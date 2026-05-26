@@ -466,16 +466,6 @@ resource "null_resource" "eks_access_entry" {
     EOF
   }
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOF
-      aws eks delete-access-entry \
-        --cluster-name "${self.triggers.cluster_name}" \
-        --principal-arn "${self.triggers.principal_arn}" \
-        --region "${self.triggers.region}" 2>&1 || true
-      echo "Access entry removed (or did not exist)"
-    EOF
-  }
 }
 
 # resource "local_file" "kubeconfig" {
