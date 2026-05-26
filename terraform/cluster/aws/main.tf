@@ -356,7 +356,7 @@ resource "null_resource" "karpenter_access_config" {
       CURRENT=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
         --query 'cluster.accessConfig.authenticationMode' --output text 2>/dev/null || echo "UNKNOWN")
       if [ "$CURRENT" = "API_AND_CONFIG_MAP" ] || [ "$CURRENT" = "API" ]; then
-        echo "EKS access config already $CURRENT — skipping"
+        echo "EKS access config already $CURRENT - skipping"
       else
         echo "Updating EKS access config from $CURRENT to API_AND_CONFIG_MAP..."
         aws eks update-cluster-config \
@@ -378,7 +378,7 @@ resource "null_resource" "karpenter_access_config" {
           sleep 5
         done
         if [ "$VERIFIED" != "API_AND_CONFIG_MAP" ] && [ "$VERIFIED" != "API" ]; then
-          echo "ERROR: Auth mode not verified after 60s — still $VERIFIED"
+          echo "ERROR: Auth mode not verified after 60s, still $VERIFIED"
           exit 1
         fi
         echo "Waiting for access entry API propagation..."
@@ -399,26 +399,82 @@ data "aws_iam_session_context" "current" {
   arn   = data.aws_caller_identity.current.arn
 }
 
-resource "aws_eks_access_entry" "terraform_caller" {
+resource "null_resource" "eks_access_entry" {
   count = var.eks_access_entries ? 1 : 0
 
   depends_on = [null_resource.karpenter_access_config]
 
-  cluster_name  = aws_eks_cluster.cluster.name
-  principal_arn = data.aws_iam_session_context.current[0].issuer_arn
-  type          = "STANDARD"
-  tags          = local.tags
-}
+  triggers = {
+    cluster_name  = aws_eks_cluster.cluster.name
+    principal_arn = data.aws_iam_session_context.current[0].issuer_arn
+    region        = data.aws_region.current.name
+    partition     = data.aws_partition.current.partition
+  }
 
-resource "aws_eks_access_policy_association" "terraform_caller" {
-  count = var.eks_access_entries ? 1 : 0
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -e
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      PRINCIPAL="${self.triggers.principal_arn}"
+      POLICY_ARN="arn:${self.triggers.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
-  cluster_name  = aws_eks_cluster.cluster.name
-  principal_arn = aws_eks_access_entry.terraform_caller[0].principal_arn
-  policy_arn    = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+      if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+        echo "Access entry already exists for $PRINCIPAL - skipping creation"
+      else
+        echo "Creating access entry for $PRINCIPAL..."
+        aws eks create-access-entry \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --type STANDARD \
+          --region "$REGION" || {
+            if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+              echo "Access entry was created concurrently - continuing"
+            else
+              echo "ERROR: Failed to create access entry" >&2
+              exit 1
+            fi
+          }
+      fi
 
-  access_scope {
-    type = "cluster"
+      EXISTING=$(aws eks list-associated-access-policies \
+        --cluster-name "$CLUSTER" \
+        --principal-arn "$PRINCIPAL" \
+        --region "$REGION" \
+        --query "associatedAccessPolicies[?policyArn=='$POLICY_ARN'].policyArn" \
+        --output text) || {
+          echo "ERROR: Failed to list access policies" >&2
+          exit 1
+        }
+
+      if [ -n "$EXISTING" ]; then
+        echo "Policy $POLICY_ARN already associated - skipping"
+      else
+        echo "Associating policy $POLICY_ARN..."
+        aws eks associate-access-policy \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --policy-arn "$POLICY_ARN" \
+          --access-scope type=cluster \
+          --region "$REGION" || {
+            echo "ERROR: Failed to associate access policy" >&2
+            exit 1
+          }
+      fi
+
+      echo "EKS access entry setup complete"
+    EOF
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOF
+      aws eks delete-access-entry \
+        --cluster-name "${self.triggers.cluster_name}" \
+        --principal-arn "${self.triggers.principal_arn}" \
+        --region "${self.triggers.region}" 2>&1 || true
+      echo "Access entry removed (or did not exist)"
+    EOF
   }
 }
 
