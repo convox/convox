@@ -172,8 +172,12 @@ module "cluster" {
 }
 
 resource "null_resource" "wait_for_cluster" {
+  triggers = {
+    cluster_ready = join(",", module.cluster.eks_addons)
+  }
+
   provisioner "local-exec" {
-    command = "sleep 1 && echo ${module.cluster.eks_addons[0]}"
+    command = "echo cluster_ready"
   }
 }
 

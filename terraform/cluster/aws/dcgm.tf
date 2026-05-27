@@ -21,7 +21,7 @@ resource "kubernetes_config_map" "dcgm_metrics_convox" {
 
 resource "helm_release" "dcgm_exporter" {
   depends_on = [
-    null_resource.wait_k8s_api,
+    null_resource.wait_eks_addons,
     helm_release.nvidia_device_plugin,
     kubernetes_config_map.dcgm_metrics_convox,
   ]

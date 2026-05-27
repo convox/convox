@@ -58,7 +58,7 @@ resource "kubernetes_service_account" "lbc" {
 
 resource "helm_release" "aws_lbc" {
   depends_on = [
-    null_resource.wait_k8s_api,
+    null_resource.wait_eks_addons,
     aws_iam_role.lbc,
     aws_iam_role_policy.lbc_policy,
     aws_eks_node_group.cluster,

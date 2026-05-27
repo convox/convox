@@ -1383,9 +1383,28 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	// karpenter_enabled=true requires karpenter_auth_mode=true — either already
 	// applied or being set in the same call.
-	if params["karpenter_enabled"] == "true" && currentParams["karpenter_enabled"] != "true" {
-		if currentParams["karpenter_auth_mode"] != "true" && params["karpenter_auth_mode"] != "true" {
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") {
+		if !strings.EqualFold(currentParams["karpenter_auth_mode"], "true") && params["karpenter_auth_mode"] != "true" {
 			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
+		}
+	}
+
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") {
+		currentNCT := strings.ToLower(currentParams["node_capacity_type"])
+		if currentNCT != "" && currentNCT != "on_demand" {
+			if strings.EqualFold(currentParams["karpenter_auth_mode"], "true") || params["karpenter_auth_mode"] == "true" {
+				return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Current node_capacity_type is %s. First run:\n    convox rack params set node_capacity_type=ON_DEMAND\n  Wait for the update to complete, then enable Karpenter:\n    convox rack params set karpenter_enabled=true", currentParams["node_capacity_type"])
+			}
+			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Current node_capacity_type is %s. First run:\n    convox rack params set karpenter_auth_mode=true node_capacity_type=ON_DEMAND\n  Wait for the update to complete, then enable Karpenter:\n    convox rack params set karpenter_enabled=true", currentParams["node_capacity_type"])
+		}
+		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
+			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Cannot set node_capacity_type=%s in the same call as karpenter_enabled=true.\n  Set node_capacity_type=ON_DEMAND first and wait for the update to complete", v)
+		}
+	}
+
+	if strings.EqualFold(currentParams["karpenter_enabled"], "true") && params["karpenter_enabled"] != "false" {
+		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
+			return fmt.Errorf("node_capacity_type cannot be set to %s while Karpenter is enabled.\n  Karpenter requires ON_DEMAND system nodes. To use %s capacity, disable\n  Karpenter first: convox rack params set karpenter_enabled=false", v, v)
 		}
 	}
 

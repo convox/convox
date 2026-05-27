@@ -38,7 +38,10 @@ output "vpc" {
 }
 
 output "eks_addons" {
-  value = [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id]
+  value = concat(
+    [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id],
+    [for ng in aws_eks_node_group.cluster : ng.id]
+  )
 }
 
 output "lbc_helm_id" {
