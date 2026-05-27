@@ -1398,13 +1398,39 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Current node_capacity_type is %s. First run:\n    convox rack params set karpenter_auth_mode=true node_capacity_type=ON_DEMAND\n  Wait for the update to complete, then enable Karpenter:\n    convox rack params set karpenter_enabled=true", currentParams["node_capacity_type"])
 		}
 		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
-			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Cannot set node_capacity_type=%s in the same call as karpenter_enabled=true.\n  Set node_capacity_type=ON_DEMAND first and wait for the update to complete", v)
+			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Cannot set node_capacity_type=%s in the same call as karpenter_enabled=true.\n  Set node_capacity_type=ON_DEMAND first, wait for the update to complete, then enable Karpenter", v)
 		}
 	}
 
 	if strings.EqualFold(currentParams["karpenter_enabled"], "true") && params["karpenter_enabled"] != "false" {
 		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
 			return fmt.Errorf("node_capacity_type cannot be set to %s while Karpenter is enabled.\n  Karpenter requires ON_DEMAND system nodes. To use %s capacity, disable\n  Karpenter first: convox rack params set karpenter_enabled=false", v, v)
+		}
+	}
+
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") &&
+		strings.EqualFold(currentParams["high_availability"], "false") {
+		ltParams := []string{
+			"gpu_tag_enable",
+			"imds_http_tokens",
+			"imds_http_hop_limit",
+			"imds_tags_enable",
+			"ebs_volume_encryption_enabled",
+			"user_data",
+			"user_data_url",
+			"kubelet_registry_pull_qps",
+			"kubelet_registry_burst",
+			"key_pair_name",
+		}
+		var conflicts []string
+		for _, p := range ltParams {
+			if _, ok := params[p]; ok {
+				conflicts = append(conflicts, p)
+			}
+		}
+		if len(conflicts) > 0 {
+			return fmt.Errorf("cannot change launch template settings in the same call as karpenter_enabled=true on\n  a non-HA rack (single node). These params trigger a node rolling update that can\n  deadlock with the Karpenter taint on undersized nodes:\n    %s\n  Set them in a separate call first, wait for the update to complete, then enable Karpenter",
+				strings.Join(conflicts, ", "))
 		}
 	}
 
