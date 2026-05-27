@@ -468,6 +468,47 @@ resource "null_resource" "eks_access_entry" {
 
 }
 
+resource "null_resource" "eks_access_entry_nodes" {
+  count = var.eks_access_entries ? 1 : 0
+
+  depends_on = [null_resource.karpenter_access_config]
+
+  triggers = {
+    cluster_name  = aws_eks_cluster.cluster.name
+    principal_arn = aws_iam_role.nodes.arn
+    region        = data.aws_region.current.name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -e
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      PRINCIPAL="${self.triggers.principal_arn}"
+
+      if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+        echo "Access entry already exists for $PRINCIPAL - skipping creation"
+      else
+        echo "Creating EC2_LINUX access entry for nodes role $PRINCIPAL..."
+        aws eks create-access-entry \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --type EC2_LINUX \
+          --region "$REGION" || {
+            if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+              echo "Access entry was created concurrently - continuing"
+            else
+              echo "ERROR: Failed to create nodes access entry" >&2
+              exit 1
+            fi
+          }
+      fi
+
+      echo "Nodes access entry setup complete"
+    EOF
+  }
+}
+
 # resource "local_file" "kubeconfig" {
 #   depends_on = [
 #     aws_eks_node_group.cluster,
