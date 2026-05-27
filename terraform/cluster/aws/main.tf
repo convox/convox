@@ -559,7 +559,7 @@ resource "aws_launch_template" "cluster-build" {
 
 module "ebs_csi_driver_controller" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_eks_addons
   ]
 
   source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=f14bbe0b1185a638d7b2609bb0a690f2bfa72420"

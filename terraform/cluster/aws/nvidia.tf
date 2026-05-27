@@ -1,6 +1,6 @@
 resource "helm_release" "nvidia_device_plugin" {
   depends_on = [
-    null_resource.wait_k8s_api,
+    null_resource.wait_eks_addons,
   ]
 
   count = var.nvidia_device_plugin_enable ? 1 : 0

@@ -14,7 +14,7 @@ resource "helm_release" "karpenter_crd" {
   count = var.karpenter_auth_mode ? 1 : 0
 
   depends_on = [
-    null_resource.wait_k8s_api,
+    null_resource.wait_eks_addons,
     aws_iam_role.karpenter_controller,
     aws_iam_role_policy.karpenter_controller_ec2,
     aws_iam_role_policy.karpenter_controller_iam,
