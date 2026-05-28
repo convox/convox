@@ -434,7 +434,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **grace**    | number | 10       | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting liveness checks |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string |        | The path to request for health checks                                                            |
-| **port**     | number or map | Main service port | The port the liveness probe connects to. Same form as `health.port`. Unlike readiness, liveness does **not** auto-inherit the main service scheme — set `scheme` explicitly when the probe needs HTTPS. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
+| **port**     | number or map | Main service port | The port the liveness probe connects to. Same form as `health.port`. Unlike readiness, liveness does **not** auto-inherit the main service scheme. Set `scheme` explicitly when the probe needs HTTPS. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
 | **timeout**  | number | 5      | The number of seconds to wait for a successful response                                          |
 | **successThreshold**  | number | 1      | The number of consecutive successful checks required to consider the probe successful             |
 | **failureThreshold**  | number | 3      | The number of consecutive failed checks required before restarting the container                  |
@@ -446,11 +446,13 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | Attribute | Type   | Default | Description                                                                                                   |
 | --------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------- |
 | **count**   | number | 1       | The number of [Processes](/reference/primitives/app/process) to run for this Service. For autoscaling use a range, e.g. **1-5**        |
+| **min**     | number |         | Minimum replica count. Used with `autoscale` or `keda` blocks. Set to `0` for scale-to-zero. |
+| **max**     | number |         | Maximum replica count. Used with `autoscale` or `keda` blocks. |
 | **cpu**     | number | 250     | The number of CPU units to reserve for [Processes](/reference/primitives/app/process) of this Service where 1000 units is a full CPU |
 | **gpu**     | map    |         | The number/type of GPUs to reserve for [Processes](/reference/primitives/app/process) of this Service  |
 | **memory**  | number | 512     | The number of MB of RAM to reserve for [Processes](/reference/primitives/app/process) of this Service                                |
-| **targets** | map    |         | Target metrics to trigger autoscaling |
-| **autoscale** | map  |         | Structured autoscale configuration. Sub-keys: `cpu`, `memory`, `gpuUtilization`, `queueDepth`, `custom` (each with a `threshold` value), plus optional `cooldownPeriod` / `pollingInterval`. The Console Service > Scaling page reads this to enable Range mode. Requires the rack-side `keda_enable=true` parameter. |
+| **targets** | map    |         | Target metrics to trigger autoscaling (native HPA, no KEDA required) |
+| **autoscale** | map  |         | Preconfigured autoscale triggers: `cpu`, `memory`, `gpuUtilization`, `queueDepth` (each with a `threshold` value), plus optional `cooldownPeriod` / `pollingInterval`. Requires `keda_enable=true`. See [Autoscaling](/configuration/scaling/autoscaling#event-driven-autoscaling-scaleautoscale). |
 | **keda** | map    |         | KEDA event-driven autoscaling configuration. See [KEDA](/configuration/scaling/keda) |
 | **vpa** | map    |         | Vertical Pod Autoscaler configuration. See [VPA](/configuration/scaling/vpa) |
 | **limit** | map    |         | The maximum cpu or memory usage limit |

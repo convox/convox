@@ -30,9 +30,12 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
 | [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
 | [ebs_volume_encryption_enabled](/configuration/rack-parameters/aws/ebs_volume_encryption_enabled) | Enables encryption for EBS volumes used by primary node disks. |
+| [ecr_additional_policy_arn](/configuration/rack-parameters/aws/ecr_additional_policy_arn) | Attaches a user-provided IAM policy ARN to the Rack API role for custom ECR access control. |
 | [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) | Enables ECR pull-through cache for Docker Hub images to avoid rate limits. |
+| [ecr_full_access](/configuration/rack-parameters/aws/ecr_full_access) | Re-attaches the `AmazonEC2ContainerRegistryFullAccess` managed policy, restoring pre-3.24.6 ECR permissions. |
 | [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) | Enables automatic vulnerability scanning for images pushed to ECR. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
+| [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) | Creates EKS Access Entries for the rack's managing IAM role and nodes role. One-way migration from `aws-auth` ConfigMap. |
 | [eks_api_server_private_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_private_access_cidrs) | Comma-separated CIDRs allowed to reach the EKS API via the private endpoint (cluster SG ingress on TCP 443). |
 | [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
