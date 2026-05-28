@@ -28,9 +28,24 @@ Setting parameters... OK
 ```
 This command sets the node capacity type to `mixed`.
 
+## Karpenter Interaction (3.24.7+)
+
+When [Karpenter](/configuration/scaling/karpenter) is enabled or being enabled, the CLI enforces constraints on `node_capacity_type`:
+
+- **Enabling Karpenter requires `ON_DEMAND`.** Setting `karpenter_enabled=true` when `node_capacity_type` is `SPOT` or `mixed` is rejected because Karpenter taints the old node group during replacement, and non-ON_DEMAND nodes may not schedule replacements reliably.
+- **Cannot change while Karpenter is active.** Any `node_capacity_type` change while `karpenter_enabled=true` is rejected. Disable Karpenter first, change the capacity type, then re-enable.
+
+These guards prevent scheduling deadlocks during node group transitions. See [Karpenter Enablement Validation Guards](/configuration/scaling/karpenter#enablement-validation-guards) for details.
+
 ## Additional Information
 When using the `mixed` capacity type, it is important to configure the [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) and [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameters to ensure that your cluster maintains the desired balance of cost and reliability.
 
 Using spot instances can lead to potential volatility as these instances may be interrupted by AWS when capacity is needed elsewhere. This setup is recommended only for non-production environments that can tolerate such interruptions.
 
 By setting the `node_capacity_type` parameter appropriately, you can optimize the cost-efficiency and reliability of your Convox rack based on your specific needs and workload requirements.
+
+## See Also
+
+- [Karpenter](/configuration/scaling/karpenter) for Karpenter node autoscaling
+- [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) for minimum on-demand nodes in mixed mode
+- [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) for maximum on-demand nodes in mixed mode

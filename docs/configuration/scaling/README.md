@@ -9,9 +9,24 @@ Convox provides several approaches to scaling your services, from simple manual 
 
 ## Autoscaling
 
-Configure horizontal scaling based on CPU and memory utilization, set initial resource defaults, manually adjust replica counts, and allocate GPUs for accelerated workloads. This is the starting point for most scaling needs.
+Configure horizontal scaling with preconfigured triggers or manual replica counts.
 
-See [Autoscaling](/configuration/scaling/autoscaling) for details.
+The simplest path to autoscaling is the `scale.autoscale` block, which provides preconfigured KEDA-based triggers for CPU, memory, GPU utilization, and queue depth with just a threshold value:
+
+```yaml
+services:
+  web:
+    scale:
+      min: 2
+      max: 10
+      autoscale:
+        cpu:
+          threshold: 70
+```
+
+This scales the service between 2 and 10 replicas, targeting 70% CPU utilization. Scale-to-zero is supported with `min: 0`. See [Autoscaling](/configuration/scaling/autoscaling) for the full trigger reference and examples.
+
+> `scale.autoscale` requires `keda_enable=true` on the rack (AWS only). CPU and memory autoscaling via `scale.targets` works on all providers without KEDA.
 
 ## Vertical Pod Autoscaler (VPA)
 
@@ -20,9 +35,9 @@ Automatically right-size CPU and memory requests for your services based on obse
 See [VPA](/configuration/scaling/vpa) for details.
 > AWS only
 
-## KEDA Autoscaling
+## KEDA Autoscaling (Advanced)
 
-Event-driven autoscaling powered by KEDA. Scale from external signals like SQS queue depth, cron schedules, Datadog queries, CloudWatch metrics, or any of KEDA's 60+ supported scalers. Supports scale-to-zero for cost optimization.
+For event sources beyond the four built-in `scale.autoscale` triggers (SQS queue depth, cron schedules, Datadog queries, CloudWatch metrics, and 60+ others), use `scale.keda.triggers` with raw KEDA trigger configuration. Supports scale-to-zero.
 
 See [KEDA Autoscaling](/configuration/scaling/keda) for details.
 > AWS only

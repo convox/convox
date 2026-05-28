@@ -8,11 +8,11 @@ url: /configuration/scaling/karpenter
 
 Convox supports [Karpenter](https://karpenter.sh/) as an opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning. When enabled, Karpenter manages workload and build nodes through NodePools and EC2NodeClasses, delivering faster node provisioning, cost-aware instance selection, and automatic node lifecycle management.
 
-Karpenter is **bidirectional** — `karpenter_enabled` can be toggled on and off safely, letting you try Karpenter and revert if needed without disrupting your Rack.
+Karpenter is **bidirectional**. `karpenter_enabled` can be toggled on and off safely, letting you try Karpenter and revert if needed without disrupting your Rack.
 
 > Karpenter is available on **AWS only**. Karpenter parameters are rejected for GCP, Azure, and DigitalOcean Racks.
 
-> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets** — a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation, expiry, or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
+> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets**, a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation, expiry, or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
 
 ## How Karpenter Works with Convox
 
@@ -30,11 +30,11 @@ Karpenter replaces Cluster Autoscaler for workload and build node scaling. Syste
 
 ### Why Karpenter Over Cluster Autoscaler
 
-Cluster Autoscaler (CAS) works at the Auto Scaling Group (ASG) level — it can only scale groups of identical instances and reacts to pending pods by incrementing ASG desired count. Karpenter works at the pod level, directly evaluating pending pod requirements and provisioning the optimal instance type, size, and purchasing model in seconds rather than minutes.
+Cluster Autoscaler (CAS) works at the Auto Scaling Group (ASG) level. It can only scale groups of identical instances and reacts to pending pods by incrementing ASG desired count. Karpenter works at the pod level, directly evaluating pending pod requirements and provisioning the optimal instance type, size, and purchasing model in seconds rather than minutes.
 
 - **Faster scaling.** Karpenter provisions nodes in response to pending pods within seconds, compared to the multi-minute feedback loop of CAS
 - **Cost optimization.** Karpenter selects the cheapest instance type that satisfies pod requirements from across all allowed families and sizes
-- **Node consolidation.** Underutilized nodes are automatically consolidated — Karpenter moves pods to fewer, better-utilized nodes and terminates the empty ones
+- **Node consolidation.** Underutilized nodes are automatically consolidated. Karpenter moves pods to fewer, better-utilized nodes and terminates the empty ones
 - **Automatic node replacement.** Nodes are replaced after `karpenter_node_expiry` (default 30 days), keeping your fleet on current AMIs
 - **Scale-to-zero builds.** The build NodePool scales to zero when no builds are running, eliminating idle build node costs
 - **Multi-architecture support.** Workload node architecture is auto-detected from `node_type`, or set explicitly with `karpenter_arch`
@@ -50,11 +50,27 @@ Setting parameters... OK
 
 Karpenter uses a two-parameter enablement model:
 
-1. **`karpenter_auth_mode=true`** — A **one-way migration** that prepares the EKS cluster. It migrates the cluster to `API_AND_CONFIG_MAP` access mode and applies `karpenter.sh/discovery` tags to subnets and security groups. This cannot be reversed once enabled (matching AWS EKS behavior).
+1. **`karpenter_auth_mode=true`**: A **one-way migration** that prepares the EKS cluster. It migrates the cluster to `API_AND_CONFIG_MAP` access mode and applies `karpenter.sh/discovery` tags to subnets and security groups. This cannot be reversed once enabled (matching AWS EKS behavior).
 
-2. **`karpenter_enabled=true`** — A **bidirectional toggle** that deploys the Karpenter controller, NodePools, IAM roles, and SQS interruption queue. Requires `karpenter_auth_mode=true`. Can be toggled on and off freely.
+2. **`karpenter_enabled=true`**: A **bidirectional toggle** that deploys the Karpenter controller, NodePools, IAM roles, and SQS interruption queue. Requires `karpenter_auth_mode=true`. Can be toggled on and off freely.
 
 Both can be set in the same call. If setting them separately, `karpenter_auth_mode` must be set first and the update must complete before setting `karpenter_enabled`.
+
+### Enablement Validation Guards
+
+The CLI validates parameter combinations when enabling Karpenter to prevent scheduling deadlocks and stuck rack updates. These guards run at `convox rack params set` time and reject invalid combinations with actionable error messages.
+
+| Guard | Trigger | Resolution |
+|-------|---------|------------|
+| `node_capacity_type` must be `ON_DEMAND` | Enabling Karpenter when `node_capacity_type` is `SPOT` or mixed | Set `node_capacity_type=ON_DEMAND` first, wait for the update, then enable Karpenter |
+| Cannot change `node_capacity_type` while active | Any `node_capacity_type` change when `karpenter_enabled=true` | Disable Karpenter first, change capacity type, then re-enable |
+| Launch template params blocked on non-HA racks | Enabling Karpenter combined with launch template params (`gpu_tag_enable`, `imds_http_tokens`, `imds_http_hop_limit`, `imds_tags_enable`, `ebs_volume_encryption_enabled`, `user_data`, `user_data_url`, `kubelet_registry_pull_qps`, `kubelet_registry_burst`, `key_pair_name`) on racks with `high_availability=false` | Set the launch template params first in a separate call, wait for the update, then enable Karpenter |
+
+**Why these guards exist:**
+- Enabling Karpenter with SPOT or mixed capacity types can deadlock node replacement: Karpenter taints the old node group while the replacement may not schedule due to capacity constraints.
+- On non-HA racks (single node), combining `karpenter_enabled=true` with launch template changes triggers a rolling update on the only node while Karpenter simultaneously taints it, leaving no schedulable nodes.
+
+All guards can be bypassed with `--force` if you are confident the combination is safe for your specific rack configuration.
 
 ### Migrating Workloads to Karpenter Nodes
 
@@ -65,7 +81,7 @@ $ convox rack params set node_type=t3.medium -r rackName
 Setting parameters... OK
 ```
 
-System nodes only need to run core Rack services (API server, router, resolver, Karpenter controller, and pinned add-on controllers). A smaller instance type like `t3.medium` is typically sufficient. Changing `node_type` triggers a rolling update of the managed node group — Kubernetes drains pods off old nodes and Karpenter provisions right-sized workload nodes to absorb them.
+System nodes only need to run core Rack services (API server, router, resolver, Karpenter controller, and pinned add-on controllers). A smaller instance type like `t3.medium` is typically sufficient. Changing `node_type` triggers a rolling update of the managed node group. Kubernetes drains pods off old nodes and Karpenter provisions right-sized workload nodes to absorb them.
 
 ## Enablement Parameters
 
@@ -137,14 +153,14 @@ When Karpenter is enabled and `build_node_enabled=true`:
 
 - The existing EKS managed build node group is scaled to zero
 - Karpenter's build NodePool provisions nodes on-demand when build pods are scheduled
-- Build nodes have a `dedicated=build:NoSchedule` taint — only build pods run on them
+- Build nodes have a `dedicated=build:NoSchedule` taint, so only build pods run on them
 - Build nodes scale back to zero after the last build completes (configurable via `karpenter_build_consolidate_after`, default 60s)
 - Architecture is auto-detected from `build_node_type`
 - The existing `build_node_min_count` parameter does not apply when Karpenter manages builds
 
 ## Advanced Configuration
 
-### `karpenter_config` — Workload NodePool Override
+### `karpenter_config` (Workload NodePool Override)
 
 For users who need access to the full Karpenter API beyond what individual parameters expose, `karpenter_config` provides a JSON escape hatch for the workload NodePool and its EC2NodeClass.
 
@@ -224,7 +240,7 @@ $ convox rack params set karpenter_config='{"nodePool":{"disruption":{"budgets":
 Setting parameters... OK
 ```
 
-### `additional_karpenter_nodepools_config` — Custom NodePools
+### `additional_karpenter_nodepools_config` (Custom NodePools)
 
 Creates additional NodePools beyond the built-in workload and build pools. Each entry in the JSON array produces its own NodePool + EC2NodeClass pair with the same infrastructure settings (subnet discovery, security groups, IAM role) as the workload pool.
 
@@ -295,7 +311,7 @@ Setting parameters... OK
 
 ### Using Taints to Protect Nodes
 
-Without taints, any pod can land on a custom NodePool's nodes if they have spare capacity — even pods that don't need those resources. For example, a basic web service could get scheduled to an expensive GPU instance. Taints prevent this by rejecting pods that lack a matching toleration.
+Without taints, any pod can land on a custom NodePool's nodes if they have spare capacity, even pods that don't need those resources. For example, a basic web service could get scheduled to an expensive GPU instance. Taints prevent this by rejecting pods that lack a matching toleration.
 
 > **Important:** `convox.yml` does not have a `tolerations` field. You cannot manually specify tolerations in your Service definition. Instead, tolerations are handled automatically through the mechanisms described below.
 
@@ -330,7 +346,7 @@ The simplest way to isolate a pool is `dedicated: true`. This auto-applies a `de
 
 #### Non-GPU custom taints
 
-For custom taints beyond `dedicated` (e.g., tenant isolation with specific taint keys), Convox does not auto-inject tolerations. Pods targeting pools with custom non-GPU taints will need tolerations added through an external mechanism such as a Kubernetes mutating admission webhook. For most non-GPU use cases, using `dedicated: true` or `labels` + `nodeSelectorLabels` without taints is the recommended approach — Karpenter only provisions nodes for pods that need them, so unwanted pods won't cause unnecessary scaling.
+For custom taints beyond `dedicated` (e.g., tenant isolation with specific taint keys), Convox does not auto-inject tolerations. Pods targeting pools with custom non-GPU taints will need tolerations added through an external mechanism such as a Kubernetes mutating admission webhook. For most non-GPU use cases, using `dedicated: true` or `labels` + `nodeSelectorLabels` without taints is the recommended approach. Karpenter only provisions nodes for pods that need them, so unwanted pods won't cause unnecessary scaling.
 
 #### DaemonSets on tainted nodes
 
@@ -362,7 +378,7 @@ When `karpenter_enabled=true`:
   - EBS CSI controller
   - EFS CSI controller
   - AWS Load Balancer Controller
-- Fluentd DaemonSet is **not** pinned — it runs on all nodes for log collection
+- Fluentd DaemonSet is **not** pinned; it runs on all nodes for log collection
 
 > The `convox.io/system-node=true` label is tied to `karpenter_auth_mode` (not `karpenter_enabled`) to ensure labels persist during enable/disable transitions.
 
@@ -407,7 +423,7 @@ Cleaning up Karpenter nodes... OK
 
 This cordons, drains, and deletes any remaining Karpenter-labeled nodes, terminates their backing EC2 instances, and removes stale NodePool and EC2NodeClass CRD objects. Safe to run multiple times.
 
-> `karpenter_auth_mode` cannot be reverted. The EKS access config migration and discovery tags remain. This is safe and has no cost or operational impact — it means the cluster is ready for Karpenter to be re-enabled at any time.
+> `karpenter_auth_mode` cannot be reverted. The EKS access config migration and discovery tags remain. This is safe and has no cost or operational impact. It means the cluster is ready for Karpenter to be re-enabled at any time.
 
 ## Constraints and Limitations
 
@@ -426,3 +442,4 @@ This cordons, drains, and deletes any remaining Karpenter-labeled nodes, termina
 - [node_type](/configuration/rack-parameters/aws/node_type) for primary node instance type
 - [node_disk](/configuration/rack-parameters/aws/node_disk) for primary node disk size
 - [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) for GPU workloads
+- [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) for migrating to EKS Access Entries (shares the auth mode switch with `karpenter_auth_mode`)

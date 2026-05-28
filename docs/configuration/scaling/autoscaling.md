@@ -60,7 +60,139 @@ services:
 ```
 > Changes to `cpu`, `memory`, or `gpu` should be done in your `convox.yml`, and a new release of your app deployed.
 
+## Event-Driven Autoscaling (scale.autoscale)
+
+The `scale.autoscale` block provides preconfigured KEDA-based autoscaling triggers with minimal configuration. Instead of writing raw KEDA trigger definitions, you specify a trigger type and a threshold value. Convox handles the KEDA ScaledObject configuration, Prometheus queries, and activation thresholds automatically.
+
+> Requires `keda_enable=true` on the rack. See [keda_enable](/configuration/rack-parameters/aws/keda_enable).
+
+### Available Triggers
+
+| Trigger | Signal | Use case |
+|---------|--------|----------|
+| `cpu` | CPU utilization % | Web services, API servers |
+| `memory` | Memory utilization % | Cache-heavy services, data processing |
+| `gpuUtilization` | GPU utilization % via DCGM | ML inference, GPU-accelerated workloads |
+| `queueDepth` | Prometheus metric value | Inference request queues, job queues |
+
+### CPU Autoscaling
+
+Scale a web service between 2 and 10 replicas based on CPU utilization:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    scale:
+      min: 2
+      max: 10
+      autoscale:
+        cpu:
+          threshold: 70
+```
+
+### Scale to Zero
+
+Scale a worker to zero when idle, spinning up automatically when CPU load increases:
+
+```yaml
+services:
+  worker:
+    build: .
+    command: bin/process
+    scale:
+      min: 0
+      max: 5
+      autoscale:
+        cpu:
+          threshold: 50
+```
+
+Services at zero replicas show a `COLD` status indicator in `convox scale` output. The first request or trigger activation incurs a cold-start delay while a replica provisions.
+
+### GPU Inference Autoscaling
+
+Scale a GPU inference service based on GPU utilization, with scale-to-zero when no requests are arriving:
+
+```yaml
+services:
+  vllm:
+    build: .
+    port: 8000
+    scale:
+      min: 0
+      max: 10
+      gpu:
+        count: 1
+        vendor: nvidia
+      autoscale:
+        gpuUtilization:
+          threshold: 70
+```
+
+> Requires `gpu_observability_enable=true` and `prometheus_url` set on the rack.
+
+### Queue Depth Autoscaling
+
+Scale based on inference request queue depth (or any Prometheus metric):
+
+```yaml
+services:
+  worker:
+    build: .
+    scale:
+      min: 0
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 5
+          metricName: vllm:num_requests_waiting
+```
+
+### Combined Triggers
+
+Multiple triggers can be combined. KEDA scales to whichever trigger demands the most replicas:
+
+```yaml
+services:
+  inference:
+    build: .
+    port: 8000
+    scale:
+      min: 1
+      max: 8
+      gpu:
+        count: 1
+        vendor: nvidia
+      autoscale:
+        cpu:
+          threshold: 70
+        gpuUtilization:
+          threshold: 75
+        queueDepth:
+          threshold: 3
+        cooldownPeriod: 300
+        pollingInterval: 15
+```
+
+### autoscale Reference
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| **cpu** | map | | CPU utilization trigger. Sub-key: `threshold` (1-100, percent) |
+| **memory** | map | | Memory utilization trigger. Sub-key: `threshold` (1-100, percent) |
+| **gpuUtilization** | map | | GPU utilization trigger via Prometheus/DCGM. Sub-keys: `threshold` (1-100), optional `metricName`, `prometheusUrl`, `query` |
+| **queueDepth** | map | | Queue depth trigger via Prometheus. Sub-keys: `threshold` (> 0), optional `metricName` (default: `vllm:num_requests_waiting`), `prometheusUrl`, `query` |
+| **custom** | list | | Raw KEDA ScaleTriggers for advanced use cases beyond the four built-in types |
+| **cooldownPeriod** | number | 300 | Seconds to wait after the last trigger activation before scaling down |
+| **pollingInterval** | number | 30 | Seconds between trigger checks |
+
+For raw KEDA trigger configuration (SQS, CloudWatch, Datadog, cron, and 60+ other scalers), see [KEDA Autoscaling](/configuration/scaling/keda).
+
 ## Horizontal Autoscaling (HPA)
+
+> For most use cases, the `scale.autoscale` block above is the recommended approach. The `scale.targets` block below uses native Kubernetes HPA and does not require KEDA.
 
 To use autoscaling you must specify a range for allowable [Process](/reference/primitives/app/process) count and
 target values for CPU and Memory utilization (in percent):
@@ -168,7 +300,7 @@ The service will scale based on CPU utilization while ensuring that each process
 
 If your cluster is not scaling down despite low resource usage, the Kubernetes Cluster Autoscaler may be blocked from removing nodes. Common causes:
 
-- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that healthy pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter. Unhealthy pods (CrashLoopBackOff, Error) do not block eviction — Convox PDBs use `unhealthyPodEvictionPolicy: AlwaysAllow` so that stuck pods cannot prevent node scale-down. To opt a specific service out of the Convox-managed PDB entirely, set the `convox.com/pdb-disabled=true` annotation on the service (see [Disabling PDB for a Service](#disabling-pdb-for-a-service) below).
+- **Restrictive PodDisruptionBudgets (PDBs)**: A PDB with `minAvailable: 1` on a service with one replica prevents that healthy pod from being evicted. Adjust with the [`pdb_default_min_available_percentage`](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) rack parameter. Unhealthy pods (CrashLoopBackOff, Error) do not block eviction. Convox PDBs use `unhealthyPodEvictionPolicy: AlwaysAllow` so that stuck pods cannot prevent node scale-down. To opt a specific service out of the Convox-managed PDB entirely, set the `convox.com/pdb-disabled=true` annotation on the service (see [Disabling PDB for a Service](#disabling-pdb-for-a-service) below).
 - **System pods**: Pods in the `kube-system` namespace may have rules preventing eviction.
 - **Pods without a controller**: Pods not managed by a Deployment or ReplicaSet will not be evicted.
 - **Pods with local storage**: Pods using `hostPath` or `emptyDir` volumes cannot be moved.
@@ -201,7 +333,7 @@ services:
       - convox.com/pdb-disabled=true
 ```
 
-With PDB disabled, the service's pods can be evicted without budget protection during node scale-down, node drain, or maintenance events. Use only on services that tolerate unplanned disruption — for example, stateless workers that can be restarted anywhere at any time.
+With PDB disabled, the service's pods can be evicted without budget protection during node scale-down, node drain, or maintenance events. Use only on services that tolerate unplanned disruption, for example stateless workers that can be restarted anywhere at any time.
 
 Both `convox.com/pdb-disabled` (canonical) and `convox.com/pdb-disbaled` (legacy spelling, kept for backward compatibility) are accepted. New configurations should use the canonical spelling.
 

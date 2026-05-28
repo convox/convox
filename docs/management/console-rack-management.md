@@ -123,6 +123,8 @@ data:
 ### Warning
 When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigure it, you can lock the user out of their rack.
 
+> **Racks on 3.24.7+** can use [`eks_access_entries`](/configuration/rack-parameters/aws/eks_access_entries) to manage cluster access via the AWS API instead of the `aws-auth` ConfigMap. EKS Access Entries are AWS-managed, provide CloudTrail audit logging, and cannot be accidentally deleted through Kubernetes operations.
+
 ### Console Rack Metrics
 
 You can visualize resource consumption for your rack nodes and workloads from the Console.

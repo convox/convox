@@ -8,6 +8,8 @@ url: /configuration/scaling/keda
 
 > KEDA autoscaling is available on AWS racks.
 
+> **Looking for the simple path?** For CPU, memory, GPU utilization, and queue depth autoscaling, the [`scale.autoscale`](/configuration/scaling/autoscaling#event-driven-autoscaling-scaleautoscale) block provides preconfigured KEDA triggers with just a threshold value. No raw trigger configuration needed. Use `scale.keda.triggers` (this page) when you need SQS, CloudWatch, Datadog, cron, or any of KEDA's 60+ other scalers.
+
 KEDA (Kubernetes Event-Driven Autoscaling) extends Convox autoscaling with event-driven triggers. Standard Convox autoscaling targets CPU and memory utilization, which works well for request-driven services. KEDA goes further by enabling two capabilities that standard autoscaling cannot provide:
 
 - **Scale to zero**: Services can scale down to zero replicas when idle, eliminating compute costs for workloads that are not actively processing. When new events arrive (e.g. messages in a queue), KEDA spins up replicas automatically.
