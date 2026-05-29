@@ -489,20 +489,31 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	}
 
 	out, err := kubectlApply(data, args...)
-	fmt.Printf("string(out): %+v\n", string(out))
 	if err != nil {
-		fmt.Printf("err: %+v\n", err)
-		if !strings.Contains(string(out), "is immutable") {
+		if !isRecoverableApplyError(out) {
 			return out, errors.WithStack(err)
 		}
 
-		out, err := kubectlApply(data, "--force")
+		fmt.Printf("ns=atom at=applyTemplate ns=%q force-recreate=true\n", namespace)
+
+		out, err = kubectlApply(data, "--force")
 		if err != nil {
 			return out, errors.WithStack(err)
 		}
 	}
 
 	return out, nil
+}
+
+// isRecoverableApplyError reports whether a failed kubectl apply can be retried with --force
+// (delete + recreate): an immutable-field change, or a strategic-merge patch that deletes a
+// required field because last-applied-configuration was written by an older rack (kubernetes #105610).
+func isRecoverableApplyError(out []byte) bool {
+	s := string(out)
+	if strings.Contains(s, "is immutable") {
+		return true
+	}
+	return strings.Contains(s, "error when applying patch") && strings.Contains(s, `"$patch":"delete"`)
 }
 
 func extractConditions(data []byte) ([]aa.AtomCondition, error) {

@@ -134,6 +134,54 @@ func TestApply(t *testing.T) {
 	})
 }
 
+func TestIsRecoverableApplyError(t *testing.T) {
+	cases := []struct {
+		name string
+		out  string
+		want bool
+	}{
+		{
+			name: "duplicate service port strategic-merge delete (k8s #105610)",
+			out: `Error from server (Invalid): error when applying patch:` +
+				`{"spec":{"$setElementOrder/ports":[{"port":8080}],"ports":[{"$patch":"delete","name":"main","port":8080}]}}` +
+				` to:` + "\n" +
+				`for: "STDIN": error when patching "STDIN": Service "web" is invalid: spec.ports: Required value`,
+			want: true,
+		},
+		{
+			name: "immutable field",
+			out:  `The Service "web" is invalid: spec.clusterIP: Invalid value: "": field is immutable`,
+			want: true,
+		},
+		{
+			name: "genuinely invalid object must NOT force-recreate",
+			out:  `The Service "web" is invalid: spec.ports[0].port: Invalid value: 99999999: must be between 1 and 65535`,
+			want: false,
+		},
+		{
+			name: "patch failure without delete directive must NOT force-recreate",
+			out: `Error from server: error when applying patch:` +
+				`{"spec":{"$setElementOrder/ports":[{"port":8080}]}}` +
+				` to:` + "\n" +
+				`for: "STDIN": error when patching "STDIN": Service "web" is invalid: spec.ports: Required value`,
+			want: false,
+		},
+		{
+			name: "clean apply output",
+			out:  "service/web configured\n",
+			want: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isRecoverableApplyError([]byte(tc.out)); got != tc.want {
+				t.Fatalf("isRecoverableApplyError() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func atomCreate(ac av.Interface, namespace, name, status, version string, spec aa.AtomSpec) error {
 	_, err := ac.AtomV1().Atoms(namespace).Create(context.Background(), &aa.Atom{
 		ObjectMeta: am.ObjectMeta{
