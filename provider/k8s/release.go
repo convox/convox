@@ -641,7 +641,7 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 }
 
 func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol, p.Engine.IngressClass())
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol, p.Engine.IngressClass(), false)
 }
 
 func (p *Provider) releaseTemplateHTTPProxyInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
@@ -650,10 +650,10 @@ func (p *Provider) releaseTemplateHTTPProxyInternal(a *structs.App, ss manifest.
 			log.Printf("WARNING: service %q has custom domains on the internal router; HTTP01 certificate challenges require the domain to be publicly reachable", ss[i].Name)
 		}
 	}
-	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false, p.Engine.IngressInternalClass())
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false, p.Engine.IngressInternalClass(), true)
 }
 
-func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool, ingressClassName string) ([]byte, error) {
+func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool, ingressClassName string, internal bool) ([]byte, error) {
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -704,14 +704,7 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 				s.Name, strings.Join(translation.IncompatibleWarnings, "\n"))
 		}
 
-		timeoutResponse := fmt.Sprintf("%ds", s.Timeout)
 		timeoutIdle := fmt.Sprintf("%ds", s.Timeout)
-		if translation.TimeoutResponse != "" {
-			annotationSecs, _ := strconv.Atoi(strings.TrimSuffix(translation.TimeoutResponse, "s"))
-			if annotationSecs > s.Timeout {
-				timeoutResponse = translation.TimeoutResponse
-			}
-		}
 		if translation.TimeoutIdle != "" {
 			annotationSecs, _ := strconv.Atoi(strings.TrimSuffix(translation.TimeoutIdle, "s"))
 			if annotationSecs > s.Timeout {
@@ -719,9 +712,15 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 			}
 		}
 
+		timeoutResponse := responseTimeout(translation.TimeoutResponse)
+
 		var whitelistCIDRs []string
 		if s.Whitelist != "" {
-			whitelistCIDRs = strings.Split(s.Whitelist, ",")
+			if internal {
+				log.Printf("WARNING: service %q sets a whitelist on the internal router; IP whitelists are not enforceable behind the internal NLB (client source addresses are not preserved) and will not be applied", s.Name)
+			} else {
+				whitelistCIDRs = parseWhitelistCIDRs(s.Whitelist)
+			}
 		}
 
 		params := map[string]interface{}{
@@ -750,6 +749,29 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
+}
+
+// responseTimeout returns the Contour route response timeout: an explicit read-timeout
+// annotation value, or "infinity" to leave streamed responses uncapped (Contour treats an
+// omitted response timeout as Envoy's 15s default rather than as unbounded).
+func responseTimeout(annotated string) string {
+	if annotated != "" {
+		return annotated
+	}
+
+	return "infinity"
+}
+
+func parseWhitelistCIDRs(whitelist string) []string {
+	var cidrs []string
+
+	for _, cidr := range strings.Split(whitelist, ",") {
+		if cidr = strings.TrimSpace(cidr); cidr != "" {
+			cidrs = append(cidrs, cidr)
+		}
+	}
+
+	return cidrs
 }
 
 func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service) ([]byte, error) {

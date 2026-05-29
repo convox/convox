@@ -14,6 +14,12 @@ resource "kubernetes_cluster_role" "resolver" {
     resources  = ["services"]
     verbs      = ["get", "list", "watch"]
   }
+
+  rule {
+    api_groups = ["projectcontour.io"]
+    resources  = ["httpproxies"]
+    verbs      = ["get", "list", "watch"]
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "resolver" {
