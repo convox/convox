@@ -42,6 +42,11 @@ resource "helm_release" "contour" {
   }
 
   set {
+    name  = "contour.manageCRDs"
+    value = "true"
+  }
+
+  set {
     name  = "contour.replicaCount"
     value = var.high_availability ? 2 : 1
   }
@@ -195,7 +200,6 @@ resource "helm_release" "contour_internal" {
   chart            = "contour"
   version          = "0.5.0"
   create_namespace = false
-  skip_crds        = true
   timeout          = 600
   wait             = true
 
@@ -206,6 +210,11 @@ resource "helm_release" "contour_internal" {
 
   set {
     name  = "contour.ingressClass.default"
+    value = "false"
+  }
+
+  set {
+    name  = "contour.manageCRDs"
     value = "false"
   }
 

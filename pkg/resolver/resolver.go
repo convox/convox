@@ -10,6 +10,8 @@ import (
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -19,8 +21,11 @@ const (
 )
 
 type Resolver struct {
+	discovery               discovery.DiscoveryInterface
 	dnsExternal             *DNS
 	dnsInternal             *DNS
+	dynamic                 dynamic.Interface
+	httpproxy               *HTTPProxy
 	ingress                 *Ingress
 	kubernetes              kubernetes.Interface
 	namespace               string
@@ -54,6 +59,10 @@ func New(namespace string) (*Resolver, error) {
 		return nil, err
 	}
 
+	if err := r.setupHTTPProxy(); err != nil {
+		return nil, err
+	}
+
 	if err := r.setupRouter(); err != nil {
 		return nil, err
 	}
@@ -72,6 +81,7 @@ func (r *Resolver) Serve() error {
 	go serve(ch, r.dnsInternal)
 
 	go r.ingress.Start()
+	go r.httpproxy.Start()
 	go r.service.Start()
 
 	return <-ch
@@ -82,13 +92,14 @@ func (r *Resolver) Shutdown(ctx context.Context) error {
 	_ = r.dnsInternal.Shutdown(ctx)
 
 	r.ingress.Stop()
+	r.httpproxy.Stop()
 	r.service.Stop()
 
 	return nil
 }
 
 func (r *Resolver) resolve(typ, host, router string) (string, bool) {
-	if r.ingress.HostExists(host) {
+	if r.ingress.HostExists(host) || (r.httpproxy != nil && r.httpproxy.HostExists(host)) {
 		switch typ {
 		case "A":
 			if net.ParseIP(router) != nil {
@@ -127,7 +138,7 @@ func (r *Resolver) resolveExternal(typ, host string) (string, bool) {
 
 func (r *Resolver) resolveInternal(typ, host string) (string, bool) {
 	router := r.routerExternalClusterIP
-	if r.ingress.HostInternal(host) {
+	if r.ingress.HostInternal(host) || (r.httpproxy != nil && r.httpproxy.HostInternal(host)) {
 		router = r.routerInternal
 	}
 	return r.resolve(typ, host, router)
@@ -176,6 +187,20 @@ func (r *Resolver) setupKubernetes() error {
 
 	r.kubernetes = kc
 
+	dc, err := dynamic.NewForConfig(c)
+	if err != nil {
+		return err
+	}
+
+	r.dynamic = dc
+
+	disco, err := discovery.NewDiscoveryClientForConfig(c)
+	if err != nil {
+		return err
+	}
+
+	r.discovery = disco
+
 	return nil
 }
 
@@ -186,6 +211,17 @@ func (r *Resolver) setupIngress() error {
 	}
 
 	r.ingress = i
+
+	return nil
+}
+
+func (r *Resolver) setupHTTPProxy() error {
+	h, err := NewHTTPProxy(r.dynamic, r.discovery)
+	if err != nil {
+		return err
+	}
+
+	r.httpproxy = h
 
 	return nil
 }
