@@ -68,7 +68,7 @@ resource "helm_release" "contour" {
 
   set {
     name  = "contour.resources.requests.memory"
-    value = "128Mi"
+    value = coalesce(var.contour_memory_request, "128Mi")
   }
 
   set {
@@ -99,6 +99,11 @@ resource "helm_release" "contour" {
   set {
     name  = "configInline.tls.minimum-protocol-version"
     value = "1.2"
+  }
+
+  set {
+    name  = "configInline.compression.algorithm"
+    value = "disabled"
   }
 
   dynamic "set" {
@@ -245,7 +250,7 @@ resource "helm_release" "contour_internal" {
 
   set {
     name  = "contour.resources.requests.memory"
-    value = "128Mi"
+    value = coalesce(var.contour_memory_request, "128Mi")
   }
 
   set {
@@ -276,6 +281,11 @@ resource "helm_release" "contour_internal" {
   set {
     name  = "configInline.tls.minimum-protocol-version"
     value = "1.2"
+  }
+
+  set {
+    name  = "configInline.compression.algorithm"
+    value = "disabled"
   }
 
   dynamic "set" {

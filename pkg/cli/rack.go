@@ -55,8 +55,8 @@ var awsKnownParams = map[string]bool{
 	"eks_api_server_public_access_cidrs":  true,
 	"eks_log_types":                       true,
 	"enable_private_access":               true,
-	"contour_cpu_request":                 true,
-	"envoy_cpu_request":                   true, "envoy_memory_request": true,
+	"contour_cpu_request":                 true, "contour_memory_request": true,
+	"envoy_cpu_request": true, "envoy_memory_request": true,
 	"fluentd_disable": true, "fluentd_memory": true,
 	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
@@ -525,6 +525,7 @@ var paramGroups = map[string]map[string]bool{
 	"ingress": {
 		"cert_duration":           true,
 		"contour_cpu_request":     true,
+		"contour_memory_request":  true,
 		"envoy_cpu_request":       true,
 		"envoy_memory_request":    true,
 		"idle_timeout":            true,
@@ -653,7 +654,7 @@ var clearableParams = map[string]bool{
 	// Private API access — clear means "remove all private CIDR rules"
 	"eks_api_server_private_access_cidrs": true,
 	// Ingress resources: clear means "use Helm chart defaults"
-	"contour_cpu_request": true, "envoy_cpu_request": true, "envoy_memory_request": true,
+	"contour_cpu_request": true, "contour_memory_request": true, "envoy_cpu_request": true, "envoy_memory_request": true,
 	// Domain — clear means "use auto-managed"
 	"convox_rack_domain": true,
 	// Custom launch scripts — clear means "remove"
@@ -1362,7 +1363,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	k8sResourceParams := map[string]bool{
-		"contour_cpu_request": true, "envoy_cpu_request": true,
+		"contour_cpu_request": true, "contour_memory_request": true, "envoy_cpu_request": true,
 		"envoy_memory_request": true, "fluentd_memory": true,
 	}
 	k8sResourceRe := regexp.MustCompile(`^\d+(\.\d+)?(m|Ki|Mi|Gi|Ti|Pi|Ei)?$`)

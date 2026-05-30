@@ -279,6 +279,11 @@ variable "contour_cpu_request" {
   default = "100m"
 }
 
+variable "contour_memory_request" {
+  type    = string
+  default = "128Mi"
+}
+
 variable "envoy_cpu_request" {
   type    = string
   default = "100m"

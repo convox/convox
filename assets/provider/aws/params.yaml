@@ -201,6 +201,13 @@ Groups:
         description: |
           CPU request for the Contour control plane pod.
           Has no effect when router_type=nginx.
+      - name: contour_memory_request
+        default: "128Mi"
+        type: string
+        description: |
+          Memory request for the Contour control plane pod. Raise this on racks
+          with many routes, where the control plane holds a larger config.
+          Has no effect when router_type=nginx.
       - name: envoy_cpu_request
         default: "100m"
         type: string
