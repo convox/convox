@@ -84,6 +84,7 @@ var preserveEmpty = map[string]bool{
 	"grafana_dashboard_var_app":       true,
 	"ecr_additional_policy_arn":       true,
 	"contour_cpu_request":             true,
+	"contour_memory_request":          true,
 	"envoy_cpu_request":               true,
 	"envoy_memory_request":            true,
 }
