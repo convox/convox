@@ -75,6 +75,7 @@ module "k8s" {
     FEATURE_GATES                             = var.api_feature_gates
     ROUTER_TYPE                               = var.router_type
     PROXY_PROTOCOL                            = var.proxy_protocol
+    CONTOUR_INTERNAL_TLS                      = var.contour_internal_tls
   }
 }
 

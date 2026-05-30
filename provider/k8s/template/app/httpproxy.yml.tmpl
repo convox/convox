@@ -21,7 +21,7 @@ spec:
   ingressClassName: {{.IngressClassName}}
   virtualhost:
     fqdn: {{ safe .Host }}
-    {{- if .ConvoxDomainTLSCertDisable}}
+    {{- if or .Service.Certificate.Id .ConvoxDomainTLS}}
     tls:
       secretName: {{if .Service.Certificate.Id}}{{.Service.Certificate.Id}}{{else}}cert-{{.Service.Name}}{{end}}
     {{- end}}
@@ -76,8 +76,10 @@ spec:
   ingressClassName: {{$.IngressClassName}}
   virtualhost:
     fqdn: {{ safe $d }}
+    {{- if or $.Service.Certificate.Id $.ConvoxDomainTLS}}
     tls:
       secretName: {{if $.Service.Certificate.Id}}{{$.Service.Certificate.Id}}{{else}}cert-{{$.Service.Name}}-domains{{end}}
+    {{- end}}
     {{- if $.WhitelistCIDRs}}
     ipAllowPolicy:
     {{- range $.WhitelistCIDRs}}

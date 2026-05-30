@@ -37,7 +37,7 @@ module "api" {
   domain                                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
   domain_internal                           = module.router.endpoint_internal
   disable_image_manifest_cache              = var.disable_image_manifest_cache
-  ecr_additional_policy_arn                  = var.ecr_additional_policy_arn
+  ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
@@ -73,6 +73,7 @@ module "api" {
   router_type                               = var.router_type
   cert_duration                             = var.cert_duration
   proxy_protocol                            = var.proxy_protocol
+  contour_internal_tls                      = var.contour_internal_tls
 }
 
 module "metrics" {
