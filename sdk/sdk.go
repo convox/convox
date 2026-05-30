@@ -3,12 +3,14 @@ package sdk
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -18,8 +20,9 @@ import (
 )
 
 const (
-	sortableTime     = "20060102.150405.000000000"
-	statusCodePrefix = "F1E49A85-0AD7-4AEF-A618-C249C6E6568D:"
+	sortableTime       = "20060102.150405.000000000"
+	statusCodePrefix   = "F1E49A85-0AD7-4AEF-A618-C249C6E6568D:"
+	ecsExecSessionByte = '\x00'
 )
 
 var (
@@ -199,6 +202,116 @@ func (c *Client) WebsocketExit(path string, ro stdsdk.RequestOptions, rw io.Read
 		}
 		if err != nil {
 			return code, err
+		}
+
+		if i := strings.Index(string(buf[0:n]), statusCodePrefix); i > -1 {
+			if _, err := rw.Write(buf[0:i]); err != nil {
+				return 0, err
+			}
+
+			m := i + len(statusCodePrefix)
+
+			code, err = strconv.Atoi(strings.TrimSpace(string(buf[m:n])))
+			if err != nil {
+				return 0, fmt.Errorf("unable to read exit code")
+			}
+
+			continue
+		}
+
+		if _, err := rw.Write(buf[0:n]); err != nil {
+			return 0, err
+		}
+	}
+}
+
+type ecsExecSession struct {
+	SessionID  string `json:"sessionId"`
+	StreamURL  string `json:"streamUrl"`
+	TokenValue string `json:"tokenValue"`
+	Region     string `json:"region"`
+}
+
+var runSessionManagerPlugin = func(session ecsExecSession) (int, error) {
+	pluginPath, err := exec.LookPath("session-manager-plugin")
+	if err != nil {
+		return -1, fmt.Errorf("session-manager-plugin not found in PATH. Install it: https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html")
+	}
+
+	sessionJSON, err := json.Marshal(map[string]string{
+		"SessionId":  session.SessionID,
+		"StreamUrl":  session.StreamURL,
+		"TokenValue": session.TokenValue,
+	})
+	if err != nil {
+		return -1, err
+	}
+
+	targetJSON, err := json.Marshal(map[string]string{
+		"Target": session.SessionID,
+	})
+	if err != nil {
+		return -1, err
+	}
+
+	endpoint := fmt.Sprintf("https://ssm.%s.amazonaws.com", session.Region)
+
+	cmd := exec.Command(pluginPath, string(sessionJSON), session.Region, "StartSession", "", string(targetJSON), endpoint)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode(), nil
+		}
+		return -1, err
+	}
+
+	return 0, nil
+}
+
+// execStream relays an exec websocket. A v2 rack with ECSExec enabled signals an
+// ECS Exec session by prefixing the FIRST payload with ecsExecSessionByte and a
+// JSON session blob (handed to session-manager-plugin); any other rack streams
+// the process output and the exit-code marker, which we forward unchanged.
+func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
+	buf := make([]byte, 10*1024)
+	code := 0
+	first := true
+	var ecsSessionData []byte
+
+	for {
+		n, err := ws.Read(buf)
+		if err == io.EOF {
+			if ecsSessionData != nil {
+				return -1, fmt.Errorf("ECS Exec session ended before it was established; please retry")
+			}
+			return code, nil
+		}
+		if err != nil {
+			return code, err
+		}
+
+		if ecsSessionData != nil {
+			ecsSessionData = append(ecsSessionData, buf[0:n]...)
+			var session ecsExecSession
+			if err := json.Unmarshal(ecsSessionData, &session); err != nil {
+				continue
+			}
+			return runSessionManagerPlugin(session)
+		}
+
+		if first {
+			first = false
+			if n > 0 && buf[0] == ecsExecSessionByte {
+				ecsSessionData = append([]byte{}, buf[1:n]...)
+				var session ecsExecSession
+				if err := json.Unmarshal(ecsSessionData, &session); err != nil {
+					continue
+				}
+				return runSessionManagerPlugin(session)
+			}
 		}
 
 		if i := strings.Index(string(buf[0:n]), statusCodePrefix); i > -1 {

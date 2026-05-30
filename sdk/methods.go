@@ -747,9 +747,10 @@ func (c *Client) ObjectStore(app, key string, r io.Reader, opts structs.ObjectSt
 	return v, err
 }
 
+// NOTE: this file is generated, but ProcessExec is hand-maintained to relay the
+// v2 ECS Exec session protocol via execStream (in sdk.go). Preserve it if you
+// regenerate sdk/methods.go.
 func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
-	var err error
-
 	ro, err := stdsdk.MarshalOptions(opts)
 	if err != nil {
 		return 0, err
@@ -758,14 +759,13 @@ func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts st
 	ro.Headers["command"] = command
 	ro.Body = rw
 
-	var v int
-
-	v, err = c.WebsocketExit(fmt.Sprintf("/apps/%s/processes/%s/exec", app, pid), ro, rw)
+	ws, err := c.Websocket(fmt.Sprintf("/apps/%s/processes/%s/exec", app, pid), ro)
 	if err != nil {
 		return 0, err
 	}
+	defer ws.Close()
 
-	return v, err
+	return execStream(ws, rw)
 }
 
 func (c *Client) ProcessGet(app, pid string) (*structs.Process, error) {
