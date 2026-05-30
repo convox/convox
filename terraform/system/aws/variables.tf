@@ -204,6 +204,11 @@ variable "internal_router" {
   default = false
 }
 
+variable "contour_internal_tls" {
+  type    = bool
+  default = true
+}
+
 variable "image" {
   default = "convox/convox"
 }

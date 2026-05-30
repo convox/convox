@@ -410,7 +410,7 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 		"cost_tracking_enable", "deploy_extra_nlb", "disable_convox_resolver",
 		"disable_image_manifest_cache", "ebs_volume_encryption_enabled",
 		"ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
-		"gpu_tag_enable", "imds_tags_enable", "internal_router",
+		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
 		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
 		"telemetry", "vpa_enable",
 	} {

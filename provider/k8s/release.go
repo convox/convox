@@ -680,10 +680,18 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 			items = append(items, data)
 		}
 
-		if s.Certificate.Id == "" && !p.ConvoxDomainTLSCertDisable {
+		convoxDomainTLS := !p.ConvoxDomainTLSCertDisable && (!internal || p.ContourInternalTLS)
+
+		certIssuer := "letsencrypt"
+		if internal && p.ContourInternalTLS {
+			certIssuer = "self-signed"
+		}
+
+		if s.Certificate.Id == "" && convoxDomainTLS {
 			certParams := map[string]interface{}{
 				"App":          a.Name,
 				"CertDuration": s.Certificate.Duration,
+				"CertIssuer":   certIssuer,
 				"HasDomains":   len(s.Domains) > 0,
 				"Host":         p.ServiceHost(a.Name, s),
 				"Namespace":    p.AppNamespace(a.Name),
@@ -724,21 +732,21 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 		}
 
 		params := map[string]interface{}{
-			"Annotations":                translation.Annotations,
-			"App":                        a.Name,
-			"BackendProtocol":            contourBackendProtocol(s.Port.Scheme),
-			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
-			"Host":                       p.ServiceHost(a.Name, s),
-			"Idles":                      common.DefaultBool(opts.Idle, idles),
-			"IngressClassName":           ingressClassName,
-			"Namespace":                  p.AppNamespace(a.Name),
-			"ProxyProtocol":              proxyProtocol,
-			"Rack":                       p.Name,
-			"RateLimitRPS":               translation.RateLimitRPS,
-			"Service":                    s,
-			"TimeoutResponse":            timeoutResponse,
-			"TimeoutIdle":                timeoutIdle,
-			"WhitelistCIDRs":             whitelistCIDRs,
+			"Annotations":      translation.Annotations,
+			"App":              a.Name,
+			"BackendProtocol":  contourBackendProtocol(s.Port.Scheme),
+			"ConvoxDomainTLS":  convoxDomainTLS,
+			"Host":             p.ServiceHost(a.Name, s),
+			"Idles":            common.DefaultBool(opts.Idle, idles),
+			"IngressClassName": ingressClassName,
+			"Namespace":        p.AppNamespace(a.Name),
+			"ProxyProtocol":    proxyProtocol,
+			"Rack":             p.Name,
+			"RateLimitRPS":     translation.RateLimitRPS,
+			"Service":          s,
+			"TimeoutResponse":  timeoutResponse,
+			"TimeoutIdle":      timeoutIdle,
+			"WhitelistCIDRs":   whitelistCIDRs,
 		}
 
 		data, err := p.RenderTemplate("app/httpproxy", params)

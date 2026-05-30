@@ -15,7 +15,7 @@ spec:
       system: convox
       type: letsencrypt-certificate
   issuerRef:
-    name: letsencrypt
+    name: {{ or .CertIssuer "letsencrypt" }}
     kind: ClusterIssuer
     group: cert-manager.io
   usages:
@@ -45,7 +45,7 @@ spec:
       system: convox
       type: letsencrypt-certificate
   issuerRef:
-    name: letsencrypt
+    name: {{ or .CertIssuer "letsencrypt" }}
     kind: ClusterIssuer
     group: cert-manager.io
   usages:

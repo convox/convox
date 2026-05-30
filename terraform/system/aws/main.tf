@@ -141,7 +141,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
-  eks_access_entries                   = var.eks_access_entries == "true"
+  eks_access_entries                  = var.eks_access_entries == "true"
   karpenter_auth_mode                 = var.karpenter_auth_mode == "true"
   karpenter_enabled                   = var.karpenter_enabled == "true"
   karpenter_instance_families         = var.karpenter_instance_families
@@ -279,6 +279,7 @@ module "rack" {
   high_availability                         = var.high_availability
   idle_timeout                              = var.idle_timeout
   internal_router                           = var.internal_router
+  contour_internal_tls                      = var.contour_internal_tls
   image                                     = local.image
   keda_enable                               = var.keda_enable
   lbc_helm_id                               = module.cluster.lbc_helm_id
@@ -306,7 +307,7 @@ module "rack" {
   telemetry_map                             = local.telemetry_map
   telemetry_default_map                     = local.telemetry_default_map
   whitelist                                 = split(",", var.whitelist)
-  ecr_additional_policy_arn                  = var.ecr_additional_policy_arn
+  ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix

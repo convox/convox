@@ -12,17 +12,17 @@ import (
 
 func httpProxyRenderParams(class string, proxyProtocol bool, whitelist []string, timeoutResponse string) map[string]interface{} {
 	return map[string]interface{}{
-		"Annotations":                map[string]string{},
-		"App":                        "test-app",
-		"BackendProtocol":            "",
-		"ConvoxDomainTLSCertDisable": true,
-		"Host":                       "web.test-app.example.com",
-		"Idles":                      false,
-		"IngressClassName":           class,
-		"Namespace":                  "ns",
-		"ProxyProtocol":              proxyProtocol,
-		"Rack":                       "rack",
-		"RateLimitRPS":               0,
+		"Annotations":      map[string]string{},
+		"App":              "test-app",
+		"BackendProtocol":  "",
+		"ConvoxDomainTLS":  true,
+		"Host":             "web.test-app.example.com",
+		"Idles":            false,
+		"IngressClassName": class,
+		"Namespace":        "ns",
+		"ProxyProtocol":    proxyProtocol,
+		"Rack":             "rack",
+		"RateLimitRPS":     0,
 		"Service": manifest.Service{
 			Name:    "web",
 			Port:    manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
@@ -54,6 +54,61 @@ func TestRenderTemplateHTTPProxySourceSelection(t *testing.T) {
 func TestResponseTimeout(t *testing.T) {
 	require.Equal(t, "infinity", responseTimeout(""))
 	require.Equal(t, "120s", responseTimeout("120s"))
+}
+
+func TestRenderTemplateHTTPProxyConvoxDomainTLS(t *testing.T) {
+	p := Provider{Engine: &mock.TestEngine{}}
+	p.templater = templater.New(template.TemplatesFS)
+
+	on := httpProxyRenderParams("contour-internal", false, nil, "infinity")
+	on["ConvoxDomainTLS"] = true
+	withTLS, err := p.RenderTemplate("app/httpproxy", on)
+	require.NoError(t, err)
+	require.Contains(t, string(withTLS), "tls:")
+	require.Contains(t, string(withTLS), "secretName: cert-web")
+
+	off := httpProxyRenderParams("contour-internal", false, nil, "infinity")
+	off["ConvoxDomainTLS"] = false
+	noTLS, err := p.RenderTemplate("app/httpproxy", off)
+	require.NoError(t, err)
+	require.NotContains(t, string(noTLS), "secretName:")
+
+	// internal + OFF + custom domain must not reference a never-created cert secret
+	offDomains := httpProxyRenderParams("contour-internal", false, nil, "infinity")
+	offDomains["ConvoxDomainTLS"] = false
+	offDomains["Service"] = manifest.Service{
+		Name:    "web",
+		Port:    manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+		Timeout: 60,
+		Domains: manifest.ServiceDomains{"custom.example.com"},
+	}
+	noDomainTLS, err := p.RenderTemplate("app/httpproxy", offDomains)
+	require.NoError(t, err)
+	require.NotContains(t, string(noDomainTLS), "secretName: cert-web-domains")
+	require.Contains(t, string(noDomainTLS), "custom.example.com")
+}
+
+func TestRenderTemplateCertificateIssuer(t *testing.T) {
+	p := Provider{Engine: &mock.TestEngine{}}
+	p.templater = templater.New(template.TemplatesFS)
+
+	base := map[string]interface{}{
+		"App":        "test-app",
+		"HasDomains": false,
+		"Host":       "web.test-app.example.com",
+		"Namespace":  "ns",
+		"Service":    manifest.Service{Name: "web"},
+	}
+
+	dflt, err := p.RenderTemplate("app/certificate", base)
+	require.NoError(t, err)
+	require.Contains(t, string(dflt), "name: letsencrypt")
+
+	base["CertIssuer"] = "self-signed"
+	ss, err := p.RenderTemplate("app/certificate", base)
+	require.NoError(t, err)
+	require.Contains(t, string(ss), "name: self-signed")
+	require.NotContains(t, string(ss), "name: letsencrypt")
 }
 
 func TestParseWhitelistCIDRs(t *testing.T) {

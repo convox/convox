@@ -2,9 +2,16 @@ package k8s
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	crand "crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net/url"
 	"os"
@@ -33,6 +40,7 @@ import (
 
 	cmclient "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned"
 	cinformer "github.com/convox/convox/provider/k8s/pkg/client/informers/externalversions/convox/v1"
+	corev1 "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -93,6 +101,7 @@ type Provider struct {
 	Router                              string
 	RouterType                          string
 	ProxyProtocol                       bool
+	ContourInternalTLS                  bool
 	Socket                              string
 	Storage                             string
 	SubnetIDs                           string
@@ -224,6 +233,7 @@ func FromEnv() (*Provider, error) {
 		Router:                           os.Getenv("ROUTER"),
 		RouterType:                       common.CoalesceString(os.Getenv("ROUTER_TYPE"), "nginx"),
 		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
+		ContourInternalTLS:               os.Getenv("CONTOUR_INTERNAL_TLS") == "true",
 		Socket:                           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:                          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
 		SubnetIDs:                        os.Getenv("SUBNET_IDS"),
@@ -654,6 +664,63 @@ func (p *Provider) installCertManagerConfig() {
 			return
 		}
 	}
+}
+
+// EnsureSelfSignedCA creates the rack self-signed CA secret if absent so cert-manager can mint the self-signed ClusterIssuer from it.
+func (p *Provider) EnsureSelfSignedCA() error {
+	if _, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), "ca", am.GetOptions{}); err == nil {
+		return nil
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), crand.Reader)
+	if err != nil {
+		return fmt.Errorf("failed to generate CA key: %w", err)
+	}
+
+	serial, err := crand.Int(crand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	tmpl := &x509.Certificate{
+		SerialNumber:          serial,
+		Subject:               pkix.Name{CommonName: "Convox Rack CA"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(10 * 365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	certDER, err := x509.CreateCertificate(crand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		return fmt.Errorf("failed to create CA certificate: %w", err)
+	}
+
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	if err != nil {
+		return fmt.Errorf("failed to marshal CA key: %w", err)
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: am.ObjectMeta{
+			Name:      "ca",
+			Namespace: p.Namespace,
+		},
+		Data: map[string][]byte{
+			"tls.crt": pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
+			"tls.key": pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}),
+		},
+		Type: corev1.SecretTypeTLS,
+	}
+
+	if _, err := p.Cluster.CoreV1().Secrets(p.Namespace).Create(context.TODO(), secret, am.CreateOptions{}); err != nil {
+		return fmt.Errorf("failed to create CA secret: %w", err)
+	}
+
+	fmt.Printf("generated self-signed CA in %s/ca\n", p.Namespace)
+
+	return nil
 }
 
 func (p *Provider) startApiProxy() {

@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -74,6 +75,12 @@ func FromEnv() (*Provider, error) {
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	if err := p.initializeAwsServices(); err != nil {
 		return err
+	}
+
+	if p.Provider.RouterType == "contour" && p.Provider.ContourInternalTLS {
+		if err := p.Provider.EnsureSelfSignedCA(); err != nil {
+			fmt.Printf("warning: could not ensure self-signed CA: %s\n", err)
+		}
 	}
 
 	if err := p.Provider.Initialize(opts); err != nil {

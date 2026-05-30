@@ -163,6 +163,16 @@ Groups:
         type: boolean
         description: Creates an internal loadbalancer within the VPC that can be used
           for VPC peering or to access other AWS Services
+      - name: contour_internal_tls
+        default: "true"
+        type: boolean
+        description: |
+          Applies only when router_type=contour. The Contour internal router
+          serves HTTPS for internal_router services using a certificate issued by
+          the rack's self-signed CA (the internal domain is private, so publicly
+          trusted ACME certificates cannot be issued for it). Set to false to serve
+          the internal router over plain HTTP and skip the per-rack CA and cert
+          resources. No effect on nginx racks.
       - name: proxy_protocol
         default: "false"
         type: boolean

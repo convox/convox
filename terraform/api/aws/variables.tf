@@ -222,3 +222,7 @@ variable "router_type" {
 variable "proxy_protocol" {
   default = false
 }
+
+variable "contour_internal_tls" {
+  default = true
+}
