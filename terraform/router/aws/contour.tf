@@ -57,6 +57,11 @@ resource "helm_release" "contour" {
   }
 
   set {
+    name  = "envoy.service.externalTrafficPolicy"
+    value = ""
+  }
+
+  set {
     name  = "contour.resources.requests.cpu"
     value = coalesce(var.contour_cpu_request, "100m")
   }
@@ -226,6 +231,11 @@ resource "helm_release" "contour_internal" {
   set {
     name  = "envoy.service.type"
     value = "ClusterIP"
+  }
+
+  set {
+    name  = "envoy.service.externalTrafficPolicy"
+    value = ""
   }
 
   set {
