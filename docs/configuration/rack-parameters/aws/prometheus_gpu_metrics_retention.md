@@ -1,5 +1,6 @@
 ---
 title: "prometheus_gpu_metrics_retention"
+description: "The prometheus_gpu_metrics_retention AWS rack parameter sets the retention window for the free-plan Prometheus deployed via the Convox Console, defaulting to 24h."
 slug: prometheus_gpu_metrics_retention
 url: /configuration/rack-parameters/aws/prometheus_gpu_metrics_retention
 ---

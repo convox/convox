@@ -1,5 +1,6 @@
 ---
 title: "Volumes"
+description: "Convox supports several volume types for persistent and temporary data, including Azure Files NFS shares with ReadWriteOnce, ReadOnlyMany, and ReadWriteMany."
 slug: volumes
 url: /configuration/volumes
 ---

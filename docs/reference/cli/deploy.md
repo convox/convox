@@ -1,5 +1,6 @@
 ---
 title: "deploy"
+description: "The convox deploy command creates a build and promotes it in one step, with flags for build args, external builds, alternate manifests, and forced deploys."
 slug: deploy
 url: /reference/cli/deploy
 ---

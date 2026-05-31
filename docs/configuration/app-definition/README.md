@@ -1,5 +1,6 @@
 ---
 title: "App Definition"
+description: "Define an app's runtime behavior in Convox through environment variables, config mounts, volumes, agents, app settings, and private registry credentials."
 slug: app-definition
 url: /configuration/app-definition
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Build Commands"
+description: "The convox cloud build commands create, list, export, import, and inspect builds for an application and view their build logs."
 slug: builds
 url: /cloud/cli-reference/builds
 ---

@@ -1,5 +1,6 @@
 ---
 title: "SSL"
+description: "Convox generates Let's Encrypt SSL certificates for your service domains via HTTP-01 by default, with DNS-01 and wildcard certificate options on AWS Route53."
 slug: ssl
 url: /deployment/ssl
 ---

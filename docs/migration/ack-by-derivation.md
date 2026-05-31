@@ -1,5 +1,6 @@
 ---
 title: "ack_by Derivation"
+description: "How the actor field on budget audit events changed in 3.24.6 to carry the authenticated user's email instead of rack-password, and how receivers should adapt."
 slug: ack-by-derivation
 url: /migration/ack-by-derivation
 ---

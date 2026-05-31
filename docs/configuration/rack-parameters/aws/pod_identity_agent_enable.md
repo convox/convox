@@ -1,5 +1,6 @@
 ---
 title: "pod_identity_agent_enable"
+description: "The pod_identity_agent_enable AWS rack parameter installs the EKS Pod Identity Agent so pods can assume IAM roles directly, defaulting to false."
 slug: pod_identity_agent_enable
 url: /configuration/rack-parameters/aws/pod_identity_agent_enable
 ---
@@ -53,6 +54,6 @@ In this example, the `web` service is granted permissions defined in three AWS I
 - The IAM role names follow the pattern `eksctl-<cluster-name>-addon-pod-identity-role`.
 - Applications using Pod Identity don't need to include AWS credentials in their environment variables.
 - When a pod is created, the identity agent automatically injects AWS credentials into the pod's environment.
-- This implementation leverages EKS Pod Identity, which is the AWS-recommended approach for pod IAM access.
+- This implementation uses EKS Pod Identity, which is the AWS-recommended approach for pod IAM access.
 - Pod Identity replaces the older kiam/kube2iam pattern as well as the IAM Roles for Service Accounts (IRSA) approach.
 - Each service can have different IAM policies attached, allowing for precise access control.

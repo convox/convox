@@ -1,5 +1,6 @@
 ---
 title: "Example Apps"
+description: "Example applications showing how to deploy languages, frameworks, and open-source apps on Convox, each with a convox.yml, Dockerfile, and deployment steps."
 slug: example-apps
 url: /example-apps
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Instance"
+description: "An Instance is a compute node that provides CPU and memory capacity for running Processes, managed through node_type and scaling Rack Parameters."
 slug: instance
 url: /reference/primitives/rack/instance
 ---

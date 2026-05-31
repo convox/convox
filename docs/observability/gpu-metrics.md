@@ -1,5 +1,6 @@
 ---
 title: "GPU Observability"
+description: "GPU observability gives per-pod, per-service, and per-app GPU telemetry such as utilization, memory, and power draw via DCGM, on AWS racks for v1."
 slug: gpu-metrics
 url: /observability/gpu-metrics
 ---

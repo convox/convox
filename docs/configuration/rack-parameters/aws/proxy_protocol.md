@@ -1,5 +1,6 @@
 ---
 title: "proxy_protocol"
+description: "The proxy_protocol AWS rack parameter enables the Proxy Protocol so the client source IP appears in the x-forwarded-for header, defaulting to false."
 slug: proxy_protocol
 url: /configuration/rack-parameters/aws/proxy_protocol
 ---

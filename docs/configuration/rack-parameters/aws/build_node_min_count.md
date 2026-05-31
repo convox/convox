@@ -1,5 +1,6 @@
 ---
 title: "build_node_min_count"
+description: "The build_node_min_count AWS rack parameter sets the minimum number of build nodes to keep running, defaulting to 0 for on-demand scale-up."
 slug: build_node_min_count
 url: /configuration/rack-parameters/aws/build_node_min_count
 ---

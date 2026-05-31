@@ -1,5 +1,6 @@
 ---
 title: "Workload Placement"
+description: "Control where Convox apps and build processes run with custom node groups, node selectors, and dedicated node pools on AWS and Azure racks."
 slug: workload-placement
 url: /configuration/scaling/workload-placement
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Rack"
+description: "A Rack is a platform to build, deploy, and host your Apps, running either locally for development or within your own cloud infrastructure."
 slug: rack
 url: /reference/primitives/rack
 ---

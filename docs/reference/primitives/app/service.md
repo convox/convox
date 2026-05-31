@@ -1,5 +1,6 @@
 ---
 title: "Service"
+description: "A Service is a horizontally-scalable collection of durable Processes that can run at a static count or autoscale in a range based on metrics."
 slug: service
 url: /reference/primitives/app/service
 ---
@@ -126,7 +127,7 @@ services:
 | **grpcHealthEnabled** | boolean   |      false          | Enables gRPC health checking (configures both readiness and liveness probes). Must follow the [gRPC health protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md). See [Health Checks](/configuration/health-checks#grpc-health-checks). |
 | **health**      | string/map | /                   | Health check definition (see below)                                                                                                        |
 | **liveness** | map |      | Liveness check definition (see below). By default it is disabled. If it fails then service will restart |
-| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. All timing parameters are inherited from the **liveness** check; setting timing fields directly on `startupProbe` has no effect. See [Health Checks](/configuration/health-checks#startup-probes) |
+| **startupProbe** | map |  | Startup probe definition. Set `path` (HTTP) or `tcpSocketPort` (TCP) to enable. Timing parameters default to the **liveness** check values when left unset, and you can set them explicitly on `startupProbe` to override. See [Health Checks](/configuration/health-checks#startup-probes) |
 | **image**       | string     |                     | An external Docker image to use for this Service (supersedes **build**)                                                                      |
 | **imagePullSecrets** | list  |                     | Credentials for pulling container images from private registries at runtime (see [imagePullSecrets](#imagepullsecrets) below). Distinct from [Private Registries](/configuration/private-registries) which apply at build time |
 | **ingressAnnotations** | list       |                     | A list of annotation keys and values to add in ingress resource. Check below for reserved annotation keys |

@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_memory_limit_gb"
+description: "The karpenter_build_memory_limit_gb AWS rack parameter sets the maximum total memory in GiB Karpenter can provision across all build nodes, defaulting to 256."
 slug: karpenter_build_memory_limit_gb
 url: /configuration/rack-parameters/aws/karpenter_build_memory_limit_gb
 ---

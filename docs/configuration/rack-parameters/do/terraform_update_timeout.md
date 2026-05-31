@@ -1,5 +1,6 @@
 ---
 title: "terraform_update_timeout"
+description: "The terraform_update_timeout Digital Ocean rack parameter sets how long Terraform waits for DOKS cluster updates to finish, defaulting to 2h."
 slug: terraform_update_timeout
 url: /configuration/rack-parameters/do/terraform_update_timeout
 ---

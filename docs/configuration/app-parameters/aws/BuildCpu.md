@@ -1,5 +1,6 @@
 ---
 title: "BuildCpu"
+description: "The BuildCpu app parameter sets the CPU request for build pods in millicores, controlling how much CPU is allocated to build processes."
 slug: buildcpu
 url: /configuration/app-parameters/aws/BuildCpu
 ---

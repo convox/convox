@@ -1,5 +1,6 @@
 ---
 title: "karpenter_disruption_budget_nodes"
+description: "The karpenter_disruption_budget_nodes AWS rack parameter caps how many Karpenter workload nodes can be disrupted at once during consolidation, defaulting to 10%."
 slug: karpenter_disruption_budget_nodes
 url: /configuration/rack-parameters/aws/karpenter_disruption_budget_nodes
 ---

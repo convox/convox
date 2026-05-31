@@ -1,5 +1,6 @@
 ---
 title: "nvidia_device_plugin_enable"
+description: "The nvidia_device_plugin_enable AWS rack parameter installs the NVIDIA GPU device plugin so Kubernetes can schedule node GPUs, defaulting to false."
 slug: nvidia_device_plugin_enable
 url: /configuration/rack-parameters/aws/nvidia_device_plugin_enable
 ---

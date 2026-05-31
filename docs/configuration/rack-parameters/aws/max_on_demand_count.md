@@ -1,5 +1,6 @@
 ---
 title: "max_on_demand_count"
+description: "The max_on_demand_count AWS rack parameter sets the maximum number of on-demand nodes when using the mixed node capacity type, defaulting to 100."
 slug: max_on_demand_count
 url: /configuration/rack-parameters/aws/max_on_demand_count
 ---

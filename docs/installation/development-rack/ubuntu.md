@@ -1,5 +1,6 @@
 ---
 title: "Ubuntu / Linux"
+description: "Install a local development Rack on Ubuntu, other Linux distributions, or WSL2 using Minikube, the Docker driver, and convox rack install local."
 slug: ubuntu
 url: /installation/development-rack/ubuntu
 ---
@@ -28,7 +29,7 @@ Start Minikube with the Docker driver, the insecure registry flag for your rack 
 ```bash
 minikube start \
   --driver=docker \
-  --kubernetes-version=v1.33.0 \
+  --kubernetes-version=v1.34.0 \
   --insecure-registry="registry.dev.localdev.convox.cloud" \
   --static-ip=192.168.212.2
 ```
@@ -53,10 +54,10 @@ minikube addons enable ingress-dns
 ### 4. Install the rack
 
 ```bash
-convox rack install local dev -v 3.24.0
+convox rack install local dev -v 3.24.8
 ```
 
-Replace `3.24.0` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+Replace `3.24.8` with the latest version from the [releases page](https://github.com/convox/convox/releases).
 
 ### 5. Verify the installation
 
@@ -71,7 +72,7 @@ Name      dev
 Provider  local
 Router    router.dev.localdev.convox.cloud
 Status    running
-Version   3.24.0
+Version   3.24.8
 ```
 
 ## Using the rack

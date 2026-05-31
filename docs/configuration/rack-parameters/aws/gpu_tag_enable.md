@@ -1,5 +1,6 @@
 ---
 title: "gpu_tag_enable"
+description: "The gpu_tag_enable AWS rack parameter enables GPU tagging on instances for cost tracking and management, defaulting to false."
 slug: gpu_tag_enable
 url: /configuration/rack-parameters/aws/gpu_tag_enable
 ---

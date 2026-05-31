@@ -1,5 +1,6 @@
 ---
 title: "karpenter_node_expiry"
+description: "The karpenter_node_expiry AWS rack parameter sets the maximum lifetime for Karpenter workload nodes before automatic replacement, defaulting to 720h (30 days)."
 slug: karpenter_node_expiry
 url: /configuration/rack-parameters/aws/karpenter_node_expiry
 ---

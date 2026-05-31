@@ -1,5 +1,6 @@
 ---
 title: "additional_build_groups_config"
+description: "The additional_build_groups_config Azure rack parameter configures dedicated build node pools for the AKS cluster, tainted so only build workloads schedule on them."
 slug: additional_build_groups_config
 url: /configuration/rack-parameters/azure/additional_build_groups_config
 ---

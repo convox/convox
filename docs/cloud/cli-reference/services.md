@@ -1,5 +1,6 @@
 ---
 title: "Service Management"
+description: "The convox cloud service commands list services for an application, restart a service or the whole app, and scale a service's count, CPU, and memory."
 slug: services
 url: /cloud/cli-reference/services
 ---

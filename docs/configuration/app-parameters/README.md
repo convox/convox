@@ -1,5 +1,6 @@
 ---
 title: "App Parameters"
+description: "App parameters are per-application settings that control build and deployment behavior for a single app, set with convox apps params."
 slug: app-parameters
 url: /configuration/app-parameters
 ---

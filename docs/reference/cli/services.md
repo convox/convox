@@ -1,5 +1,6 @@
 ---
 title: "services"
+description: "The convox services command lists an app's services with domains and ports and manages restart, in-place update, and Console-driven autoscale triggers."
 slug: services
 url: /reference/cli/services
 ---

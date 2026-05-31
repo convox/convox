@@ -1,5 +1,6 @@
 ---
 title: "node_type"
+description: "The node_type AWS rack parameter sets the EC2 instance type for cluster nodes, fixing their compute, memory, and CPU architecture, defaulting to t3.small."
 slug: node_type
 url: /configuration/rack-parameters/aws/node_type
 ---

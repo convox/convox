@@ -1,5 +1,6 @@
 ---
 title: "Deploy Keys"
+description: "Deploy keys are limited-scope API keys that run a restricted set of convox commands from CI systems without exposing your user credentials."
 slug: deploy-keys
 url: /management/deploy-keys
 ---

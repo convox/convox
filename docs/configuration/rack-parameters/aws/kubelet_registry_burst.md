@@ -1,5 +1,6 @@
 ---
 title: "kubelet_registry_burst"
+description: "The kubelet_registry_burst AWS rack parameter sets the maximum image pull requests allowed in a burst beyond registry_pull_qps, defaulting to 10."
 slug: kubelet_registry_burst
 url: /configuration/rack-parameters/aws/kubelet_registry_burst
 ---

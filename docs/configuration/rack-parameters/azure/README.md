@@ -1,5 +1,6 @@
 ---
 title: "Azure Rack Parameters"
+description: "Reference for the rack parameters available when running a Convox rack on Microsoft Azure, covering node pools, networking, storage, GPU, and TLS settings."
 slug: azure-rack-parameters
 url: /configuration/rack-parameters/azure
 ---

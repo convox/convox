@@ -1,5 +1,6 @@
 ---
 title: "Running Locally"
+description: "Run your application on a local development Rack with convox start, which builds from your Dockerfile and syncs local file changes into running containers."
 slug: running-locally
 url: /development/running-locally
 ---

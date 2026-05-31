@@ -1,5 +1,6 @@
 ---
 title: "convox.yml"
+description: "convox.yml is the manifest that describes your application and all of its infrastructure needs, including services, resources, environment, and settings."
 slug: convox-yml
 url: /configuration/convox-yml
 ---

@@ -1,5 +1,6 @@
 ---
 title: "ecr_scan_on_push_enable"
+description: "The ecr_scan_on_push_enable AWS rack parameter enables ECR image scanning so each image pushed to the repository is automatically scanned for vulnerabilities."
 slug: ecr_scan_on_push_enable
 url: /configuration/rack-parameters/aws/ecr_scan_on_push_enable
 ---
@@ -9,7 +10,7 @@ url: /configuration/rack-parameters/aws/ecr_scan_on_push_enable
 ## Description
 The `ecr_scan_on_push_enable` parameter enables or disables the image scan feature for images pushed to an Amazon ECR repository. When enabled, each image pushed to the repository is automatically scanned for vulnerabilities.
 
-This feature leverages Amazon ECR's native scanning capability, which identifies software vulnerabilities in your container images. After the scan completes, you can retrieve the scan results through the AWS Management Console or AWS CLI.
+This feature uses Amazon ECR's native scanning capability, which identifies software vulnerabilities in your container images. After the scan completes, you can retrieve the scan results through the AWS Management Console or AWS CLI.
 
 ## Default Value
 The default value for `ecr_scan_on_push_enable` is `false`.

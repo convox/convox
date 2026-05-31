@@ -1,5 +1,6 @@
 ---
 title: "vpc_id"
+description: "The vpc_id AWS rack parameter sets an existing VPC ID to use for cluster creation, defaulting to empty so Convox creates a new VPC."
 slug: vpc_id
 url: /configuration/rack-parameters/aws/vpc_id
 ---

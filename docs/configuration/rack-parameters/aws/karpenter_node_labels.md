@@ -1,5 +1,6 @@
 ---
 title: "karpenter_node_labels"
+description: "The karpenter_node_labels AWS rack parameter adds custom Kubernetes labels to Karpenter workload nodes alongside the default convox.io/nodepool=workload label."
 slug: karpenter_node_labels
 url: /configuration/rack-parameters/aws/karpenter_node_labels
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Cloud vs Rack Comparison"
+description: "Compare Convox Cloud managed Machines against self-hosted Convox Racks across features, cost, scalability, and migration to choose the right option."
 slug: comparison
 url: /cloud/comparison
 ---

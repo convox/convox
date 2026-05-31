@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_cpu_limit"
+description: "The karpenter_build_cpu_limit AWS rack parameter sets the maximum total vCPUs Karpenter can provision across all build nodes, defaulting to 32."
 slug: karpenter_build_cpu_limit
 url: /configuration/rack-parameters/aws/karpenter_build_cpu_limit
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Budget Caps"
+description: "Budget Caps track per-app cloud spend and enforce a monthly cap that can alert, block new deploys, or auto-shutdown services when reached."
 slug: budget-caps
 url: /management/budget-caps
 ---
@@ -188,7 +189,7 @@ on every provider (AWS, Azure, GCP, DigitalOcean, Equinix Metal, Local).
 | Set or raise the monthly cap (`--monthly-cap`) | Admin |
 | Set the at-cap action (`--at-cap-action`) | Admin |
 | Set the pricing adjustment (`--pricing-adjustment`) | Admin |
-| Set the alert threshold only (`--alert-threshold-percent`) | `rw` |
+| Set the alert threshold only (`--alert-at`) | `rw` |
 | Clear budget config (`convox budget clear`) | Admin |
 | Reset (`convox budget reset`) | `rw` |
 | Reset with `--force-clear-cooldown` | Admin |
@@ -236,7 +237,7 @@ Edge cases:
 - **Per-app entry cap.** The breakdown holds up to 1000 services per app. Once
   full, existing rows keep accumulating but new services are dropped from this
   month's breakdown, and an `app:budget:per-service-truncated` event fires.
-  Subscribe via webhook or `convox events list -a <app>` to surface it. Most
+  Subscribe via webhook to surface it. Most
   apps stay well under the cap; if you hit it, check for unbounded
   service-name churn.
 - **Pre-3.24.6 history.** Per-service attribution starts populating after

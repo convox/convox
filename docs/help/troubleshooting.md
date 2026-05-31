@@ -1,5 +1,6 @@
 ---
 title: "Troubleshooting"
+description: "Diagnose common Convox problems including install errors, failed deploys, SSL and health check failures, stuck uninstalls, and disappearing environment variables."
 slug: troubleshooting
 url: /help/troubleshooting
 ---

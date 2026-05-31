@@ -1,5 +1,6 @@
 ---
 title: "Migrating from Docker Compose"
+description: "Move a Docker Compose app to Convox by translating compose.yaml services, ports, environment, volumes, and datastores into one convox.yml on a Rack."
 slug: migrating-from-docker-compose
 url: /migration/docker-compose
 ---

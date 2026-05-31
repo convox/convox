@@ -1,5 +1,6 @@
 ---
 title: "apps"
+description: "The convox apps command lists, creates, and deletes apps and manages app-specific operations such as locks, parameters, and import or export."
 slug: apps
 url: /reference/cli/apps
 ---

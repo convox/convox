@@ -1,5 +1,6 @@
 ---
 title: "CI/CD Workflows"
+description: "Workflows automate build, test, and deploy on GitHub or GitLab events, with review workflows for pull requests and deployment workflows for branch merges."
 slug: workflows
 url: /deployment/workflows
 ---
@@ -170,7 +171,7 @@ With this approach, code merged to master is automatically deployed to staging a
 ## Best Practices
 
 - **Use Clear Naming**: Name workflows and jobs descriptively to make them easy to identify
-- **Leverage Environment Variables**: Use different environment configurations for review, staging, and production deployments
+- **Use Environment Variables**: Use different environment configurations for review, staging, and production deployments
 - **Implement Before/After Commands**: Use these hooks for database migrations and post-deployment tasks
 - **Combine with Feature Branches**: Create a workflow that matches your team's branching strategy
 - **Monitor Job Logs**: Regularly check job logs to identify and resolve issues quickly

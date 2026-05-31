@@ -1,5 +1,6 @@
 ---
 title: "Rack-to-Rack Communication"
+description: "Enable private communication between AWS Racks using the internal_router parameter and the service internalRouter attribute over a peered VPC connection."
 slug: rack-to-rack-communication
 url: /configuration/rack-to-rack
 ---

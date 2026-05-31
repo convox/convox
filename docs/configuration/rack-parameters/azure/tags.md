@@ -1,5 +1,6 @@
 ---
 title: "tags"
+description: "The tags Azure rack parameter applies custom Azure resource tags to the rack resource group and load balancer for cost tracking, organization, and compliance."
 slug: tags
 url: /configuration/rack-parameters/azure/tags
 ---

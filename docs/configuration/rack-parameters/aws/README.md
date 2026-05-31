@@ -1,5 +1,6 @@
 ---
 title: "AWS Rack Parameters"
+description: "Reference for the AWS rack parameters that configure a Convox rack on Amazon Web Services, grouped by networking, ingress, Karpenter, nodes, build, and GPU."
 slug: aws-rack-parameters
 url: /configuration/rack-parameters/aws
 ---

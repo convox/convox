@@ -1,5 +1,6 @@
 ---
 title: "BuildLabels"
+description: "The BuildLabels app parameter sets Kubernetes node selector labels for build pods, directing build processes to specific node groups."
 slug: buildlabels
 url: /configuration/app-parameters/aws/BuildLabels
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Console"
+description: "The Convox Console is the web management interface for managing Racks, Apps, deployments, team access, and integrations across all your cloud providers."
 slug: overview
 url: /console/overview
 ---

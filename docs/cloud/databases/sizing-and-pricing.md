@@ -1,5 +1,6 @@
 ---
 title: "Database Sizing and Pricing"
+description: "Convox Cloud Database pricing covers the dev, small, medium, and large classes with hourly billing, fixed monthly rates, and doubled cost for Multi-AZ failover."
 slug: sizing-and-pricing
 url: /cloud/databases/sizing-and-pricing
 ---

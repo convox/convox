@@ -1,5 +1,6 @@
 ---
 title: "additional_karpenter_nodepools_config"
+description: "The additional_karpenter_nodepools_config AWS rack parameter creates custom Karpenter NodePools beyond the built-in workload and build pools."
 slug: additional_karpenter_nodepools_config
 url: /configuration/rack-parameters/aws/additional_karpenter_nodepools_config
 ---

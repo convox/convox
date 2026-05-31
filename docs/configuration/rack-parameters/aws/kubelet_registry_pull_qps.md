@@ -1,5 +1,6 @@
 ---
 title: "kubelet_registry_pull_qps"
+description: "The kubelet_registry_pull_qps AWS rack parameter caps the image pull requests to a container registry per second, defaulting to 5."
 slug: kubelet_registry_pull_qps
 url: /configuration/rack-parameters/aws/kubelet_registry_pull_qps
 ---

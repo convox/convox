@@ -1,5 +1,6 @@
 ---
 title: "key_pair_name"
+description: "The key_pair_name AWS rack parameter installs an EC2 key pair on all EKS node instances to enable SSH access, empty by default with no key assigned."
 slug: key_pair_name
 url: /configuration/rack-parameters/aws/key_pair_name
 ---

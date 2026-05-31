@@ -1,5 +1,6 @@
 ---
 title: "keda_enable"
+description: "The keda_enable AWS rack parameter installs KEDA on the rack for event-driven autoscaling on queues, databases, and custom metrics, defaulting to false."
 slug: keda_enable
 url: /configuration/rack-parameters/aws/keda_enable
 ---

@@ -1,5 +1,6 @@
 ---
 title: "region"
+description: "The region Azure rack parameter sets the Azure region where the Convox rack is deployed, affecting latency, availability, and cost, defaulting to eastus."
 slug: region
 url: /configuration/rack-parameters/azure/region
 ---

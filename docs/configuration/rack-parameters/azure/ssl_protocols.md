@@ -1,5 +1,6 @@
 ---
 title: "ssl_protocols"
+description: "The ssl_protocols Azure rack parameter sets which SSL/TLS protocol versions the nginx ingress controller accepts, defaulting to the nginx default protocols."
 slug: ssl_protocols
 url: /configuration/rack-parameters/azure/ssl_protocols
 ---

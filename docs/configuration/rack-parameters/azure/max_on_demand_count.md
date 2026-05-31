@@ -1,5 +1,6 @@
 ---
 title: "max_on_demand_count"
+description: "The max_on_demand_count Azure rack parameter sets the maximum number of nodes the autoscaler can provision in the default AKS node pool, defaulting to 100."
 slug: max_on_demand_count
 url: /configuration/rack-parameters/azure/max_on_demand_count
 ---

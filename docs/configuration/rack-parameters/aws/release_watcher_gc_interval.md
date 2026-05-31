@@ -1,5 +1,6 @@
 ---
 title: "release_watcher_gc_interval"
+description: "The release_watcher_gc_interval AWS rack parameter controls how often the rack sweeps orphaned tracking slots for in-flight promote operations, defaulting to 5m."
 slug: release_watcher_gc_interval
 url: /configuration/rack-parameters/aws/release_watcher_gc_interval
 ---

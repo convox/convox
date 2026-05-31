@@ -1,5 +1,6 @@
 ---
 title: "karpenter_auth_mode"
+description: "The karpenter_auth_mode AWS rack parameter is a one-way migration that moves the EKS cluster to API_AND_CONFIG_MAP access mode to prepare it for Karpenter."
 slug: karpenter_auth_mode
 url: /configuration/rack-parameters/aws/karpenter_auth_mode
 ---

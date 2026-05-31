@@ -1,5 +1,6 @@
 ---
 title: "karpenter_instance_sizes"
+description: "The karpenter_instance_sizes AWS rack parameter specifies which EC2 instance sizes Karpenter can use for workload nodes, allowing all sizes when empty."
 slug: karpenter_instance_sizes
 url: /configuration/rack-parameters/aws/karpenter_instance_sizes
 ---

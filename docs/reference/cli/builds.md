@@ -1,5 +1,6 @@
 ---
 title: "builds"
+description: "The convox builds command lists builds and manages build operations such as info, logs, and importing or exporting builds between apps."
 slug: builds
 url: /reference/cli/builds
 ---

@@ -1,5 +1,6 @@
 ---
 title: "start"
+description: "The convox start command runs an application locally for development, building services and syncing local code changes into the running containers."
 slug: start
 url: /reference/cli/start
 ---

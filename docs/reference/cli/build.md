@@ -1,5 +1,6 @@
 ---
 title: "build"
+description: "The convox build command creates a build from a source directory, with flags for build args, no-cache, alternate manifests, and external local builds."
 slug: build
 url: /reference/cli/build
 ---

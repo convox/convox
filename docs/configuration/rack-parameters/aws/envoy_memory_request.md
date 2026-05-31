@@ -1,5 +1,6 @@
 ---
 title: "envoy_memory_request"
+description: "The envoy_memory_request AWS rack parameter sets the memory request for the Envoy data-plane pods when router_type=contour, defaulting to 256Mi."
 slug: envoy_memory_request
 url: /configuration/rack-parameters/aws/envoy_memory_request
 ---

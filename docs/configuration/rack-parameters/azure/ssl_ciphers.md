@@ -1,5 +1,6 @@
 ---
 title: "ssl_ciphers"
+description: "The ssl_ciphers Azure rack parameter sets the SSL/TLS cipher suites the nginx ingress controller uses for HTTPS, defaulting to the nginx default cipher suite."
 slug: ssl_ciphers
 url: /configuration/rack-parameters/azure/ssl_ciphers
 ---

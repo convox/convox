@@ -1,5 +1,6 @@
 ---
 title: "gpu_observability_chart_version"
+description: "The gpu_observability_chart_version AWS rack parameter pins the Helm chart version for the NVIDIA DCGM exporter installed by gpu_observability_enable."
 slug: gpu_observability_chart_version
 url: /configuration/rack-parameters/aws/gpu_observability_chart_version
 ---

@@ -1,5 +1,6 @@
 ---
 title: "balancers"
+description: "The convox balancers command lists custom Balancers for an app, the dedicated load balancers that expose non-HTTP TCP and UDP services."
 slug: balancers
 url: /reference/cli/balancers
 ---

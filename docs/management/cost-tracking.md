@@ -1,5 +1,6 @@
 ---
 title: "Cost Tracking"
+description: "Cost Tracking aggregates per-app spend from cloud pricing data and in-cluster usage telemetry, feeding budget caps and the convox cost CLI."
 slug: cost-tracking
 url: /management/cost-tracking
 ---

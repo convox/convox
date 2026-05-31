@@ -1,5 +1,6 @@
 ---
 title: "releases"
+description: "The convox releases command lists an app's releases and manages them with info, promote, rollback, manifest, and create-from for build-once deploy-many flows."
 slug: releases
 url: /reference/cli/releases
 ---

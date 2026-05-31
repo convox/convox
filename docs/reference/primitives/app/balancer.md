@@ -1,5 +1,6 @@
 ---
 title: "Balancer"
+description: "A Balancer accepts incoming TCP or UDP traffic and balances it across the Processes of a Service, configured with listen-to-forward port maps in convox.yml."
 slug: balancer
 url: /reference/primitives/app/balancer
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Registry"
+description: "A Registry is a set of stored credentials for a private Docker registry that can be referenced during a Build, added with convox registries add."
 slug: registry
 url: /reference/primitives/rack/registry
 ---

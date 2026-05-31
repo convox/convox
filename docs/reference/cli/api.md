@@ -1,5 +1,6 @@
 ---
 title: "api"
+description: "The convox api command provides low-level access to the Rack API for debugging, scripting, or querying endpoints other commands do not expose."
 slug: api
 url: /reference/cli/api
 ---

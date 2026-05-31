@@ -1,5 +1,6 @@
 ---
 title: "Release"
+description: "A Release is the atomic unit of deployment pairing a Build with a set of environment variables, and promoting one begins a rolling deployment."
 slug: release
 url: /reference/primitives/app/release
 ---

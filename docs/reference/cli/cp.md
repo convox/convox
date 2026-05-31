@@ -1,5 +1,6 @@
 ---
 title: "cp"
+description: "The convox cp command copies files between your local filesystem and a running process, useful for debugging or extracting artifacts from containers."
 slug: cp
 url: /reference/cli/cp
 ---

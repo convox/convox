@@ -1,5 +1,6 @@
 ---
 title: "Console RBAC"
+description: "Role-based access control assigns granular roles and permission policies to users across the Console and CLI under a zero-trust model."
 slug: rbac
 url: /management/rbac
 ---
@@ -9,6 +10,8 @@ url: /management/rbac
 The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization.
 
 Users who have not been assigned a custom role retain a **Legacy Role** that preserves their original Console permissions. Organizations can create, test, and assign new roles at their own pace.
+
+> Custom RBAC roles require a Pro or Plus plan. On other plans, every user in the organization is an Administrator with full access.
 
 > RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
 
@@ -148,7 +151,7 @@ These examples showcase the flexibility of RBAC in managing user access based on
 
 A small set of sensitive operations require an **admin** role, which sits above the standard `Read`/`Write` actions. These checks are enforced by the rack itself, not just the Console UI, so they apply equally to Console users, CLI users authenticating with the rack password, and direct API callers using a JWT.
 
-The pre-created **Administrator** role satisfies these checks. The pre-created **OperatorV2** and **DeveloperV2** roles do not. A custom role satisfies them when it grants `Write` access on the **All Resources** type.
+Only the **Administrator** role satisfies these checks. The pre-created **OperatorV2** and **DeveloperV2** roles do not, and a custom role does not satisfy them even if it grants `Write` access on the **All Resources** type. Administrator is the top-level role for sensitive operations such as billing, budget cap changes, and webhook signing key rotation; `Write` permissions cover day-to-day resource work without granting these.
 
 Admin-only operations include:
 

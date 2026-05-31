@@ -1,5 +1,6 @@
 ---
 title: "build_node_type"
+description: "The build_node_type AWS rack parameter sets the instance type for the build node, defaulting to the same value as the node_type parameter."
 slug: build_node_type
 url: /configuration/rack-parameters/aws/build_node_type
 ---

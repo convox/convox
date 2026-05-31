@@ -1,5 +1,6 @@
 ---
 title: "cost_tracking_enable"
+description: "The cost_tracking_enable AWS rack parameter turns on the rack-side cost accumulator that powers convox cost and per-app budget caps, defaulting to false."
 slug: cost_tracking_enable
 url: /configuration/rack-parameters/aws/cost_tracking_enable
 ---

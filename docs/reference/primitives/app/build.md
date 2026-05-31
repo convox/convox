@@ -1,5 +1,6 @@
 ---
 title: "Build"
+description: "A Build is a compiled version of the code for each Service of an App, produced from a Dockerfile, with each Build creating a new Release."
 slug: build
 url: /reference/primitives/app/build
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Migrating from Render"
+description: "Move a Render app to a Convox v3 rack by translating render.yaml services, env var groups, scaling, and managed datastores into one convox.yml."
 slug: render
 url: /migration/render
 ---
@@ -35,7 +36,7 @@ This guide is for teams running services on Render that want to move to a Convox
 | Custom domain on a service | service `domain` |
 | `disk` (persistent disk) | [Volume](/configuration/volumes) |
 
-> FLAG (human verify against current Render docs): exact `type` and `runtime` value sets, and whether the managed Redis `type` is `keyvalue` or the deprecated `redis`. Render has renamed these in the past. Verified against the Render Blueprint YAML reference (see changelog), but key names drift between Render releases.
+> Render occasionally renames blueprint keys between releases (for example, its managed Redis service `type` is now `keyvalue`). If your `render.yaml` uses older names, check the current Render Blueprint reference as you map fields.
 
 ## convox.yml
 

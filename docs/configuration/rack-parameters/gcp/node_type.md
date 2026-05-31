@@ -1,5 +1,6 @@
 ---
 title: "node_type"
+description: "The node_type GCP rack parameter sets the Compute Engine machine type used for rack nodes, defaulting to n1-standard-1."
 slug: node_type
 url: /configuration/rack-parameters/gcp/node_type
 ---

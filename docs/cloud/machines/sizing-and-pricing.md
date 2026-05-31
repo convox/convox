@@ -1,5 +1,6 @@
 ---
 title: "Sizing and Pricing"
+description: "Convox Cloud Machine pricing across the X-Small, Small, Medium, and Large tiers, with fixed monthly rates, resource specs, and X-Small free hours."
 slug: sizing-and-pricing
 url: /cloud/machines/sizing-and-pricing
 ---
@@ -70,7 +71,7 @@ The X-Small tier includes 250 free hours per month:
 
 **Example usage:**
 - Running 24/7 for ~11 days (250 hours) = FREE
-- Running one machine full month (730 hours) = $7.89 for extra 480 hours
+- Running one machine full month (730 hours) = $7.68 for extra 480 hours
 
 ## Cloud Databases Pricing
 

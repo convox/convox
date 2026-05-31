@@ -1,5 +1,6 @@
 ---
 title: "Webhook Signing"
+description: "Sign outbound Rack webhooks with an HMAC-SHA256 key so receivers can verify the Convox-Signature header, covering key rotation and verification code samples."
 slug: webhook-signing
 url: /console/webhook-signing
 ---
@@ -241,7 +242,7 @@ export function verify(header: string, key: string, body: Buffer | string): bool
     try {
       return timingSafeEqual(Buffer.from(sig, "utf8"), expectedBuf);
     } catch {
-      return false; // length mismatch — safe to reject
+      return false; // length mismatch, safe to reject
     }
   });
 }

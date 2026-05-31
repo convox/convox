@@ -1,5 +1,6 @@
 ---
 title: "Rack Roles"
+description: "Rack Roles control who can perform sensitive Rack-level operations in the Console, separate from the per-App RBAC roles that govern who can deploy an App."
 slug: rack-roles
 url: /console/rack-roles
 ---

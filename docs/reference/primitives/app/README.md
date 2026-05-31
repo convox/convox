@@ -1,5 +1,6 @@
 ---
 title: "App"
+description: "An App is a logical container for Convox Primitives that are updated together through transactional deployments, defined by a single convox.yml."
 slug: app
 url: /reference/primitives/app
 ---

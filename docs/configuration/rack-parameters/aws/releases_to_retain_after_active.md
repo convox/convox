@@ -1,5 +1,6 @@
 ---
 title: "releases_to_retain_after_active"
+description: "The releases_to_retain_after_active AWS rack parameter sets how many releases and their ECR images to keep after the active release, unset by default (no cleanup)."
 slug: releases_to_retain_after_active
 url: /configuration/rack-parameters/aws/releases_to_retain_after_active
 ---

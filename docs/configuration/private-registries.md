@@ -1,5 +1,6 @@
 ---
 title: "Private Registries"
+description: "Convox can pull base images from private registries during build and deploy, authenticating with credentials you register for Docker Hub, ECR, GHCR, and others."
 slug: private-registries
 url: /configuration/private-registries
 ---

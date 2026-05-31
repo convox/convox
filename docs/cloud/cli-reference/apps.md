@@ -1,5 +1,6 @@
 ---
 title: "Application Commands"
+description: "The convox cloud apps commands list, create, delete, export, import, and inspect applications on a machine, plus view and set app parameters."
 slug: apps
 url: /cloud/cli-reference/apps
 ---
@@ -133,6 +134,6 @@ $ convox cloud apps params set <Key=Value> [Key=Value]... -a <app> -i <machine>
 
 **Example:**
 ```bash
-$ convox cloud apps params set BuildMemory=2048 -a myapp -i production
+$ convox cloud apps params set BuildMem=2048 -a myapp -i production
 Setting parameters... OK
 ```

@@ -1,5 +1,6 @@
 ---
 title: "Autoscaling"
+description: "Autoscale Convox services on horizontal count, CPU, memory, and GPU, using scale.autoscale preconfigured triggers including scale-to-zero on AWS."
 slug: autoscaling
 url: /configuration/scaling/autoscaling
 ---

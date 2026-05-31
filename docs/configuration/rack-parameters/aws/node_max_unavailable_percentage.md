@@ -1,5 +1,6 @@
 ---
 title: "node_max_unavailable_percentage"
+description: "The node_max_unavailable_percentage AWS rack parameter caps the percentage of nodes unavailable at once during EKS node group updates, defaulting to 0 (AWS default)."
 slug: node_max_unavailable_percentage
 url: /configuration/rack-parameters/aws/node_max_unavailable_percentage
 ---

@@ -1,5 +1,6 @@
 ---
 title: "update"
+description: "The convox update command updates the Convox CLI to the latest version and links to the workflow for updating a rack one minor version at a time."
 slug: update
 url: /reference/cli/update
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Observability"
+description: "Convox built-in logging and monitoring for production apps, covering log streaming, metrics, dashboards, alerting, deploy diagnostics, and Datadog integration."
 slug: observability
 url: /configuration/observability
 ---

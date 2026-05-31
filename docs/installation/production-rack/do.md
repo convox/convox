@@ -1,5 +1,6 @@
 ---
 title: "Digital Ocean"
+description: "Install a Convox production Rack on Digital Ocean via the command line, covering the API token, Spaces access key, environment, and install parameters."
 slug: digital-ocean
 url: /installation/production-rack/do
 ---

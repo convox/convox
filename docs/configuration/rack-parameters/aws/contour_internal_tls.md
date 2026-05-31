@@ -1,5 +1,6 @@
 ---
 title: "contour_internal_tls"
+description: "The contour_internal_tls AWS rack parameter controls whether internalRouter Services serve HTTPS when the rack uses the Contour router, defaulting to true."
 slug: contour_internal_tls
 url: /configuration/rack-parameters/aws/contour_internal_tls
 ---

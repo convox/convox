@@ -1,5 +1,6 @@
 ---
 title: "karpenter_config"
+description: "The karpenter_config AWS rack parameter is a JSON escape hatch for the Karpenter workload NodePool and EC2NodeClass to reach features not exposed as parameters."
 slug: karpenter_config
 url: /configuration/rack-parameters/aws/karpenter_config
 ---

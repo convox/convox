@@ -1,5 +1,6 @@
 ---
 title: "Rack Settings"
+description: "The Rack Settings page provides Console controls for Rack-wide features including cost tracking, GPU telemetry, KEDA, webhook signing keys, and Rack uninstall."
 slug: rack-settings
 url: /console/rack-settings
 ---

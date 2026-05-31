@@ -1,5 +1,6 @@
 ---
 title: "karpenter_consolidate_after"
+description: "The karpenter_consolidate_after AWS rack parameter sets the delay before Karpenter consolidation triggers on workload nodes, defaulting to 30s."
 slug: karpenter_consolidate_after
 url: /configuration/rack-parameters/aws/karpenter_consolidate_after
 ---

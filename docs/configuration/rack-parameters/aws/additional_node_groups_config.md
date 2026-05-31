@@ -1,5 +1,6 @@
 ---
 title: "additional_node_groups_config"
+description: "The additional_node_groups_config AWS rack parameter configures additional customized node groups for the cluster with specific instance types and labels."
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/aws/additional_node_groups_config
 ---

@@ -1,5 +1,6 @@
 ---
 title: "certs"
+description: "The convox certs command lists, generates, imports, renews, and deletes the SSL certificates that apps use to serve traffic over HTTPS."
 slug: certs
 url: /reference/cli/certs
 ---

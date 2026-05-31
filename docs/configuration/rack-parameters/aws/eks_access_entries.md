@@ -1,5 +1,6 @@
 ---
 title: "eks_access_entries"
+description: "The eks_access_entries AWS rack parameter creates EKS Access Entries for the rack and nodes IAM roles, migrating away from the legacy aws-auth ConfigMap."
 slug: eks_access_entries
 url: /configuration/rack-parameters/aws/eks_access_entries
 ---

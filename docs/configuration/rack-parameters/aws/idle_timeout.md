@@ -1,5 +1,6 @@
 ---
 title: "idle_timeout"
+description: "The idle_timeout AWS rack parameter sets how long, in seconds, the rack load balancer waits before closing an idle connection, defaulting to 3600."
 slug: idle_timeout
 url: /configuration/rack-parameters/aws/idle_timeout
 ---

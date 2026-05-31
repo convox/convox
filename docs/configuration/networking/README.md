@@ -1,5 +1,6 @@
 ---
 title: "Networking"
+description: "Convox networking controls how traffic reaches services and how services communicate, covering load balancers, service discovery, and health checks."
 slug: networking
 url: /configuration/networking
 ---

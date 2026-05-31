@@ -1,5 +1,6 @@
 ---
 title: "deploy-debug"
+description: "The convox deploy-debug command diagnoses deploy failures by inspecting an app's Kubernetes pods server-side, collecting logs, events, and hints without kubectl."
 slug: deploy-debug
 url: /reference/cli/deploy-debug
 ---

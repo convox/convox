@@ -1,5 +1,6 @@
 ---
 title: "run"
+description: "The convox run command executes a command in a new one-off process, with flags for CPU, memory, GPU, node placement, release, and service volumes."
 slug: run
 url: /reference/cli/run
 ---

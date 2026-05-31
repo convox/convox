@@ -1,5 +1,6 @@
 ---
 title: "dcgm_scrape_interval"
+description: "The dcgm_scrape_interval AWS rack parameter controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics, defaulting to 15s."
 slug: dcgm_scrape_interval
 url: /configuration/rack-parameters/aws/dcgm_scrape_interval
 ---

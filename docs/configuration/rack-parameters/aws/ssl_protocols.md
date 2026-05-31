@@ -1,5 +1,6 @@
 ---
 title: "ssl_protocols"
+description: "The ssl_protocols AWS rack parameter sets the space-separated SSL protocols nginx uses, defaulting to empty so nginx applies TLSv1.2 and TLSv1.3."
 slug: ssl_protocols
 url: /configuration/rack-parameters/aws/ssl_protocols
 ---

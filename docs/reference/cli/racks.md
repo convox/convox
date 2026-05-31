@@ -1,5 +1,6 @@
 ---
 title: "racks"
+description: "The convox racks command lists all racks accessible from your current Console login, along with each rack's cloud provider and status."
 slug: racks
 url: /reference/cli/racks
 ---

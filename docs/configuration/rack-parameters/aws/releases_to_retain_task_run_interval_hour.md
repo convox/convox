@@ -1,5 +1,6 @@
 ---
 title: "releases_to_retain_task_run_interval_hour"
+description: "The releases_to_retain_task_run_interval_hour AWS rack parameter sets how often the release cleanup task runs, in hours, defaulting to 24."
 slug: releases_to_retain_task_run_interval_hour
 url: /configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour
 ---

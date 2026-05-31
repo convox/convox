@@ -1,5 +1,6 @@
 ---
 title: "Monitoring"
+description: "Add third-party monitoring such as Datadog to a Convox Rack by deploying agents into the cluster with kubectl to collect metrics, traces, and logs."
 slug: monitoring
 url: /integrations/monitoring
 ---

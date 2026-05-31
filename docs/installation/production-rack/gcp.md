@@ -1,5 +1,6 @@
 ---
 title: "Google Cloud"
+description: "Install a Convox production Rack on Google Cloud via the command line, covering the project, service account, required APIs, and install parameters."
 slug: google-cloud
 url: /installation/production-rack/gcp
 ---

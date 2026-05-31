@@ -1,5 +1,6 @@
 ---
 title: "Deploying Changes"
+description: "Deploy code changes by creating a Release and promoting it, in one step with convox deploy or two steps with build then releases promote."
 slug: deploying-changes
 url: /deployment/deploying-changes
 ---

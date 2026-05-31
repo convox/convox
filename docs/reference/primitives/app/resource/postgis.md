@@ -1,5 +1,6 @@
 ---
 title: "PostGIS"
+description: "A PostGIS Resource extends PostgreSQL with spatial and geographic data types, functions, and indexes, running as a containerized-only Resource in your Rack."
 slug: postgis
 url: /reference/primitives/app/resource/postgis
 ---

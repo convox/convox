@@ -1,5 +1,6 @@
 ---
 title: "Cloud Databases"
+description: "Convox Cloud Databases are fully managed RDS instances billed by the hour, with 7-day automated backups and optional Multi-AZ failover, defined in convox.yml."
 slug: databases
 url: /cloud/databases
 ---

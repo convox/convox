@@ -1,5 +1,6 @@
 ---
 title: "exec"
+description: "The convox exec command runs a command inside an existing running process, for example opening a shell in a container to inspect or debug it."
 slug: exec
 url: /reference/cli/exec
 ---

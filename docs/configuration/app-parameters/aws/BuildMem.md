@@ -1,5 +1,6 @@
 ---
 title: "BuildMem"
+description: "The BuildMem app parameter sets the memory request for build pods in megabytes, controlling build memory and preventing out-of-memory failures."
 slug: buildmem
 url: /configuration/app-parameters/aws/BuildMem
 ---

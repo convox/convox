@@ -1,5 +1,6 @@
 ---
 title: "Budget"
+description: "A Budget is a per-app monthly spend cap with an alert threshold and a configurable action when the cap is reached, available starting with rack version 3.24.6."
 slug: budget
 url: /reference/primitives/app/budget
 ---

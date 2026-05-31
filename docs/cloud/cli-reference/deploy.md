@@ -1,5 +1,6 @@
 ---
 title: "Deployment Commands"
+description: "The convox cloud deploy command builds and promotes an application in a single step, with flags for app, build args, description, force, and manifest."
 slug: deploy
 url: /cloud/cli-reference/deploy
 ---

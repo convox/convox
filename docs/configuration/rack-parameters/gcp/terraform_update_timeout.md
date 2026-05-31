@@ -1,5 +1,6 @@
 ---
 title: "terraform_update_timeout"
+description: "The terraform_update_timeout GCP rack parameter sets how long Terraform waits for GKE node pool updates to finish, defaulting to 2h."
 slug: terraform_update_timeout
 url: /configuration/rack-parameters/gcp/terraform_update_timeout
 ---

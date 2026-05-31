@@ -1,5 +1,6 @@
 ---
 title: "eks_log_types"
+description: "The eks_log_types AWS rack parameter lists the EKS control plane log types to ship to CloudWatch Logs, such as api, audit, and authenticator."
 slug: eks_log_types
 url: /configuration/rack-parameters/aws/eks_log_types
 ---

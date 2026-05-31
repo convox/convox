@@ -1,5 +1,6 @@
 ---
 title: "karpenter_capacity_types"
+description: "The karpenter_capacity_types AWS rack parameter sets the EC2 purchasing model for Karpenter workload nodes, defaulting to on-demand."
 slug: karpenter_capacity_types
 url: /configuration/rack-parameters/aws/karpenter_capacity_types
 ---

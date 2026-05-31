@@ -1,5 +1,6 @@
 ---
 title: "idle_timeout"
+description: "The idle_timeout Azure rack parameter sets the router Azure Load Balancer idle timeout in minutes, controlling how long idle connections stay open, default 4."
 slug: idle_timeout
 url: /configuration/rack-parameters/azure/idle_timeout
 ---

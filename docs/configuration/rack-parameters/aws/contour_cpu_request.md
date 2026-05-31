@@ -1,5 +1,6 @@
 ---
 title: "contour_cpu_request"
+description: "The contour_cpu_request AWS rack parameter sets the CPU request for the Contour control-plane pods when router_type=contour, defaulting to 100m."
 slug: contour_cpu_request
 url: /configuration/rack-parameters/aws/contour_cpu_request
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Limitations and Differences"
+description: "Limitations of Convox Cloud Machines from their managed, multi-tenant nature, across infrastructure, networking, storage, scaling, and compliance, with alternatives."
 slug: limitations
 url: /cloud/machines/limitations
 ---
@@ -52,8 +53,8 @@ The sections below detail each limitation, the impact, and the available alterna
 
 **Available Commands**:
 ```bash
-# Access running container
-$ convox cloud exec my-service bash -a myapp -i my-machine
+# Access running container (use a process ID from `convox cloud ps`)
+$ convox cloud exec web-abc123 bash -a myapp -i my-machine
 
 # Run one-off command
 $ convox cloud run web "rails console" -a myapp -i my-machine

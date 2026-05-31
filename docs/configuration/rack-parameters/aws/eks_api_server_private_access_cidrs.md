@@ -1,5 +1,6 @@
 ---
 title: "eks_api_server_private_access_cidrs"
+description: "The eks_api_server_private_access_cidrs AWS rack parameter lists CIDR blocks allowed to reach the EKS API via the private endpoint on TCP 443."
 slug: eks_api_server_private_access_cidrs
 url: /configuration/rack-parameters/aws/eks_api_server_private_access_cidrs
 ---

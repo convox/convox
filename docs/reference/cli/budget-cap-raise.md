@@ -1,5 +1,6 @@
 ---
 title: "budget cap raise"
+description: "The convox budget cap raise command raises an app's monthly budget cap and clears the breaker in one operation when the new cap is above current spend."
 slug: budget-cap-raise
 url: /reference/cli/budget-cap-raise
 ---

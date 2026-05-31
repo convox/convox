@@ -1,5 +1,6 @@
 ---
 title: "karpenter_node_disk"
+description: "The karpenter_node_disk AWS rack parameter sets the EBS volume size in GiB for Karpenter-provisioned workload nodes, inheriting the rack node_disk value when 0."
 slug: karpenter_node_disk
 url: /configuration/rack-parameters/aws/karpenter_node_disk
 ---

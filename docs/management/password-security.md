@@ -1,5 +1,6 @@
 ---
 title: "Password Security"
+description: "Convox Console enforces password length and complexity requirements and supports GitHub sign-in to help meet security and SOC 2 controls."
 slug: password-security
 url: /management/password-security
 ---
@@ -25,7 +26,7 @@ Passwords that do not meet these requirements will be rejected with a validation
 
 ## Third-Party Authentication
 
-As an alternative to password-based authentication, Convox Console supports signing in with **GitHub**. Using GitHub authentication allows your organization to leverage GitHub's own password and authentication policies, including two-factor authentication (2FA).
+As an alternative to password-based authentication, Convox Console supports signing in with **GitHub**. Using GitHub authentication allows your organization to use GitHub's own password and authentication policies, including two-factor authentication (2FA).
 
 If your organization requires stricter password policies than Convox enforces natively, using GitHub SSO can help satisfy those requirements indirectly.
 

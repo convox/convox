@@ -1,5 +1,6 @@
 ---
 title: "Autoscale Triggers Override"
+description: "Enable, edit, and disable per-Service autoscaling from the Console without editing convox.yml, using CPU, memory, GPU, or queue depth triggers that persist."
 slug: autoscale-triggers
 url: /console/autoscale-triggers
 ---

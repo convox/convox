@@ -1,5 +1,6 @@
 ---
 title: "env"
+description: "The convox env command lists, gets, sets, and unsets an app's environment variables, with masking, per-release scoping, and optional promote."
 slug: env
 url: /reference/cli/env
 ---

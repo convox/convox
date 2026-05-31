@@ -1,5 +1,6 @@
 ---
 title: "BuildArch"
+description: "The BuildArch app parameter directs build pods to nodes matching a CPU architecture, amd64 or arm64, so apps build natively without emulation."
 slug: buildarch
 url: /configuration/app-parameters/aws/BuildArch
 ---

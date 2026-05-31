@@ -1,5 +1,6 @@
 ---
 title: "prometheus_gpu_metrics_chart_version"
+description: "The prometheus_gpu_metrics_chart_version AWS rack parameter pins the Helm chart version for the free-plan Console Prometheus, defaulting to 27.9.0."
 slug: prometheus_gpu_metrics_chart_version
 url: /configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version
 ---

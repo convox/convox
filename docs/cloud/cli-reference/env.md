@@ -1,5 +1,6 @@
 ---
 title: "Environment Commands"
+description: "The convox cloud env commands list, edit, get, set, and unset environment variables for an application, with optional auto-promote."
 slug: env
 url: /cloud/cli-reference/env
 ---

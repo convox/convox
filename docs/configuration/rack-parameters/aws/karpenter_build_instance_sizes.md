@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_instance_sizes"
+description: "The karpenter_build_instance_sizes AWS rack parameter sets which EC2 instance sizes Karpenter uses for build nodes, falling back to the workload list when empty."
 slug: karpenter_build_instance_sizes
 url: /configuration/rack-parameters/aws/karpenter_build_instance_sizes
 ---

@@ -1,5 +1,6 @@
 ---
 title: "node_disk"
+description: "The node_disk GCP rack parameter sets the size of the root disk in GB for each node in the rack, defaulting to 100."
 slug: node_disk
 url: /configuration/rack-parameters/gcp/node_disk
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Development Rack"
+description: "A development Rack runs on your local workstation using Minikube so you can work on an App in an environment nearly identical to production."
 slug: development-rack
 url: /installation/development-rack
 ---

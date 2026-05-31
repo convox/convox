@@ -1,5 +1,6 @@
 ---
 title: "Cloud CLI Reference"
+description: "The convox cloud command namespace manages machines and deploys apps to Convox Cloud, with every command following the convox cloud subcommand pattern."
 slug: cli-reference
 url: /cloud/cli-reference
 ---

@@ -1,5 +1,6 @@
 ---
 title: "node_disk"
+description: "The node_disk AWS rack parameter sets the disk size in gigabytes for each node in the cluster, defaulting to 20 GB."
 slug: node_disk
 url: /configuration/rack-parameters/aws/node_disk
 ---

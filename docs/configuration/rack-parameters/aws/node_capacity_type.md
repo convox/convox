@@ -1,5 +1,6 @@
 ---
 title: "node_capacity_type"
+description: "The node_capacity_type AWS rack parameter selects the capacity type for cluster nodes, on_demand (default), spot, or mixed."
 slug: node_capacity_type
 url: /configuration/rack-parameters/aws/node_capacity_type
 ---

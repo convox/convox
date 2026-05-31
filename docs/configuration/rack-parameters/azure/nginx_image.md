@@ -1,5 +1,6 @@
 ---
 title: "nginx_image"
+description: "The nginx_image Azure rack parameter sets a custom container image for the nginx ingress controller, defaulting to the built-in ingress-nginx controller image."
 slug: nginx_image
 url: /configuration/rack-parameters/azure/nginx_image
 ---

@@ -1,5 +1,6 @@
 ---
 title: "cidr"
+description: "The cidr AWS rack parameter sets the CIDR range for the VPC, defining its IP address space, and defaults to 10.1.0.0/16."
 slug: cidr
 url: /configuration/rack-parameters/aws/cidr
 ---

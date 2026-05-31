@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_instance_families"
+description: "The karpenter_build_instance_families rack parameter sets which EC2 instance families Karpenter uses for build nodes, falling back to the workload list when empty."
 slug: karpenter_build_instance_families
 url: /configuration/rack-parameters/aws/karpenter_build_instance_families
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Rolling Updates"
+description: "Rolling updates promote a Release with a make-one, break-one rollout that keeps services up and reverses automatically on health check failures."
 slug: rolling-updates
 url: /deployment/rolling-updates
 ---

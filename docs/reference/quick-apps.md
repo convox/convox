@@ -1,5 +1,6 @@
 ---
 title: "Quick Apps"
+description: "Quick Apps are pre-configured application templates that deploy supported apps like Drupal into a Convox Rack from the Console without authoring a convox.yml."
 slug: quick-apps
 url: /reference/quick-apps
 ---

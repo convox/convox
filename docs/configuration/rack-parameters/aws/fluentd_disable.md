@@ -1,5 +1,6 @@
 ---
 title: "fluentd_disable"
+description: "The fluentd_disable AWS rack parameter disables the installation of Fluentd, the component Convox uses to send logs to CloudWatch, defaulting to false."
 slug: fluentd_disable
 url: /configuration/rack-parameters/aws/fluentd_disable
 ---

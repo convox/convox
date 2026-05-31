@@ -1,5 +1,6 @@
 ---
 title: "internal_router"
+description: "The internal_router AWS rack parameter installs an internal VPC load balancer for private traffic routing, not exposed to the internet, defaulting to false."
 slug: internal_router
 url: /configuration/rack-parameters/aws/internal_router
 ---
@@ -27,5 +28,5 @@ This command installs an internal load balancer within the VPC.
 ## Additional Information
 Using an internal load balancer can improve security by keeping internal traffic within the private network. This setup is beneficial for applications that need to communicate across different racks or utilize other AWS services internally.
 
-By setting `internal_router` to `true`, you can leverage the benefits of internal load balancing, such as reduced latency and enhanced security for internal communications.
+By setting `internal_router` to `true`, you gain the benefits of internal load balancing, such as reduced latency and enhanced security for internal communications.
 

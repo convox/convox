@@ -1,5 +1,6 @@
 ---
 title: "Config Mounts"
+description: "Config Mounts mount configuration files into service containers as Kubernetes Secrets, for config files managed independently from your application image."
 slug: config-mounts
 url: /configuration/config-mounts
 ---

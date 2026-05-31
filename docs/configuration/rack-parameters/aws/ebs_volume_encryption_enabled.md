@@ -1,5 +1,6 @@
 ---
 title: "ebs_volume_encryption_enabled"
+description: "The ebs_volume_encryption_enabled AWS rack parameter enables encryption for EBS volumes on the primary node disks of the EKS cluster, defaulting to false."
 slug: ebs_volume_encryption_enabled
 url: /configuration/rack-parameters/aws/ebs_volume_encryption_enabled
 ---

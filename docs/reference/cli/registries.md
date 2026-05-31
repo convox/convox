@@ -1,5 +1,6 @@
 ---
 title: "registries"
+description: "The convox registries command lists, adds, and removes private container registry credentials the rack uses to pull images during builds and deploys."
 slug: registries
 url: /reference/cli/registries
 ---

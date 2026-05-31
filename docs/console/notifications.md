@@ -1,5 +1,6 @@
 ---
 title: "Notifications"
+description: "Forward Rack and Workflow events to Slack or Discord, covering App lifecycle, build and release, infrastructure, workflow, alert, and budget events."
 slug: notifications
 url: /console/notifications
 ---

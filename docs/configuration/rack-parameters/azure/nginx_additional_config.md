@@ -1,5 +1,6 @@
 ---
 title: "nginx_additional_config"
+description: "The nginx_additional_config Azure rack parameter passes extra key-value pairs to the nginx ingress controller ConfigMap for fine-grained control over nginx behavior."
 slug: nginx_additional_config
 url: /configuration/rack-parameters/azure/nginx_additional_config
 ---

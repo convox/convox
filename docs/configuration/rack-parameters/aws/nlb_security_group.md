@@ -1,5 +1,6 @@
 ---
 title: "nlb_security_group"
+description: "The nlb_security_group AWS rack parameter specifies the security group ID to attach to the Network Load Balancer, defaulting to empty (AWS default group)."
 slug: nlb_security_group
 url: /configuration/rack-parameters/aws/nlb_security_group
 ---

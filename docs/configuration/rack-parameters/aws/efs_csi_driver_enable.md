@@ -1,5 +1,6 @@
 ---
 title: "efs_csi_driver_enable"
+description: "The efs_csi_driver_enable AWS rack parameter enables the EFS CSI driver so services can use AWS EFS for scalable, shared file storage, defaulting to false."
 slug: efs_csi_driver_enable
 url: /configuration/rack-parameters/aws/efs_csi_driver_enable
 ---

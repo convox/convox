@@ -1,5 +1,6 @@
 ---
 title: "resources"
+description: "The convox resources command lists an app's resources and manages per-resource operations such as console, proxy, url, info, and data import or export."
 slug: resources
 url: /reference/cli/resources
 ---

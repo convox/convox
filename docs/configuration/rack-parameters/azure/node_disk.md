@@ -1,5 +1,6 @@
 ---
 title: "node_disk"
+description: "The node_disk Azure rack parameter sets the OS disk size in GB for the default AKS node pool and the default for additional pools, defaulting to 30."
 slug: node_disk
 url: /configuration/rack-parameters/azure/node_disk
 ---

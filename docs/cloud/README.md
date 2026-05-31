@@ -1,5 +1,6 @@
 ---
 title: "Convox Cloud"
+description: "Convox Cloud is a fully managed multi-tenant platform that runs your apps on Convox-hosted Machines and Cloud Databases with no infrastructure to manage."
 slug: cloud
 url: /cloud
 ---

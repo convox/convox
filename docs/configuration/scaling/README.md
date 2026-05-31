@@ -1,5 +1,6 @@
 ---
 title: "Scaling"
+description: "Convox scaling approaches for services, from manual replica counts to event-driven autoscaling, VPA, KEDA, Karpenter, and workload placement."
 slug: scaling
 url: /configuration/scaling
 ---

@@ -1,5 +1,6 @@
 ---
 title: "syslog"
+description: "The syslog AWS rack parameter sets the endpoint that rack logs are forwarded to, such as tcp+tls://example.org:1234, defaulting to empty (no forwarding)."
 slug: syslog
 url: /configuration/rack-parameters/aws/syslog
 ---

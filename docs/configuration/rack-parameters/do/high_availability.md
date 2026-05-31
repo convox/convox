@@ -1,5 +1,6 @@
 ---
 title: "high_availability"
+description: "The high_availability Digital Ocean rack parameter runs the rack across multiple nodes when true, or a minimal node configuration when false, defaulting to true."
 slug: high_availability
 url: /configuration/rack-parameters/do/high_availability
 ---

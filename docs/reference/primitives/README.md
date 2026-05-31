@@ -1,5 +1,6 @@
 ---
 title: "Primitives"
+description: "Primitives are the building blocks for an App on Convox, including Service, Build, Release, Resource, Timer, Balancer, and the Rack Instance and Registry."
 slug: primitives
 url: /reference/primitives
 ---

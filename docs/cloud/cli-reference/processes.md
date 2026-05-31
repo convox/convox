@@ -1,5 +1,6 @@
 ---
 title: "Process Management"
+description: "The convox cloud process commands exec into, list, inspect, and stop running processes, and run one-off commands in a new process."
 slug: processes
 url: /cloud/cli-reference/processes
 ---

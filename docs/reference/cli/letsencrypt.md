@@ -1,5 +1,6 @@
 ---
 title: "letsencrypt"
+description: "The convox letsencrypt command configures Let's Encrypt DNS-01 solvers for Route53 zones on AWS racks, with add, list, update, delete, and role subcommands."
 slug: letsencrypt
 url: /reference/cli/letsencrypt
 ---

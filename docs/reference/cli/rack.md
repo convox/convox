@@ -1,5 +1,6 @@
 ---
 title: "rack"
+description: "The convox rack command shows rack info and manages rack operations including install, update, params, scale, access, Karpenter cleanup, and kubeconfig."
 slug: rack
 url: /reference/cli/rack
 ---
@@ -140,9 +141,12 @@ Install a new Rack
     convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
 ```
 
-flags:
-  - `runtime`: runtime integration ID
-  - `version`: specify the rack version to install
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `runtime` | | runtime integration ID |
+| `version` | | specify the rack version to install |
 
 > note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, see [CLI Management](/management/cli-rack-management).
 
@@ -207,9 +211,12 @@ Generates rack access credential
 ```bash
     convox rack access --role [role] --duration-in-hours [duration]
 ```
-flags:
-  - `role`: Access role for the credential. Allowed roles are: `read` or `write`
-  - `duration-in-hours`: TTL for the credential.
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `role` | | Access role for the credential. Allowed roles are: `read` or `write` |
+| `duration-in-hours` | | TTL for the credential. |
 
 ### Examples
 ```bash

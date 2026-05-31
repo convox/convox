@@ -1,5 +1,6 @@
 ---
 title: "Load Balancers"
+description: "Each Rack includes a built-in HTTPS load balancer that fronts your Services, using an AWS NLB or GCP Load Balancer depending on the cloud provider."
 slug: load-balancers
 url: /configuration/load-balancers
 ---
