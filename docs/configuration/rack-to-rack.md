@@ -39,3 +39,4 @@ services:
 
 - [`internal_router` rack parameter](/configuration/rack-parameters/aws/internal_router) for enabling the internal load balancer
 - [Service Discovery](/configuration/service-discovery) for intra-rack service communication
+- [Ingress Router](/configuration/ingress-router) for the `contour_internal_tls` option that encrypts internal-router traffic
