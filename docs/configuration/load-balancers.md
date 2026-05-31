@@ -176,6 +176,7 @@ Custom balancers can only be configured with multiple TCP or multiple UDP ports 
 
 ## See Also
 
+- [Ingress Router](/configuration/ingress-router) for choosing between the nginx and Contour (Envoy) routers
 - [Custom Domains](/deployment/custom-domains) for routing custom domains to your services
 - [SSL](/deployment/ssl) for configuring SSL certificates
 - [Health Checks](/configuration/health-checks) for configuring health check endpoints

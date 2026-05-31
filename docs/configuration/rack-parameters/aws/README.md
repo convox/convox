@@ -23,6 +23,9 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [build_node_type](/configuration/rack-parameters/aws/build_node_type)               | Specifies the node type for the build node.                              |
 | [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certificate renewal period.                              |
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
+| [contour_cpu_request](/configuration/rack-parameters/aws/contour_cpu_request) | Sets the CPU request for the Contour control plane. Applies only when `router_type=contour`. |
+| [contour_internal_tls](/configuration/rack-parameters/aws/contour_internal_tls) | Encrypts traffic between the internal Contour router and services using a rack-issued certificate. Applies only when `router_type=contour`. |
+| [contour_memory_request](/configuration/rack-parameters/aws/contour_memory_request) | Sets the memory request for the Contour control plane. Raise on racks with many routes. Applies only when `router_type=contour`. |
 | [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
@@ -38,6 +41,8 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) | Creates EKS Access Entries for the rack's managing IAM role and nodes role. One-way migration from `aws-auth` ConfigMap. |
 | [eks_api_server_private_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_private_access_cidrs) | Comma-separated CIDRs allowed to reach the EKS API via the private endpoint (cluster SG ingress on TCP 443). |
 | [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |
+| [envoy_cpu_request](/configuration/rack-parameters/aws/envoy_cpu_request) | Sets the CPU request for the Envoy data plane. Applies only when `router_type=contour`. |
+| [envoy_memory_request](/configuration/rack-parameters/aws/envoy_memory_request) | Sets the memory request for the Envoy data plane. Applies only when `router_type=contour`. |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
 | [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory)                 | Configures memory allocation for the Fluentd log collector DaemonSet.    |
 | [gpu_metrics_max_concurrent](/configuration/rack-parameters/aws/gpu_metrics_max_concurrent) | Caps simultaneous Prometheus QueryRange invocations issued by the rack's GPU metrics handler. |
@@ -104,6 +109,7 @@ The following parameters are available for configuring your Convox rack on Amazo
 | [release_watcher_gc_interval](/configuration/rack-parameters/aws/release_watcher_gc_interval) | Controls how frequently the rack's release-watcher subsystem runs garbage collection on orphaned watcher slots. |
 | [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |
 | [releases_to_retain_task_run_interval_hour](/configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour) | Defines the interval in hours at which the release cleanup task runs. |
+| [router_type](/configuration/rack-parameters/aws/router_type)                       | Selects the rack ingress router: `nginx` (default) or `contour` (Envoy). See [Ingress Router](/configuration/ingress-router). |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
 | [ssl_ciphers](/configuration/rack-parameters/aws/ssl_ciphers)                       | Specifies the SSL ciphers to use for Nginx.                              |
