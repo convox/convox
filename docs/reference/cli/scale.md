@@ -20,7 +20,7 @@ The positional `<service>` is required for imperative changes (`--count`,
 `--cpu`, `--memory`, `--gpu`, `--gpu-vendor`, `--min`, `--max`) and optional in
 read-mode. With no service argument, `convox scale` prints the full scale table
 for the app. With a service argument, the table is filtered to that service's
-row only — the same columns, one row.
+row only: the same columns, one row.
 
 ```bash
     $ convox scale web -a myapp
@@ -58,8 +58,8 @@ not loop forever printing the same error.
 | `--memory` | Memory allocation in MB |
 | `--gpu` | Number of GPU devices to reserve per pod |
 | `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
-| `--min` | Minimum replica count. With autoscale configured, sets the autoscale floor. Without autoscale (3.24.6+), patches the deployment replica count directly — useful for short-lived overrides without editing convox.yml. |
-| `--max` | Maximum replica count when autoscale is configured. Combined with `--min`, requires the service to declare `scale.autoscale` (or `scale.keda`) in convox.yml — without an autoscale block the rack returns an error directing you to add one or use `--count` for a fixed replica count. Services with a Console-driven [triggers override](/console/autoscale-triggers) accept `--min`/`--max` via the HPA bounds (3.24.6+) without requiring a manifest autoscale block. |
+| `--min` | Minimum replica count. With autoscale configured, sets the autoscale floor. Without autoscale (3.24.6+), patches the deployment replica count directly, useful for short-lived overrides without editing convox.yml. |
+| `--max` | Maximum replica count when autoscale is configured. Combined with `--min`, requires the service to declare `scale.autoscale` (or `scale.keda`) in convox.yml. Without an autoscale block the rack returns an error directing you to add one or use `--count` for a fixed replica count. Services with a Console-driven [triggers override](/console/autoscale-triggers) accept `--min`/`--max` via the HPA bounds (3.24.6+) without requiring a manifest autoscale block. |
 
 ### Output Table
 
@@ -72,13 +72,13 @@ When no flags are passed, `convox scale` prints a table of the configured scale 
     vllm     0        0        4000  16384   1    0    10   gpu-util>70  COLD (~2-5m first req)
 ```
 
-The `vllm` row above is at rest with zero replicas — the cold-start hint
+The `vllm` row above is at rest with zero replicas. The cold-start hint
 (`COLD (~2-5m first req)`) only renders when both `DESIRED=0` and `RUNNING=0`
 on a service whose autoscale `min` is 0 (a `min: 0` service that has scaled
 back down to zero). Once a request triggers the first replica, `DESIRED` and
 `RUNNING` become 1+ and the STATUS cell clears.
 
-The `AUTOSCALE` column appears between `MAX` and `STATUS` when at least one service in the app has autoscaling enabled. Its cell summarizes the configured trigger (e.g. `cpu>70`, `gpu-util>80 queue>10`) — services without autoscale render `-` in that column.
+The `AUTOSCALE` column appears between `MAX` and `STATUS` when at least one service in the app has autoscaling enabled. Its cell summarizes the configured trigger (e.g. `cpu>70`, `gpu-util>80 queue>10`). Services without autoscale render `-` in that column.
 
 The trailing `STATUS` column carries the cold-start hint (`COLD (~2-5m first req)` for services with `min: 0` autoscale) and, when the app's budget cap is breached, the per-service sub-state token (`armed-Nm`, `at-cap-keda`, `at-cap-auto`, `at-cap`).
 

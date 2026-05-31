@@ -240,7 +240,7 @@ Promoting RSPAOICEBER...
 
 Once the rollback is complete, refresh your browser, and you should see the `Hello Convox!` message has been reverted to `Hello World!`.
 
-Hopefully, this small example has given you an idea of how easy and powerful Convox is. As a next step, let's get your first custom app configured and deployed by following the [App Configuration Guide](/tutorials/preparing-an-application).
+As a next step, configure and deploy your first custom app by following the [App Configuration Guide](/tutorials/preparing-an-application).
 
 ## Take a Tour of the Convox Console
 

@@ -24,7 +24,7 @@ List services for an app
 
 When the app's budget cap has been breached (3.24.6+), `convox services`
 adds a `BUDGET` column showing the per-service sub-state (`armed-Nm`,
-`at-cap-keda`, `at-cap-auto`, `at-cap`) — see [`convox ps`](/reference/cli/ps)
+`at-cap-keda`, `at-cap-auto`, `at-cap`). See [`convox ps`](/reference/cli/ps)
 for the full value reference and [Budget Caps](/management/budget-caps)
 for recovery flows.
 
@@ -83,7 +83,7 @@ in `convox.yml`.
 CPU- or memory-only overrides materialize a native Kubernetes HPA and
 require `--min` >= 1; the Kubernetes `HPAScaleToZero` feature gate is
 alpha and not enabled on managed clusters. For scale-to-zero behavior,
-include a KEDA-eligible trigger (`--gpu` or `--queue`) — the KEDA
+include a KEDA-eligible trigger (`--gpu` or `--queue`); the KEDA
 `ScaledObject` path supports `--min 0` natively. Mixed trigger sets
 that include any of `--gpu` / `--queue` (e.g. `--cpu 70 --gpu 75`)
 dispatch through the KEDA `ScaledObject` path and therefore also

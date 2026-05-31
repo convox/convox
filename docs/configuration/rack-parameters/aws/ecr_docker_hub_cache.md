@@ -62,7 +62,7 @@ Disabling tears down the ECR pull-through cache rule, the Secrets Manager secret
   - An IAM policy scoped to the cache prefix granting cluster nodes the permissions needed to lazily create cache repositories and import upstream images on first pull
 - Resource images are automatically rewritten to use the ECR cache URL. For example, `redis:4.0.10` becomes `<account_id>.dkr.ecr.<region>.amazonaws.com/docker-hub-<rack-name>/library/redis:4.0.10`.
 - Docker Hub "library" images (redis, postgres, mysql, mariadb, memcached) get a `library/` prefix in the ECR path per Docker Hub's canonical convention. Namespaced images (e.g., `postgis/postgis`) keep their full path.
-- Custom image overrides on resource definitions are always respected — user-supplied images are never rewritten, even when the cache is enabled.
+- Custom image overrides on resource definitions are always respected. User-supplied images are never rewritten, even when the cache is enabled.
 - Each rack has its own ECR cache prefix (`docker-hub-<rack-name>`) and its own IAM scope, so multiple racks in the same AWS account cache independently.
 - After enabling the cache, existing resource pods continue to use their previous image references until the next deploy. Redeploy apps that depend on Convox-managed resources to move them onto the cache.
 - Standard ECR storage costs apply for cached images.

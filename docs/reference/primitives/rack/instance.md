@@ -44,13 +44,13 @@ Terminated instances are automatically replaced by the cluster autoscaler.
 
 On Kubernetes-based (v3) racks, `convox instances terminate` performs a safe, drain-aware sequence:
 
-1. **Cordon** — marks the node `Unschedulable` so new pods are not scheduled onto it
-2. **Drain** — removes pods from the node according to the node's readiness state:
+1. **Cordon**: marks the node `Unschedulable` so new pods are not scheduled onto it
+2. **Drain**: removes pods from the node according to the node's readiness state:
    - **Ready nodes** use the Kubernetes Eviction API (`policy/v1`), which respects PodDisruptionBudgets. PDB-blocked evictions retry every 5 seconds for up to a 5-minute deadline, then fall back to force-delete
    - **NotReady nodes** force-delete pods immediately, since kubelet on a NotReady node cannot process evictions
    - DaemonSet-managed pods and mirror pods are skipped during drain, matching `kubectl drain` semantics
-3. **Delete** — removes the Kubernetes node object
-4. **Terminate cloud VM** — on AWS, the underlying EC2 instance is terminated via `ec2:TerminateInstances`. On other v3 providers, only the Kubernetes node is removed and the cloud VM must be terminated through the provider's own tools
+3. **Delete**: removes the Kubernetes node object
+4. **Terminate cloud VM**: on AWS, the underlying EC2 instance is terminated via `ec2:TerminateInstances`. On other v3 providers, only the Kubernetes node is removed and the cloud VM must be terminated through the provider's own tools
 
 **Per-provider cloud VM reclamation:**
 
@@ -65,7 +65,7 @@ On Kubernetes-based (v3) racks, `convox instances terminate` performs a safe, dr
 
 ### Cleaning Up a Stuck or NotReady Node
 
-Use `convox instances terminate` to clean up a node left behind after an EKS upgrade that could not drain — for example, a node running an older kubelet version that failed during a rolling upgrade. Stuck `NotReady` nodes can also cause subsequent rack updates to fail.
+Use `convox instances terminate` to clean up a node left behind after an EKS upgrade that could not drain, for example a node running an older kubelet version that failed during a rolling upgrade. Stuck `NotReady` nodes can also cause subsequent rack updates to fail.
 
 Identify the stuck node:
 

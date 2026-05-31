@@ -21,15 +21,15 @@ comma-separated `key=value` segments:
 Convox-Signature: t=<unix-ts>,v1=<hex1>[,v1=<hex2>]
 ```
 
-- `t=<unix-ts>` — UTC unix timestamp of dispatch (seconds since epoch).
-- `v1=<hex>` — hex-encoded HMAC-SHA256 signature. The signed input is
-  `fmt.Sprintf("%d.%s", t, body)` — the timestamp, a literal `.`, then
+- `t=<unix-ts>` is the UTC unix timestamp of dispatch (seconds since epoch).
+- `v1=<hex>` is a hex-encoded HMAC-SHA256 signature. The signed input is
+  `fmt.Sprintf("%d.%s", t, body)`, that is, the timestamp, a literal `.`, then
   the raw response body bytes. Multiple `v1=` segments may appear when
   the Rack is in the middle of a key rotation (one signature per active
   key; up to 4 keys are supported per rotation, see "Rotation depth"
   below). Receivers verify against ANY one of the listed `v1=` values.
 
-Example header (HTTP-handler event — `app:budget:reset` carries the
+Example header (an HTTP-handler event where `app:budget:reset` carries the
 JWT-derived `actor` from the operator who ran `convox budget reset`):
 
 ```text
@@ -47,12 +47,12 @@ Reject if the timestamp is outside your tolerance window (Convox
 recommends 5 minutes).
 
 The signature plus timestamp tolerance authenticates the request but
-does NOT include a nonce — within the tolerance window, an attacker
+does NOT include a nonce. Within the tolerance window, an attacker
 with man-in-the-middle access could replay the same signed payload.
 Receivers that need replay protection should add their own dedupe
 (e.g. cache `(t, body-hash)` pairs within the tolerance window and
-reject duplicates). Idempotent receivers — Slack notifications,
-PagerDuty pages, append-only audit logs — typically do not need
+reject duplicates). Idempotent receivers, such as Slack notifications,
+PagerDuty pages, and append-only audit logs, typically do not need
 replay protection because re-processing the same event is harmless.
 
 Example verification (Python):
@@ -281,16 +281,16 @@ Set the Rack parameter:
 $ convox rack params set webhook_signing_key=$(openssl rand -hex 32)
 ```
 
-The Rack uses the value as-is — any string of sufficient entropy works. Convox
+The Rack uses the value as-is, so any string of sufficient entropy works. Convox
 recommends a 32-byte random hex string. Rotate by running the same command with
 a new value; receivers must update their copy of the key in lockstep, since
 old payloads cannot be re-signed.
 
 The CLI masks the value in `convox rack params` output as of 3.24.6. Older CLIs
-print the value plaintext to the TTY — upgrade the CLI before running param
+print the value plaintext to the TTY, so upgrade the CLI before running param
 introspection commands against 3.24.6 Racks. See the 3.24.6 release notes.
 
-The Console provides a key management interface under Rack > Settings with controls for generating, revealing, and rotating the signing key. See [Rack Settings](/console/rack-settings).
+The Console provides a key management interface under Rack > Settings with controls for generating, revealing, and rotating the signing key. See [Rack Settings](/console/rack-settings). Revealing the key requires the Admin role; non-admin users see a masked value only (see [Console RBAC](/management/rbac#admin-only-operations)).
 
 ## Cross-Provider Availability
 

@@ -62,9 +62,9 @@ tiebreak. Each row is one entry in the underlying
 
 Two reserved buckets may appear alongside service rows:
 
-- `_build` — build pods (carry `service-type=build`) attributed away from the
+- `_build`: build pods (carry `service-type=build`) attributed away from the
   service they are building so normal-operation cost stays uninflated.
-- `_unattributed` — pods without a `service` label (system sidecars, KEDA
+- `_unattributed`: pods without a `service` label (system sidecars, KEDA
   scalers, anything not user-deployed).
 
 ### Pre-3.24.6 racks (fallback table)
@@ -78,7 +78,7 @@ CLI auto-falls-back to the legacy aggregated columns:
 ```
 
 `GPU-HOURS` / `CPU-HOURS` / `MEM-GB-HOURS` are reserved for a future
-per-resource pricing model — they render `0.00` on every release that
+per-resource pricing model. They render `0.00` on every release that
 ships this column shape. The `SPEND-USD` column is populated from the
 accumulator's per-service totals.
 
@@ -115,7 +115,7 @@ retroactively attributed.
 
 ### Cost tracking prerequisite
 
-The `convox cost` read path always returns 200 — when `cost_tracking_enable`
+The `convox cost` read path always returns 200. When `cost_tracking_enable`
 is `false`, the response is a zero `SpendUsd` and an empty breakdown rather
 than an error, so dashboards and scripts polling the endpoint do not break.
 Spend only populates after the rack parameter is set:
@@ -126,7 +126,7 @@ $ convox rack params set cost_tracking_enable=true
 # starts populating spend.
 ```
 
-The 422 rejection applies only to the WRITE paths — `convox budget set` and
+The 422 rejection applies only to the WRITE paths: `convox budget set` and
 `convox deploy` against a manifest with a `budget:` block. See
 [Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
 for the full enable instructions. Functional scope is AWS-only today.
@@ -155,6 +155,6 @@ were tripped in the previous month are cleared as part of the rollover.
 
 ## See Also
 
-- [Cost Tracking](/management/cost-tracking) — operational guide
-- [Budget Caps](/management/budget-caps) — caps that consume the spend signal
-- [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
+- [Cost Tracking](/management/cost-tracking): operational guide
+- [Budget Caps](/management/budget-caps): caps that consume the spend signal
+- [convox.yml budget block](/configuration/convox-yml#budget): schema reference

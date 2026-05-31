@@ -14,11 +14,9 @@ or removing the cap is done through `convox budget set` or `convox budget clear`
 Raise the monthly cap. Atomic with breaker-clear when the new cap is above
 current spend.
 
-> **Requires admin role on the rack RBAC.** Mutating the monthly cap is
-> admin-gated end-to-end (`AppBudgetSet` cap-mutation path on the rack).
-> A non-admin caller (`rw` role) receives `403 AppBudgetSet: admin role
-> required to set budget cap`. Basic-auth (rack-password) callers
-> automatically pass the admin check.
+> **Requires admin role on the rack.** A non-admin caller (`rw` role)
+> receives `403 AppBudgetSet: admin role required to set budget cap`.
+> Basic-auth (rack-password) callers automatically pass the admin check.
 
 ### Usage
 ```bash
@@ -28,8 +26,7 @@ current spend.
 ### Examples
 ```bash
     $ convox budget cap raise myapp --monthly-cap-usd 500
-    Raising monthly cap to 500.00 USD... OK
-    Breaker cleared.
+    Raising monthly cap for myapp... OK
 ```
 
 If the new cap is below current spend, the request is rejected:
@@ -41,12 +38,11 @@ If the new cap is below current spend, the request is rejected:
 
 Use `convox cost --app myapp` to confirm current spend before raising.
 
-After `:fired` (post-shutdown), cap-raise clears the breaker but does NOT
-restart already-shutdown services. Run `convox budget reset myapp` to
-restore replicas from the persisted shutdown-state annotation.
+After an auto-shutdown, cap-raise clears the breaker but does NOT restart
+already-shutdown services. Run `convox budget reset myapp` to restart them.
 
 ## See Also
 
-- [budget](/reference/cli/budget) — full budget command group
-- [budget reset](/reference/cli/budget-reset) — acknowledge cap breach without raising
-- [Cap raise](/management/budget-caps#cap-raise) — operational guide
+- [budget](/reference/cli/budget): full budget command group
+- [budget reset](/reference/cli/budget-reset): acknowledge cap breach without raising
+- [Cap raise](/management/budget-caps#cap-raise): operational guide

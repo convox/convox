@@ -30,5 +30,3 @@ The `max_on_demand_count` parameter is used in conjunction with the [node_capaci
 Adjusting the `max_on_demand_count` helps you optimize your resource allocation by ensuring that you have a sufficient number of on-demand nodes for reliability while utilizing spot instances to reduce costs.
 
 Additionally, consider configuring the [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) parameter to ensure that a minimum number of on-demand nodes are always available to handle your workloads.
-
-By configuring the `max_on_demand_count` parameter, you can effectively manage the scalability and cost-efficiency of your Convox rack.

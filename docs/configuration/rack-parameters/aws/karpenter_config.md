@@ -10,7 +10,7 @@ url: /configuration/rack-parameters/aws/karpenter_config
 
 The `karpenter_config` parameter provides a JSON escape hatch for the [Karpenter](/configuration/scaling/karpenter) workload NodePool and its EC2NodeClass. Use this to access Karpenter API features not exposed as individual parameters, such as disruption scheduling windows, custom AMI selection, or advanced block device mappings.
 
-Individual `karpenter_*` parameters build the defaults. `karpenter_config` overrides them at the section level — for example, setting `nodePool.template.spec.requirements` in the config completely replaces the defaults built from `karpenter_instance_families`, `karpenter_instance_sizes`, etc.
+Individual `karpenter_*` parameters build the defaults. `karpenter_config` overrides them at the section level. For example, setting `nodePool.template.spec.requirements` in the config completely replaces the defaults built from `karpenter_instance_families`, `karpenter_instance_sizes`, etc.
 
 ## Default Value
 

@@ -58,13 +58,13 @@ services:
         scheme: http
 ```
 
-With this configuration, traffic flows to the service on HTTPS port 8080, while the readiness probe queries `http://<pod>:9090/healthz` — a plain-HTTP diagnostics endpoint fronted by an HTTPS service port.
+With this configuration, traffic flows to the service on HTTPS port 8080, while the readiness probe queries `http://<pod>:9090/healthz`, a plain-HTTP diagnostics endpoint fronted by an HTTPS service port.
 
 If `scheme` is omitted, the readiness probe inherits the scheme of the main service port. The scalar form `port: 9090` is equivalent to the map form `port: { port: 9090 }` and inherits the service scheme. Provide `scheme` explicitly only when you need to override the inherited value.
 
 > **Scope.** `health.port` only affects the readiness probe. Startup probes continue to target the main service port regardless of `health.port`, and liveness probes use their own `liveness.port` override (see below). If your service speaks gRPC (`port: grpc:...` with `grpcHealthEnabled: true`), a `health.port` override redirects the gRPC health check to the new port; `scheme` is ignored in that case.
 
-> **Valid scheme values.** Only `http` and `https` are valid under `health.port.scheme` and `liveness.port.scheme`. Setting `scheme: grpc` on a service whose main port is **not** gRPC will silently skip the probe — use `grpcHealthEnabled: true` with a gRPC main port instead. See [gRPC Health Checks](#grpc-health-checks) below.
+> **Valid scheme values.** Only `http` and `https` are valid under `health.port.scheme` and `liveness.port.scheme`. Setting `scheme: grpc` on a service whose main port is **not** gRPC will silently skip the probe. Use `grpcHealthEnabled: true` with a gRPC main port instead. See [gRPC Health Checks](#grpc-health-checks) below.
 
 ## Liveness Checks
 
@@ -99,8 +99,8 @@ services:
 
 ### Important Considerations
 
-- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks. Setting `liveness.port` without `liveness.path` is a silent no-op — no liveness probe is generated
-- **`port` is optional**: If unset, the liveness probe targets the main service port, mirroring the `health.port` behavior. Startup probes ignore `liveness.port` and continue to target the main service port. If you need the liveness probe to use a specific scheme (for example, HTTPS), set `liveness.port.scheme` explicitly — unlike readiness, liveness does not auto-inherit the main service scheme
+- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks. Setting `liveness.port` without `liveness.path` is a silent no-op, so no liveness probe is generated
+- **`port` is optional**: If unset, the liveness probe targets the main service port, mirroring the `health.port` behavior. Startup probes ignore `liveness.port` and continue to target the main service port. If you need the liveness probe to use a specific scheme (for example, HTTPS), set `liveness.port.scheme` explicitly. Unlike readiness, liveness does not auto-inherit the main service scheme
 - **Conservative Configuration**: Liveness checks should be configured conservatively to avoid unnecessary restarts. False positives can cause service disruption
 - **Separate Endpoints**: Consider using different endpoints for health checks and liveness checks to monitor different aspects of your application
 - **Startup Time**: Set an appropriate `grace` period to allow your application to fully initialize before liveness checks begin
@@ -216,7 +216,7 @@ services:
       failureThreshold: 3
 ```
 
-In this example, the startup probe uses its own values: 60s grace, 30s interval, 10 failure threshold — allowing a generous startup window (60s + 10 x 30s = 360s) while keeping the liveness probe tight for ongoing monitoring.
+In this example, the startup probe uses its own values: 60s grace, 30s interval, 10 failure threshold, allowing a generous startup window (60s + 10 x 30s = 360s) while keeping the liveness probe tight for ongoing monitoring.
 
 > **Note on versions before 3.24.1:** In rack versions prior to 3.24.1, a bug caused the startup probe to always use liveness timing values regardless of explicit configuration. If you are running an older rack version, timing fields set on `startupProbe` will have no effect. Update to 3.24.1 or later to use independent startup probe timing.
 

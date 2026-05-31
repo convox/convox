@@ -52,7 +52,7 @@ Keys added to the per-app mask list (via `convox env mask set`) render as `****`
     $ convox env -a my-app > backup.env    # pipe output is always unmasked
 ```
 
-Masking affects display only. The stored value in the release record and in Kubernetes pod specs is unchanged — no `ReleasePromote` is triggered when setting or unsetting the mask list.
+Masking affects display only. The stored value in the release record and in Kubernetes pod specs is unchanged. No `ReleasePromote` is triggered when setting or unsetting the mask list.
 
 ## env edit
 

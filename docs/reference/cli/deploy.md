@@ -85,7 +85,7 @@ The `--external` flag runs the Docker build locally instead of uploading the sou
     $ convox deploy --external -a myapp
 ```
 
-See [build — External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
+See [build: External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
 
 ## See Also
 

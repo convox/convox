@@ -25,8 +25,8 @@ Setting parameters... OK
 
 - **Format:** Comma-separated `key=value:Effect` or `key:Effect` entries.
 - **Validation:** Effect must be `NoSchedule`, `PreferNoSchedule`, or `NoExecute`. Keys and values must not contain double quotes.
-- `convox.yml` does not have a `tolerations` field. For GPU taints (`nvidia.com/gpu`, `amd.com/gpu`), Convox emits a matching toleration (`operator: Exists`, `effect: NoSchedule`) directly on any pod that declares `scale.gpu.count > 0` — no admission controller is required. For non-GPU taints, tolerations must be added through an external mechanism (e.g., a mutating admission webhook) or via the `dedicated-node` convention (set `nodeSelectorLabels.convox.io/label: <value>` to also receive the dedicated-node toleration). See [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for details.
-- Node-level DaemonSets (fluentd, `aws-node`, `kube-proxy`, etc.) are not affected by custom taints — they use broad tolerations and will continue to run on tainted nodes.
+- `convox.yml` does not have a `tolerations` field. For GPU taints (`nvidia.com/gpu`, `amd.com/gpu`), Convox emits a matching toleration (`operator: Exists`, `effect: NoSchedule`) directly on any pod that declares `scale.gpu.count > 0`, so no admission controller is required. For non-GPU taints, tolerations must be added through an external mechanism (e.g., a mutating admission webhook) or via the `dedicated-node` convention (set `nodeSelectorLabels.convox.io/label: <value>` to also receive the dedicated-node toleration). See [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for details.
+- Node-level DaemonSets (fluentd, `aws-node`, `kube-proxy`, etc.) are not affected by custom taints. They use broad tolerations and will continue to run on tainted nodes.
 
 ## See Also
 

@@ -6,13 +6,14 @@ url: /management/budget-caps
 # Budget Caps
 
 Convox tracks per-app cloud spend and lets you enforce a monthly cap. When the
-cap fires, the rack can alert, block new deploys, or auto-shut services down to
-prevent overrun. Caps are managed at runtime via the `convox budget` CLI or the
-Console budget tab. The [budget block in convox.yml](/configuration/convox-yml#budget)
-declares the schema and is validated on `convox releases promote`, but does not
-itself persist runtime cap values — set caps via `convox budget set` so cap
-changes are explicit, audit-attributed, and not implicitly overwritten by the
-next deploy.
+cap is reached, the rack can alert, block new deploys, or automatically shut
+services down to prevent overrun. Caps are managed at runtime with the
+`convox budget` CLI or the Console budget tab. The
+[budget block in convox.yml](/configuration/convox-yml#budget) declares the
+schema and is validated on `convox releases promote`, but it does not itself
+persist runtime cap values. Set caps with `convox budget set` so cap changes
+are explicit, audit-attributed, and not implicitly overwritten by the next
+deploy.
 
 This page is the operational guide for managing caps in production. For schema
 details see the [convox.yml budget block](/configuration/convox-yml#budget); for
@@ -21,150 +22,119 @@ how spend is computed see [Cost Tracking](/management/cost-tracking).
 ## Prerequisite: cost tracking must be enabled <a id="cost-tracking-prerequisite"></a>
 
 Budget enforcement (`monthlyCapUsd`, `alertThresholdPercent`, `atCapAction`)
-requires the rack-level cost accumulator. Without it, no spend is computed —
-caps and alerts persist as config but never trip. Enable on AWS racks:
+requires the rack-level cost accumulator. Without it, no spend is computed, so
+caps and alerts persist as config but never trip. Enable it on AWS racks:
 
 ```bash
 $ convox rack params set cost_tracking_enable=true
 ```
 
 If you run `convox budget set` (or deploy a manifest with a `budget:` block)
-against a rack with `cost_tracking_enable=false`, the rack rejects with HTTP
-422 and a message pointing at this command. Set the rack parameter, wait for
-the apply to complete (~3 min), then redeploy or retry.
+against a rack with `cost_tracking_enable=false`, the rack rejects the request
+with HTTP 422 and a message pointing at this command. Set the rack parameter,
+wait for the apply to complete (~3 min), then redeploy or retry.
 
 `cost_tracking_enable` is AWS-only today; non-AWS racks (Azure, GCP,
 DigitalOcean, Equinix Metal, Local) cannot enforce budgets in the current
 release. Recovery operations (`convox budget clear`, `convox budget reset`)
 remain available regardless of cost tracking state so you can always clean up.
 
-## Authorization <a id="authorization"></a>
+## Set a monthly cap <a id="set-a-cap"></a>
 
-Budget mutations split across two authorization tiers. The split is
-enforced server-side in `AppBudgetSet`, `AppBudgetClear`, and
-`AppBudgetReset` and applies on every provider (AWS, Azure, GCP,
-DigitalOcean, Equinix Metal, Local).
+Set a cap for an app with `convox budget set`:
 
-| Mutation | Required role | Rejection on under-privileged caller |
+```bash
+$ convox budget set myapp --monthly-cap 500
+```
+
+The cap value is in USD. You can configure the alert threshold, the at-cap
+action, and a pricing adjustment in the same command:
+
+```bash
+$ convox budget set myapp --monthly-cap 1000 --alert-at 75 --at-cap-action block-new-deploys --pricing-adjustment 0.7
+```
+
+| Flag | Default | Effect |
 |---|---|---|
-| `AppBudgetSet --monthly-cap` (cap mutation, alias `convox budget cap raise`) | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetSet --at-cap-action` | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetSet --pricing-adjustment` (alias `--pricing-adjustment-only`) | Admin | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetSet --alert-threshold-percent` (threshold-only) | `rw` | n/a |
-| `AppBudgetClear` (alias `convox budget clear`) | Admin | `403 AppBudgetClear: admin role required to remove budget config` |
-| `AppBudgetReset` (plain, alias `convox budget reset`) | `rw` | n/a |
-| `AppBudgetReset --force-clear-cooldown` | Admin | `403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.` |
-| `AppBudgetDismissRecovery` (alias `convox budget dismiss-recovery`) | `rw` | n/a |
-| `AppBudgetSimulateShutdown` (alias `convox budget simulate-shutdown`) | `rw` (read-only) | n/a |
-| Webhook signing key reveal (`webhook_signing_key`) | Admin | `403` (Console resolver layer) |
+| `--monthly-cap` | none | Monthly spend cap in USD. Setting it enables enforcement for the app. |
+| `--alert-at` | `80` | Percent of the cap at which an alert fires (the threshold alert). |
+| `--at-cap-action` | `alert-only` | What happens when spend crosses the cap. See [Cap actions](#cap-actions). |
+| `--pricing-adjustment` | `1.0` | Multiplier applied to computed spend (e.g. `0.7` to model a 30% committed-use discount). |
 
-The Admin gate on cap mutation, Clear, and `--force-clear-cooldown`
-closes a cap-circumvention path: without it, a non-admin caller could
-defeat an admin-set cap by Clear+Set (the threshold-only re-set has no
-admin gate). End-to-end admin coverage of the cap lifecycle keeps the
-budget guardrail honest.
+You can also set these in the [convox.yml budget block](/configuration/convox-yml#budget),
+but runtime cap values come from `convox budget set`, not from the manifest.
 
-Basic-auth callers (rack-password) automatically pass the Admin check
-via `SetAdminRole` at authenticate-time. Non-Admin Console users
-attempting an Admin-gated action see the rejection message above
-relayed through the Console UI.
-
-## Cap actions
+## Cap actions <a id="cap-actions"></a>
 
 `atCapAction` selects what happens when an app crosses its `monthlyCapUsd`:
 
 | Action | Behavior |
 |--------|----------|
-| `alert-only` | Fires `app:budget:cap` and webhooks. No deploy or runtime impact. |
-| `block-new-deploys` | Fires `app:budget:cap`, trips the breaker. New deploys are rejected with an over-cap error. Running services keep running. |
-| `auto-shutdown` | Arms the auto-shutdown countdown. After `notifyBeforeMinutes`, services are scaled to zero per `shutdownOrder`. |
+| `alert-only` (default) | Fires the `app:budget:cap` event and webhooks. No deploy or runtime impact. |
+| `block-new-deploys` | Fires `app:budget:cap` and blocks new deploys with an over-cap error. Running services keep running. |
+| `auto-shutdown` | Starts the auto-shutdown countdown. After `notifyBeforeMinutes`, services are scaled to zero in `shutdownOrder` order. |
 
-## Sub-state vocabulary <a id="sub-state-vocabulary"></a>
+When you choose `auto-shutdown`, the CLI prints a warning reminding you to
+configure your at-cap webhook and to validate the configuration first:
 
-The `convox ps` `STATUS` column and the `convox services` `BUDGET` column both surface a per-service sub-state token when an app's budget cap is breached or arming. The vocabulary is identical across the two CLI surfaces:
+```bash
+$ convox budget set myapp --monthly-cap 500 --at-cap-action auto-shutdown
+```
 
-| Token | Meaning |
-|-------|---------|
-| `armed-Nm` | Auto-shutdown countdown is active; `N` minutes remain until services scale to zero (e.g. `armed-25m`). |
-| `at-cap-keda` | Service has been scaled to zero by auto-shutdown via the KEDA `paused-replicas` annotation (KEDA-managed services). |
-| `at-cap-auto` | Service has been scaled to zero by auto-shutdown via direct `replicas=0` PATCH (deployment-only services). |
-| `at-cap` | Cap is breached but `atCapAction: block-new-deploys`; no scale-to-zero, deploys are rejected. |
+Run `convox budget simulate-shutdown myapp` to preview which services would be
+scaled to zero, and in what order, without actually shutting anything down.
 
-## Cap raise <a id="cap-raise"></a>
+### Choosing an action
 
-Raising the cap mid-month clears the breaker (when current spend is below the
-new cap) and dismisses any active recovery banner.
+- Use `alert-only` while you are still learning what an app costs. You get the
+  threshold alert and the at-cap event without any runtime impact.
+- Use `block-new-deploys` to stop new deploys from adding more cost without
+  touching what is already running. Good for non-production apps that should
+  not grow further this month.
+- Use `auto-shutdown` for apps where stopping the spend matters more than
+  staying up. Pair it with a configured webhook so your team is paged on the
+  `:armed` event before services scale down.
+
+## Raising or recovering a cap <a id="cap-raise"></a>
+
+Raising the cap mid-month re-enables blocked deploys (when current spend is
+below the new cap) and dismisses any active recovery banner:
 
 ```bash
 $ convox budget cap raise myapp --monthly-cap-usd 500
-Raising monthly cap to 500.00 USD... OK
-Breaker cleared.
+Raising monthly cap for myapp... OK
 ```
 
-`budget cap raise` is an alias for `budget set --monthly-cap`. The clear is
-atomic — the rack acquires the per-app lock, writes the new cap, and clears
-`CircuitBreakerTripped` + the alert-fired timestamps in the same critical
-section. There is no observable window where the new cap is set but the old
-breaker is still tripped.
+`budget cap raise` is an alias for `budget set --monthly-cap`. Both
+`--monthly-cap-usd` and `--monthly-cap` are accepted.
 
-If the new cap is below current spend, the cap-raise rejects with an explicit
-error and the breaker remains tripped. Use `convox cost --app myapp` to confirm
-current spend before raising.
+If the new cap is below current spend, the cap-raise is rejected with an
+explicit error and deploys stay blocked. Use `convox cost --app myapp` to
+confirm current spend before raising.
 
-A cap-raise during the armed window (after `:armed`, before `:fired`) produces
-two related events from one operator action, both emitted synchronously from
-the same HTTP request handler under the per-app lock: first
-`app:budget:breaker-cleared` (with `reason="cap-raised"`) when the cap-raise
-atomically clears the tripped deploy circuit breaker, then immediately
-`app:budget:auto-shutdown:cancelled` (with `cancel_reason="cap-raised"`)
-because the orphan armed shutdown-state annotation is deleted atomically
-with the breaker clear. There is no "next accumulator tick" between
-them — both events are sent before the cap-raise HTTP request returns.
-Receivers correlating the audit pair should match on:
-1. `data.app` — identical on both events.
-2. The operator identity — `data.ack_by` on `:breaker-cleared` and
-   `data.actor` on `:cancelled` (different field names, same JWT-derived
-   value sourced from the cap-raiser).
-3. `data.cleared_at` on `:breaker-cleared` and `data.cancelled_at` on
-   `:cancelled` — bit-identical RFC 3339 timestamps, both populated from
-   the single `breakerClearedAckAt` value captured at the breaker-clear
-   site (not two `time.Now()` calls), so receivers can match on exact
-   string equality.
-Receivers cannot use `tick_id` to correlate the pair: only the auto-shutdown
-lifecycle events carry `tick_id` in their universal payload, and
-`:breaker-cleared` is a top-level audit event whose payload does not include
-that field. The two events are intentional and not duplicates —
-`:breaker-cleared` covers the deploy-circuit-breaker side effect (deploys are
-unblocked), while `:cancelled reason=cap-raised` records that the
-auto-shutdown countdown was aborted.
-
-After `:fired` (post-shutdown), a cap-raise alone clears the breaker but
-does NOT restart already-shutdown services on its own — the cap-raise is
-limited to the cap value and breaker. Run `convox budget reset myapp` to
-clear the breaker AND restore replicas from the persisted shutdown-state
-annotation (`restoreFromAnnotation`). See
-[Reset and force-clear cooldown](#force-clear-cooldown) below.
+After auto-shutdown has fired, a cap-raise alone re-enables deploys but does
+**not** restart already-shutdown services. To clear the breach and restore
+services, use `convox budget reset` (see below).
 
 ## Reset and force-clear cooldown <a id="force-clear-cooldown"></a>
 
-`convox budget reset` acknowledges a cap breach and re-enables deploys. The
-plain reset clears the deploy circuit breaker AND, when invoked after `:fired`,
-restores replicas from the persisted shutdown-state annotation
-(`restoreFromAnnotation`). The default behavior preserves any flap-suppress
-carry-over so that an app that recently breached, was reset, then breached
-again does not flip-flop into auto-shutdown loops.
+`convox budget reset` acknowledges a cap breach and re-enables deploys. After
+auto-shutdown has fired, the plain reset also restarts services that were
+scaled to zero. The cap value itself is unchanged.
 
 ```bash
 $ convox budget reset myapp
 Resetting budget for myapp... OK
-Breaker cleared.
 ```
 
-`--force-clear-cooldown` is additive — it does not change the breaker-clear
-or the replica-restore behavior, but it additionally clears the flap-suppress
-annotation so the next cap fire will not be suppressed by the 24-hour
-flap-prevention cooldown. Use only when you are sure the underlying cause is
-resolved.
+By default, reset preserves the flap-suppression cooldown: an app that recently
+breached, was reset, then breached again will not flip-flop into repeated
+auto-shutdown cycles within 24 hours.
+
+`--force-clear-cooldown` is additive. It re-enables deploys and restores
+services exactly as the plain reset does, and additionally clears the
+flap-suppression cooldown so the next cap breach is not suppressed by the
+24-hour window. Use it only when you are sure the underlying cause is resolved.
 
 ```bash
 $ convox budget reset myapp --force-clear-cooldown
@@ -173,10 +143,11 @@ Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 
 ## Block-new-deploys recovery <a id="block-new-deploys"></a>
 
-When `atCapAction: block-new-deploys` fires, deploys are rejected with:
+When `atCapAction: block-new-deploys` is in effect and the cap is reached,
+deploys are rejected with an over-cap error similar to:
 
 ```text
-budget cap exceeded: monthly cap 250.00 USD, current spend 268.42 USD
+budget cap exceeded for app myapp: spent $268.42 of $250.00 cap this month
 ```
 
 To recover:
@@ -184,127 +155,126 @@ To recover:
 1. Run `convox cost --app myapp` to confirm current spend.
 2. Either raise the cap (`convox budget cap raise --monthly-cap-usd NEW`) or wait
    for the next month rollover (current spend resets on the 1st).
-3. Or accept the cap and reset to re-enable deploys for the rest of the month
-   without raising — `convox budget reset`. The breaker clears but the cap
-   remains; subsequent cost growth will trip the breaker again.
+3. Or accept the cap and run `convox budget reset` to re-enable deploys for the
+   rest of the month without raising the cap. The breaker clears but the cap
+   remains; subsequent cost growth will block deploys again.
+
+## What you see when a cap is hit <a id="sub-state-vocabulary"></a>
+
+The `convox ps` `STATUS` column and the `convox services` `BUDGET` column both
+show a per-service sub-state token when an app's budget cap is breached or
+arming. The vocabulary is the same on both surfaces:
+
+| Token | Meaning |
+|-------|---------|
+| `armed-Nm` | Auto-shutdown countdown is active; `N` minutes remain until services scale to zero (e.g. `armed-25m`). |
+| `at-cap-keda` | Service has been scaled to zero by auto-shutdown (KEDA-managed services). |
+| `at-cap-auto` | Service has been scaled to zero by auto-shutdown (deployment-only services). |
+| `at-cap` | Cap is breached with `atCapAction: block-new-deploys`; no scale-to-zero, deploys are rejected. |
+
+When you recover (raise the cap or reset), these tokens clear and any recovery
+banner in the Console is dismissed.
+
+## Authorization <a id="authorization"></a>
+
+Budget operations split across two authorization tiers. Cap mutation, clearing
+budget config, and force-clearing the cooldown require the Admin role.
+Threshold-only changes, plain reset, dismiss-recovery, and the read-only
+simulate-shutdown preview require the read-write (`rw`) role. The split applies
+on every provider (AWS, Azure, GCP, DigitalOcean, Equinix Metal, Local).
+
+| Operation | Required role |
+|---|---|
+| Set or raise the monthly cap (`--monthly-cap`) | Admin |
+| Set the at-cap action (`--at-cap-action`) | Admin |
+| Set the pricing adjustment (`--pricing-adjustment`) | Admin |
+| Set the alert threshold only (`--alert-threshold-percent`) | `rw` |
+| Clear budget config (`convox budget clear`) | Admin |
+| Reset (`convox budget reset`) | `rw` |
+| Reset with `--force-clear-cooldown` | Admin |
+| Dismiss recovery banner (`convox budget dismiss-recovery`) | `rw` |
+| Simulate shutdown (`convox budget simulate-shutdown`, read-only) | `rw` |
+
+The Admin requirement on cap changes, clear, and force-clear keeps an admin-set
+cap from being circumvented by a non-admin (for example, clearing the budget
+and re-setting it without the cap).
+
+Basic-auth callers (using the rack password) pass the Admin check
+automatically. A non-Admin Console user who attempts an Admin-only action sees
+the rejection message relayed through the Console UI. The exact rejection
+messages are:
+
+```text
+403 AppBudgetSet: admin role required to set budget cap
+403 AppBudgetClear: admin role required to remove budget config
+403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.
+```
 
 ## Per-service cost breakdown <a id="per-service-breakdown"></a>
 
 `convox cost --app myapp` returns a `breakdown` array with the cumulative
-spend, instance type, and bucket name for every service that has been
-observed running this month. The breakdown populates from accumulator ticks
-(default 10 minutes apart) and grows monotonically until month rollover, at
-which point it resets to zero alongside `currentMonthSpendUsd`.
+spend, instance type, and bucket name for every service that has been observed
+running this month. The breakdown grows over the month and resets to zero at
+month rollover alongside `currentMonthSpendUsd`.
 
-Two reserved buckets surface alongside service names:
+Two reserved buckets appear alongside service names:
 
-- `_build` — build pods carry `service-type=build` plus a `service` label
-  naming the service being built. Their spend is bucketed away from that
-  service so the named service's normal-operation cost stays uninflated.
-- `_unattributed` — pods with no `service` label (system-injected sidecars,
-  KEDA scalers, anything not user-deployed). Their spend stays visible in
-  the breakdown without polluting any user-deployed service's row.
+- `_build`: spend for build pods, bucketed away from the service being built so
+  the named service's normal-operation cost stays uninflated.
+- `_unattributed`: spend for pods with no service label (system sidecars,
+  autoscaler components, anything not user-deployed). Kept visible without
+  inflating any user-deployed service's row.
 
 Edge cases:
 
 - **Service deleted mid-month.** The deleted service's accumulated spend
-  remains in the breakdown until the month rollover. Operator intuition: "I
-  ran this service for a week, it cost $50; deleting it doesn't make the $50
-  go away."
-- **Service renamed mid-month.** The old name keeps its pre-rename spend;
-  the new name accumulates from the rename point forward. Both rows appear
-  until rollover, summing to the correct app total.
-- **Bucket cap.** The breakdown is capped at 1000 entries per app. Once full,
-  existing rows continue to accumulate but new services are dropped from this
-  month's breakdown. The rack logs `at=per_service_truncated count=N` and
-  also fires an `app:budget:per-service-truncated` audit event on every
-  truncating tick (`data.dropped`, `data.cap`, `data.app`); subscribe via
-  webhook or `convox events list -a <app>` to surface it without log
-  access. Practical apps stay well under the cap; if you hit it, audit the
-  per-tick label set for unbounded service-name churn.
-- **Pre-3.24.6 history.** Per-service attribution starts populating from
-  the first tick after upgrade. Spend that accumulated before the upgrade
-  remains in `currentMonthSpendUsd` (the total) but is not retroactively
-  attributed.
-- **Rolling back.** Total spend (`currentMonthSpendUsd`) survives a
-  downgrade-then-re-upgrade round-trip. Per-service attribution does not —
-  the older binary drops the unknown fields on its first tick. After
-  re-upgrading, the breakdown re-populates from the next tick forward.
+  remains in the breakdown until month rollover. You ran the service for part
+  of the month, so its cost stays attributed for that month.
+- **Service renamed mid-month.** The old name keeps its pre-rename spend; the
+  new name accumulates from the rename point forward. Both rows appear until
+  rollover and sum to the correct app total.
+- **Per-app entry cap.** The breakdown holds up to 1000 services per app. Once
+  full, existing rows keep accumulating but new services are dropped from this
+  month's breakdown, and an `app:budget:per-service-truncated` event fires.
+  Subscribe via webhook or `convox events list -a <app>` to surface it. Most
+  apps stay well under the cap; if you hit it, check for unbounded
+  service-name churn.
+- **Pre-3.24.6 history.** Per-service attribution starts populating after
+  upgrade. Spend accumulated before the upgrade remains in the app total
+  (`currentMonthSpendUsd`) but is not retroactively attributed.
+- **Rolling back.** Total spend survives a downgrade-then-re-upgrade round
+  trip. Per-service attribution does not; an older rack drops the per-service
+  fields, and the breakdown re-populates after re-upgrading.
 
 The breakdown surfaces in `convox cost`, the Console budget panel, and the
 auto-shutdown `shutdownOrder: largest-cost` ranking. With per-service spends
 populated, `largest-cost` shuts down the most expensive service first.
 
-## Audit actor resolution <a id="audit-actor"></a>
+## Audit actor <a id="audit-actor"></a>
 
 Every budget mutation emits an audit event with an `actor` field identifying
-who triggered the action. From 3.24.6 onward the rack honors a
-`ack_by` form parameter passed alongside the request body and records its
-value as the persisted `actor` instead of the basic-auth literal
-`rack-password`. When the form parameter is absent or empty, the rack falls
-back to the JWT-derived caller (typically `rack-password` for basic-auth
-clients or the system user for internal callers), preserving pre-3.24.6
-behavior.
+who triggered the action. From 3.24.6 onward, when the request supplies an
+acknowledging identity (the Console passes the authenticated admin's email, and
+the CLI derives it from your authenticated identity), the rack records that value as the
+`actor`. When no such value is supplied, the rack falls back to the caller
+derived from the request credentials (typically `rack-password` for basic-auth
+clients), preserving pre-3.24.6 behavior.
 
-The four mutation handlers wired through this resolution are:
-
-| Handler | Event | Where the resolved actor lands |
-|---|---|---|
-| `AppBudgetSet` | `app:budget:set` | `cfg.LastCapMutationBy` + `data.actor` |
-| `AppBudgetClear` | `app:budget:clear` | `data.actor` (also `prev_ack_by` metadata) |
-| `AppBudgetReset` | `app:budget:reset` | `state.CircuitBreakerAckBy` + `data.actor` |
-| `AppBudgetDismissRecovery` | `app:budget:auto-shutdown:dismissed` | `data.actor` |
-
-Console (3.24.6+) populates the form parameter with the authenticated
-admin's email so the rack records `actor=alice@example.com` rather than
-the generic `rack-password` sentinel. When the form parameter is honored,
-the rack's HTTP response carries an RFC 8594 deprecation triple:
-
-```text
-Deprecation: true
-Sunset: Thu, 01 Oct 2026 00:00:00 GMT
-Link: <https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"
-```
-
-The `Sunset` date is a courtesy hint per [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594) —
-it signals migration intent, not a binding deadline. Operator scripts and
-webhook receivers ingesting these events should follow the actor-shape
-guidance in [ack_by Derivation](/migration/ack-by-derivation).
-
-### Backward compatibility
-
-Pre-3.24.6 racks (3.24.5 and earlier) silently ignore the deprecation-signal
-layer — they predate the `Sunset`/`Deprecation`/`Link` triple — but still
-record the form-parameter value into audit events. Mixed-version deployments
-are safe in both directions:
-
-- **3.24.6 Console + 3.24.5 rack** — actor still records the authenticated
-  email; no rack-emitted deprecation triple. Console self-mirrors the same
-  triple onto its own GraphQL response so the GUI sunset banner still
-  renders.
-- **3.24.5 Console + 3.24.6 rack** — actor records the older Console's
-  literal fallback (`console`); rack still emits the deprecation triple,
-  but the older Vue layer has no banner widget and silently drops the
-  headers.
-- **Older Console / no form parameter** — rack falls back to the JWT-derived
-  caller with pre-3.24.6 audit behavior; no deprecation triple is emitted.
-
-The deprecation triple is gated on a non-empty form parameter; an empty or
-absent parameter never produces deprecation headers.
+Operator scripts and webhook receivers ingesting these events should follow the
+actor-shape guidance in [ack_by Derivation](/migration/ack-by-derivation).
 
 ## Troubleshooting <a id="troubleshooting"></a>
 
 ### Breaker re-trips immediately after reset
 
-The cap is below current spend. Either raise the cap or wait for month rollover.
-`convox budget show myapp` displays current spend vs cap.
+The cap is below current spend. Either raise the cap or wait for month
+rollover. `convox budget show myapp` displays current spend versus cap.
 
 ### Recovery banner persists across cycles
 
-Pre-3.24.6 racks had a leak where the dismiss timestamp could carry from one
-ARMED→RECOVERED cycle into the next, silently suppressing the new banner. The
-fix landed in 3.24.6's `runStaleAnnotationGC`. For racks already in stuck state,
-clear the annotation manually:
+Pre-3.24.6 racks could carry a dismiss timestamp from one shutdown-and-recovery
+cycle into the next, silently suppressing the new banner. The fix shipped in
+3.24.6. For racks already in a stuck state, clear the annotation manually:
 
 ```bash
 $ kubectl annotate ns <rack>-<app> convox.com/budget-recovery-banner-dismissed-
@@ -312,25 +282,25 @@ $ kubectl annotate ns <rack>-<app> convox.com/budget-recovery-banner-dismissed-
 
 ### Auto-shutdown fired but services did not scale down
 
-Confirm `convox.yml` has `atCapAction: auto-shutdown` set (not `block-new-deploys`).
-Check `convox budget show myapp` for the live state. If `:armed` fired but
-not `:fired`, the countdown may still be running (`notifyBeforeMinutes`).
+Confirm `convox.yml` has `atCapAction: auto-shutdown` set (not
+`block-new-deploys`). Check `convox budget show myapp` for the live state. If
+the countdown armed but did not fire, it may still be running
+(`notifyBeforeMinutes`).
 
-### `:fired` fired but I want to keep services running
+### Auto-shutdown fired but I want to keep services running
 
-Run `convox budget reset myapp`. The plain reset clears the breaker AND
-restarts shutdown services from the persisted shutdown-state annotation.
-A cap-raise alone (`convox budget cap raise`) clears the breaker but does
-not restart shutdown services — `budget reset` is the canonical recovery
-path post-`:fired`.
+Run `convox budget reset myapp`. The plain reset re-enables deploys AND
+restarts services that were scaled to zero. A cap-raise alone
+(`convox budget cap raise`) re-enables deploys but does not restart services.
+`convox budget reset` is the recovery path after auto-shutdown has fired.
 
 ## See Also
 
-- [Cost Tracking](/management/cost-tracking) — how spend is computed
-- [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
-- [budget CLI reference](/reference/cli/budget) — command reference
-- [Webhooks](/configuration/webhooks) — receiving cap events at an external URL
-- [ack_by Derivation](/migration/ack-by-derivation) — actor field semantics for audit-event receivers
-- [Budget Management](/console/budget-management) — Console UI for budget configuration
+- [Cost Tracking](/management/cost-tracking): how spend is computed
+- [convox.yml budget block](/configuration/convox-yml#budget): schema reference
+- [budget CLI reference](/reference/cli/budget): command reference
+- [Webhooks](/configuration/webhooks): receiving cap events at an external URL
+- [ack_by Derivation](/migration/ack-by-derivation): actor field semantics for audit-event receivers
+- [Budget Management](/console/budget-management): Console UI for budget configuration
 
-> **Note on terminology:** this page covers the **per-app monthly spend cap** introduced in 3.24.6. The unrelated **Karpenter disruption budget** (cluster-level node-scheduling primitive — see [Karpenter](/configuration/scaling/karpenter)) shares the word "budget" but is a separate concept with no shared configuration surface.
+> **Note on terminology:** this page covers the **per-app monthly spend cap** introduced in 3.24.6. The unrelated **Karpenter disruption budget** (a cluster-level node-scheduling primitive; see [Karpenter](/configuration/scaling/karpenter)) shares the word "budget" but is a separate concept with no shared configuration surface.

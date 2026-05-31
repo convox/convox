@@ -30,7 +30,7 @@ The following environment variables are required:
 
 ### Create Project
 ```bash
-    $ gcloud projects create <id> --set-as-default
+$ gcloud projects create <id> --set-as-default
 ```
 - `GOOGLE_PROJECT` is the id you selected
 
@@ -38,15 +38,15 @@ The following environment variables are required:
 
 ### Create Service Account
 ```bash
-    $ serviceaccount="convox@${GOOGLE_PROJECT}.iam.gserviceaccount.com"
-    $ gcloud iam service-accounts create convox
-    $ gcloud iam service-accounts keys create ~/.gcloud.convox --iam-account="${serviceaccount}"
+$ serviceaccount="convox@${GOOGLE_PROJECT}.iam.gserviceaccount.com"
+$ gcloud iam service-accounts create convox
+$ gcloud iam service-accounts keys create ~/.gcloud.convox --iam-account="${serviceaccount}"
 ```
-- `GOOGLE_CREDENTIALS` is `~/gcloud.convox`
+- `GOOGLE_CREDENTIALS` is `~/.gcloud.convox`
 
 ### Grant Permissions
 ```bash
-    $ gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT} --member="serviceAccount:${serviceaccount}" --role="roles/owner"
+$ gcloud projects add-iam-policy-binding ${GOOGLE_PROJECT} --member="serviceAccount:${serviceaccount}" --role="roles/owner"
 ```
 
 ## Enable GCP APIs
@@ -54,17 +54,17 @@ The following environment variables are required:
 The following APIs must be enabled for your GCP project:
 
 ```bash
-    $ gcloud services enable cloudapis.googleapis.com
-    $ gcloud services enable compute.googleapis.com
-    $ gcloud services enable cloudresourcemanager.googleapis.com
-    $ gcloud services enable container.googleapis.com
-    $ gcloud services enable serviceusage.googleapis.com
-    $ gcloud services enable servicemanagement.googleapis.com
+$ gcloud services enable cloudapis.googleapis.com
+$ gcloud services enable compute.googleapis.com
+$ gcloud services enable cloudresourcemanager.googleapis.com
+$ gcloud services enable container.googleapis.com
+$ gcloud services enable serviceusage.googleapis.com
+$ gcloud services enable servicemanagement.googleapis.com
 ```
 
 ## Install Rack
 ```bash
-    $ convox rack install gcp <name> [param1=value1]...
+$ convox rack install gcp <name> [param1=value1]...
 ```
 ### Available Parameters
 
@@ -81,12 +81,12 @@ The following APIs must be enabled for your GCP project:
 After the install completes, verify your rack is running:
 
 ```bash
-    $ convox rack
-    Name      myrack
-    Provider  gcp
-    Router    router.0a1b2c3d4e5f.convox.cloud
-    Status    running
-    Version   3.23.3
+$ convox rack
+Name      myrack
+Provider  gcp
+Router    router.0a1b2c3d4e5f.convox.cloud
+Status    running
+Version   3.23.3
 ```
 
 Installation typically takes 10-20 minutes while GKE provisions the cluster and node pools.

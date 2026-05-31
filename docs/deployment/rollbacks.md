@@ -12,10 +12,10 @@ You can roll back to an old [Release](/reference/primitives/app/release)
 First you will need to find the [Release](/reference/primitives/app/release) to which
 you would like to roll back.
 ```bash
-    $ convox releases -a myapp
-    ID          STATUS  BUILD       CREATED        DESCRIPTION
-    RCDEFGHIJK  active  BABCDEFGHI  1 minute ago   env add:FOO
-    RBCDEFGHIJ          BABCDEFGHI  5 minutes ago  build 0a1b2c3d4e5f my commit message
+$ convox releases -a myapp
+ID          STATUS  BUILD       CREATED        DESCRIPTION
+RCDEFGHIJK  active  BABCDEFGHI  1 minute ago   env add:FOO
+RBCDEFGHIJ          BABCDEFGHI  5 minutes ago  build 0a1b2c3d4e5f my commit message
 ```
 In this example we will assume that `RCDEFGHIJK` has caused a problem and we would like to
 roll back to `RBCDEFGHIJ`
@@ -25,18 +25,18 @@ roll back to `RBCDEFGHIJ`
 Rolling back to an old [Release](/reference/primitives/app/release) will make a copy
 of that [Release](/reference/primitives/app/release) and promote the copy.
 ```bash
-    $ convox releases rollback RBCDEFGHIJ -a myapp
-    Rolling back to RBCDEFGHIJ...
-    2026-01-15T14:30:49Z system/k8s/atom/app Status: Running => Pending
-    2026-01-15T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
-    2026-01-15T14:30:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
-    2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
-    2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2026-01-15T14:30:53Z system/k8s/atom/app Status: Pending => Updating
-    2026-01-15T14:30:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
-    2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Created container main
-    2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
-    OK, RZYXWVUTSR
+$ convox releases rollback RBCDEFGHIJ -a myapp
+Rolling back to RBCDEFGHIJ...
+2026-01-15T14:30:49Z system/k8s/atom/app Status: Running => Pending
+2026-01-15T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
+2026-01-15T14:30:51Z system/k8s/web-745f845dc Created pod: web-745f845dc-rzl2q
+2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Successfully assigned convox-myapp/web-745f845dc-rzl2q to instance-0a1b2c3d4e5f
+2026-01-15T14:30:51Z system/k8s/web-745f845dc-rzl2q Pulling image "registry.host/convox/myapp:web.BABCDEFGHI"
+2026-01-15T14:30:53Z system/k8s/atom/app Status: Pending => Updating
+2026-01-15T14:30:55Z system/k8s/web-745f845dc-rzl2q Successfully pulled image "registry.host/convox/myapp:web.BABCDEFGHI"
+2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Created container main
+2026-01-15T14:30:56Z system/k8s/web-745f845dc-rzl2q Started container main
+OK, RZYXWVUTSR
 ```
 
 ```bash

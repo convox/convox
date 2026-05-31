@@ -35,7 +35,7 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
 
 ### What happens during an update
 
-When you run `convox rack update`, Convox applies infrastructure changes (Terraform), updates internal services, and may roll Kubernetes components. The rack status changes from `running` to `updating` and back to `running` when complete. Your application containers continue running during the update -- rack updates are designed for zero downtime.
+When you run `convox rack update`, Convox applies infrastructure changes (Terraform), updates internal services, and may roll Kubernetes components. The rack status changes from `running` to `updating` and back to `running` when complete. Your application containers continue running during the update, because rack updates are designed for zero downtime.
 
 ### Automatic Parameter Reconciliation
 

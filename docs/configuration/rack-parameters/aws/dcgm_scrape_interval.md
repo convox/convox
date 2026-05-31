@@ -9,20 +9,20 @@ url: /configuration/rack-parameters/aws/dcgm_scrape_interval
 ## Description
 The `dcgm_scrape_interval` parameter controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. Lower values produce a more responsive Console GPU dashboard at the cost of more Prometheus storage and CPU; higher values reduce overhead at the cost of coarser chart resolution.
 
-The value flows two ways:
-- The free in-cluster Prometheus path (Convox-Console-managed) reads the value via `pkg/structs/dcgm-scrape.yaml` and writes it into the scrape job's `scrape_interval` field.
-- Operators running their own Prometheus that discovers via `prometheus.io/*` pod annotations pick up the same interval from the DaemonSet's `prometheus.io/scrape-interval` annotation set in `terraform/cluster/aws/dcgm.tf`.
+The interval applies to both metrics paths:
+- The free in-cluster Prometheus deployment (Console-managed) uses it as the scrape interval for the DCGM exporter job.
+- If you run your own Prometheus that discovers targets via `prometheus.io/*` pod annotations, it picks up the same interval from the DCGM exporter's `prometheus.io/scrape-interval` annotation.
 
-Accepts a Go-style duration string — for example `15s`, `30s`, or `2m`.
+Accepts a duration string, for example `15s`, `30s`, or `2m`.
 
 ## Default Value
 The default value is `15s`.
 
 ## Allowed Range
-`15s` to `300s` (5 minutes). Values below `15s` exceed the DCGM exporter's recommended scrape budget; values above `300s` are sparse enough that the chart renders mostly gaps. The validator at `pkg/cli/rack.go` rejects out-of-range values.
+`15s` to `300s` (5 minutes). Values below `15s` exceed the DCGM exporter's recommended scrape budget; values above `300s` are sparse enough that the chart renders mostly gaps. Values outside the `15s` to `300s` range, or values that are not valid durations, are rejected.
 
 ## Use Cases
-- **Cost-sensitive Prometheus storage**: Bump from `15s` to `30s` or `60s` to reduce sample volume — operators on metered Prometheus tiers (Datadog, Grafana Cloud, AMP) save substantially on this metric class.
+- **Cost-sensitive Prometheus storage**: Bump from `15s` to `30s` or `60s` to reduce sample volume. Operators on metered Prometheus tiers (Datadog, Grafana Cloud, AMP) save substantially on this metric class.
 - **Tighter resolution for active debugging**: Drop to `15s` (the default) when chasing a transient GPU spike that gets averaged out at coarser intervals.
 
 ## Setting Parameters

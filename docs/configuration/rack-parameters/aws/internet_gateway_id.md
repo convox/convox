@@ -24,6 +24,6 @@ The `internet_gateway_id` parameter must be configured at rack installation. Exa
 | `internet_gateway_id`   | `igw-1234567890abcdef0` |
 
 ## Additional Information
-By setting the `internet_gateway_id` parameter, you enable your rack to utilize the specified internet gateway, ensuring seamless integration with your existing AWS network infrastructure.
+Setting the `internet_gateway_id` parameter attaches your rack to the specified internet gateway so it integrates with your existing AWS network infrastructure.
 
 It is also important to configure the [cidr](/configuration/rack-parameters/aws/cidr) block to avoid collisions with existing VPC subnets. To avoid CIDR block collision with existing VPC subnets, add a new CIDR block to your VPC to separate rack resources.

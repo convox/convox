@@ -10,7 +10,7 @@ GPU observability gives you per-pod, per-service, and per-app GPU
 telemetry: utilization, memory used and total, tensor / SM / DRAM
 activity, FP16 / FP32 throughput, and power draw. Additional DCGM
 metrics (clock rates, PCIe throughput, NVLink, throttle reasons) are
-collected by the DCGM exporter and visible in Grafana — the Console
+collected by the DCGM exporter and visible in Grafana. The Console
 dashboard surfaces the 9-field summary above as the everyday
 observability view. The Convox Console renders these metrics on the
 per-app GPU dashboard with a configurable time-range dropdown; the
@@ -25,24 +25,24 @@ appear.
 This guide uses several Kubernetes and observability concepts. Quick
 definitions:
 
-- **DCGM (Data Center GPU Manager)** — NVIDIA's tool for reading GPU
+- **DCGM (Data Center GPU Manager)**: NVIDIA's tool for reading GPU
   statistics. Convox installs the upstream `dcgm-exporter` Helm chart
   on GPU nodes when you enable observability.
-- **Prometheus** — A metrics storage system that scrapes DCGM at a
+- **Prometheus**: A metrics storage system that scrapes DCGM at a
   configurable interval and stores the time-series data.
-- **Helm** — Kubernetes package manager. Convox uses it to install the
+- **Helm**: Kubernetes package manager. Convox uses it to install the
   DCGM exporter chart and (optionally) a free in-cluster Prometheus
   chart.
-- **DaemonSet** — A Kubernetes object that runs one copy of a pod on
+- **DaemonSet**: A Kubernetes object that runs one copy of a pod on
   each node. The DCGM exporter runs as a DaemonSet so every GPU node
   gets a scrape target.
-- **ConfigMap** — A Kubernetes object that holds configuration data.
+- **ConfigMap**: A Kubernetes object that holds configuration data.
   The DCGM scrape config and the rack's webhook-receiver config both
   live in ConfigMaps.
-- **Scrape interval** — How frequently Prometheus polls DCGM for fresh
+- **Scrape interval**: How frequently Prometheus polls DCGM for fresh
   metrics. Lower values give finer time resolution at higher storage
   cost; higher values reduce storage at the cost of resolution.
-- **NVIDIA driver** — The host-side driver that DCGM relies on for GPU
+- **NVIDIA driver**: The host-side driver that DCGM relies on for GPU
   introspection. Convox-supported AMIs ship a compatible driver
   version; if you use a custom AMI, verify driver compatibility with
   the chart version pinned by `gpu_observability_chart_version`.
@@ -116,10 +116,10 @@ Open the app, select the GPU tab.
 Above the chart, the **Display window** dropdown lets you pick the
 time range:
 
-- `5 min` — recent activity, fine resolution
-- `30 min` — recent trend
-- `1 hour` — typical operational window
-- `24 hour` — daily / overnight pattern
+- `5 min`: recent activity, fine resolution
+- `30 min`: recent trend
+- `1 hour`: typical operational window
+- `24 hour`: daily / overnight pattern
 
 Changing the dropdown refetches data from the Rack. Chart data is sourced from Prometheus range queries on the Rack.
 
@@ -129,10 +129,10 @@ Each GPU service shows a summary card with the most recent scrape
 values: GPU utilization, memory used, memory total, tensor active,
 SM active, DRAM active, FP16 / FP32, and power draw. The summary card
 values are spatial averages across the service's GPU pods at the most
-recent scrape — they are NOT temporal averages.
+recent scrape. They are NOT temporal averages.
 
-For DCGM metrics not surfaced in the summary card — clock rates, PCIe
-throughput, NVLink, throttle reasons — open the Grafana deep-link
+For DCGM metrics not surfaced in the summary card (clock rates, PCIe
+throughput, NVLink, throttle reasons), open the Grafana deep-link
 from the dashboard to see the full DCGM panel set.
 
 ### Per-service chart
@@ -237,8 +237,8 @@ gpu_observability_enable     true
 
 The defaults work for most workloads. Adjust
 `gpu_metrics_max_pods` only if a single GPU dashboard request would
-fan out across more than 100 services (the parameter name is historical
-— the cap enforces a per-request services count, not a per-service pod
+fan out across more than 100 services (the parameter name is historical:
+the cap enforces a per-request services count, not a per-service pod
 count). Adjust `gpu_metrics_max_concurrent` only if you observe rack-side
 handler saturation under bursty dashboard traffic.
 
@@ -257,7 +257,7 @@ lifecycle, or release-watcher events and want to confirm delivery:
   Successful dispatches log `audit_type=webhook_dispatch_succeeded
   url_host=hooks.slack.com status=200`. Failed dispatches log
   `audit_type=webhook_dispatch_failed url_host=... status=...`. The
-  rack does NOT retry failed dispatches — receivers MUST be
+  rack does NOT retry failed dispatches. Receivers MUST be
   idempotent and tolerate occasional drops on transient receiver
   errors.
 
@@ -330,6 +330,6 @@ wired into rack-side metrics handlers) is AWS-only for v1.
 
 ## See Also
 
-- [GPU Dashboard](/console/gpu-dashboard) — Console dashboard for GPU telemetry
-- [Rack Settings](/console/rack-settings) — toggle the GPU telemetry scraper
-- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) — Rack parameter reference
+- [GPU Dashboard](/console/gpu-dashboard): Console dashboard for GPU telemetry
+- [Rack Settings](/console/rack-settings): toggle the GPU telemetry scraper
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Rack parameter reference

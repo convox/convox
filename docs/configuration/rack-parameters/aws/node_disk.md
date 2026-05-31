@@ -26,5 +26,3 @@ This command sets the disk size for each node to 50 GB.
 
 ## Additional Information
 Adjusting the `node_disk` size can help you optimize the storage capacity of your cluster based on your specific needs. Larger disk sizes provide more storage for applications and data, but they may also increase costs. Ensure that the disk size you choose balances capacity, performance, and cost-effectiveness.
-
-By configuring the `node_disk` parameter, you can ensure that your nodes have the appropriate amount of storage to support your workloads and applications effectively.

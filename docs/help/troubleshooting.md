@@ -41,24 +41,24 @@ When you know there is an issue and want to stop a deployment, you can run the `
 
 ### SSL Certificate Issues
 
-Convox uses LetsEncrypt to automatically and seamlessly provision SSL certificates for your App's domains if needed. In order for the provisioning to be successful, the DNS records for all the domains you list in your `convox.yml` for your App must resolve to the router address for your Rack. If you get a certificate warning and see the certificate is listed as a "Kubernetes Ingress Controller Fake Certificate", this means the provisioning has failed, most likely because of DNS resolution issues. Check these and try again!
+Convox uses LetsEncrypt to automatically provision SSL certificates for your App's domains if needed. In order for the provisioning to be successful, the DNS records for all the domains you list in your `convox.yml` for your App must resolve to the router address for your Rack. If you get a certificate warning and see the certificate is listed as a "Kubernetes Ingress Controller Fake Certificate", this means the provisioning has failed, most likely because of DNS resolution issues. Check these and try again!
 
 ### Health Checks
 
 Any Services within your App that expose a port will require a passing [health check](/configuration/health-checks) before receiving traffic. Deploying a Release of your App that does not pass the health checks will result in a rollback to the previous release. If this is your first release of a new App, a failing health check will result in a failed deployment.
 Failing health checks will be reported when promoting your Release:
 ```text
-    Promoting RABCDEFGHIJ...
-    2026-03-18T14:16:50Z system/k8s/atom/app Status: Running => Pending
-    2026-03-18T14:16:53Z system/k8s/atom/app Status: Pending => Updating
-    2026-03-18T14:16:53Z system/k8s/web-56f5d77d7 Created pod: web-56f5d77d7-6gx8z
-    2026-03-18T14:16:53Z system/k8s/web Scaled up replica set web-56f5d77d7 to 1
-    2026-03-18T14:16:53Z system/k8s/web-56f5d77d7-6gx8z Successfully assigned abcde-myapp/web-56f5d77d7-6gx8z to gke-abcde-abcde-nodes-n1-highcpu-8-90530fd3-p77q
-    2026-03-18T14:16:54Z system/k8s/web-56f5d77d7-6gx8z Pulling image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
-    2026-03-18T14:17:06Z system/k8s/web-56f5d77d7-6gx8z Successfully pulled image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
-    2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Started container main
-    2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
-    2026-03-18T14:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
+Promoting RABCDEFGHIJ...
+2026-03-18T14:16:50Z system/k8s/atom/app Status: Running => Pending
+2026-03-18T14:16:53Z system/k8s/atom/app Status: Pending => Updating
+2026-03-18T14:16:53Z system/k8s/web-56f5d77d7 Created pod: web-56f5d77d7-6gx8z
+2026-03-18T14:16:53Z system/k8s/web Scaled up replica set web-56f5d77d7 to 1
+2026-03-18T14:16:53Z system/k8s/web-56f5d77d7-6gx8z Successfully assigned abcde-myapp/web-56f5d77d7-6gx8z to gke-abcde-abcde-nodes-n1-highcpu-8-90530fd3-p77q
+2026-03-18T14:16:54Z system/k8s/web-56f5d77d7-6gx8z Pulling image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
+2026-03-18T14:17:06Z system/k8s/web-56f5d77d7-6gx8z Successfully pulled image "gcr.io/abcde-123456/myapp:web.BABCDEFGHIJ"
+2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Started container main
+2026-03-18T14:17:09Z system/k8s/web-56f5d77d7-6gx8z Created container main
+2026-03-18T14:17:17Z system/k8s/web-56f5d77d7-6gx8z Readiness probe failed: HTTP probe failed with statuscode: 404
 ```
 You should ensure that your App is able to respond to the health check probes to facilitate a successful deployment.
 
@@ -94,7 +94,7 @@ When a rack uninstall fails, it is typically because a cloud resource cannot be 
 
 1. **Attempt a forced uninstall from the CLI.**
     ```bash
-    $ convox rack uninstall <rack_name>
+$ convox rack uninstall <rack_name>
     ```
 
 2. **Identify the blocking resource in CloudFormation (AWS).**

@@ -15,7 +15,7 @@ Convox Monitoring and Alerting offers:
 - **Pre-configured dashboards** with essential infrastructure metrics
 - **Custom panel creation** using Smart Queries or PromQL
 - **Intelligent alerting** with configurable thresholds and notifications
-- **Seamless integration** with your existing Convox workflow
+- **Integration** with your existing Convox workflow
 
 ## Enabling Metrics Collection
 
@@ -37,7 +37,7 @@ Once enabled, the Metrics Agent installs into your rack and begins collecting pe
 When monitoring is enabled, the Rack Settings → Dashboard Settings panel shows a **Switch Plan** button alongside the existing toggle. Switching between Free and Paid:
 
 - Uninstalls the current plan's chart, then installs the new plan's chart. Total ~5-15 minutes.
-- During the switch, `convox ps` GPU enrichment fields show em-dash sentinels until the new chart is installed and `prometheus_url` is wired (see below).
+- During the switch, `convox ps` GPU enrichment fields show a dash (`—`) until the new chart is installed and `prometheus_url` is set (see below).
 - Free → Paid requires a payment method on file. The Console surfaces a card-on-file gate before the switch begins.
 - Paid → Free preserves the underlying Stripe subscription (metering stops; no auto-cancellation).
 
@@ -57,7 +57,7 @@ convox rack params set prometheus_url=http://convox-kube-prometheus-sta-promethe
 convox rack params set prometheus_url=http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80
 ```
 
-Until `prometheus_url` is set, `convox ps` GPU fields render as em-dash sentinels (`—`) even after monitoring is enabled in the Console.
+Until `prometheus_url` is set, `convox ps` GPU fields show a dash (`—`) even after monitoring is enabled in the Console.
 
 ## Default Dashboards
 
@@ -223,7 +223,7 @@ convox logs -a myapp
 
 - **Rack-only users (no Convox Console connection)** do not have access to GPU-observability Prometheus charts. The DCGM exporter still installs via `gpu_observability_enable=true`, but no Prometheus chart scrapes it. Connect to Convox Console and enable monitoring to restore full functionality.
 - **`monitoring_metrics_provisioned` has been replaced.** Monitoring is now configured in the Convox Console (Rack Settings → Dashboard Settings → Enable Metrics Agent) rather than via rack parameters.
-- **Chart-version overrides require a Disable→Enable cycle to take effect.** Setting [`prometheus_gpu_metrics_chart_version`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) or [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) on a rack with monitoring enabled does not immediately re-deploy — the new value applies on the next Disable→Enable cycle from the Console.
+- **Chart-version overrides require a Disable→Enable cycle to take effect.** Setting [`prometheus_gpu_metrics_chart_version`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) or [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) on a rack with monitoring enabled does not immediately re-deploy. The new value applies on the next Disable→Enable cycle from the Console.
 - **`convox ps` GPU fields require `prometheus_url` to be set.** Even with monitoring enabled in the Console, the rack does not auto-resolve a Prometheus URL. See "Setting `prometheus_url`" above.
 - **DCGM without monitoring**: setting `gpu_observability_enable=true` on the rack without enabling monitoring in the Console results in DCGM running with no scraper. Dashboards remain empty until monitoring is enabled in the Console.
 - **Prometheus-backed autoscaling requires explicit `prometheus_url`.** Users with `scale.autoscale.gpuUtilization` or `scale.autoscale.queueDepth` triggers (without an explicit per-trigger `prometheusUrl`) must set `prometheus_url`. CPU-, memory-, and `scale.keda.triggers`-based autoscale (e.g. `aws-sqs-queue`, `kafka`, `cron`) continue to work without a Prometheus URL.

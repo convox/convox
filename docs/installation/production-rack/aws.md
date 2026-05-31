@@ -29,16 +29,16 @@ The following environment variables are required:
 
 ### Create IAM User
 ```bash
-    $ aws iam create-user --user-name convox
-    $ aws iam attach-user-policy --user-name convox --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
-    $ aws iam create-access-key --user-name convox
+$ aws iam create-user --user-name convox
+$ aws iam attach-user-policy --user-name convox --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+$ aws iam create-access-key --user-name convox
 ```
 - `AWS_ACCESS_KEY_ID` is `AccessKeyId`
 - `AWS_SECRET_ACCESS_KEY` is `SecretAccessKey`
 
 ## Install Rack
 ```bash
-    $ convox rack install aws <name> [param1=value1]...
+$ convox rack install aws <name> [param1=value1]...
 ```
 ### Available Parameters
 
@@ -94,7 +94,7 @@ Convox allows you to configure access to the Kubernetes API server endpoint for 
 
 ### Modes of Cluster Endpoint Access
 
-There are three modes available for configuring the cluster endpoint access:
+There are four modes available for configuring the cluster endpoint access:
 
 - **Public**: The EKS cluster endpoint is accessible from outside the VPC, allowing external connections. This is the default configuration. Although publicly accessible, it is secured through multiple layers of protection to ensure that only authorized access is permitted.
 

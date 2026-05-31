@@ -115,7 +115,7 @@ Unlike self-hosted Racks, Cloud machines have limited configuration options:
 **Alternatives**:
 - Implement application-level authentication
 - Use service mesh patterns in your application
-- Leverage environment-based configuration
+- Use environment-based configuration
 
 ### No VPC Peering
 
@@ -253,7 +253,7 @@ volumes:
 
 **Alternatives**:
 - Use efficient build practices
-- Leverage Docker layer caching
+- Use Docker layer caching
 - Minimize build context size
 
 ## Security Limitations

@@ -9,7 +9,7 @@ url: /configuration/rack-parameters/aws/cost_tracking_enable
 ## Description
 The `cost_tracking_enable` parameter turns on the rack-side cost-accumulator that powers `convox cost` and per-app budget caps. With cost tracking enabled, the rack samples the resource usage of every running pod (CPU millicores, memory megabytes, GPU count, GPU vendor) on a fixed cadence, multiplies each sample by the rack's per-instance pricing table, and persists the rolling-window total as a Kubernetes namespace annotation on each app. The cost data is exposed through the `AppCost` API and surfaces in the Convox Console cost dashboards, the `convox cost` CLI, and the budget-cap auto-shutdown machinery.
 
-Cost tracking is a prerequisite for the per-app budget cap feature (`convox budget set`). With cost tracking disabled, budget caps cannot fire because the accumulator is not running — `convox budget set` is rejected at the CLI with a friendly error pointing here.
+Cost tracking is a prerequisite for the per-app budget cap feature (`convox budget set`). With cost tracking disabled, budget caps cannot fire because the accumulator is not running. `convox budget set` is rejected at the CLI with a friendly error pointing here.
 
 ## Default Value
 The default value for `cost_tracking_enable` is `false`. Users must opt in to enable the cost accumulator and budget-cap surfaces.
@@ -47,7 +47,7 @@ Disabling stops the cost accumulator on the next rack restart. Existing budget-s
 
 ## Additional Information
 - This parameter is currently AWS-only.
-- The cost accumulator runs inside the rack control plane, not as a sidecar — sampling cadence is bounded by the rack's existing resource budget. There is no additional CPU or memory allocation introduced by enabling this parameter.
+- The cost accumulator runs inside the rack control plane, not as a sidecar. Sampling cadence is bounded by the rack's existing resource budget. There is no additional CPU or memory allocation introduced by enabling this parameter.
 - The pricing table is updated per Convox release. Pin a custom multiplier (e.g., to model your AWS Enterprise Discount Program) via the per-app `pricing-adjustment` budget option (`convox budget set --pricing-adjustment 0.7 <app>`).
 - Spot capacity-type discount is applied automatically (a default factor of `0.30`) when the underlying NodePool is configured for spot. Per-instance overrides are configurable via the rack's pricing table.
 - The rolling-window length is 30 days. Older samples roll off the tail as new samples arrive; the rack does not retain unbounded historical data.

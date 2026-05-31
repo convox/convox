@@ -5,11 +5,11 @@ url: /reference/cli/budget
 ---
 # budget
 
-The `convox budget` command group manages an app's monthly budget cap, the
-`atCapAction` enforcement, and recovery from a cap fire.
+The `convox budget` command group manages an app's monthly budget cap, its
+at-cap action, and recovery after a cap is reached.
 
-For the operational guide see [Budget Caps](/management/budget-caps); for the
-schema reference see the [convox.yml budget block](/configuration/convox-yml#budget).
+For the full operational guide see [Budget Caps](/management/budget-caps); for
+the schema reference see the [convox.yml budget block](/configuration/convox-yml#budget).
 
 ## budget show
 
@@ -48,10 +48,8 @@ to editing the manifest and redeploying, but applied without a redeploy.
 ### Prerequisite: cost tracking must be enabled
 
 `budget set` rejects with HTTP 422 when the rack parameter
-`cost_tracking_enable` is `false` and you supply any enforcement-bearing
-field (`--monthly-cap`, `--alert-at`, `--at-cap-action`). Without the
-accumulator running, those fields would persist as unenforced config —
-the loud rejection replaces a silent no-op. Set the rack parameter first:
+`cost_tracking_enable` is `false` and you supply any enforcement field
+(`--monthly-cap`, `--alert-at`, `--at-cap-action`). Enable cost tracking first:
 
 ```bash
 $ convox rack params set cost_tracking_enable=true
@@ -59,18 +57,16 @@ $ convox rack params set cost_tracking_enable=true
 $ convox budget set myapp --monthly-cap 500 --at-cap-action auto-shutdown
 ```
 
-Updates that touch only `--pricing-adjustment` are not gated; the pricing
-multiplier modifies the displayed model output and does not require the
-accumulator. See
+Updates that touch only `--pricing-adjustment` are not gated. See
 [Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
-for the full rationale and AWS-only-functional scope. Recovery operations
+for the full rationale and supported-provider scope. Recovery operations
 (`budget clear`, `budget reset`) remain available regardless of cost-tracking
 state.
 
 ## budget clear
 
 Remove the budget config for an app. The app continues running with no cap,
-no threshold, and no auto-shutdown — equivalent to omitting the budget block
+no threshold, and no auto-shutdown, equivalent to omitting the budget block
 from `convox.yml`.
 
 ### Usage
@@ -80,11 +76,10 @@ from `convox.yml`.
 
 ## budget reset
 
-Acknowledge a cap breach and re-enable deploys. Clears the breaker AND, when
-invoked after `:fired`, restores replicas from the persisted shutdown-state
-annotation. Preserves flap-suppress carry-over by default;
-`--force-clear-cooldown` is additive and forces past the 24-hour
-flap-prevention cooldown.
+Acknowledge a cap breach and re-enable deploys. Clears the breaker and, when
+run after an auto-shutdown, restarts the services that were scaled down.
+Preserves the flap-prevention cooldown by default; `--force-clear-cooldown`
+additionally clears the 24-hour cooldown so the next cap fire is not suppressed.
 
 ### Usage
 ```bash
@@ -94,7 +89,6 @@ flap-prevention cooldown.
 ```bash
     $ convox budget reset myapp
     Resetting budget for myapp... OK
-    Breaker cleared.
 
     $ convox budget reset myapp --force-clear-cooldown
     Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
@@ -115,19 +109,17 @@ current spend. Alias for `budget set --monthly-cap`.
 ### Examples
 ```bash
     $ convox budget cap raise myapp --monthly-cap-usd 500
-    Raising monthly cap to 500.00 USD... OK
-    Breaker cleared.
+    Raising monthly cap for myapp... OK
 ```
 
-After `:fired` (post-shutdown), cap-raise clears the breaker but does NOT
-restart already-shutdown services. Run `convox budget reset myapp` to
-restore replicas from the persisted shutdown-state annotation. See
-[Cap raise](/management/budget-caps#cap-raise).
+After an auto-shutdown, cap-raise clears the breaker but does NOT restart
+already-shutdown services. Run `convox budget reset myapp` to restart them.
+See [Cap raise](/management/budget-caps#cap-raise).
 
 ## budget simulate-shutdown
 
-Dry-run an auto-shutdown plan without modifying the app. Emits the
-`:simulated` audit event so operators can rehearse the failure path.
+Dry-run an auto-shutdown plan without modifying the app. Use it to rehearse
+which services would scale down before a real cap fire.
 
 ### Usage
 ```bash
@@ -137,11 +129,30 @@ Dry-run an auto-shutdown plan without modifying the app. Emits the
 ```bash
     $ convox budget simulate-shutdown myapp
     Simulating auto-shutdown for myapp...
-    Plan (largest-cost order):
-      worker (eligible)
-      api (eligible)
-      web (excluded — neverAutoShutdown)
-    OK
+
+    Configuration:
+      at_cap_action: auto-shutdown
+      webhook URL: https://hooks.example.com/budget
+      notify_before_minutes: 10
+      shutdown_grace_period: 30s
+      shutdown_order: largest-cost-first
+      recovery_mode: restore-previous
+
+    Eligibility:
+      worker: ELIGIBLE -- replicas=2, cost=$0.40/hr
+      api: ELIGIBLE -- replicas=1, cost=$0.20/hr
+      web: EXEMPT (neverAutoShutdown)
+
+    Shutdown order (largest-cost-first):
+      1. worker -- would scale to 0
+      2. api -- would scale to 0
+
+    Estimated savings: $0.60/hr
+
+    Webhook payload sent (dry_run=true):
+      See app:budget:auto-shutdown:simulated event in your atCapWebhookUrl webhook delivery and rack log aggregation
+
+    Status: SIMULATION COMPLETE. No changes made.
 ```
 
 ## budget dismiss-recovery
@@ -156,16 +167,15 @@ recovers. Equivalent to clicking "Dismiss" in the Console banner.
 ### Examples
 ```bash
     $ convox budget dismiss-recovery myapp
-    Dismissing recovery banner for myapp... OK
+    Banner dismissed for myapp.
 ```
 
 The dismiss is per-app, not per-user; once dismissed by any user the banner
-hides for everyone viewing that app. See [Webhook Signing](/console/webhook-signing#receiver-migration)
-for the audit event semantics.
+hides for everyone viewing that app.
 
 ## See Also
 
-- [Budget Caps](/management/budget-caps) — operational guide
-- [Cost Tracking](/management/cost-tracking) — how spend is computed
-- [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
-- [cost CLI](/reference/cli/cost) — cost breakdown
+- [Budget Caps](/management/budget-caps): operational guide
+- [Cost Tracking](/management/cost-tracking): how spend is computed
+- [convox.yml budget block](/configuration/convox-yml#budget): schema reference
+- [cost CLI](/reference/cli/cost): cost breakdown

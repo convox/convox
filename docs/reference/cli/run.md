@@ -59,7 +59,7 @@ When you have configured dedicated GPU node groups in your rack, you can ensure 
     $ convox run web python train-model.py --gpu 1 --node-labels "convox.io/label=gpu-nodes"
 ```
 
-This works seamlessly with custom node group configurations. For example, if you've set up GPU nodes:
+This works with custom node group configurations. For example, if you've set up GPU nodes:
 
 ```bash
     $ convox rack params set 'additional_node_groups_config=[{"id":201,"type":"g4dn.xlarge","capacity_type":"ON_DEMAND","label":"gpu-nodes"}]' -r rackName
@@ -85,7 +85,7 @@ services:
       convox.io/nodepool: gpu
 ```
 
-Then `convox run gpu-worker bash` automatically runs on the `gpu` pool — no `--node-labels` flag needed.
+Then `convox run gpu-worker bash` automatically runs on the `gpu` pool, with no `--node-labels` flag needed.
 
 ### Override with `--node-labels`
 
@@ -107,7 +107,7 @@ To remove the inherited node affinity and allow the pod to schedule on general c
 
 This is useful for debugging when you want to run a one-off process outside its usual dedicated pool.
 
-> Builds are not affected by automatic node placement — `convox build` always uses the configured build nodes regardless of `nodeSelectorLabels`.
+> Builds are not affected by automatic node placement. `convox build` always uses the configured build nodes regardless of `nodeSelectorLabels`.
 
 ## Service Volume Support
 

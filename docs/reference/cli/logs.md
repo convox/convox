@@ -53,7 +53,7 @@ Pass `--max-log-requests N` to raise the concurrency cap. The flag is also wired
     $ convox logs --service pii-worker --since 5m --max-log-requests 50
 ```
 
-Set the value to at least the pod count of the target service. Log streams are persistent HTTP connections, so very large values put sustained load on the API server — prefer filtering by `--service` and a modest concurrency over tailing the full app stream without the flag.
+Set the value to at least the pod count of the target service. Log streams are persistent HTTP connections, so very large values put sustained load on the API server. Prefer filtering by `--service` and a modest concurrency over tailing the full app stream without the flag.
 
 ## See Also
 

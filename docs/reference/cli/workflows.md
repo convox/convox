@@ -41,7 +41,7 @@ Trigger workflow run for the specified branch or commit. Specified branch or com
 
 ### Examples
 ```bash
-    $ convox workflows run 55dd9440-eb98-4d9b-816f-99230077feff --branch feat-branch --title "title"
+    $ convox workflows run 55dd9440-eb98-4d9b-816f-9923ee77feff --branch feat-branch --title "title"
     Successfully trigger the workflow, job id: 65a4160a-27cd-47c6-ba74-aaaaaaaa
 ```
 

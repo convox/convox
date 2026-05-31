@@ -16,7 +16,7 @@ The default value for `ebs_volume_encryption_enabled` is `false`.
 - **Enhanced Security**: Encrypts data at rest on EKS worker node disks, meeting compliance and security requirements.
 - **Compliance Standards**: Helps meet regulatory requirements such as HIPAA, PCI DSS, or SOC 2 that mandate encryption of data at rest.
 - **AWS Best Practices**: Aligns with AWS security recommendations for encrypting EBS volumes.
-- **Zero-Trust Architecture**: Provides defense-in-depth security by ensuring all storage is encrypted by default.
+- **Encryption by Default**: Ensures all EBS volumes attached to worker nodes are encrypted without per-volume configuration.
 - **Organizational Policies**: Meets internal security policies that require encryption of all persistent storage.
 
 ## Setting Parameters

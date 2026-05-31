@@ -5,19 +5,17 @@ url: /reference/cli/budget-reset
 ---
 # budget reset
 
-Acknowledge a cap breach and re-enable deploys. Clears the breaker. Preserves
-flap-suppress carry-over by default.
+Acknowledge a cap breach and re-enable deploys. Clears the breaker and
+preserves the flap-prevention cooldown by default.
 
-> **Plain reset is `rw`-gated.** A read-write user can run
-> `convox budget reset` without admin role for the routine
-> ACTIVE→recover flow.
+> **Plain reset requires the `rw` role.** A read-write user can run
+> `convox budget reset` without admin role for the routine recovery flow.
 >
-> **`--force-clear-cooldown` requires admin role on the rack RBAC.**
-> The 24-hour flap-prevention cooldown is admin-only to drop. A
-> non-admin caller (`rw` role) attempting `--force-clear-cooldown`
-> receives `403 AppBudgetReset --force-clear-cooldown requires Admin
-> role; current role is 'w'. Contact rack admin or use Admin token.`
-> Basic-auth (rack-password) callers automatically pass the admin check.
+> **`--force-clear-cooldown` requires admin role on the rack.** A non-admin
+> caller (`rw` role) attempting `--force-clear-cooldown` receives
+> `403 AppBudgetReset --force-clear-cooldown requires Admin role; current
+> role is 'w'. Contact rack admin or use Admin token.` Basic-auth
+> (rack-password) callers automatically pass the admin check.
 
 ### Usage
 ```bash
@@ -31,7 +29,6 @@ Reset the breaker on myapp; flap-suppress carry-over preserved:
 ```bash
     $ convox budget reset myapp
     Resetting budget for myapp... OK
-    Breaker cleared.
 ```
 
 Reset and force-clear the flap-suppress cooldown so the next cap fire will
@@ -45,30 +42,23 @@ resolved):
 
 ### Behavior
 
-- Clears `CircuitBreakerTripped` and the alert-fired timestamps.
-- Restarts services that were already shutdown by `:fired` (calls
-  `restoreFromAnnotation` to reapply the persisted replica counts).
-  Both the plain reset and `--force-clear-cooldown` invoke the same
-  replica-restore path; cap-raise alone clears the breaker but does NOT
-  restart services, so `convox budget reset` is the canonical post-`:fired`
-  recovery path.
-- Preserves the flap-suppress carry-over (`FlapSuppressedUntil` and
-  `FlapSuppressFiredAt` annotations) unless `--force-clear-cooldown` is set.
-  The flag is additive — it does not change the breaker-clear or replica
-  restore behavior, but it additionally clears the flap-suppress cooldown
-  so the next cap fire will not be suppressed.
-- Emits `app:budget:auto-shutdown:cancelled` reason=`reset-during-armed` if
-  the reset interrupts an in-flight armed countdown.
+- Clears the breaker so deploys are re-enabled.
+- Restarts any services that were scaled down by an auto-shutdown. Cap-raise
+  alone clears the breaker but does NOT restart services, so `convox budget
+  reset` is the recovery path after an auto-shutdown fires.
+- Preserves the flap-prevention cooldown unless `--force-clear-cooldown` is
+  set. The flag is additive: it does not change the breaker-clear or service
+  restart, it additionally clears the cooldown so the next cap fire is not
+  suppressed.
 - Does NOT reset the current month's spend; spend continues accumulating
-  toward the cap. Reset is the breaker-clear, not a spend-zero.
+  toward the cap. Reset clears the breaker, it does not zero out spend.
 
-The reset is serialized against the accumulator's tick path via the per-app
-lock — concurrent reset and accumulator decisions cannot produce duplicate
-`:cancelled` events.
+For the full reset lifecycle see
+[Reset and force-clear cooldown](/management/budget-caps#force-clear-cooldown).
 
 ## See Also
 
-- [budget](/reference/cli/budget) — full budget command group
-- [budget cap raise](/reference/cli/budget-cap-raise) — raise the cap instead
+- [budget](/reference/cli/budget): full budget command group
+- [budget cap raise](/reference/cli/budget-cap-raise): raise the cap instead
   of resetting
-- [Reset and force-clear cooldown](/management/budget-caps#force-clear-cooldown) — operational guide
+- [Reset and force-clear cooldown](/management/budget-caps#force-clear-cooldown): operational guide

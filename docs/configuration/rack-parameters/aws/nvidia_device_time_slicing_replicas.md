@@ -89,7 +89,7 @@ With time slicing enabled, multiple instances of this service can share the same
 
 ## Related Parameters
 - [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable): **Required** - Must be enabled before using time slicing.
-- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter so you can validate that your time-slicing replica count actually matches workload behavior — exposes physical-GPU saturation underneath the virtual replicas.
+- [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter so you can validate that your time-slicing replica count actually matches workload behavior. It exposes physical-GPU saturation underneath the virtual replicas.
 - [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable): Enables GPU tagging for resource tracking.
 - [node_type](/configuration/rack-parameters/aws/node_type): Should be set to GPU-enabled instance types (e.g., `p3.2xlarge`, `g4dn.xlarge`).
 

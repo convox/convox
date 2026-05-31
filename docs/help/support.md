@@ -13,7 +13,7 @@ Convox offers several levels of support to help you get the most out of the plat
 |-|---------------|---------|----------------|
 | **Channel** | Community Forums | In-Console Support | Dedicated Slack Channel |
 | **Response Time** | Best effort | 24-hour SLA | Custom SLA |
-| **Urgent Tickets (24/7)** | -- | -- | Included |
+| **Urgent Tickets (24/7)** | Not included | Not included | Included |
 | **Availability** | All users | Pro plan users | Enterprise plan users |
 
 ### Community
