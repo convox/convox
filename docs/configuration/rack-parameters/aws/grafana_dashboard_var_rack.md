@@ -1,5 +1,6 @@
 ---
 title: "grafana_dashboard_var_rack"
+description: "The grafana_dashboard_var_rack AWS rack parameter overrides the Grafana dashboard template variable name for the rack or cluster filter, defaulting to rack."
 slug: grafana_dashboard_var_rack
 url: /configuration/rack-parameters/aws/grafana_dashboard_var_rack
 ---

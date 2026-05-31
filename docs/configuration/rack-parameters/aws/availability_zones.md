@@ -1,5 +1,6 @@
 ---
 title: "availability_zones"
+description: "The availability_zones AWS rack parameter specifies a list of at least three Availability Zones to override the random automatic selection by AWS."
 slug: availability_zones
 url: /configuration/rack-parameters/aws/availability_zones
 ---

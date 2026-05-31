@@ -1,5 +1,6 @@
 ---
 title: "Command Line Interface"
+description: "Install the Convox CLI on Linux or macOS (amd64 or arm64) by downloading the release binary, then verify it with convox version."
 slug: command-line-interface
 url: /installation/cli
 ---

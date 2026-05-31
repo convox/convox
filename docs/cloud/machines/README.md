@@ -1,5 +1,6 @@
 ---
 title: "Machine Management"
+description: "Machines are the compute units of Convox Cloud, each providing dedicated vCPU and memory to run your applications in a fully managed environment."
 slug: machines
 url: /cloud/machines
 ---

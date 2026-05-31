@@ -1,5 +1,6 @@
 ---
 title: "Monitoring Commands"
+description: "The convox cloud logs command streams application logs, with flags to filter, set a time window, tail lines, or dump logs without following."
 slug: logs
 url: /cloud/cli-reference/logs
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Rack Parameters"
+description: "Rack parameters are settings that control a Convox rack, set at install through the Console modal, templates, or a JSON file, and managed with convox rack params."
 slug: rack-parameters
 url: /configuration/rack-parameters
 ---

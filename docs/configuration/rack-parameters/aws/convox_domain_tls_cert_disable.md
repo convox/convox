@@ -1,5 +1,6 @@
 ---
 title: "convox_domain_tls_cert_disable"
+description: "The convox_domain_tls_cert_disable AWS rack parameter disables automatic TLS certificate generation for the convox.cloud domain on your services."
 slug: convox_domain_tls_cert_disable
 url: /configuration/rack-parameters/aws/convox_domain_tls_cert_disable
 ---

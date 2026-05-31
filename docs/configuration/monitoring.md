@@ -1,5 +1,6 @@
 ---
 title: "Monitoring and Alerting"
+description: "Convox provides integrated metrics collection and alerting, with dashboards, custom panels via Smart Queries or PromQL, and configurable threshold alerts."
 slug: monitoring-and-alerting
 url: /configuration/monitoring
 ---

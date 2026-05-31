@@ -1,5 +1,6 @@
 ---
 title: "karpenter_instance_families"
+description: "The karpenter_instance_families rack parameter sets which EC2 instance families Karpenter uses for workload nodes, allowing all general-purpose families by default."
 slug: karpenter_instance_families
 url: /configuration/rack-parameters/aws/karpenter_instance_families
 ---

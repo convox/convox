@@ -1,5 +1,6 @@
 ---
 title: "Migrating from Fly.io"
+description: "Move a Fly.io app to Convox on your own cloud by translating fly.toml processes, secrets, scaling, volumes, and datastores into one convox.yml."
 slug: fly
 url: /migration/fly
 ---

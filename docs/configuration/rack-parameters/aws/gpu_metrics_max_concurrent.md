@@ -1,5 +1,6 @@
 ---
 title: "gpu_metrics_max_concurrent"
+description: "The gpu_metrics_max_concurrent AWS rack parameter caps the number of simultaneous Prometheus queries the rack issues for GPU metrics, defaulting to 10."
 slug: gpu_metrics_max_concurrent
 url: /configuration/rack-parameters/aws/gpu_metrics_max_concurrent
 ---

@@ -1,5 +1,6 @@
 ---
 title: "macOS"
+description: "Install a local development Rack on Intel or Apple Silicon macOS using Minikube, the Docker driver, a tunnel, and convox rack install local."
 slug: macos
 url: /installation/development-rack/macos
 ---
@@ -28,7 +29,7 @@ Start Minikube with the Docker driver and the insecure registry flag for your ra
 ```bash
 minikube start \
   --driver=docker \
-  --kubernetes-version=v1.33.0 \
+  --kubernetes-version=v1.34.0 \
   --insecure-registry="registry.dev.macdev.convox.cloud"
 ```
 
@@ -46,10 +47,10 @@ minikube addons enable ingress-dns
 ### 4. Install the rack
 
 ```bash
-convox rack install local dev -v 3.24.0 os=mac
+convox rack install local dev -v 3.24.8 os=mac
 ```
 
-Replace `3.24.0` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+Replace `3.24.8` with the latest version from the [releases page](https://github.com/convox/convox/releases).
 
 > The `os=mac` parameter is required on macOS. It configures the rack to use `*.macdev.convox.cloud` instead of `*.localdev.convox.cloud`.
 
@@ -76,7 +77,7 @@ Name      dev
 Provider  local
 Router    router.dev.macdev.convox.cloud
 Status    running
-Version   3.24.0
+Version   3.24.8
 ```
 
 ## Using the rack

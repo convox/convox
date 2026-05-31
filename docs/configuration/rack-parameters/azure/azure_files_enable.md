@@ -1,5 +1,6 @@
 ---
 title: "azure_files_enable"
+description: "The azure_files_enable Azure rack parameter enables Azure Files NFS volumes for shared persistent storage across service replicas, defaulting to false."
 slug: azure_files_enable
 url: /configuration/rack-parameters/azure/azure_files_enable
 ---

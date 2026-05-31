@@ -1,5 +1,6 @@
 ---
 title: "Rollbacks"
+description: "Roll back to an earlier Release with convox releases rollback, which copies the target release and promotes it without changing the original."
 slug: rollbacks
 url: /deployment/rollbacks
 ---

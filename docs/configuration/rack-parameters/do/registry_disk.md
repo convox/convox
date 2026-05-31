@@ -1,5 +1,6 @@
 ---
 title: "registry_disk"
+description: "The registry_disk Digital Ocean rack parameter sets the size of the rack registry disk used to store images, defaulting to 50Gi."
 slug: registry_disk
 url: /configuration/rack-parameters/do/registry_disk
 ---

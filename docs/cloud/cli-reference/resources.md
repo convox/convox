@@ -1,5 +1,6 @@
 ---
 title: "Resource Management (Cloud Databases)"
+description: "The convox cloud resources commands list, inspect, open a console, proxy, export, and import data for managed Cloud Databases defined in convox.yml."
 slug: resources
 url: /cloud/cli-reference/resources
 ---

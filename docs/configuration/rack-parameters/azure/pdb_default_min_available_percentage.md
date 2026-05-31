@@ -1,5 +1,6 @@
 ---
 title: "pdb_default_min_available_percentage"
+description: "The pdb_default_min_available_percentage Azure rack parameter sets the default minimum available percentage for Pod Disruption Budgets, defaulting to 50."
 slug: pdb_default_min_available_percentage
 url: /configuration/rack-parameters/azure/pdb_default_min_available_percentage
 ---

@@ -1,5 +1,6 @@
 ---
 title: "tags"
+description: "The tags AWS rack parameter adds custom key=value tags to AWS resources alongside the Convox managed tags, defaulting to empty (no custom tags)."
 slug: tags
 url: /configuration/rack-parameters/aws/tags
 ---

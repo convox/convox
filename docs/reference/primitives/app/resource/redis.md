@@ -1,5 +1,6 @@
 ---
 title: "Redis"
+description: "A Redis Resource links to a Service in convox.yml, running as a container by default or as an AWS ElastiCache managed instance with the elasticache-redis type."
 slug: redis
 url: /reference/primitives/app/resource/redis
 ---

@@ -1,5 +1,6 @@
 ---
 title: "pdb_default_min_available_percentage"
+description: "The pdb_default_min_available_percentage AWS rack parameter sets the default minimum available replicas for Pod Disruption Budgets rack-wide, defaulting to 50."
 slug: pdb_default_min_available_percentage
 url: /configuration/rack-parameters/aws/pdb_default_min_available_percentage
 ---

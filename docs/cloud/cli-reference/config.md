@@ -1,5 +1,6 @@
 ---
 title: "Configuration Management"
+description: "The convox cloud config commands get, set, and list configuration values for an application on a Convox Cloud machine."
 slug: config
 url: /cloud/cli-reference/config
 ---

@@ -1,5 +1,6 @@
 ---
 title: "contour_memory_request"
+description: "The contour_memory_request AWS rack parameter sets the memory request for the Contour control-plane pods when router_type=contour, defaulting to 128Mi."
 slug: contour_memory_request
 url: /configuration/rack-parameters/aws/contour_memory_request
 ---

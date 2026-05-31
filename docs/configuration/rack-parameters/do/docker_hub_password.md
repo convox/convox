@@ -1,5 +1,6 @@
 ---
 title: "docker_hub_password"
+description: "The docker_hub_password Digital Ocean rack parameter sets the Docker Hub authentication token, used with docker_hub_username to enable authenticated image pulls."
 slug: docker_hub_password
 url: /configuration/rack-parameters/do/docker_hub_password
 ---

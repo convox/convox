@@ -1,5 +1,6 @@
 ---
 title: "Service Discovery"
+description: "Find a Service's load balancer hostname with convox services and connect to it to distribute traffic across all Processes of that Service."
 slug: service-discovery
 url: /configuration/service-discovery
 ---

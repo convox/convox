@@ -1,5 +1,6 @@
 ---
 title: "Digital Ocean Rack Parameters"
+description: "Reference for the rack parameters available when running a Convox rack on Digital Ocean, covering node type, region, high availability, registry disk, and logging."
 slug: do-rack-parameters
 url: /configuration/rack-parameters/do
 ---

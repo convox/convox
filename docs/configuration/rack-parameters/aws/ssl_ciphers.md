@@ -1,5 +1,6 @@
 ---
 title: "ssl_ciphers"
+description: "The ssl_ciphers AWS rack parameter sets the colon-separated SSL ciphers nginx uses, defaulting to empty so nginx applies its own cipher list."
 slug: ssl_ciphers
 url: /configuration/rack-parameters/aws/ssl_ciphers
 ---

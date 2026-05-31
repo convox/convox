@@ -1,5 +1,6 @@
 ---
 title: "Import a Rack into Console"
+description: "Import a locally managed rack into the Console with convox rack mv so any organization member can update and manage it, including the AWS IAM step."
 slug: import-rack
 url: /management/import-rack
 ---

@@ -1,5 +1,6 @@
 ---
 title: "version"
+description: "The convox version command displays the locally installed CLI client version alongside the server version of the currently selected rack."
 slug: version
 url: /reference/cli/version
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Support"
+description: "Convox support tiers from free Community forums to Pro in-console tickets and Enterprise dedicated Slack, with response times and how to reach each one."
 slug: support
 url: /help/support
 ---

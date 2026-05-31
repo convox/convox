@@ -1,5 +1,6 @@
 ---
 title: "region"
+description: "The region Digital Ocean rack parameter sets the region where the Convox rack is deployed, affecting latency, availability, and cost, defaulting to nyc3."
 slug: region
 url: /configuration/rack-parameters/do/region
 ---

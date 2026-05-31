@@ -1,5 +1,6 @@
 ---
 title: "karpenter_arch"
+description: "The karpenter_arch AWS rack parameter sets the CPU architecture for Karpenter workload nodes, auto-detected from node_type when left empty."
 slug: karpenter_arch
 url: /configuration/rack-parameters/aws/karpenter_arch
 ---

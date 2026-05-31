@@ -1,5 +1,6 @@
 ---
 title: "CLI Rack Management"
+description: "Update a v3 rack step-wise through minor versions and manage rack parameters from the convox CLI, including downgrade and reconciliation rules."
 slug: cli-rack-management
 url: /management/cli-rack-management
 ---
@@ -36,6 +37,21 @@ _Note on Versioning: In the `major.minor.patch` format, `minor` versions indicat
 ### What happens during an update
 
 When you run `convox rack update`, Convox applies infrastructure changes (Terraform), updates internal services, and may roll Kubernetes components. The rack status changes from `running` to `updating` and back to `running` when complete. Your application containers continue running during the update, because rack updates are designed for zero downtime.
+
+### Downgrading and rolling back
+
+Convox supports rolling a rack back to an earlier **patch** within the same minor version (for example `3.24.8` to `3.24.6`):
+
+```bash
+    $ convox rack update 3.24.6
+    Updating rack... OK
+```
+
+A few guardrails apply:
+
+- **Minor-version downgrades are not supported.** Rolling a v3 rack back across a minor version (for example `3.24.x` to `3.23.x`) is blocked, because each minor version can change Kubernetes components or cluster configuration in ways that cannot be cleanly reversed. The CLI rejects it with `Downgrade from minor version is not supported for v3 rack`. If you need to recover from a bad minor update, contact Convox support: the team can often work out a manual recovery, but it is a hands-on operation, not a self-service rollback. Where possible, prefer rolling **forward** to a newer patch over downgrading.
+- **Switch off Contour before downgrading.** If `router_type=contour` is set, a downgrade is blocked with `cannot downgrade while router_type=contour is set`. Set `router_type=nginx` and let the rack finish updating before you downgrade.
+- **Parameters are reconciled automatically.** Any rack parameter the older version does not recognize is removed before the apply runs (see [Automatic Parameter Reconciliation](#automatic-parameter-reconciliation) below). Re-apply those parameters after you update forward again.
 
 ### Automatic Parameter Reconciliation
 

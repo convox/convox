@@ -1,5 +1,6 @@
 ---
 title: "additional_build_groups_config"
+description: "The additional_build_groups_config AWS rack parameter defines dedicated node groups for application build processes, isolating builds from production workloads."
 slug: additional_build_groups_config
 url: /configuration/rack-parameters/aws/additional_build_groups_config
 ---

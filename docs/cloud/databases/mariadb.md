@@ -1,5 +1,6 @@
 ---
 title: "MariaDB"
+description: "Convox Cloud provides fully managed MariaDB databases through AWS RDS, configured in convox.yml by class, version, and optional Multi-AZ failover."
 slug: mariadb
 url: /cloud/databases/mariadb
 ---

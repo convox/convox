@@ -1,5 +1,6 @@
 ---
 title: "Utility Commands"
+description: "The convox cloud cp command copies files to and from processes, and convox cloud test runs an application's test suite on a machine."
 slug: utility
 url: /cloud/cli-reference/utility
 ---

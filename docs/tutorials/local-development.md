@@ -1,5 +1,6 @@
 ---
 title: "Local Development"
+description: "Install a development Rack and deploy your first app to it with convox start, then edit code and see file sync update the running container live."
 slug: local-development
 url: /tutorials/local-development
 ---

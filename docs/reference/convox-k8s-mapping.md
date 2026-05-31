@@ -1,5 +1,6 @@
 ---
 title: "Convox to Kubernetes Resource Mapping"
+description: "Map Convox concepts (apps, services, resources, timers, volumes, balancers) to their underlying Kubernetes resources for kubectl inspection and troubleshooting."
 slug: convox-k8s-mapping
 url: /reference/convox-k8s-mapping
 ---
@@ -13,9 +14,9 @@ Convox abstracts Kubernetes complexity by mapping high-level concepts from your 
 
 -   **Namespace Isolation**: Each application is deployed into its own dedicated Kubernetes namespace, providing strong isolation. Rack-level system components also reside in their own namespace.
 -   **Label-Driven Architecture**: Convox uses a consistent labeling scheme across all generated resources, making it easy to find and manage related components. The primary labels are `system=convox`, `rack=<rack-name>`, `app=<app-name>`, and `service=<service-name>`.
--   **Declarative Configuration**: Your `convox.yml` file is the single source of truth, which Convox translates into Kubernetes Deployments, Services, Ingresses, and other resource types.
+-   **Declarative Configuration**: Your `convox.yml` file is the authoritative definition, which Convox translates into Kubernetes Deployments, Services, Ingresses, and other resource types.
 
-Understanding these mappings allows you to leverage the full power of Kubernetes for advanced debugging and observability while still benefiting from the simplicity of the Convox developer experience.
+Understanding these mappings allows you to use the full range of Kubernetes tooling for advanced debugging and observability while still benefiting from the simplicity of the Convox developer experience.
 
 ## Namespace Mapping
 

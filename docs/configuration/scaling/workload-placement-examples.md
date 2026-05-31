@@ -1,5 +1,6 @@
 ---
 title: "Workload Placement Examples"
+description: "Copy-ready Convox workload placement configurations for node groups, node selectors, and dedicated pools to optimize cost and isolate workloads."
 slug: workload-placement-examples
 url: /configuration/scaling/workload-placement-examples
 ---

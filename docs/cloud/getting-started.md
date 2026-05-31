@@ -1,5 +1,6 @@
 ---
 title: "Getting Started with Convox Cloud"
+description: "Set up Convox Cloud and deploy your first application, from installing the CLI and creating a Machine through deploying, scaling, and adding a database."
 slug: getting-started
 url: /cloud/getting-started
 ---

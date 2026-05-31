@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_node_labels"
+description: "The karpenter_build_node_labels AWS rack parameter adds custom Kubernetes labels to Karpenter build nodes alongside the default convox-build and nodepool labels."
 slug: karpenter_build_node_labels
 url: /configuration/rack-parameters/aws/karpenter_build_node_labels
 ---

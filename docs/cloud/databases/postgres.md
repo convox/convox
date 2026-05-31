@@ -1,5 +1,6 @@
 ---
 title: "PostgreSQL"
+description: "Convox Cloud provides fully managed PostgreSQL databases through AWS RDS, configured in convox.yml by class, version, and optional Multi-AZ failover."
 slug: postgres
 url: /cloud/databases/postgres
 ---

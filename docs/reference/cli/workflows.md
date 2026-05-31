@@ -1,5 +1,6 @@
 ---
 title: "workflows"
+description: "The convox workflows command lists an organization's deployment and review workflows and triggers a workflow run for a given branch or commit."
 slug: workflows
 url: /reference/cli/workflows
 ---

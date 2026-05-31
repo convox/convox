@@ -1,5 +1,6 @@
 ---
 title: "Health Checks"
+description: "Health checks tell the load balancer whether a Process is ready to serve requests, with options for path, port, interval, grace period, and timeout."
 slug: health-checks
 url: /configuration/health-checks
 ---

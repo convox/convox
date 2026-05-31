@@ -1,5 +1,6 @@
 ---
 title: "login"
+description: "The convox login command authenticates your CLI against a Convox Console, a prerequisite for most other commands, with token and env-var options for CI."
 slug: login
 url: /reference/cli/login
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Ingress Router"
+description: "Every AWS V3 Rack runs an ingress router that routes external traffic to your Services, using nginx by default or Contour via the router_type parameter."
 slug: ingress-router
 url: /configuration/ingress-router
 ---

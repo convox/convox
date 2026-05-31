@@ -1,5 +1,6 @@
 ---
 title: "budget reset"
+description: "The convox budget reset command acknowledges a cap breach and re-enables deploys, clearing the breaker and preserving the flap-prevention cooldown by default."
 slug: budget-reset
 url: /reference/cli/budget-reset
 ---

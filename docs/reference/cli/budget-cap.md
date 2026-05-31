@@ -1,5 +1,6 @@
 ---
 title: "budget cap"
+description: "The convox budget cap command group operates on the monthlyCapUsd field of an app's budget config and currently exposes the raise subcommand."
 slug: budget-cap
 url: /reference/cli/budget-cap
 ---

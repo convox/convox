@@ -1,5 +1,6 @@
 ---
 title: "Vertical Pod Autoscaler (VPA)"
+description: "VPA automatically right-sizes CPU and memory requests for Convox services based on observed usage, adjusting each replica rather than the replica count, on AWS."
 slug: vpa
 url: /configuration/scaling/vpa
 ---

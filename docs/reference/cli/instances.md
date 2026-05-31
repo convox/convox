@@ -1,5 +1,6 @@
 ---
 title: "instances"
+description: "The convox instances command lists cluster instances and manages per-instance operations such as terminate, SSH key roll, and opening a shell over SSH."
 slug: instances
 url: /reference/cli/instances
 ---

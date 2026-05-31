@@ -1,5 +1,6 @@
 ---
 title: "CLI"
+description: "The Convox CLI reference covers every command for managing apps, builds, releases, scaling, env vars, resources, certs, and racks across all providers."
 slug: cli
 url: /reference/cli
 ---

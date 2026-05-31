@@ -1,5 +1,6 @@
 ---
 title: "preemptible"
+description: "The preemptible GCP rack parameter uses lower-cost preemptible instances that Google Cloud can terminate with short notice, defaulting to true."
 slug: preemptible
 url: /configuration/rack-parameters/gcp/preemptible
 ---

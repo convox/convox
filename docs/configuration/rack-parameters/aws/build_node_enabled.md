@@ -1,5 +1,6 @@
 ---
 title: "build_node_enabled"
+description: "The build_node_enabled AWS rack parameter enables a dedicated build node so builds run isolated from application runtime, defaulting to false."
 slug: build_node_enabled
 url: /configuration/rack-parameters/aws/build_node_enabled
 ---

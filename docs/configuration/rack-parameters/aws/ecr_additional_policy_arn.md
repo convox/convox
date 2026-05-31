@@ -1,5 +1,6 @@
 ---
 title: "ecr_additional_policy_arn"
+description: "The ecr_additional_policy_arn AWS rack parameter attaches a user-provided IAM policy to the Rack API role for access to additional ECR repositories."
 slug: ecr_additional_policy_arn
 url: /configuration/rack-parameters/aws/ecr_additional_policy_arn
 ---

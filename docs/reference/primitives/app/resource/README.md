@@ -1,5 +1,6 @@
 ---
 title: "Resource"
+description: "A Resource is a network-accessible backing service such as a database or cache, available containerized, as an AWS managed service, or on Convox Cloud."
 slug: resource
 url: /reference/primitives/app/resource
 ---

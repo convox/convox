@@ -1,5 +1,6 @@
 ---
 title: "Changes"
+description: "What changed between Convox v2 (ECS, date-based) and v3 racks, covering providers, agent ports, scaling, sticky sessions, and timer cron syntax."
 slug: changes
 url: /help/changes
 ---

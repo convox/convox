@@ -1,5 +1,6 @@
 ---
 title: "Migrating from Heroku"
+description: "Move a Heroku app to Convox by translating your Procfile, config vars, and add-ons into one convox.yml, with a low-downtime DNS cutover."
 slug: heroku
 url: /migration/heroku
 ---

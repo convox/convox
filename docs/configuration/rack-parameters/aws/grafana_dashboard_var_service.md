@@ -1,5 +1,6 @@
 ---
 title: "grafana_dashboard_var_service"
+description: "The grafana_dashboard_var_service AWS rack parameter overrides the Grafana dashboard template variable name for the service filter, defaulting to service."
 slug: grafana_dashboard_var_service
 url: /configuration/rack-parameters/aws/grafana_dashboard_var_service
 ---

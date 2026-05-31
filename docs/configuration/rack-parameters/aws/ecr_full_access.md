@@ -1,5 +1,6 @@
 ---
 title: "ecr_full_access"
+description: "The ecr_full_access AWS rack parameter re-attaches the AmazonEC2ContainerRegistryFullAccess policy to the Rack API role, restoring pre-3.24.6 ECR permissions."
 slug: ecr_full_access
 url: /configuration/rack-parameters/aws/ecr_full_access
 ---

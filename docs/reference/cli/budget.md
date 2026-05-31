@@ -1,5 +1,6 @@
 ---
 title: "budget"
+description: "The convox budget command group manages an app's monthly budget cap, its at-cap action, and recovery after a cap is reached."
 slug: budget
 url: /reference/cli/budget
 ---

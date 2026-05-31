@@ -1,5 +1,6 @@
 ---
 title: "budget dismiss-recovery"
+description: "The convox budget dismiss-recovery command dismisses the sticky recovery banner shown after an auto-shutdown recovers, like the Console Dismiss button."
 slug: budget-dismiss-recovery
 url: /reference/cli/budget-dismiss-recovery
 ---

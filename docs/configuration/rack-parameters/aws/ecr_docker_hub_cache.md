@@ -1,5 +1,6 @@
 ---
 title: "ecr_docker_hub_cache"
+description: "The ecr_docker_hub_cache AWS rack parameter enables an ECR pull-through cache for Docker Hub images so resource pods avoid Docker Hub rate limit errors."
 slug: ecr_docker_hub_cache
 url: /configuration/rack-parameters/aws/ecr_docker_hub_cache
 ---

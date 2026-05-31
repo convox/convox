@@ -1,5 +1,6 @@
 ---
 title: "Postgres"
+description: "A Postgres Resource links to a Service in convox.yml, running as a container by default or as an AWS RDS managed instance with the rds-postgres type."
 slug: postgres
 url: /reference/primitives/app/resource/postgres
 ---

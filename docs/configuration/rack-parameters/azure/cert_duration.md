@@ -1,5 +1,6 @@
 ---
 title: "cert_duration"
+description: "The cert_duration Azure rack parameter sets the certificate renewal period, controlling how often certificates are renewed, defaulting to 2160h (90 days)."
 slug: cert_duration
 url: /configuration/rack-parameters/azure/cert_duration
 ---

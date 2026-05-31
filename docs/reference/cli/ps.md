@@ -1,5 +1,6 @@
 ---
 title: "ps"
+description: "The convox ps command lists an app's running processes and manages per-process operations such as info and stop, including budget-cap sub-states."
 slug: ps
 url: /reference/cli/ps
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Console Rack Management"
+description: "Move a CLI-installed rack into a Convox Console organization with convox rack mv so teammates can update and manage it together."
 slug: console-rack-management
 url: /management/console-rack-management
 ---

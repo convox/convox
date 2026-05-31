@@ -1,5 +1,6 @@
 ---
 title: "webhook_signing_key"
+description: "The webhook_signing_key AWS rack parameter sets a per-rack HMAC secret that signs outbound webhook deliveries with a Convox-Signature header, unset by default."
 slug: webhook_signing_key
 url: /configuration/rack-parameters/aws/webhook_signing_key
 ---

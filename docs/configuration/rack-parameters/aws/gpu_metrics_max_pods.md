@@ -1,5 +1,6 @@
 ---
 title: "gpu_metrics_max_pods"
+description: "The gpu_metrics_max_pods AWS rack parameter caps the number of services included in a single GPU metrics request, bounding dashboard fan-out, defaulting to 100."
 slug: gpu_metrics_max_pods
 url: /configuration/rack-parameters/aws/gpu_metrics_max_pods
 ---

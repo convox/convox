@@ -1,5 +1,6 @@
 ---
 title: "cost"
+description: "The convox cost command shows a per-service spend breakdown for an app, including GPU, CPU, and memory hours, instance type, and month-to-date totals."
 slug: cost
 url: /reference/cli/cost
 ---
@@ -31,16 +32,18 @@ Default per-service / per-variant breakdown on a 3.24.6+ rack:
     _build         c5.large     on-demand  —                $0.02
     _unattributed  t3.medium    on-demand  —                $0.01
     TOTAL: $0.45
-    Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.
-    Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.
 ```
+
+Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.
+
+Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.
 
 Aggregated app totals via `--aggregate`:
 
 ```bash
     $ convox cost --app myapp --aggregate
     APP    SPEND-USD  AS-OF        PRICING-SOURCE
-    myapp  $0.45      2 minutes ago  pricing-table:2026-05
+    myapp  $0.45      2 minutes ago  pricing-table:2026-04-29
 ```
 
 ### Output table (3.24.6+)

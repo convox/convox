@@ -1,5 +1,6 @@
 ---
 title: "Production Rack"
+description: "A production Rack runs on a cloud provider and hosts your apps in a real Kubernetes cluster, supporting autoscaling, managed resources, and Rack Parameters."
 slug: production-rack
 url: /installation/production-rack
 ---

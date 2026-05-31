@@ -1,5 +1,6 @@
 ---
 title: "additional_node_groups_config"
+description: "The additional_node_groups_config Azure rack parameter defines additional AKS node pools with specific VM sizes, capacity types, scaling, and custom labels."
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/azure/additional_node_groups_config
 ---

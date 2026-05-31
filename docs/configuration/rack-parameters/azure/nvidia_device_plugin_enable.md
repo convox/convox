@@ -1,5 +1,6 @@
 ---
 title: "nvidia_device_plugin_enable"
+description: "The nvidia_device_plugin_enable Azure rack parameter deploys the NVIDIA GPU Device Plugin so workloads can request GPU resources, defaulting to false."
 slug: nvidia_device_plugin_enable
 url: /configuration/rack-parameters/azure/nvidia_device_plugin_enable
 ---

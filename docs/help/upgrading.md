@@ -1,5 +1,6 @@
 ---
 title: "Upgrading"
+description: "Upgrade a local development Rack to a newer version, and move apps from a v2 (ECS) rack to a v3 Kubernetes rack using app export and import."
 slug: upgrading
 url: /help/upgrading
 ---

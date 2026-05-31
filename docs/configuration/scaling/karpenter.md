@@ -1,5 +1,6 @@
 ---
 title: "Karpenter"
+description: "Karpenter is an opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning, with faster provisioning and cost-aware instance selection."
 slug: karpenter
 url: /configuration/scaling/karpenter
 ---

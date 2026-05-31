@@ -1,5 +1,6 @@
 ---
 title: "Migrating to Convox"
+description: "Move an existing app from Heroku, Render, Fly, Docker Compose, Elastic Beanstalk, or Convox v2 onto a Convox Rack by producing an equivalent convox.yml."
 slug: migration
 url: /migration
 ---

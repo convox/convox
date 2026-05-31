@@ -1,5 +1,6 @@
 ---
 title: "logs"
+description: "The convox logs command streams an app's logs continuously, with flags to filter by string or service, set a time window, and stop after current output."
 slug: logs
 url: /reference/cli/logs
 ---

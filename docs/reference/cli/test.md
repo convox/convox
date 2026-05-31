@@ -1,5 +1,6 @@
 ---
 title: "test"
+description: "The convox test command builds the app and runs the test command defined on each service in convox.yml, failing if any returns a non-zero exit code."
 slug: test
 url: /reference/cli/test
 ---

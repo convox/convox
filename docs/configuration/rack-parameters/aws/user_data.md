@@ -1,5 +1,6 @@
 ---
 title: "user_data"
+description: "The user_data AWS rack parameter appends custom commands to the EC2 instance user data scripts run at node startup, defaulting to empty (no extra commands)."
 slug: user_data
 url: /configuration/rack-parameters/aws/user_data
 ---

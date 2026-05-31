@@ -1,5 +1,6 @@
 ---
 title: "MySQL"
+description: "Convox Cloud provides fully managed MySQL databases through AWS RDS, configured in convox.yml by class, version, and optional Multi-AZ failover."
 slug: mysql
 url: /cloud/databases/mysql
 ---

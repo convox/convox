@@ -1,5 +1,6 @@
 ---
 title: "Rack Statuses"
+description: "Rack statuses report each Rack's infrastructure lifecycle state, from installing through running, updating, rollback, and uninstalling, with the actions allowed in each."
 slug: rack-statuses
 url: /reference/rack-statuses
 ---

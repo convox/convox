@@ -1,5 +1,6 @@
 ---
 title: "public_subnets_ids"
+description: "The public_subnets_ids AWS rack parameter sets the public subnet IDs used to create the Rack, defaulting to empty so Convox creates its own."
 slug: public_subnets_ids
 url: /configuration/rack-parameters/aws/public_subnets_ids
 ---
@@ -26,4 +27,4 @@ The `public_subnets_ids` parameter must be configured at rack installation. Exam
 ## Additional Information
 When configuring `public_subnets_ids`, ensure that you also set the [vpc_id](/configuration/rack-parameters/aws/vpc_id) parameter and properly configure the VPC with an internet gateway and route table. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) parameter for internal resources. For high availability, there should be at least three subnets.
 
-Using this parameter allows you to leverage existing network infrastructure and customize the subnet configuration for your Convox rack. This advanced configuration is suitable for scenarios where specific network setups are required.
+Using this parameter lets you attach the rack load balancer to public subnets you already manage rather than having Convox create new ones. This advanced configuration is suitable when inbound traffic must enter through an existing public network layout.

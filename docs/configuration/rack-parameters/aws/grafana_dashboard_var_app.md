@@ -1,5 +1,6 @@
 ---
 title: "grafana_dashboard_var_app"
+description: "The grafana_dashboard_var_app AWS rack parameter overrides the Grafana dashboard template variable name for the app filter, defaulting to app."
 slug: grafana_dashboard_var_app
 url: /configuration/rack-parameters/aws/grafana_dashboard_var_app
 ---

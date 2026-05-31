@@ -1,5 +1,6 @@
 ---
 title: "Object"
+description: "An Object is a blob of data stored at a slash-separated path, used internally by Convox for build source archives, logs, and other artifacts."
 slug: object
 url: /reference/primitives/app/object
 ---

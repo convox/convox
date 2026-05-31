@@ -1,5 +1,6 @@
 ---
 title: "grafana_url"
+description: "The grafana_url AWS rack parameter sets an external Grafana base URL that surfaces a deep-link button on the Console GPU views, hidden when empty."
 slug: grafana_url
 url: /configuration/rack-parameters/aws/grafana_url
 ---

@@ -1,5 +1,6 @@
 ---
 title: "access_log_retention_in_days"
+description: "The access_log_retention_in_days AWS rack parameter sets the retention period for Nginx access logs stored in CloudWatch Logs, defaulting to 7 days."
 slug: access_log_retention_in_days
 url: /configuration/rack-parameters/aws/access_log_retention_in_days
 ---

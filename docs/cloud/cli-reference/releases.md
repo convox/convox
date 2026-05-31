@@ -1,5 +1,6 @@
 ---
 title: "Release Management"
+description: "The convox cloud releases commands list, create, inspect, view the manifest for, promote, and rollback releases of an application."
 slug: releases
 url: /cloud/cli-reference/releases
 ---

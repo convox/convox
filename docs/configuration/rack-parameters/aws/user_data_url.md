@@ -1,5 +1,6 @@
 ---
 title: "user_data_url"
+description: "The user_data_url AWS rack parameter points to a script downloaded and run during EC2 instance startup, defaulting to empty (no extra script)."
 slug: user_data_url
 url: /configuration/rack-parameters/aws/user_data_url
 ---

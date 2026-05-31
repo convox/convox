@@ -1,5 +1,6 @@
 ---
 title: "envoy_cpu_request"
+description: "The envoy_cpu_request AWS rack parameter sets the CPU request for the Envoy data-plane pods when router_type=contour, defaulting to 100m."
 slug: envoy_cpu_request
 url: /configuration/rack-parameters/aws/envoy_cpu_request
 ---

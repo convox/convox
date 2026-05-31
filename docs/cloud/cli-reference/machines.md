@@ -1,5 +1,6 @@
 ---
 title: "Machine Management"
+description: "The convox cloud machines command lists all machines in your organization; create, update, and delete machines from the Convox Console."
 slug: machines
 url: /cloud/cli-reference/machines
 ---

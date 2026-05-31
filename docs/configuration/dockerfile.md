@@ -1,5 +1,6 @@
 ---
 title: "Dockerfile"
+description: "The Dockerfile describes the steps used to create a Build from your application code, with directive reference and tips for optimizing build caching."
 slug: dockerfile
 url: /configuration/dockerfile
 ---

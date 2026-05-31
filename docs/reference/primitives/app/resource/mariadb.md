@@ -1,5 +1,6 @@
 ---
 title: "MariaDB"
+description: "A MariaDB Resource links to a Service in convox.yml, running as a container by default or as an AWS RDS managed instance with the rds-mariadb type."
 slug: mariadb
 url: /reference/primitives/app/resource/mariadb
 ---

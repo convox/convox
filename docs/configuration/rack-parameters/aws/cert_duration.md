@@ -1,5 +1,6 @@
 ---
 title: "cert_duration"
+description: "The cert_duration AWS rack parameter sets the renewal period for SSL/TLS certificates, defaulting to 2160h (90 days)."
 slug: cert_duration
 url: /configuration/rack-parameters/aws/cert_duration
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Webhooks"
+description: "Convox Racks emit signed webhooks for app-level events like build and release lifecycle, budget caps, and auto-shutdown, delivered to receivers you subscribe."
 slug: webhooks
 url: /configuration/webhooks
 ---
@@ -221,7 +222,7 @@ To rotate a receiver to the JSON form:
 
 ```bash
 $ kubectl -n convox-system get configmap webhooks -o yaml > webhooks.yaml
-$ # edit webhooks.yaml — change the value for the target receiver from a
+$ # edit webhooks.yaml, change the value for the target receiver from a
 $ # plain URL string to a JSON-encoded object with timeout
 $ kubectl -n convox-system apply -f webhooks.yaml
 ```

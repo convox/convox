@@ -1,5 +1,6 @@
 ---
 title: "vpa_enable"
+description: "The vpa_enable AWS rack parameter installs the Vertical Pod Autoscaler to right-size service CPU and memory requests from observed usage, defaulting to false."
 slug: vpa_enable
 url: /configuration/rack-parameters/aws/vpa_enable
 ---

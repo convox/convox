@@ -1,5 +1,6 @@
 ---
 title: "One-off Commands"
+description: "Run one-off commands on an app with convox run to spawn a new Process, or convox exec to run inside an existing Process for debugging and migrations."
 slug: one-off-commands
 url: /management/run
 ---

@@ -1,5 +1,6 @@
 ---
 title: "schedule_rack_scale_down"
+description: "The schedule_rack_scale_down AWS rack parameter sets a UTC cron schedule for scaling the rack down, defaulting to empty (no schedule)."
 slug: schedule_rack_scale_down
 url: /configuration/rack-parameters/aws/schedule_rack_scale_down
 ---

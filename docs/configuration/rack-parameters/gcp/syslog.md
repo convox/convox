@@ -1,5 +1,6 @@
 ---
 title: "syslog"
+description: "The syslog GCP rack parameter sets the endpoint to forward rack logs to a syslog server, such as tcp+tls://example.org:1234, disabled by default."
 slug: syslog
 url: /configuration/rack-parameters/gcp/syslog
 ---

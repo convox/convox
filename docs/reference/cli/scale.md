@@ -1,5 +1,6 @@
 ---
 title: "scale"
+description: "The convox scale command views and adjusts a service's replica count, CPU, and memory, or prints the full scale table when run without flags."
 slug: scale
 url: /reference/cli/scale
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Migration Guide"
+description: "Migrate applications to Convox Cloud from Heroku, Render, Railway, Docker Compose, or a self-hosted Rack by converting to convox.yml and moving data and DNS."
 slug: migration-guide
 url: /cloud/migration-guide
 ---

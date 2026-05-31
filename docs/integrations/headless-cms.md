@@ -1,5 +1,6 @@
 ---
 title: "Headless CMS"
+description: "Connect a headless CMS such as Contentful to Convox so content editors can trigger deployment workflows directly from the CMS interface using a deploy key."
 slug: headless-cms
 url: /integrations/headless-cms
 ---

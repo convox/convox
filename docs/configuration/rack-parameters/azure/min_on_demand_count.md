@@ -1,5 +1,6 @@
 ---
 title: "min_on_demand_count"
+description: "The min_on_demand_count Azure rack parameter sets the minimum number of nodes in the default AKS node pool and the initial node count at creation, defaulting to 3."
 slug: min_on_demand_count
 url: /configuration/rack-parameters/azure/min_on_demand_count
 ---

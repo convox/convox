@@ -1,5 +1,6 @@
 ---
 title: "Workflows"
+description: "Automate building, testing, and deploying applications when code is pushed, using Deployment Workflows for push-to-deploy and Review Workflows for PR previews."
 slug: workflows
 url: /console/workflows
 ---

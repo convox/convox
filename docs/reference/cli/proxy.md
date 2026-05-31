@@ -1,5 +1,6 @@
 ---
 title: "proxy"
+description: "The convox proxy command opens a secure tunnel from localhost to internal Rack resources such as databases and caches that are not publicly exposed."
 slug: proxy
 url: /reference/cli/proxy
 ---

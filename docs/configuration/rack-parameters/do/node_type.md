@@ -1,5 +1,6 @@
 ---
 title: "node_type"
+description: "The node_type Digital Ocean rack parameter sets the droplet instance type used for rack nodes, defaulting to s-2vcpu-4gb."
 slug: node_type
 url: /configuration/rack-parameters/do/node_type
 ---

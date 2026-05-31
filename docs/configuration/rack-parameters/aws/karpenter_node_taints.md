@@ -1,5 +1,6 @@
 ---
 title: "karpenter_node_taints"
+description: "The karpenter_node_taints AWS rack parameter adds custom Kubernetes taints to Karpenter workload nodes so pods without matching tolerations cannot schedule there."
 slug: karpenter_node_taints
 url: /configuration/rack-parameters/aws/karpenter_node_taints
 ---

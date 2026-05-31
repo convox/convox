@@ -1,5 +1,6 @@
 ---
 title: "karpenter_consolidation_enabled"
+description: "The karpenter_consolidation_enabled AWS rack parameter controls how aggressively Karpenter consolidates workload nodes, defaulting to true."
 slug: karpenter_consolidation_enabled
 url: /configuration/rack-parameters/aws/karpenter_consolidation_enabled
 ---

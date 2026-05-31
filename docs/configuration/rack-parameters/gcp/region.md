@@ -1,5 +1,6 @@
 ---
 title: "region"
+description: "The region GCP rack parameter sets the GCP region where the Convox rack is deployed, affecting latency, availability, and cost, defaulting to us-east1."
 slug: region
 url: /configuration/rack-parameters/gcp/region
 ---

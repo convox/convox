@@ -1,5 +1,6 @@
 ---
 title: "App Settings"
+description: "App settings are per-App configuration parameters set independently of the Rack, currently the awsLogs section for CloudWatch log retention."
 slug: app-settings
 url: /configuration/app-settings
 ---

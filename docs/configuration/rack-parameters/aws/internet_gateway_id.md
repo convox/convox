@@ -1,5 +1,6 @@
 ---
 title: "internet_gateway_id"
+description: "The internet_gateway_id AWS rack parameter specifies the ID of an attached internet gateway when installing the rack into an existing VPC, empty by default."
 slug: internet_gateway_id
 url: /configuration/rack-parameters/aws/internet_gateway_id
 ---

@@ -1,5 +1,6 @@
 ---
 title: "KEDA Autoscaling"
+description: "KEDA extends Convox autoscaling with event-driven triggers and scale-to-zero, scaling on queue depth, cron, Prometheus, and 60+ scalers on AWS."
 slug: keda
 url: /configuration/scaling/keda
 ---
@@ -15,7 +16,7 @@ KEDA (Kubernetes Event-Driven Autoscaling) extends Convox autoscaling with event
 - **Scale to zero**: Services can scale down to zero replicas when idle, eliminating compute costs for workloads that are not actively processing. When new events arrive (e.g. messages in a queue), KEDA spins up replicas automatically.
 - **Scale from external signals**: Instead of reacting to pod-level CPU or memory, KEDA scales based on external event sources: queue depth, cron schedules, Prometheus queries, or any of 60+ supported scalers. This means your services scale in response to actual demand signals rather than lagging resource utilization.
 
-Any scaler listed in the [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/) can be configured via the `scale.keda.triggers` block in `convox.yml`.
+Any scaler listed in the [KEDA Scalers documentation](https://keda.sh/docs/2.18/scalers/) can be configured via the `scale.keda.triggers` block in `convox.yml`.
 
 ## Prerequisites
 
@@ -64,7 +65,7 @@ The `count` range defines the minimum and maximum replicas. KEDA scales within t
 
 ### Trigger Definition
 
-Each trigger requires a `type` and a `metadata` map. The available trigger types and their metadata fields are defined in the [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/).
+Each trigger requires a `type` and a `metadata` map. The available trigger types and their metadata fields are defined in the [KEDA Scalers documentation](https://keda.sh/docs/2.18/scalers/).
 
 | Attribute | Type | Description |
 | --------- | ---- | ----------- |
@@ -181,7 +182,7 @@ On AWS racks, KEDA automatically uses the rack's IAM role for authentication wit
 
 ## KEDA with Datadog Metrics
 
-KEDA supports a [Datadog scaler](https://keda.sh/docs/2.19/scalers/datadog/) that can drive autoscaling from Datadog queries. This is an alternative to the HPA-based [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) approach.
+KEDA supports a [Datadog scaler](https://keda.sh/docs/2.18/scalers/datadog/) that can drive autoscaling from Datadog queries. This is an alternative to the HPA-based [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) approach.
 
 To use the KEDA Datadog scaler:
 
@@ -215,5 +216,5 @@ When KEDA is configured for a service, Convox uses a KEDA ScaledObject instead o
 - [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for HPA-based Datadog scaling (without KEDA)
 - [VPA](/configuration/scaling/vpa) for automatic resource right-sizing
 - [keda_enable](/configuration/rack-parameters/aws/keda_enable) rack parameter
-- [KEDA Scalers documentation](https://keda.sh/docs/2.19/scalers/) for all available trigger types and configuration
+- [KEDA Scalers documentation](https://keda.sh/docs/2.18/scalers/) for all available trigger types and configuration
 - [Autoscale Triggers Override](/console/autoscale-triggers) for Console-driven trigger management without convox.yml edits (3.24.6+)

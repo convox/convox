@@ -1,5 +1,6 @@
 ---
 title: "Logging"
+description: "Convox captures stdout and stderr from every Process across all Services, aggregating timestamped, source-tagged logs viewable through the CLI and Console."
 slug: logging
 url: /configuration/logging
 ---

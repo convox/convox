@@ -1,5 +1,6 @@
 ---
 title: "MySQL"
+description: "A MySQL Resource links to a Service in convox.yml, running as a container by default or as an AWS RDS managed instance with the rds-mysql type."
 slug: mysql
 url: /reference/primitives/app/resource/mysql
 ---

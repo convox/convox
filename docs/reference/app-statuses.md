@@ -1,5 +1,6 @@
 ---
 title: "App Statuses"
+description: "App statuses report each App's lifecycle state (creating, running, updating, rollback, deleting, failed) and the actions allowed in each state."
 slug: app-statuses
 url: /reference/app-statuses
 ---

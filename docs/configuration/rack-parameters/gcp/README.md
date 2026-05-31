@@ -1,5 +1,6 @@
 ---
 title: "GCP Rack Parameters"
+description: "Reference for the rack parameters available when running a Convox rack on Google Cloud Platform, covering node type, disk, region, preemptible nodes, and logging."
 slug: gcp-rack-parameters
 url: /configuration/rack-parameters/gcp
 ---

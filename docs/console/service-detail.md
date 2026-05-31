@@ -1,5 +1,6 @@
 ---
 title: "Service Detail"
+description: "The Service detail page shows a single Service within an App, including resource allocation, scaling, environment variables, GPU telemetry, logs, events, and cost."
 slug: service-detail
 url: /console/service-detail
 ---

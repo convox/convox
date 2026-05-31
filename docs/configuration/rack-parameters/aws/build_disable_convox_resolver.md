@@ -1,5 +1,6 @@
 ---
 title: "build_disable_convox_resolver"
+description: "The build_disable_convox_resolver AWS rack parameter disables the Convox DNS resolver during build processes to fix package manager DNS resolution issues."
 slug: build_disable_convox_resolver
 url: /configuration/rack-parameters/aws/build_disable_convox_resolver
 ---

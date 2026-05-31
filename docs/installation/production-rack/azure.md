@@ -1,5 +1,6 @@
 ---
 title: "Microsoft Azure"
+description: "Install a Convox production Rack on Azure via the command line, covering the service principal, Graph permissions, directory role, and install parameters."
 slug: microsoft-azure
 url: /installation/production-rack/azure
 ---

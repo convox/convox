@@ -1,5 +1,6 @@
 ---
 title: "Agents"
+description: "Agents are Services that run a single Process on every Rack Instance, optionally listening on host ports so other Processes can reach them by Instance IP."
 slug: agents
 url: /configuration/agents
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Model Deploy Wizard"
+description: "Deploy pre-configured or custom HuggingFace inference models to a Rack from the Console, handling App creation, GPU placement, access control, and a Playground."
 slug: deploy-wizard
 url: /console/deploy-wizard
 ---

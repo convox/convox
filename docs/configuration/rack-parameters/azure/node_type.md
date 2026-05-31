@@ -1,5 +1,6 @@
 ---
 title: "node_type"
+description: "The node_type Azure rack parameter sets the VM SKU used for rack nodes, requiring an x86 SKU, defaulting to Standard_D2_v3."
 slug: node_type
 url: /configuration/rack-parameters/azure/node_type
 ---

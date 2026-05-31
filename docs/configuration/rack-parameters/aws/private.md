@@ -1,5 +1,6 @@
 ---
 title: "private"
+description: "The private AWS rack parameter places nodes in private subnets behind NAT gateways, an immutable setting that defaults to true."
 slug: private
 url: /configuration/rack-parameters/aws/private
 ---

@@ -1,5 +1,6 @@
 ---
 title: "nvidia_device_time_slicing_replicas"
+description: "The nvidia_device_time_slicing_replicas AWS rack parameter enables GPU time slicing by setting how many virtual replicas each GPU splits into, disabled by default."
 slug: nvidia_device_time_slicing_replicas
 url: /configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Migrating from AWS Elastic Beanstalk"
+description: "Move an AWS Elastic Beanstalk app to Convox on EKS by mapping environments, Dockerrun, env properties, cron.yaml, and RDS into one convox.yml."
 slug: elastic-beanstalk
 url: /migration/elastic-beanstalk
 ---

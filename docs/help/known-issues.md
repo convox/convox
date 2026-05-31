@@ -1,5 +1,6 @@
 ---
 title: "Known Issues"
+description: "Current known issues and workarounds for Convox racks, including the AWS EKS ENI leak on uninstall and local rack self-signed certificate and tunnel notes."
 slug: known-issues
 url: /help/known-issues
 ---

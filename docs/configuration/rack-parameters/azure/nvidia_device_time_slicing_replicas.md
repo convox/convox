@@ -1,5 +1,6 @@
 ---
 title: "nvidia_device_time_slicing_replicas"
+description: "The nvidia_device_time_slicing_replicas Azure rack parameter sets GPU time-slicing replicas so one GPU is shared across pods, defaulting to 0 (disabled)."
 slug: nvidia_device_time_slicing_replicas
 url: /configuration/rack-parameters/azure/nvidia_device_time_slicing_replicas
 ---

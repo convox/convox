@@ -1,5 +1,6 @@
 ---
 title: "AWS App Parameters"
+description: "App parameters available for Convox apps on AWS, including BuildArch, BuildLabels, BuildCpu, and BuildMem for controlling build resources and placement."
 slug: aws-app-parameters
 url: /configuration/app-parameters/aws
 ---

@@ -1,5 +1,6 @@
 ---
 title: "disable_convox_resolver"
+description: "The disable_convox_resolver AWS rack parameter turns off the Convox resolver and uses the Kubernetes resolver instead, often needed with proxy_protocol."
 slug: disable_convox_resolver
 url: /configuration/rack-parameters/aws/disable_convox_resolver
 ---

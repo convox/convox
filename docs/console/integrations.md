@@ -1,5 +1,6 @@
 ---
 title: "Integrations"
+description: "Connect the Console to your cloud providers, source control repositories, and notification channels through the Runtimes, Source, and Notification tabs."
 slug: integrations
 url: /console/integrations
 ---

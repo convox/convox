@@ -1,5 +1,6 @@
 ---
 title: "prometheus_url"
+description: "The prometheus_url AWS rack parameter sets the external Prometheus URL for KEDA autoscale triggers and GPU metrics in convox ps, defaulting to empty."
 slug: prometheus_url
 url: /configuration/rack-parameters/aws/prometheus_url
 ---

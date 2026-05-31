@@ -1,5 +1,6 @@
 ---
 title: "gpu_observability_enable"
+description: "The gpu_observability_enable AWS rack parameter installs the NVIDIA DCGM exporter DaemonSet to export GPU metrics like utilization, memory, and temperature."
 slug: gpu_observability_enable
 url: /configuration/rack-parameters/aws/gpu_observability_enable
 ---

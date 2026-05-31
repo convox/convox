@@ -1,5 +1,6 @@
 ---
 title: "docker_hub_username"
+description: "The docker_hub_username Azure rack parameter configures Docker Hub authentication, which when set with docker_hub_password avoids anonymous pull rate limits."
 slug: docker_hub_username
 url: /configuration/rack-parameters/azure/docker_hub_username
 ---

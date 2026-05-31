@@ -1,5 +1,6 @@
 ---
 title: "fluentd_memory"
+description: "The fluentd_memory Digital Ocean rack parameter sets the memory request and limit for the Fluentd log collector DaemonSet, defaulting to 200Mi."
 slug: fluentd_memory
 url: /configuration/rack-parameters/do/fluentd_memory
 ---

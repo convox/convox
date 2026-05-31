@@ -1,5 +1,6 @@
 ---
 title: "builds import-image"
+description: "The convox builds import-image command imports a prebuilt container image into a new Build, pulling it from a source registry and creating a Release."
 slug: builds-import-image
 url: /reference/cli/builds-import-image
 ---

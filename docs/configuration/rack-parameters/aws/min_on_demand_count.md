@@ -1,5 +1,6 @@
 ---
 title: "min_on_demand_count"
+description: "The min_on_demand_count AWS rack parameter sets the minimum number of on-demand nodes when using the mixed node capacity type, defaulting to 1."
 slug: min_on_demand_count
 url: /configuration/rack-parameters/aws/min_on_demand_count
 ---

@@ -1,5 +1,6 @@
 ---
 title: "fluentd_memory"
+description: "The fluentd_memory AWS rack parameter configures the memory request and limit for the Fluentd log collector DaemonSet, defaulting to 200Mi."
 slug: fluentd_memory
 url: /configuration/rack-parameters/aws/fluentd_memory
 ---

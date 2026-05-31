@@ -1,5 +1,6 @@
 ---
 title: "grafana_dashboard_var_namespace"
+description: "The grafana_dashboard_var_namespace AWS rack parameter overrides the Grafana dashboard template variable name for the namespace filter, defaulting to namespace."
 slug: grafana_dashboard_var_namespace
 url: /configuration/rack-parameters/aws/grafana_dashboard_var_namespace
 ---

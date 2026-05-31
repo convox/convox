@@ -1,5 +1,6 @@
 ---
 title: "Environment Variables"
+description: "Environment variables keep application secrets out of your codebase, defined in convox.yml at the application level or per service for different deployments."
 slug: environment-variables
 url: /configuration/environment
 ---

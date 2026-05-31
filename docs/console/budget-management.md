@@ -1,5 +1,6 @@
 ---
 title: "Budget Management"
+description: "Configure per-App budget caps and organization-wide cost visibility in the Console, tracking month-to-date spend and enforcing actions when a cap is reached."
 slug: budget-management
 url: /console/budget-management
 ---

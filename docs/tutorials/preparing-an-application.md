@@ -1,5 +1,6 @@
 ---
 title: "Preparing An Application"
+description: "Prepare an app for Convox with a Dockerfile and a convox.yml manifest, covering the environment, resources, services, and timers sections you will define."
 slug: preparing-an-application
 url: /tutorials/preparing-an-application
 ---

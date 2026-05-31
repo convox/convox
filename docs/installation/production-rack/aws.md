@@ -1,5 +1,6 @@
 ---
 title: "Amazon Web Services"
+description: "Install a Convox production Rack on AWS via the command line, covering the IAM user, environment variables, install parameters, and cluster endpoint access."
 slug: amazon-web-services
 url: /installation/production-rack/aws
 ---

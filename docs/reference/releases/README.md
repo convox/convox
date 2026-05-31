@@ -1,5 +1,6 @@
 ---
 title: "Releases"
+description: "Browse the Convox v3 release history from 3.15 onward, with per-version changes and the Kubernetes version each minor release targets."
 slug: releases
 url: /reference/releases
 ---

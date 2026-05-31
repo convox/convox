@@ -1,5 +1,6 @@
 ---
 title: "Introduction"
+description: "Get started with Convox, the open-source PaaS you install on your own infrastructure, from creating an account to installing a Rack and deploying a sample app."
 slug: introduction
 url: /getting-started/introduction
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Timer"
+description: "A Timer spawns a Process from a Service on a cron schedule in UTC, with optional parallel replicas and a configurable concurrency policy."
 slug: timer
 url: /reference/primitives/app/timer
 ---

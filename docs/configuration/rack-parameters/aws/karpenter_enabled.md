@@ -1,5 +1,6 @@
 ---
 title: "karpenter_enabled"
+description: "The karpenter_enabled AWS rack parameter is a bidirectional toggle that deploys or removes Karpenter node autoscaling, requiring karpenter_auth_mode to be true."
 slug: karpenter_enabled
 url: /configuration/rack-parameters/aws/karpenter_enabled
 ---

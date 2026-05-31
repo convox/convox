@@ -1,5 +1,6 @@
 ---
 title: "Process"
+description: "A Process is a running container created from a Release, either a durable Process managed by a Service or a one-off Process started with convox run."
 slug: process
 url: /reference/primitives/app/process
 ---

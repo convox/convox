@@ -1,5 +1,6 @@
 ---
 title: "router_type"
+description: "The router_type AWS rack parameter selects the Rack ingress controller, either nginx (the default) or contour, an Envoy-based alternative."
 slug: router_type
 url: /configuration/rack-parameters/aws/router_type
 ---

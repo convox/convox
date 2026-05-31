@@ -1,5 +1,6 @@
 ---
 title: "Direct Kubernetes Access"
+description: "Point kubectl at your rack through the Convox Kubernetes API proxy to inspect cluster primitives without exposing raw cluster credentials."
 slug: direct-kubernetes-access
 url: /management/direct-k8s-access
 ---

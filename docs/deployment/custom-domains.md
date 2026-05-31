@@ -1,5 +1,6 @@
 ---
 title: "Custom Domains"
+description: "Custom domains route one or more domains, including wildcards via DNS-01, to a Convox service by aliasing them to the rack router endpoint."
 slug: custom-domains
 url: /deployment/custom-domains
 ---

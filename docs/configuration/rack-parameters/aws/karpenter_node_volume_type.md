@@ -1,5 +1,6 @@
 ---
 title: "karpenter_node_volume_type"
+description: "The karpenter_node_volume_type AWS rack parameter sets the EBS volume type for Karpenter-provisioned workload nodes, defaulting to gp3."
 slug: karpenter_node_volume_type
 url: /configuration/rack-parameters/aws/karpenter_node_volume_type
 ---

@@ -1,5 +1,6 @@
 ---
 title: "karpenter_build_consolidate_after"
+description: "The karpenter_build_consolidate_after AWS rack parameter sets the delay before empty Karpenter build nodes are consolidated and removed, defaulting to 60s."
 slug: karpenter_build_consolidate_after
 url: /configuration/rack-parameters/aws/karpenter_build_consolidate_after
 ---

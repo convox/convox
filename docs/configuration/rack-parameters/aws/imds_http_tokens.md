@@ -1,5 +1,6 @@
 ---
 title: "imds_http_tokens"
+description: "The imds_http_tokens AWS rack parameter controls whether the Instance Metadata Service requires session tokens (IMDSv2), defaulting to optional."
 slug: imds_http_tokens
 url: /configuration/rack-parameters/aws/imds_http_tokens
 ---

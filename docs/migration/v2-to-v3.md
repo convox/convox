@@ -1,5 +1,6 @@
 ---
 title: "Migrating from Convox v2 to v3"
+description: "Move apps from a Convox v2 (ECS) rack to a v3 (Kubernetes) rack with a field-by-field convox.yml diff guide for the small set of manifest edits required."
 slug: v2-to-v3
 url: /migration/v2-to-v3
 ---

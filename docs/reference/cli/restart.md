@@ -1,5 +1,6 @@
 ---
 title: "restart"
+description: "The convox restart command performs a rolling restart of all services in an app, restarting each service sequentially to help maintain availability."
 slug: restart
 url: /reference/cli/restart
 ---

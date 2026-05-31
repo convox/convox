@@ -1,5 +1,6 @@
 ---
 title: "high_availability"
+description: "The high_availability AWS rack parameter controls whether the cluster is built with redundant resources, defaulting to true; set false to cut costs."
 slug: high_availability
 url: /configuration/rack-parameters/aws/high_availability
 ---

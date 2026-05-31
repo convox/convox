@@ -1,5 +1,6 @@
 ---
 title: "docker_hub_username"
+description: "The docker_hub_username AWS rack parameter configures Docker Hub authentication, and with docker_hub_password authenticates all pulls to avoid rate limits."
 slug: docker_hub_username
 url: /configuration/rack-parameters/aws/docker_hub_username
 ---

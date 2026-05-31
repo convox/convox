@@ -1,5 +1,6 @@
 ---
 title: "Deploying an Application"
+description: "Walk through deploying an app to a production Rack, from cloning an example through deploy, viewing services and logs, scaling, and promoting a release."
 slug: deploying-an-application
 url: /tutorials/deploying-an-application
 ---

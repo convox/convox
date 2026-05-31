@@ -1,5 +1,6 @@
 ---
 title: "high_availability"
+description: "The high_availability Azure rack parameter runs the router and API with multiple replicas when true, or single replicas when false, defaulting to true."
 slug: high_availability
 url: /configuration/rack-parameters/azure/high_availability
 ---

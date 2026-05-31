@@ -1,5 +1,6 @@
 ---
 title: "GPU Dashboard"
+description: "View real-time GPU telemetry for accelerated Services in the Console, with per-Service utilization summaries, charts, and per-Process snapshots from NVIDIA DCGM."
 slug: gpu-dashboard
 url: /console/gpu-dashboard
 ---
