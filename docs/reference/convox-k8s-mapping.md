@@ -62,53 +62,24 @@ kubectl config set-context --current --namespace=my-rack-my-app
 
 ## Complete convox.yml Example
 
-The following `convox.yml` demonstrates every Convox concept covered in this document. Inline comments reference the Kubernetes resources each section generates. Use this as a cross-reference when inspecting your cluster with `kubectl`.
+The following `convox.yml` demonstrates every Convox concept covered in this document. The annotations after the example explain which Kubernetes resources each section generates, so you can use this as a cross-reference when inspecting your cluster with `kubectl`.
 
 ```yaml
-# ============================================================================
-# ENVIRONMENT
-# ============================================================================
-# Shared environment variables available to all services.
-# Each service gets its own K8s Secret named "env-<service-name>" containing
-# these values plus any service-level overrides.
-#
-# K8s Resource: Secret (env-web, env-worker, env-agent, env-jobs)
-# kubectl: kubectl get secret env-web -n <rack>-<app> -o yaml
-
 environment:
   - PORT=3000
   - RAILS_ENV=production
   - DATABASE_URL
 
-# ============================================================================
-# RESOURCES
-# ============================================================================
-# Each resource creates a set of K8s objects in the app namespace.
-#
-# Containerized resources → Deployment + Service (NodePort) + PVC + ConfigMap
-#   Naming: resource-<name>  (e.g. resource-database, resource-cache)
-#   kubectl: kubectl get deploy,svc,pvc,configmap -l resource=<name>
-#
-# Managed resources (rds-*, elasticache-*) are provisioned in the cloud
-# provider and exposed to the app via the same ConfigMap / env var pattern.
-
 resources:
-  # --- Containerized Postgres -------------------------------------------
-  # K8s: Deployment, Service (NodePort), PVC, ConfigMap
-  # Injects DATABASE_URL, DATABASE_USER, DATABASE_PASS, etc.
   database:
     type: postgres
     options:
       version: "13"
       storage: 20
 
-  # --- Containerized Redis ----------------------------------------------
-  # K8s: Deployment, Service (NodePort), ConfigMap  (no PVC  -  stateless)
   cache:
     type: redis
 
-  # --- AWS RDS Postgres (managed) ---------------------------------------
-  # K8s: ConfigMap only (cloud provider manages the instance)
   analytics-db:
     type: rds-postgres
     options:
@@ -121,8 +92,6 @@ resources:
       backupRetentionPeriod: 7
       preferredBackupWindow: "02:00-03:00"
 
-  # --- AWS ElastiCache Redis (managed) ----------------------------------
-  # K8s: ConfigMap only
   sessions:
     type: elasticache-redis
     options:
@@ -131,22 +100,7 @@ resources:
       encrypted: true
       durable: true
 
-# ============================================================================
-# SERVICES
-# ============================================================================
-
 services:
-  # --- Web Service (public-facing) --------------------------------------
-  # K8s Resources:
-  #   Deployment    "web"           -  runs the application containers
-  #   Service       "web"           -  ClusterIP routing to pods
-  #   Ingress       "web"           -  external HTTPS termination & routing
-  #   HPA           "web"           -  autoscaling (because scale.count is a range)
-  #   Secret        "env-web"       -  environment variables
-  #   ServiceAccount "web"          -  pod identity (if accessControl is set)
-  #
-  # kubectl: kubectl get deploy,svc,ing,hpa -l service=web
-
   web:
     build:
       path: .
@@ -155,32 +109,20 @@ services:
     domain: ${WEB_HOST}
     port: 3000
     internal: false
-
-    # Pod-level annotations → metadata.annotations on Pod and ServiceAccount
     annotations:
       - prometheus.io/scrape=true
-
-    # Ingress-level annotations → metadata.annotations on Ingress
     ingressAnnotations:
       - nginx.ingress.kubernetes.io/limit-rpm=100
-
-    # Custom K8s labels on all generated resources
     labels:
       convox.com/team: platform
-
-    # Environment → merged into Secret "env-web"
     environment:
       - PORT=3000
       - WEB_HOST
-
-    # Readiness probe → readinessProbe on the container
     health:
       path: /health
       grace: 10
       interval: 5
       timeout: 3
-
-    # Liveness probe → livenessProbe on the container
     liveness:
       path: /liveness
       grace: 15
@@ -188,46 +130,22 @@ services:
       timeout: 5
       successThreshold: 1
       failureThreshold: 3
-
-    # Certificate duration for auto-issued TLS cert
     certificate:
       duration: 2160h
-
-    # TLS redirect → annotation on Ingress
     tls:
       redirect: true
-
-    # Rolling deployment strategy → Deployment.spec.strategy
     deployment:
       minimum: 50
       maximum: 200
-
-    # Termination grace → Pod.spec.terminationGracePeriodSeconds
     termination:
       grace: 45
-
-    # Lifecycle hooks → Pod.spec.containers[].lifecycle
     lifecycle:
       preStop: "sleep 10"
-
-    # DNS config → Pod.spec.dnsConfig
     dnsConfig:
       ndots: 5
-
-    # Sticky sessions → Ingress session-cookie annotation
     sticky: true
-
-    # Request timeout → Ingress proxy-read-timeout annotation
     timeout: 180
-
-    # Whitelist → Ingress whitelist-source-range annotation
     whitelist: "10.0.0.0/16,192.168.1.0/24"
-
-    # Scaling → Deployment replicas + HPA + resource requests/limits
-    #   count range → HPA  (minReplicas / maxReplicas)
-    #   cpu/memory  → container resources.requests
-    #   limit       → container resources.limits
-    #   targets     → HPA metrics
     scale:
       count: 2-10
       cpu: 250
@@ -238,41 +156,22 @@ services:
       targets:
         cpu: 70
         memory: 80
-
-    # Resource links → env vars injected from resource ConfigMaps
     resources:
       - database
       - cache
       - analytics-db
       - sessions
-
-    # AWS Pod Identity → ServiceAccount with IAM role annotation
-    #   kubectl: kubectl describe sa web
     accessControl:
       awsPodIdentity:
         policyArns:
           - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-
-    # EFS volume → PersistentVolumeClaim + volumeMount
-    #   PVC name: efs-web-shared-uploads
-    #   kubectl: kubectl get pvc -l system=convox
     volumeOptions:
       - awsEfs:
           id: "shared-uploads"
           accessMode: ReadWriteMany
           mountPath: "/app/public/uploads"
-
-    # Init container → Pod.spec.initContainers
     initContainer:
       command: "bin/migrate"
-
-  # --- Worker Service (background) -------------------------------------
-  # K8s Resources:
-  #   Deployment    "worker"        -  runs background job processors
-  #   Secret        "env-worker"    -  environment variables
-  #   Service       "worker"        -  because ports are defined (for balancer)
-  #
-  # kubectl: kubectl get deploy -l service=worker
 
   worker:
     build: ./worker
@@ -289,20 +188,10 @@ services:
     resources:
       - database
       - cache
-
-    # emptyDir volume → Pod.spec.volumes (ephemeral scratch space)
     volumeOptions:
       - emptyDir:
           id: "tmp-data"
           mountPath: "/tmp/processing"
-
-  # --- Agent Service (DaemonSet) ----------------------------------------
-  # K8s Resources:
-  #   DaemonSet     "agent"         -  one pod per node
-  #   Service       "agent"         -  because ports are defined
-  #   Secret        "env-agent"     -  environment variables
-  #
-  # kubectl: kubectl get ds -l service=agent
 
   agent:
     build: ./agent
@@ -311,13 +200,6 @@ services:
       - 8125/udp
       - 8126
 
-  # --- Jobs Template Service (scaled to zero) ---------------------------
-  # K8s Resources:
-  #   Deployment    "jobs"          -  0 replicas (template only)
-  #   Secret        "env-jobs"      -  environment variables
-  #
-  # No running pods  -  used only as the image source for Timers.
-
   jobs:
     build: ./jobs
     scale:
@@ -325,25 +207,13 @@ services:
     resources:
       - database
 
-# ============================================================================
-# TIMERS
-# ============================================================================
-# Each timer creates a K8s CronJob in the app namespace.
-#
-# Naming: timer-<timer-name>
-# kubectl: kubectl get cronjobs -l system=convox
-#          kubectl get jobs      -l name=<timer-name>
-
 timers:
-  # Simple scheduled task → CronJob "timer-cleanup"
   cleanup:
     command: bin/cleanup
     schedule: "0 3 * * *"
     service: jobs
     concurrency: Forbid
 
-  # Parallel timer → CronJob "timer-data-import" with parallelism=4
-  # Each replica gets a TIMER_INDEX env var (0, 1, 2, 3)
   data-import:
     command: bin/import
     schedule: "0 * * * *"
@@ -353,16 +223,7 @@ timers:
     annotations:
       - monitoring.example.com/alert=true
 
-# ============================================================================
-# BALANCERS
-# ============================================================================
-# Each balancer creates a K8s Service of type LoadBalancer.
-#
-# Naming: balancer-<balancer-name>
-# kubectl: kubectl get svc -l type=balancer
-
 balancers:
-  # TCP balancer → Service (LoadBalancer) "balancer-tcp-lb"
   tcp-lb:
     annotations:
       - service.beta.kubernetes.io/aws-load-balancer-type=nlb
@@ -374,29 +235,65 @@ balancers:
 
 ### How convox.yml Maps to Kubernetes
 
-The diagram below summarizes the relationship between the `convox.yml` sections above and the Kubernetes resources Convox generates:
+Convox translates each section of the example above into Kubernetes resources in the app namespace.
 
-```text
-convox.yml Section        Kubernetes Resources Created
-─────────────────         ──────────────────────────────────────────────
-environment:         ──►  Secret         (env-<service>)
-resources:           ──►  Deployment + Service + PVC + ConfigMap
-                          (or cloud-managed + ConfigMap only)
-services:
-  web: (port set)    ──►  Deployment + Service + Ingress + HPA
-  worker: (ports)    ──►  Deployment + Service
-  agent: (agent)     ──►  DaemonSet + Service
-  jobs: (count: 0)   ──►  Deployment (0 replicas, template only)
-  ├─ scale           ──►  HPA + resources.requests/limits
-  ├─ health          ──►  readinessProbe
-  ├─ liveness        ──►  livenessProbe
-  ├─ volumeOptions   ──►  PVC (EFS) or emptyDir volume
-  ├─ initContainer   ──►  Pod.spec.initContainers
-  ├─ accessControl   ──►  ServiceAccount + IAM annotation
-  └─ termination     ──►  terminationGracePeriodSeconds
-timers:              ──►  CronJob        (timer-<name>)
-balancers:           ──►  Service type=LoadBalancer (balancer-<name>)
-```
+**`environment`** creates one `Secret` per service named `env-<service-name>` (`env-web`, `env-worker`, `env-agent`, `env-jobs`). The Secret holds the shared values plus any service-level overrides. Inspect it with `kubectl get secret env-web -n <rack>-<app> -o yaml`.
+
+**`resources`** create backing services in two flavors:
+
+| Resource | `type` | Kubernetes resources | Notes |
+| :--- | :--- | :--- | :--- |
+| `database` | `postgres` | `Deployment`, `Service` (`NodePort`), `PVC`, `ConfigMap` | Containerized. Injects `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASS`, and related vars. |
+| `cache` | `redis` | `Deployment`, `Service` (`NodePort`), `ConfigMap` | Containerized. No `PVC` because Redis is stateless here. |
+| `analytics-db` | `rds-postgres` | `ConfigMap` only | Cloud-managed. The provider runs the instance; Convox exposes it through the ConfigMap and env vars. |
+| `sessions` | `elasticache-redis` | `ConfigMap` only | Cloud-managed. |
+
+Containerized resources are named `resource-<name>` (for example `resource-database`, `resource-cache`). Find their components with `kubectl get deploy,svc,pvc,configmap -l resource=<name>`. Managed resources (`rds-*`, `elasticache-*`) are provisioned in the cloud provider and exposed to the app through the same ConfigMap and env var pattern.
+
+**`services`** map to different workload types based on their configuration:
+
+| Service | Trigger | Kubernetes resources |
+| :--- | :--- | :--- |
+| `web` | `port` set | `Deployment`, `Service` (`ClusterIP`), `Ingress`, `HPA`, `Secret` (`env-web`), and a `ServiceAccount` when `accessControl` is set |
+| `worker` | `ports` defined | `Deployment`, `Secret` (`env-worker`), and a `Service` (because `ports` are defined, for the balancer) |
+| `agent` | `agent: true` | `DaemonSet` (one pod per node), `Service` (because `ports` are defined), `Secret` (`env-agent`) |
+| `jobs` | `scale.count: 0` | `Deployment` with 0 replicas, `Secret` (`env-jobs`). No running pods; used only as the image source for Timers. |
+
+Inspect them with `kubectl get deploy,svc,ing,hpa -l service=web`, `kubectl get deploy -l service=worker`, and `kubectl get ds -l service=agent`.
+
+Service-level settings on `web` generate further Kubernetes detail:
+
+| `convox.yml` field | Kubernetes effect |
+| :--- | :--- |
+| `annotations` | `metadata.annotations` on the Pod and the ServiceAccount |
+| `ingressAnnotations` | `metadata.annotations` on the Ingress |
+| `labels` | Custom labels on all generated resources |
+| `environment` | Merged into the `env-web` Secret |
+| `health` | `readinessProbe` on the container |
+| `liveness` | `livenessProbe` on the container |
+| `certificate.duration` | Duration of the auto-issued TLS certificate |
+| `tls.redirect` | TLS redirect annotation on the Ingress |
+| `deployment.minimum` / `maximum` | `Deployment.spec.strategy` (rolling deployment) |
+| `termination.grace` | `Pod.spec.terminationGracePeriodSeconds` |
+| `lifecycle.preStop` | `Pod.spec.containers[].lifecycle` |
+| `dnsConfig` | `Pod.spec.dnsConfig` |
+| `sticky` | Session-cookie annotation on the Ingress |
+| `timeout` | `proxy-read-timeout` annotation on the Ingress |
+| `whitelist` | `whitelist-source-range` annotation on the Ingress |
+| `scale.count` (range) | `HPA` `minReplicas` / `maxReplicas` |
+| `scale.cpu` / `memory` | Container `resources.requests` |
+| `scale.limit` | Container `resources.limits` |
+| `scale.targets` | `HPA` metrics |
+| `resources` | Env vars injected from each linked resource's ConfigMap |
+| `accessControl.awsPodIdentity` | `ServiceAccount` with an IAM role annotation (inspect with `kubectl describe sa web`) |
+| `volumeOptions.awsEfs` | `PersistentVolumeClaim` plus a `volumeMount` (PVC name `efs-web-shared-uploads`; find it with `kubectl get pvc -l system=convox`) |
+| `initContainer` | `Pod.spec.initContainers` |
+
+The `worker` service shows the `emptyDir` form of `volumeOptions`, which maps to an ephemeral scratch volume in `Pod.spec.volumes` rather than a PVC.
+
+**`timers`** each create a `CronJob` named `timer-<timer-name>` (`timer-cleanup`, `timer-data-import`). The `data-import` timer sets `parallelCount: 4`, which maps to `parallelism: 4` on the Job, and each replica receives a `TIMER_INDEX` env var (`0`, `1`, `2`, `3`). List them with `kubectl get cronjobs -l system=convox` and find the resulting jobs with `kubectl get jobs -l name=<timer-name>`.
+
+**`balancers`** each create a `Service` of type `LoadBalancer` named `balancer-<balancer-name>` (`balancer-tcp-lb`). Find them with `kubectl get svc -l type=balancer`.
 
 ## Detailed Mappings
 

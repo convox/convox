@@ -6,7 +6,7 @@ url: /cloud/databases/mysql
 
 # MySQL
 
-Convox Cloud provides fully managed MySQL databases through AWS RDS.
+Convox Cloud provides fully managed MySQL databases through AWS RDS. These are Console-managed Cloud Databases on Convox-hosted infrastructure, not database resources on a self-managed Rack. See [Cloud Databases](/cloud/databases) for an overview and [Cloud vs Rack Comparison](/cloud/comparison) for the differences.
 
 ## Definition
 
@@ -72,7 +72,7 @@ Enabling `durable: true` doubles the monthly cost.
 ### Medium
 - Growing applications
 - Higher connection limits
-- Read replica support
+- Optional Multi-AZ failover
 
 ### Large
 - High-traffic production

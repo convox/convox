@@ -464,23 +464,7 @@ Consider a self-hosted Convox Rack if you need:
 
 ## Feature Comparison Table
 
-| Feature | Convox Cloud | Self-Hosted Rack |
-|---------|--------------|------------------|
-| Kubernetes Access | No | Yes |
-| SSH to Nodes | No | Yes |
-| Custom Node Types | No | Yes |
-| VPC Configuration | No | Yes |
-| Network Policies | No | Yes |
-| Persistent Volumes | No | Yes |
-| Custom IAM Roles | No | Yes |
-| Managed Databases | Yes (Cloud DBs) | Yes (RDS Resources) |
-| RDS Read Replicas | No | Yes |
-| Agent Services | No | Yes |
-| Custom Build Nodes | No | Yes |
-| Rack Parameters | Limited | Full |
-| Setup Time | Instant | 10-20 min |
-| Maintenance | None | Required |
-| Pricing | Per Machine/DB | Infrastructure |
+For a full side-by-side comparison of Convox Cloud and self-hosted Rack, including features, cost, scalability, and migration paths, see the [Cloud vs Rack Comparison](/cloud/comparison).
 
 ## Getting Help
 
