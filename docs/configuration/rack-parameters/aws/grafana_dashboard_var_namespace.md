@@ -13,7 +13,7 @@ The `grafana_dashboard_var_namespace` parameter overrides the Grafana dashboard 
 The default value is `namespace`.
 
 ## Allowed Range
-Letters, digits, and underscore only. The validator at `pkg/cli/rack.go` rejects values containing characters that would break URL substitution or Grafana template syntax.
+Letters, digits, and underscore only. Values containing any other character are rejected, since they would break URL substitution or Grafana template syntax.
 
 ## Use Cases
 - **Dashboards using `k8s_namespace`**: Some imported dashboards prefix Kubernetes-specific variables with `k8s_`.
@@ -39,7 +39,7 @@ Setting parameters... OK
 ```
 
 ## Operational Notes
-- The Console reads the value via the rack-params query and substitutes at deep-link generation time. No restart is required; the next dashboard open uses the new value.
+- No restart is required. The next "Open in Grafana" deep-link uses the new value.
 - The "Dashboard filter mismatch?" troubleshooting modal in the Console explains the four configurable var names and how to inspect Grafana's expected variable names.
 
 ## Related Parameters

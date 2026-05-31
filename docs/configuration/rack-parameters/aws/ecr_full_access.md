@@ -42,9 +42,9 @@ Disabling cleanly detaches the managed policy from the API role. The scoped inli
 
 ## Additional Information
 
-- The managed policy is attached via a conditional `aws_iam_role_policy_attachment` resource gated by `count`. Disabling cleanly detaches it with no orphaned resources.
+- Disabling the parameter cleanly detaches the managed policy from the API role with no leftover resources.
 - This parameter can be combined with `ecr_additional_policy_arn`. Both policies are additive.
-- Downgrade safety: the `reconcileVarsWithModule` mechanism strips the variable on downgrade to a version without it. Terraform cleanly detaches the policy via `DetachRolePolicy`.
+- Downgrade safety: on downgrade to a rack version that does not support this parameter, the attached policy is cleanly detached and no manual cleanup is required.
 
 ## See Also
 

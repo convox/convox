@@ -12,7 +12,7 @@ The `prometheus_gpu_metrics_chart_version` parameter pins the Helm chart version
 The chart is `prometheus-community/prometheus` from the upstream `https://prometheus-community.github.io/helm-charts` repo. The release is named `prometheus-gpu-metrics` and lives in the `kube-system` namespace.
 
 ## Default Value
-The default value is the chart version that ships with this rack release — currently `27.9.0`.
+The default value is the chart version that ships with this rack release, currently `27.9.0`.
 
 ## Use Cases
 - **CVE response**: When the upstream chart publishes a security fix patch (e.g., `27.9.0` → `27.9.1`), pin to the patched version immediately rather than waiting for the next Convox rack release.
@@ -31,7 +31,7 @@ $ convox rack params set prometheus_gpu_metrics_chart_version=27.9.0 -r rackName
 Setting parameters... OK
 ```
 
-You must enable monitoring (free plan) in the Convox Console for the free-plan Prometheus chart to be deployed at all — pinning the version is otherwise a no-op until you enable monitoring. The new chart version takes effect on the next Disable→Enable cycle from the Console.
+You must enable monitoring (free plan) in the Convox Console for the free-plan Prometheus chart to be deployed at all. Pinning the version is otherwise a no-op until you enable monitoring. The new chart version takes effect on the next Disable→Enable cycle from the Console.
 
 ## Additional Information
 - Stay on the same chart major version (e.g., within `27.x`) when pinning. Chart majors may introduce subchart name changes or values-schema breakage that the Convox provider does not yet handle.

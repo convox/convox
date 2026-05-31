@@ -41,16 +41,16 @@ $ convox env set HOST=myapp.example.org,myapp2.example.org
 
 You will need to alias your custom domain to your Rack's router endpoint. You can find this with `convox rack`:
 ```bash
-    $ convox rack
-    Name      convox
-    Provider  gcp
-    Router    router.0a1b2c3d4e5f.convox.cloud
-    Status    running
-    Version   3.23.4
+$ convox rack
+Name      convox
+Provider  gcp
+Router    router.0a1b2c3d4e5f.convox.cloud
+Status    running
+Version   3.23.4
 ```
 In this example you would set up the following DNS entry:
 ```bash
-    myapp.example.org CNAME router.0a1b2c3d4e5f.convox.cloud
+myapp.example.org CNAME router.0a1b2c3d4e5f.convox.cloud
 ```
 
 ## See Also

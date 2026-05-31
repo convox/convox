@@ -15,7 +15,7 @@ Use this parameter when your imported Grafana dashboards use template variable n
 The default value is `rack`.
 
 ## Allowed Range
-Letters, digits, and underscore only. The validator at `pkg/cli/rack.go` rejects values containing characters that would break URL substitution or Grafana template syntax.
+Letters, digits, and underscore only. Values containing any other character are rejected, since they would break URL substitution or Grafana template syntax.
 
 ## Use Cases
 - **Imported dashboards using `cluster_name`**: Standard Kubernetes dashboards from Grafana Labs's gallery typically use `var-cluster_name` instead of `var-rack`.
@@ -41,7 +41,7 @@ Setting parameters... OK
 ```
 
 ## Operational Notes
-- The Console reads the value via the rack-params query and substitutes at deep-link generation time. No restart is required; the next dashboard open uses the new value.
+- No restart is required. The next "Open in Grafana" deep-link uses the new value.
 - The "Dashboard filter mismatch?" troubleshooting modal in the Console explains the four configurable var names and how to inspect Grafana's expected variable names.
 
 ## Related Parameters

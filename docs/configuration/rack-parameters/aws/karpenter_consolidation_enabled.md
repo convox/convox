@@ -23,8 +23,8 @@ Setting parameters... OK
 
 ## Additional Information
 
-- When `true`: Karpenter uses `WhenEmptyOrUnderutilized` — it consolidates both underutilized nodes (by moving pods to fewer, better-utilized nodes) and fully empty nodes.
-- When `false`: Karpenter uses `WhenEmpty` — it only removes nodes with no running pods.
+- When `true`: Karpenter uses `WhenEmptyOrUnderutilized`, consolidating both underutilized nodes (by moving pods to fewer, better-utilized nodes) and fully empty nodes.
+- When `false`: Karpenter uses `WhenEmpty`, removing only nodes with no running pods.
 - The delay before consolidation triggers is controlled by [`karpenter_consolidate_after`](/configuration/rack-parameters/aws/karpenter_consolidate_after).
 
 ## See Also

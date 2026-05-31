@@ -45,7 +45,7 @@ Setting parameters... OK
 
 The CLI validates parameter combinations when enabling Karpenter:
 
-- **`node_capacity_type` must be `ON_DEMAND`** when enabling Karpenter. SPOT or mixed capacity types can deadlock node replacement.
+- **`node_capacity_type` must be `on_demand`** when enabling Karpenter. `spot` or `mixed` capacity types can deadlock node replacement.
 - **`node_capacity_type` cannot be changed** while Karpenter is active. Disable Karpenter first.
 - **Launch template params blocked on non-HA racks** (`gpu_tag_enable`, `imds_http_tokens`, `ebs_volume_encryption_enabled`, `user_data`, `key_pair_name`, and others). Set them in a separate call before enabling Karpenter.
 

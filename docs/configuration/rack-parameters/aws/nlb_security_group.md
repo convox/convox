@@ -25,7 +25,7 @@ Setting parameters... OK
 This command attaches the specified security group to the NLB.
 
 ## Additional Information
-When the `nlb_security_group` parameter is set to ``, Convox will apply the AWS default security group to the NLB, which allows inbound traffic from any IP address. For enhanced security, it is recommended to specify a custom security group that restricts access according to your requirements.
+When the `nlb_security_group` parameter is set to `""`, Convox will apply the AWS default security group to the NLB, which allows inbound traffic from any IP address. For enhanced security, it is recommended to specify a custom security group that restricts access according to your requirements.
 
 Carefully configure the security group to ensure that only trusted IP addresses and protocols can access your services. Improper settings may result in loss of access or expose your services to potential threats.
 

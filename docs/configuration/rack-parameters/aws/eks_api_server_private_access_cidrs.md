@@ -39,17 +39,11 @@ Setting parameters... OK
 ```
 
 ## Additional Information
-- Each CIDR creates a separate `aws_security_group_rule` on the cluster security group. CIDRs are deduplicated — passing the same CIDR twice has no effect.
+- Each CIDR creates a separate `aws_security_group_rule` on the cluster security group. CIDRs are deduplicated, so passing the same CIDR twice has no effect.
 - Reordering CIDRs in the parameter value does not cause Terraform to destroy and recreate rules (the implementation uses `for_each` with set semantics, not index-based `count`).
 - Invalid CIDR notation (e.g., missing prefix length) is rejected by the AWS API at apply time with a clear error message.
-- This parameter does NOT enable the private endpoint itself — use `enable_private_access=true` and/or `disable_public_access=true` to control endpoint visibility. This parameter only adds ingress rules to the cluster security group, which is a prerequisite for private endpoint connectivity from outside the VPC.
+- This parameter only adds ingress rules to the cluster security group; it does not change which EKS API endpoints are exposed. Public and private endpoint visibility is configured separately, through the Console on Console-managed racks. Adding the relevant CIDRs here is a prerequisite for reaching the private endpoint from outside the VPC.
 - Downgrade safety: removing this parameter (or downgrading to a rack version that does not support it) cleanly removes the security group rules. No orphaned resources.
-
-## Related Parameters
-- [disable_public_access](/configuration/rack-parameters/aws/disable_public_access): Disables the public EKS API endpoint, making the private endpoint the only way to reach the API.
-- [enable_private_access](/configuration/rack-parameters/aws/enable_private_access): Enables the EKS private API endpoint within the VPC.
-- [eks_api_server_public_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_public_access_cidrs): Restricts which CIDRs can reach the public EKS API endpoint (the public counterpart to this parameter).
-- [private_eks_host](/configuration/rack-parameters/aws/private_eks_host): Overrides the private EKS host URL for custom DNS configurations.
 
 ## Version Requirements
 This parameter requires at least Convox rack version `3.24.6`.

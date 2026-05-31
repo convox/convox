@@ -186,7 +186,7 @@ spend is computed.
 
 Persistence: enforcement-bearing fields (`monthlyCapUsd`, `alertThresholdPercent`,
 `atCapAction`, `pricingAdjustment`) are set at runtime via `convox budget set`
-or the Console budget tab — `convox releases promote` validates the manifest's
+or the Console budget tab. `convox releases promote` validates the manifest's
 `budget:` block but does not auto-write these fields. Auto-shutdown runtime
 fields (`atCapWebhookUrl`, `notifyBeforeMinutes`, `shutdownGracePeriod`,
 `recoveryMode`, `shutdownOrder`, `neverAutoShutdown`) are read fresh from the

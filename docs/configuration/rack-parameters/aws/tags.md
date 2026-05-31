@@ -10,7 +10,7 @@ url: /configuration/rack-parameters/aws/tags
 The `tags` parameter specifies custom tags to add to AWS resources (e.g. **key1=val1,key2=val2**).
 
 ## Default Value
-The default value for `tags` is ``. When set to ``, no custom tags are applied. Convox managed tags are always applied, and custom tags specified with this parameter are appended to the Convox managed tags. This parameter is optional and can be configured based on your specific tagging needs.
+The default value for `tags` is `""`. When set to `""`, no custom tags are applied. Convox managed tags are always applied, and custom tags specified with this parameter are appended to the Convox managed tags. This parameter is optional and can be configured based on your specific tagging needs.
 
 ## Use Cases
 - **Resource Organization**: Use custom tags to organize and identify AWS resources for billing, management, and operational purposes.

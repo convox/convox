@@ -61,7 +61,7 @@ See [GPU Metrics](/observability/gpu-metrics) for Rack-side setup and [GPU Dashb
 
 ## KEDA Status
 
-The KEDA card shows whether Kubernetes Event-Driven Autoscaling is enabled on the Rack. KEDA unlocks GPU utilization, inference queue depth, custom Prometheus, and message-queue autoscale triggers. CPU and memory autoscaling works without KEDA.
+The KEDA card shows whether Kubernetes Event-Driven Autoscaling is enabled on the Rack. KEDA enables GPU utilization, inference queue depth, custom Prometheus, and message-queue autoscale triggers. CPU and memory autoscaling works without KEDA.
 
 **To toggle**, run the CLI command shown on the card:
 

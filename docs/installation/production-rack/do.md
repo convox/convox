@@ -39,7 +39,7 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 
 ## Install Rack
 ```bash
-    $ convox rack install do <name> [param1=value1]...
+$ convox rack install do <name> [param1=value1]...
 ```
 ### Available Parameters
 
@@ -56,12 +56,12 @@ Go to https://cloud.digitalocean.com/account/api/tokens and generate a new Space
 After the install completes, verify your rack is running:
 
 ```bash
-    $ convox rack
-    Name      myrack
-    Provider  do
-    Router    router.0a1b2c3d4e5f.convox.cloud
-    Status    running
-    Version   3.23.3
+$ convox rack
+Name      myrack
+Provider  do
+Router    router.0a1b2c3d4e5f.convox.cloud
+Status    running
+Version   3.23.3
 ```
 
 Installation typically takes 10-20 minutes while DOKS provisions the cluster.

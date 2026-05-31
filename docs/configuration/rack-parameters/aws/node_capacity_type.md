@@ -32,7 +32,7 @@ This command sets the node capacity type to `mixed`.
 
 When [Karpenter](/configuration/scaling/karpenter) is enabled or being enabled, the CLI enforces constraints on `node_capacity_type`:
 
-- **Enabling Karpenter requires `ON_DEMAND`.** Setting `karpenter_enabled=true` when `node_capacity_type` is `SPOT` or `mixed` is rejected because Karpenter taints the old node group during replacement, and non-ON_DEMAND nodes may not schedule replacements reliably.
+- **Enabling Karpenter requires `on_demand`.** Setting `karpenter_enabled=true` when `node_capacity_type` is `spot` or `mixed` is rejected because Karpenter taints the old node group during replacement, and non-on_demand nodes may not schedule replacements reliably.
 - **Cannot change while Karpenter is active.** Any `node_capacity_type` change while `karpenter_enabled=true` is rejected. Disable Karpenter first, change the capacity type, then re-enable.
 
 These guards prevent scheduling deadlocks during node group transitions. See [Karpenter Enablement Validation Guards](/configuration/scaling/karpenter#enablement-validation-guards) for details.

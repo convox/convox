@@ -45,11 +45,11 @@ The Console adjusts its behavior based on App status:
 - **Polling frequency** increases to 5 seconds during `updating` and `rollback` (default is 15 seconds for `running`).
 - **Deploy and promote buttons** are disabled while the App is in `creating`, `updating`, `rollback`, or `deleting`.
 - **Status badge color** follows this mapping:
-  - `running` — green (success)
-  - `updating` — blue (info)
-  - `rollback` — orange (warning)
-  - `failed` — red (danger)
-  - Other statuses — gray (secondary)
+  - `running`: green (success)
+  - `updating`: blue (info)
+  - `rollback`: orange (warning)
+  - `failed`: red (danger)
+  - Other statuses: gray (secondary)
 
 ## CLI Commands
 

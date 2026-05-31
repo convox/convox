@@ -34,7 +34,7 @@ Registered credentials are used during `convox build` and `convox deploy` to aut
 
 `convox registries` provides credentials used during `convox build` and `convox deploy` to pull base images referenced in your Dockerfile. These credentials are consumed by the build process and do not affect running containers.
 
-To authenticate at **runtime** — when Kubernetes pulls the container image specified in the `image` field of `convox.yml` — use the [`imagePullSecrets`](/reference/primitives/app/service#imagepullsecrets) field on a Service:
+To authenticate at **runtime** (when Kubernetes pulls the container image specified in the `image` field of `convox.yml`), use the [`imagePullSecrets`](/reference/primitives/app/service#imagepullsecrets) field on a Service:
 
 ```yaml
 services:

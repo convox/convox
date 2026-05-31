@@ -44,10 +44,10 @@ The Console adjusts its behavior based on Rack status:
 
 - **Polling frequency**: 5 seconds for `installing`, `updating`, `uninstalling`, `converging`, `rollback`, and `deleting`. 30 seconds for `running`.
 - **Card interactivity**:
-  - `running` and `unknown` — click navigates into the Rack detail view
-  - `updating`, `converging`, `rollback`, `deleting` — click navigates into the Rack detail view
-  - `uninstalling`, `incomplete`, `failed` — click opens the uninstall dialog
-  - `installing` — card is non-interactive
+  - `running` and `unknown`: click navigates into the Rack detail view
+  - `updating`, `converging`, `rollback`, `deleting`: click navigates into the Rack detail view
+  - `uninstalling`, `incomplete`, `failed`: click opens the uninstall dialog
+  - `installing`: card is non-interactive
 - **Stale-data handling**: when a Rack probe fails, the Console marks the status as `unknown` and displays a banner on all sub-pages indicating that data may be out of date.
 
 ## CLI Commands

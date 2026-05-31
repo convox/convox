@@ -21,7 +21,7 @@ See [Monitoring and Alerting](/configuration/monitoring) for details.
 
 ## Diagnostics
 
-When a deployment fails, `convox deploy-debug` inspects the failing Kubernetes pods server-side, collecting pre-healthcheck logs, events, and container state to surface actionable failure hints -- all without requiring kubectl or kubeconfig.
+When a deployment fails, `convox deploy-debug` inspects the failing Kubernetes pods server-side, collecting pre-healthcheck logs, events, and container state to surface actionable failure hints, all without requiring kubectl or kubeconfig.
 
 See [deploy-debug](/reference/cli/deploy-debug) for details.
 

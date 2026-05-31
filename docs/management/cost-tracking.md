@@ -13,14 +13,14 @@ CLI.
 ## Enabling cost tracking <a id="enable"></a>
 
 Cost tracking is gated by the rack parameter `cost_tracking_enable`, default
-`false`. Without it, the cost accumulator does not run — no spend is
+`false`. Without it, the cost accumulator does not run, so no spend is
 computed and budget enforcement (caps, alerts, auto-shutdown) cannot fire
 even with a `budget:` block in `convox.yml`.
 
 Read paths still return successfully: `convox cost` against a rack with
 `cost_tracking_enable=false` returns a zero spend total and an empty
 breakdown (HTTP 200), so dashboards and scripts that poll the endpoint do
-not break — they see "no data yet." Write paths, on the other hand,
+not break; they see "no data yet." Write paths, on the other hand,
 reject loud: `convox budget set` and `convox deploy` against a manifest
 with an enforcement-bearing `budget:` block return HTTP 422 with an
 actionable message pointing at the enable command. Recovery operations
@@ -88,9 +88,9 @@ for cap headroom.
 ## Unpriced instance types <a id="unpriced-instance-types"></a>
 
 The built-in price table covers the common instance families on each provider.
-When a pod runs on an instance the table does not know about — a brand-new AWS
+When a pod runs on an instance the table does not know about (a brand-new AWS
 family, a Karpenter-spawned instance from a custom NodePool, or a custom GPU SKU
-on metal — the rack records `0` for that sample. The pod still runs; only the
+on metal), the rack records `0` for that sample. The pod still runs; only the
 cost-tracking column is blank.
 
 Symptoms:
@@ -146,7 +146,7 @@ poll interval (10 min default).
 
 ## See Also
 
-- [Budget Caps](/management/budget-caps) — operational management of caps
-- [convox.yml budget block](/configuration/convox-yml#budget) — schema reference
-- [cost CLI reference](/reference/cli/cost) — command reference
-- [Budget Management](/console/budget-management) — Console UI for cost and budget management
+- [Budget Caps](/management/budget-caps): operational management of caps
+- [convox.yml budget block](/configuration/convox-yml#budget): schema reference
+- [cost CLI reference](/reference/cli/cost): command reference
+- [Budget Management](/console/budget-management): Console UI for cost and budget management

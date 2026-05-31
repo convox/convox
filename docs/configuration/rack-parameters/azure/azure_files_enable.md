@@ -28,7 +28,7 @@ This command enables the Azure Files NFS volume feature for your rack.
 ## Additional Information
 Azure Files provides a scalable file storage solution using the NFS protocol. It uses a Premium FileStorage account for the performance required by NFS shares, with a minimum share size of 100GiB.
 
-AKS includes the Azure Files CSI driver (`file.csi.azure.com`) by default — no additional driver installation is needed.
+AKS includes the Azure Files CSI driver (`file.csi.azure.com`) by default, so no additional driver installation is needed.
 
 ### Example Configuration
 To configure your services to use Azure Files for persistent storage, set up your `convox.yml` as follows:

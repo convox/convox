@@ -39,7 +39,7 @@ The following events are forwarded to notification channels:
 
 | Event | Description |
 |-------|-------------|
-| `build:create` | Build failed |
+| `build:create` | Build started |
 | `release:create` | Release created |
 | `release:promote` | Release promoted, started, or failed |
 | `release:finish` | Rolling deploy of a Release finished |

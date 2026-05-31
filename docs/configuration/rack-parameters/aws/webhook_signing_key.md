@@ -7,14 +7,14 @@ url: /configuration/rack-parameters/aws/webhook_signing_key
 # webhook_signing_key
 
 ## Description
-The `webhook_signing_key` parameter sets a per-rack HMAC secret that the rack uses to sign every outbound webhook delivery. With this parameter set, the rack adds a `Convox-Signature` HTTP header to each webhook POST. The header carries `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]` — a Stripe-style multi-segment value where `t` is the Unix timestamp at emit time and each `v1=<hex>` segment is the HMAC-SHA256 of `<t>.<body>` keyed by the configured signing key. Multiple `v1=` segments may appear during key rotation; receivers verify against any one. See [Webhook Signing](/console/webhook-signing) for the receiver-side verification example.
+The `webhook_signing_key` parameter sets a per-rack HMAC secret that the rack uses to sign every outbound webhook delivery. With this parameter set, the rack adds a `Convox-Signature` HTTP header to each webhook POST. The header carries `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]`, a Stripe-style multi-segment value where `t` is the Unix timestamp at emit time and each `v1=<hex>` segment is the HMAC-SHA256 of `<t>.<body>` keyed by the configured signing key. Multiple `v1=` segments may appear during key rotation; receivers verify against any one. See [Webhook Signing](/console/webhook-signing) for the receiver-side verification example.
 
-When unset (the default), no signature header is emitted — receivers cannot distinguish authentic Convox webhooks from spoofed payloads. Set this parameter and configure the same secret on your receiver to enable HMAC verification.
+When unset (the default), no signature header is emitted, so receivers cannot distinguish authentic Convox webhooks from spoofed payloads. Set this parameter and configure the same secret on your receiver to enable HMAC verification.
 
-The parameter value is treated as a credential and is stored only in a Kubernetes Secret on the rack — never in the plaintext ConfigMap and never in the rack's deploy-spec annotations. Rack telemetry (heartbeat to metrics.convox.com) emits a SHA-256 hash of the value to signal "key set" / "key rotated" without leaking the plaintext.
+The parameter value is treated as a credential. It is stored as a Kubernetes Secret on the rack, never in plaintext, and never logged. Convox telemetry emits only a hash of the value, never the key itself.
 
 ## Default Value
-The default value for `webhook_signing_key` is `""` (empty string). Empty value means "no signature header on outbound webhooks" — receivers cannot HMAC-verify.
+The default value for `webhook_signing_key` is `""` (empty string). Empty value means "no signature header on outbound webhooks", so receivers cannot HMAC-verify.
 
 ## Use Cases
 - **Webhook authenticity verification**: Enable HMAC verification on receivers so a leaked webhook URL cannot be replayed by a third party with crafted payloads.
@@ -35,7 +35,7 @@ $ convox rack params set webhook_signing_key=0123456789abcdef0123456789abcdef012
 Updating parameters... OK
 ```
 
-`webhook_signing_key` cannot be cleared once set. Once HMAC signing is enabled at 3.24.6, it stays enabled at this rack version — downstream receivers that have already adopted signature verification would otherwise silently start rejecting unsigned payloads. To revert to unsigned mode, downgrade the rack to a pre-3.24.6 release (the variable is removed by Terraform on the older module).
+`webhook_signing_key` cannot be cleared once set. Once HMAC signing is enabled at 3.24.6, it stays enabled at this rack version; downstream receivers that have already adopted signature verification would otherwise silently start rejecting unsigned payloads. To revert to unsigned mode, downgrade the rack to a pre-3.24.6 release (the variable is removed by Terraform on the older module).
 
 To rotate to a new secret without disabling signing, set a comma-separated pair (`newkey,oldkey`) so receivers continue to verify against either segment during the rotation window:
 ```bash
@@ -45,10 +45,10 @@ Updating parameters... OK
 Then update receivers to the new key and run `convox rack params set webhook_signing_key="$NEW_KEY"` to retire the old segment.
 
 ## Additional Information
-- The value is treated as sensitive: stored as a Kubernetes Secret (not a ConfigMap), never logged in plaintext, never serialized into rack deploy-spec annotations, and SHA-256-hashed before emission to telemetry.
-- Rotation is safe at any time. The rack re-reads the Secret on each delivery, so a rotation takes effect on the next webhook event. Plan rotations to follow a "set new secret on receiver, rotate rack secret, observe verification success" sequence so no deliveries are lost.
-- The signature scheme signs `fmt.Sprintf("%d.%s", t, body)` — the Unix timestamp followed by a literal `.` then the raw request body bytes. The header value `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]` packs the timestamp and one-or-more hex-encoded HMAC-SHA256 outputs into a single header line; multiple `v1=` segments support zero-downtime key rotation.
-- The signing applies to every outbound webhook event class: budget-cap events (`app:budget:set` / `:cap` / `:armed` / `:fired` / `:cancelled` / `:restored` / `:noop` / `:expired` / `:flap-suppressed` / `:failed` / `:simulated` / `:dismissed` / `:per-service-truncated`), release lifecycle (`release:promote`, `app:promote:completed` / `:errored` / `:cancelled`), scale-override (`app:scale-override:toggled` / `:honored`), and any future event class introduced post-3.24.6.
+- The value is treated as sensitive: stored as a Kubernetes Secret (not a ConfigMap), never logged in plaintext, and hashed before emission to telemetry.
+- Rotation is safe at any time. The rack re-reads the secret on each delivery, so a rotation takes effect on the next webhook event. Plan rotations to follow a "set new secret on receiver, rotate rack secret, observe verification success" sequence so no deliveries are lost.
+- The signature is computed over the Unix timestamp, a literal `.`, then the raw request body. The header value `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]` packs the timestamp and one or more hex-encoded HMAC-SHA256 outputs into a single header line; multiple `v1=` segments support zero-downtime key rotation.
+- Signing applies to every outbound webhook the rack sends, including budget, release lifecycle, and scale-override events.
 - If your receiver does not yet support HMAC verification, leaving this parameter unset preserves the pre-3.24.6 behavior (no signature header). The parameter is purely opt-in.
 
 ## Related Parameters

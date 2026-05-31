@@ -5,7 +5,7 @@ url: /example-apps
 ---
 # Example Apps
 
-Convox provides a comprehensive collection of example applications demonstrating how to deploy various languages, frameworks, and popular open-source applications. These examples showcase the simplicity of going from a fresh application to a production-ready deployment on Convox.
+Convox provides a collection of example applications demonstrating how to deploy various languages, frameworks, and popular open-source applications.
 
 All example applications are available in our [GitHub organization](https://github.com/convox-examples/), with each repository containing:
 - Complete `convox.yml` configuration
@@ -13,8 +13,6 @@ All example applications are available in our [GitHub organization](https://gith
 - Step-by-step deployment instructions
 - Environment variable documentation
 - Best practices for production deployments
-
-Whether you're deploying to Convox Cloud for a fully-managed experience or to your own Convox Rack for complete infrastructure control, these examples will help you get started quickly.
 
 ## Languages
 
@@ -74,8 +72,6 @@ Complete deployment of the n8n workflow automation platform featuring:
 - User authentication and management
 - Scaling strategies for queue mode with Redis
 - Backup and restore procedures
-
-Perfect for teams looking to self-host their automation workflows with 400+ service integrations.
 
 ## Getting Started
 

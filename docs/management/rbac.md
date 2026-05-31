@@ -32,17 +32,17 @@ To assign a custom role to a user:
 
 ## Pre-Created Roles
 
-To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions and are managed by Convox to cover common use cases and best practices for platform access. The managed roles apply to both the Console and CLI, ensuring consistent permissions across interfaces. These roles are cumulative, with each level adding more permissions than the last.
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions and are managed by Convox to cover common use cases and best practices for platform access. The managed roles apply to both the Console and CLI, ensuring consistent permissions across interfaces. These roles are cumulative, with each level adding more permissions than the last. They are listed below from least to most privileged.
 
-### Administrator
+### DeveloperV2
 
-The **Administrator** role provides full access across all resources and permissions within the platform.
+The **DeveloperV2** role is focused on application development and deployment. This role grants control over applications while providing read-only visibility into certain organizational resources.
 
-An Administrator can:
-- **Write All Resources**: Full control over all platform resources, including:
-  - Billing
-  - Users
-  - Audit Logs
+A DeveloperV2 can:
+- **Write Applications**: Full control over application deployment and management.
+- **Read Dashboard**: View-only access to the organization dashboard.
+- **Read Jobs**: View-only access to job statuses and logs.
+- **Read Racks**: View-only access to rack details.
 
 ### OperatorV2
 
@@ -57,15 +57,15 @@ An OperatorV2 can:
 - **Read Dashboard**: View-only access to the organization dashboard.
 - **Read Jobs**: View-only access to job statuses and logs.
 
-### DeveloperV2
+### Administrator
 
-The **DeveloperV2** role is focused on application development and deployment. This role grants control over applications while providing read-only visibility into certain organizational resources.
+The **Administrator** role builds on the **OperatorV2** role and provides full access across all resources and permissions within the platform.
 
-A DeveloperV2 can:
-- **Write Applications**: Full control over application deployment and management.
-- **Read Dashboard**: View-only access to the organization dashboard.
-- **Read Jobs**: View-only access to job statuses and logs.
-- **Read Racks**: View-only access to rack details.
+An Administrator can:
+- **Write All Resources**: Full control over all platform resources, including:
+  - Billing
+  - Users
+  - Audit Logs
 
 ## Defining Role Permissions
 
@@ -144,43 +144,26 @@ This role is designed for compliance or auditing purposes. The user is granted r
 
 These examples showcase the flexibility of RBAC in managing user access based on common organizational roles and responsibilities.
 
-## Rack-tier admin gates
+## Admin-Only Operations
 
-Several rack-side mutations enforce a `CanAdmin` check above the
-standard `Read`/`Write` action set. These gates are enforced by the
-rack itself (not just the Console UI), so they apply equally to
-Console callers, CLI callers using rack-password basic auth, and
-direct API callers using a JWT.
+A small set of sensitive operations require an **admin** role, which sits above the standard `Read`/`Write` actions. These checks are enforced by the rack itself, not just the Console UI, so they apply equally to Console users, CLI users authenticating with the rack password, and direct API callers using a JWT.
 
-The current set of admin-gated operations on a 3.24.6 rack:
+The pre-created **Administrator** role satisfies these checks. The pre-created **OperatorV2** and **DeveloperV2** roles do not. A custom role satisfies them when it grants `Write` access on the **All Resources** type.
 
-| Operation | CLI surface | Rejection message |
-|---|---|---|
-| `AppBudgetSet --monthly-cap` | `convox budget set --monthly-cap`, `convox budget cap raise` | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetSet --at-cap-action` | `convox budget set --at-cap-action`, `convox deploy` (when manifest sets `atCapAction`) | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetSet --pricing-adjustment` | `convox budget set --pricing-adjustment-only` | `403 AppBudgetSet: admin role required to set budget cap` |
-| `AppBudgetClear` | `convox budget clear` | `403 AppBudgetClear: admin role required to remove budget config` |
-| `AppBudgetReset --force-clear-cooldown` | `convox budget reset --force-clear-cooldown` | `403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.` |
-| Webhook signing key reveal | Console "Reveal" button on `webhook_signing_key` rack param | `403` (requires organization administrator) |
+Admin-only operations include:
 
-The pre-created **Administrator** role passes the rack-tier
-`CanAdmin` check; the pre-created **OperatorV2** and
-**DeveloperV2** roles do not. Custom roles pass when they grant
-`Write` access on the **All Resources** type and any cumulative-tier
-admin permissions configured for the organization.
+- **Budget cap mutations** such as setting a monthly cap, the at-cap action, or a pricing adjustment, and clearing a budget or clearing the auto-restore cooldown. An under-privileged caller receives a `403` response, for example:
 
-Basic-auth callers (rack-password) automatically pass the admin
-check via `SetAdminRole` at authenticate-time. This means scripted
-flows authenticated with the rack password can mutate caps and
-clear budget config even when the calling human's RBAC role is
-narrower — operators concerned about this should rotate to JWT
-issuance for scripted flows and keep the rack password tightly
-scoped.
+  ```
+  403 AppBudgetSet: admin role required to set budget cap
+  403 AppBudgetClear: admin role required to remove budget config
+  ```
 
-For the full Authorization table covering every budget operation
-(including read+write paths like the plain reset, dismiss-recovery,
-and simulate-shutdown), see
-[Budget Caps → Authorization](/management/budget-caps#authorization).
+  For the full list of which budget operations require admin versus read/write access, see [Budget Caps → Authorization](/management/budget-caps#authorization).
+
+- **Revealing the webhook signing key** in Console under Rack > Settings. Non-admin users see a masked value only. See [Rack Roles](/console/rack-roles) for details.
+
+When a user authenticates with the rack password instead of a Console identity, the request is treated as an admin request. Scripted flows that use the rack password can therefore perform admin-only operations even when the person running them has a narrower RBAC role. If this is a concern, use JWT-based access for scripted flows and keep the rack password tightly scoped.
 
 ## Deploy Keys and RBAC
 
@@ -198,7 +181,7 @@ With RBAC, you can now:
 - Create custom roles with fine-grained permissions.
 - Assign roles to users from the **Active Users** tab.
 - Define permissions for different resource types, including applications, billing, and Kubernetes access.
-- Leverage the zero-trust model to ensure that only allowed actions are permitted.
+- Use the zero-trust model to ensure that only allowed actions are permitted.
 - Extend Deploy Key functionality by assigning custom roles for more flexible use cases.
 
 By setting up permissions correctly, your organization can achieve tighter security controls and more flexible user access management.

@@ -270,7 +270,7 @@ Note: Cloud Databases are managed separately and are not deleted when a machine 
 1. **Leave headroom**: Keep 20-30% resources free for bursts
 2. **Balance services**: Distribute load across multiple small services
 3. **Optimize builds**: Use multi-stage Docker builds to reduce image size
-4. **Cache dependencies**: Leverage Docker layer caching
+4. **Cache dependencies**: Use Docker layer caching
 
 ### Cost Optimization
 

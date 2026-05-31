@@ -9,7 +9,7 @@ url: /configuration/rack-parameters/aws/grafana_url
 ## Description
 External Grafana base URL surfaced as the "Open in your Grafana" deep-link button on the Convox Console GPU views. Lets users running their own Grafana (Grafana Cloud, self-hosted, or a Grafana instance deployed as a Convox app on this rack) jump from a Convox-rendered GPU panel directly to the matching dashboard with rack/app/service template variables prefilled.
 
-When empty (default), the deep-link button hides itself entirely from the Console GPU views — there is no inert state. Users without Grafana see no extra UI affordance, by design. Users who later set the value see the button appear on next page load.
+When empty (default), the deep-link button hides itself entirely from the Console GPU views; there is no inert state. Users without Grafana see no extra UI affordance, by design. Users who later set the value see the button appear on next page load.
 
 The button constructs URLs of the form `<grafana_url>/d/<dashboard-uid>/?var-rack=<rack>&var-namespace=<rack>-<app>&var-service=<svc>&from=now-1h&to=now`. The Convox-authored dashboards (cluster overview, per-app, inference, health, vLLM, Karpenter) ship with stable UIDs (`convox-gpu-cluster-overview`, `convox-gpu-per-app`, etc.). The deep link 404s in your Grafana until you import the dashboards from the `examples/gpu-llm/grafana/*.json` files in the `convox/convox` repository.
 
@@ -36,7 +36,7 @@ Updating parameters... OK
 
 ## Additional Information
 - This parameter is AWS-only at this time.
-- Setting `grafana_url` has no effect on rack workloads or the Convox-managed Prometheus chart. It is purely a Console-side URL hint — the rack itself never reaches out to the configured URL.
+- Setting `grafana_url` has no effect on rack workloads or the Convox-managed Prometheus chart. It is purely a Console-side URL hint; the rack itself never reaches out to the configured URL.
 - The button is hidden until set, so there is no broken-link UX before the dashboards are imported. Standard import path: `git clone https://github.com/convox/convox && cd convox/examples/gpu-llm/grafana && # import the *.json files into Grafana`.
 - Trailing slashes in the URL are stripped client-side before constructing the deep link, so `https://grafana.example.com`, `https://grafana.example.com/`, and `https://grafana.example.com//` all resolve identically.
 

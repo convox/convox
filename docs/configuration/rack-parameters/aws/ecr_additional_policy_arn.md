@@ -72,10 +72,10 @@ A minimal policy granting push and pull access to specific ECR repositories:
 
 ## Additional Information
 
-- The policy is attached via a conditional `aws_iam_role_policy_attachment` resource. Clearing the parameter cleanly detaches it with no orphaned resources.
+- Clearing the parameter cleanly detaches the custom policy from the API role with no leftover resources.
 - This parameter can be combined with `ecr_full_access`. Both policies are additive (though `ecr_full_access` makes this parameter redundant).
 - The policy ARN must be a valid IAM policy in the same AWS account. Cross-account policy ARNs are not supported.
-- Downgrade safety: the `reconcileVarsWithModule` mechanism strips the variable on downgrade. Terraform cleanly detaches the policy.
+- Downgrade safety: on downgrade to a rack version that does not support this parameter, the attached policy is cleanly detached and no manual cleanup is required.
 
 ## See Also
 
