@@ -10,6 +10,46 @@ auto-shutdown lifecycle) are signed when a `webhook_signing_key` is configured
 on the Rack. Receivers verify the `Convox-Signature` header to confirm the
 payload originated from your Rack and was not tampered with in transit.
 
+To turn this on you set one Rack parameter, then point your receivers at the
+same key so they can validate incoming deliveries. The steps below cover
+enabling signing and rotating the key; the signing format and copy-paste
+verification code live further down under [Signing](#signing) and
+Verifying signatures.
+
+## Configuring the Signing Key
+
+Set the Rack parameter:
+
+```bash
+$ convox rack params set webhook_signing_key=$(openssl rand -hex 32)
+```
+
+The Rack uses the value as-is, so any string of sufficient entropy works. Convox
+recommends a 32-byte random hex string. Rotate by running the same command with
+a new value; receivers must update their copy of the key in lockstep, since
+old payloads cannot be re-signed.
+
+The CLI masks the value in `convox rack params` output as of 3.24.6. Older CLIs
+print the value plaintext to the TTY, so upgrade the CLI before running param
+introspection commands against 3.24.6 Racks. See the 3.24.6 release notes.
+
+The Console provides a key management interface under Rack > Settings with controls for generating, revealing, and rotating the signing key. See [Rack Settings](/console/rack-settings). Revealing the key requires the Admin role; non-admin users see a masked value only (see [Console RBAC](/management/rbac#admin-only-operations)).
+
+## Key Rotation
+
+A Rack supports up to 4 active signing keys at once, enabling zero-downtime key rotation:
+
+1. Generate a new key and set it on the Rack.
+2. The Rack signs outbound webhooks with all active keys (multiple `v1=` segments in the header).
+3. Update your receivers to accept the new key.
+4. Remove the old key from the Rack once all receivers have been updated.
+
+During the rotation window, receivers can verify against any of the listed `v1=` signatures. Setting more than 4 keys is rejected.
+
+### Downgrade Note
+
+Rack versions before 3.24.6 do not support webhook signing. If you downgrade to a pre-3.24.6 release, the Rack stops sending the `Convox-Signature` header. Update receivers to accept unsigned deliveries before downgrading. On re-upgrade, set a fresh `webhook_signing_key` value.
+
 ## Signing <a id="signing"></a>
 
 The Rack signs each webhook payload with HMAC-SHA256 using the
@@ -39,6 +79,12 @@ Convox-Signature: t=1714233600,v1=4b2c5f7a8b9d6e3a1f0c5e8d7b4a3c2f1e9d8c7b6a5f4e
 
 {"action":"app:budget:reset","status":"success","timestamp":"2026-04-27T10:30:00Z","data":{"app":"myapp","actor":"alice@example.com",...}}
 ```
+
+## Verifying signatures
+
+Receivers confirm a delivery is authentic by recomputing the HMAC and comparing
+it against the header. The snippets below show the same check in several
+languages; pick the one that matches your stack.
 
 To verify, parse the header, recompute
 `HMAC-SHA256(webhook_signing_key, fmt.Sprintf("%d.%s", t, body))`,
@@ -257,40 +303,6 @@ on the receiver. The Rack will sign with both for a grace window;
 receiver accepts either; once the receiver has fully cut over, the old
 key is removed from Rack config and signing collapses back to one
 `v1=`.
-
-## Key Rotation
-
-A Rack supports up to 4 active signing keys at once, enabling zero-downtime key rotation:
-
-1. Generate a new key and set it on the Rack.
-2. The Rack signs outbound webhooks with all active keys (multiple `v1=` segments in the header).
-3. Update your receivers to accept the new key.
-4. Remove the old key from the Rack once all receivers have been updated.
-
-During the rotation window, receivers can verify against any of the listed `v1=` signatures. Setting more than 4 keys is rejected.
-
-### Downgrade Note
-
-Rack versions before 3.24.6 do not support webhook signing. If you downgrade to a pre-3.24.6 release, the Rack stops sending the `Convox-Signature` header. Update receivers to accept unsigned deliveries before downgrading. On re-upgrade, set a fresh `webhook_signing_key` value.
-
-## Configuring the Signing Key
-
-Set the Rack parameter:
-
-```bash
-$ convox rack params set webhook_signing_key=$(openssl rand -hex 32)
-```
-
-The Rack uses the value as-is, so any string of sufficient entropy works. Convox
-recommends a 32-byte random hex string. Rotate by running the same command with
-a new value; receivers must update their copy of the key in lockstep, since
-old payloads cannot be re-signed.
-
-The CLI masks the value in `convox rack params` output as of 3.24.6. Older CLIs
-print the value plaintext to the TTY, so upgrade the CLI before running param
-introspection commands against 3.24.6 Racks. See the 3.24.6 release notes.
-
-The Console provides a key management interface under Rack > Settings with controls for generating, revealing, and rotating the signing key. See [Rack Settings](/console/rack-settings). Revealing the key requires the Admin role; non-admin users see a masked value only (see [Console RBAC](/management/rbac#admin-only-operations)).
 
 ## Cross-Provider Availability
 

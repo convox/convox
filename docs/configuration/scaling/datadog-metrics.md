@@ -13,6 +13,12 @@ Convox passes your Datadog metric configuration directly into Kubernetes HPA ext
 
 > **KEDA and Datadog**: If you use KEDA, you can scale on Datadog metrics via the [KEDA Datadog scaler](https://keda.sh/docs/2.19/scalers/datadog/) instead of HPA external metrics. This requires the Datadog Cluster Agent with external metrics enabled. When KEDA is configured for a service, Convox uses the KEDA ScaledObject rather than a native HPA, so HPA-based external metric targets in `scale.targets.external` are not applied. See [KEDA Autoscaling](/configuration/scaling/keda) for details.
 
+## When to Use
+
+Reach for Datadog metrics autoscaling when CPU and memory are not the right signals for your workload and you want scaling driven by business-level metrics such as request rates, queue depths, or page views. This path assumes you already run Datadog and are willing to operate the Datadog Cluster Agent as an external metrics provider in your cluster.
+
+If CPU or memory utilization is enough, start with the simpler built-in [Autoscaling](/configuration/scaling/autoscaling). For event-driven scaling, including scale-to-zero or scaling on queue and stream sources, see [KEDA Autoscaling](/configuration/scaling/keda), which can also consume Datadog metrics through its own scaler.
+
 ## Prerequisites
 
 - **A Convox Rack.** Check status with `convox rack -r rackNAME`.

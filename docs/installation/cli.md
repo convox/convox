@@ -41,6 +41,16 @@ $ sudo mv /tmp/convox /usr/local/bin/convox
 $ sudo chmod 755 /usr/local/bin/convox
 ```
 
+## Verify the Install
+
+After moving the binary into place, confirm the CLI is installed and on your `PATH`:
+
+```bash
+$ convox version
+```
+
+A successful install prints the client version. If you see a "command not found" error, make sure `/usr/local/bin` is on your `PATH` and that the binary is executable.
+
 ## See Also
 
 - [Development Rack](/installation/development-rack) for setting up a local development environment

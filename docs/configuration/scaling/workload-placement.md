@@ -10,6 +10,10 @@ Convox provides powerful tools to control where your applications and build proc
 
 > Workload Placement is available on AWS and Azure racks.
 
+Reach for workload placement when the default single node group is no longer the right fit: when you want to run builds on separate hardware from production services, use cheaper spot instances for non-critical work, match instance types to specific workload profiles, isolate sensitive services on dedicated nodes, or mix CPU architectures within one rack. If your apps run fine on the rack's standard nodes, you do not need any of this.
+
+This page is organized so you can decide first, configure second. The strategies and configuration components below explain the moving parts and the field options. The JSON examples and implementation walkthroughs that follow give you copy-ready configurations once you know what you want.
+
 ## Workload Placement Strategies
 
 Workload placement in Convox is achieved through these key features:
@@ -50,6 +54,34 @@ These parameters allow you to specify:
 - Provider tags for cost allocation and resource organization
 
 > These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
+
+### Node Group Configuration Options
+
+Each node group configuration supports the following fields:
+
+| Field | Required | Description | Default |
+|-------|----------|-------------|---------|
+| `id` | No | Unique integer identifier for the node group | Auto-generated |
+| `type` | Yes | The instance type to use (AWS EC2 type or Azure VM size) | |
+| `disk` | No | The disk size in GB for the nodes | Same as main node disk |
+| `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
+| `min_size` | No | Minimum number of nodes | 1 |
+| `max_size` | No | Maximum number of nodes | 100 |
+| `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
+| `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
+| `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
+| `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
+| `zones` | No | Comma-separated list of availability zones (Azure only) | None |
+
+#### About the `id` field
+
+The `id` field provides important benefits:
+- Preserves node group identity during configuration updates
+- Prevents unnecessary recreation of node groups
+- Allows for stable references when targeting specific node groups
+- Reduces downtime during configuration changes
+
+Without the `id` field, Convox generates a random identifier that changes when the configuration is updated, potentially causing unnecessary node group recreation.
 
 ### Setting Rack Parameters with JSON Files
 
@@ -176,34 +208,6 @@ $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"c5.x
 ```
 
 This approach is useful for automation scripts or when making quick changes, though it becomes unwieldy for more complex configurations.
-
-### Node Group Configuration Options
-
-Each node group configuration supports the following fields:
-
-| Field | Required | Description | Default |
-|-------|----------|-------------|---------|
-| `id` | No | Unique integer identifier for the node group | Auto-generated |
-| `type` | Yes | The instance type to use (AWS EC2 type or Azure VM size) | |
-| `disk` | No | The disk size in GB for the nodes | Same as main node disk |
-| `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
-| `min_size` | No | Minimum number of nodes | 1 |
-| `max_size` | No | Maximum number of nodes | 100 |
-| `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
-| `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
-| `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
-| `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
-| `zones` | No | Comma-separated list of availability zones (Azure only) | None |
-
-#### About the `id` field
-
-The `id` field provides important benefits:
-- Preserves node group identity during configuration updates
-- Prevents unnecessary recreation of node groups
-- Allows for stable references when targeting specific node groups
-- Reduces downtime during configuration changes
-
-Without the `id` field, Convox generates a random identifier that changes when the configuration is updated, potentially causing unnecessary node group recreation.
 
 ### App-level Configuration
 

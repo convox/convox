@@ -8,6 +8,32 @@ url: /cloud/comparison
 
 This comparison helps you choose between Convox Cloud (managed machines) and self-hosted Convox Racks based on your requirements.
 
+## Use Case Recommendations
+
+If you want a fast answer, start here. Pick the option that matches how you want to run your applications, then read the detailed comparison tables further down to confirm the specifics.
+
+### Choose Convox Cloud When:
+
+- Need to deploy in minutes, not hours
+- Limited DevOps resources
+- Fixed monthly budgets
+- Standard web applications
+- Small development teams
+- SaaS applications
+
+### Choose Self-Hosted Rack When:
+
+- Need Kubernetes access
+- Compliance requirements (HIPAA, PCI DSS)
+- Service mesh implementations
+- Multi-region deployments
+- GPU workloads
+- VPC peering required
+- Direct RDS/ElastiCache access with advanced features
+- Very large applications
+
+For a recommendation by team type, see [Recommendation Summary](#recommendation-summary) below. The full feature, cost, and scalability tables follow.
+
 ## Summary
 
 | Aspect | Convox Cloud | Self-Hosted Rack |
@@ -172,28 +198,6 @@ Variable costs based on usage:
 | Build Concurrency | Queued | Configurable |
 | Network Bandwidth | Shared | Dedicated |
 | IOPS | Shared | Dedicated |
-
-## Use Case Recommendations
-
-### Choose Convox Cloud When:
-
-- Need to deploy in minutes, not hours
-- Limited DevOps resources
-- Fixed monthly budgets
-- Standard web applications
-- Small development teams
-- SaaS applications
-
-### Choose Self-Hosted Rack When:
-
-- Need Kubernetes access
-- Compliance requirements (HIPAA, PCI DSS)
-- Service mesh implementations
-- Multi-region deployments
-- GPU workloads
-- VPC peering required
-- Direct RDS/ElastiCache access with advanced features
-- Very large applications
 
 ## Migration Paths
 

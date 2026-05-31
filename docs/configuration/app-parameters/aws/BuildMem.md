@@ -60,11 +60,15 @@ Setting BuildLabels... OK
 ## Sizing Guidance
 - The `BuildMem` value is specified in megabytes (MB).
 - Common values include:
-  - `512`: Suitable for simple builds
-  - `1024` (1GB): Balanced for most builds
-  - `2048` (2GB): Good for builds with moderate dependencies
-  - `4096` (4GB): Recommended for memory-intensive builds
-  - `8192` (8GB): For very large or complex builds
+
+| Value | Size | When to use |
+|-------|------|-------------|
+| `512` | | Suitable for simple builds |
+| `1024` | 1GB | Balanced for most builds |
+| `2048` | 2GB | Good for builds with moderate dependencies |
+| `4096` | 4GB | Recommended for memory-intensive builds |
+| `8192` | 8GB | For very large or complex builds |
+
 - Setting an appropriate memory allocation is critical for successful builds:
   - Too low: Builds may fail with out-of-memory errors
   - Too high: May waste resources or prevent builds from being scheduled if nodes don't have sufficient capacity

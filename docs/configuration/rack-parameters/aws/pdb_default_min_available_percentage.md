@@ -27,11 +27,17 @@ $ convox rack params set pdb_default_min_available_percentage=40 -r rackName
 Setting parameters... OK
 ```
 
+## Choosing a Value
+Lower values favor cost and scaling speed; higher values favor availability. Pick based on which matters more for the Rack.
+
+| Value | Effect |
+|-------|--------|
+| Lower (e.g., 25%) | Allow more aggressive scaling and faster node removal, which can reduce costs but potentially impact availability. |
+| Higher (e.g., 75%) | Provide greater assurance of service availability during scaling events but may limit the ability to scale down quickly. |
+
 ## Additional Information
 - Pod Disruption Budgets (PDBs) protect applications from voluntary disruptions that might reduce availability below specified thresholds.
 - This parameter sets a global default for all services in all namespaces within the Rack.
-- Lower values (e.g., 25%) allow more aggressive scaling and faster node removal, which can reduce costs but potentially impact availability.
-- Higher values (e.g., 75%) provide greater assurance of service availability during scaling events but may limit the ability to scale down quickly.
 - The value represents the percentage of pods that must remain available during voluntary disruptions, relative to the desired number of replicas.
 - For example, with a value of 50% and a service with 10 replicas, at least 5 replicas must remain available during any voluntary disruption.
 - This parameter is particularly beneficial in environments with:

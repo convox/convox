@@ -7,6 +7,12 @@ url: /console/deploy-wizard
 
 The Model Deploy Wizard deploys pre-configured or custom inference models to a Rack from the Console. It handles App creation, image import, GPU node placement, access control, and provides a built-in Playground for testing deployed models.
 
+## When to Use
+
+Use the Deploy Wizard when you want a guided, point-and-click path to stand up an inference model without writing a `convox.yml` by hand. It is the fastest way to launch a catalog template or a custom HuggingFace model, check GPU readiness, set access and authentication, and try the result in the Playground.
+
+Reach for the CLI instead when you are deploying an existing application from source, scripting deployments into CI, or working with a template marked Advanced: Deploy via CLI. The wizard and the CLI manage the same Apps, so anything launched here can still be inspected and updated with `convox`.
+
 ## Prerequisites
 
 - Rack version **3.24.6** or later (V3 only; V2 Racks are not supported)
