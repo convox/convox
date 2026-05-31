@@ -26,7 +26,7 @@ Convox Cloud also provides **Cloud Databases** - fully managed RDS database inst
 
 | Feature | Convox Cloud | Self-Hosted Rack |
 |---------|--------------|------------------|
-| **Setup Time** | Instant | 10-20 minutes |
+| **Setup Time** | < 1 minute | 10-20 minutes |
 | **Cloud Account Required** | No | Yes |
 | **Infrastructure Management** | Convox-managed | Self-managed |
 | **Pricing Model** | Per machine/database | Infrastructure costs |
@@ -34,6 +34,8 @@ Convox Cloud also provides **Cloud Databases** - fully managed RDS database inst
 | **Customization** | Limited | Full control |
 | **Managed Databases** | Yes (RDS) | Containerized or self-managed |
 | **Best For** | Rapid deployment, predictable costs | Complete control, custom requirements |
+
+See [Cloud vs Self-Hosted Rack](/cloud/comparison) for the full comparison.
 
 ## Machines
 

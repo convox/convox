@@ -70,7 +70,7 @@ Enabling `durable: true` creates a standby replica for automatic failover. This 
 **Features:**
 - Growing applications
 - Higher connection limits
-- Read replica support
+- Optional Multi-AZ failover
 - 7-day automated backups
 
 **Best For:** Growing applications, moderate traffic, multiple services

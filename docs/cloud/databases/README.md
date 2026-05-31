@@ -8,6 +8,8 @@ url: /cloud/databases
 
 Convox Cloud Databases provide fully managed RDS instances without a subscription. Pay only for the hours you use. Every tier includes 7-day automated backups and optional Multi-AZ failover, so you can match your database to your workload from development environments to high-traffic production.
 
+Cloud Databases are a Convox Cloud offering, provisioned and operated for you on Convox-hosted, multi-tenant infrastructure and managed through the Console. They are not the same as the database resources you run on a self-managed Convox Rack, and they expose a fixed set of options (class, version, and Multi-AZ failover) rather than full RDS configuration. See [Cloud Machine Limitations](/cloud/machines/limitations) for the complete list of what is and is not configurable.
+
 ## Supported Database Types
 
 Convox Cloud supports three database engines:
