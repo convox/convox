@@ -8,6 +8,14 @@ url: /cloud/machines/limitations
 
 While Convox Cloud provides the same application deployment capabilities as self-hosted Convox Racks, there are some limitations due to its managed, multi-tenant nature. This guide outlines these limitations and provides alternatives where applicable.
 
+## When to Use Cloud Machines
+
+Cloud Machines are a good fit when you want to ship a containerized application fast without managing any infrastructure. They are well suited for stateless web services and APIs, applications that store their data in Cloud Databases or external object storage, standard HTTPS workloads with automatic SSL and custom domains, and teams that want zero cluster maintenance and instant setup.
+
+Cloud Machines are not the right choice when your application needs direct Kubernetes access, custom infrastructure such as node types, VPC settings, or network policies, private connectivity to your own AWS resources, persistent volumes or custom volume mounts, custom IAM roles per service, or compliance certifications such as HIPAA, PCI DSS, or SOC 2. For any of those needs, use a self-hosted Convox Rack instead.
+
+The sections below detail each limitation, the impact, and the available alternatives. The [Feature Comparison Table](#feature-comparison-table) near the bottom summarizes Cloud versus self-hosted Rack at a glance, and [When to Consider Self-Hosted Rack](#when-to-consider-self-hosted-rack) lists the specific capabilities that require a Rack.
+
 ## Infrastructure Access Limitations
 
 ### No Direct Kubernetes Access

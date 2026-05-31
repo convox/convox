@@ -16,11 +16,14 @@ The default value is an empty string (`""`), which means no EKS control plane lo
 
 ## Valid Log Types
 The following log types are supported by EKS (case-sensitive):
-- `api`: Kubernetes API server logs (all API requests)
-- `audit`: Kubernetes audit logs (who did what, when; the compliance-critical one)
-- `authenticator`: AWS IAM Authenticator logs (authentication events)
-- `controllerManager`: Kubernetes controller manager logs
-- `scheduler`: Kubernetes scheduler logs
+
+| Log Type | Description |
+|----------|-------------|
+| `api` | Kubernetes API server logs (all API requests) |
+| `audit` | Kubernetes audit logs (who did what, when; the compliance-critical one) |
+| `authenticator` | AWS IAM Authenticator logs (authentication events) |
+| `controllerManager` | Kubernetes controller manager logs |
+| `scheduler` | Kubernetes scheduler logs |
 
 ## Use Cases
 - **SOC 2 compliance**: Enable `audit` (minimum) to satisfy audit trail requirements. Most auditors expect `api,audit,authenticator` for full coverage.

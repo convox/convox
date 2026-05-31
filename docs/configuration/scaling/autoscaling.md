@@ -36,29 +36,14 @@ services:
       gpu: 1
 ```
 
-## Manual Scaling
+## Choosing an Autoscaler
 
-### Determine Current Scale
-```bash
-    $ convox scale
-    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS
-    web      2        2        250  512     -    -    -
-```
+Convox offers several ways to set the size of a service. Start here to pick the right one, then jump to the matching section below.
 
-> Columns 1-6 (`SERVICE`, `DESIRED`, `RUNNING`, `CPU`, `MEMORY`, `GPU`) match the 3.24.5 layout exactly. 3.24.6 appends `MIN`, `MAX`, an optional `AUTOSCALE`, and a trailing `STATUS` column. See [`convox scale` output reference](/reference/cli/scale#output-table) for the full column-position contract.
-### Scaling Count Horizontally
-```bash
-    $ convox scale web --count=3
-    Scaling web...
-    2026-01-15T14:30:00Z system/k8s/web Scaled up replica set web-65f45567d to 2
-    2026-01-15T14:30:00Z system/k8s/web-65f45567d Created pod: web-65f45567d-c7sdw
-    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Successfully assigned dev-convox/web-65f45567d-c7sdw to node
-    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Container image "registry.dev.convox/convox:web.BABCDEFGHI" already present on machine
-    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Created container main
-    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Started container main
-    OK
-```
-> Changes to `cpu`, `memory`, or `gpu` should be done in your `convox.yml`, and a new release of your app deployed.
+- **`scale.autoscale` (recommended):** Preconfigured KEDA-based triggers for CPU, memory, GPU utilization, and queue depth, including scale-to-zero. Use this when you want event-driven or utilization-driven autoscaling with minimal configuration. Requires `keda_enable=true` on the rack.
+- **KEDA (raw triggers):** Drop down to raw KEDA ScaleTriggers when you need a scaler outside the four built-in types (SQS, CloudWatch, Datadog, cron, and 60+ other sources). See [KEDA Autoscaling](/configuration/scaling/keda).
+- **Manual replica counts:** Set a fixed `count` and adjust it by hand with `convox scale`. Use this when traffic is steady or predictable and you do not want automatic adjustment.
+- **Horizontal Autoscaling (HPA), legacy:** The `scale.targets` block uses native Kubernetes HPA and does not require KEDA. Prefer `scale.autoscale` for new services; use `scale.targets` if you cannot enable KEDA on the rack.
 
 ## Event-Driven Autoscaling (scale.autoscale)
 
@@ -189,6 +174,30 @@ services:
 | **pollingInterval** | number | 30 | Seconds between trigger checks |
 
 For raw KEDA trigger configuration (SQS, CloudWatch, Datadog, cron, and 60+ other scalers), see [KEDA Autoscaling](/configuration/scaling/keda).
+
+## Manual Scaling
+
+### Determine Current Scale
+```bash
+    $ convox scale
+    SERVICE  DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS
+    web      2        2        250  512     -    -    -
+```
+
+> Columns 1-6 (`SERVICE`, `DESIRED`, `RUNNING`, `CPU`, `MEMORY`, `GPU`) match the 3.24.5 layout exactly. 3.24.6 appends `MIN`, `MAX`, an optional `AUTOSCALE`, and a trailing `STATUS` column. See [`convox scale` output reference](/reference/cli/scale#output-table) for the full column-position contract.
+### Scaling Count Horizontally
+```bash
+    $ convox scale web --count=3
+    Scaling web...
+    2026-01-15T14:30:00Z system/k8s/web Scaled up replica set web-65f45567d to 2
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d Created pod: web-65f45567d-c7sdw
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Successfully assigned dev-convox/web-65f45567d-c7sdw to node
+    2026-01-15T14:30:00Z system/k8s/web-65f45567d-c7sdw Container image "registry.dev.convox/convox:web.BABCDEFGHI" already present on machine
+    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Created container main
+    2026-01-15T14:30:01Z system/k8s/web-65f45567d-c7sdw Started container main
+    OK
+```
+> Changes to `cpu`, `memory`, or `gpu` should be done in your `convox.yml`, and a new release of your app deployed.
 
 ## Horizontal Autoscaling (HPA)
 

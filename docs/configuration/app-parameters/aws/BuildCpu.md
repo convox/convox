@@ -60,10 +60,14 @@ Setting BuildLabels... OK
 ## Sizing Guidance
 - The `BuildCpu` value is specified in millicores, where 1000 millicores equals 1 vCPU.
 - Common values include:
-  - `250` (0.25 vCPU): Suitable for simple builds
-  - `500` (0.5 vCPU): Balanced for most builds
-  - `1000` (1.0 vCPU): Good for moderately complex builds
-  - `2000` (2.0 vCPU): Recommended for CPU-intensive builds
+
+| Value | vCPU | When to use |
+|-------|------|-------------|
+| `250` | 0.25 vCPU | Suitable for simple builds |
+| `500` | 0.5 vCPU | Balanced for most builds |
+| `1000` | 1.0 vCPU | Good for moderately complex builds |
+| `2000` | 2.0 vCPU | Recommended for CPU-intensive builds |
+
 - Setting an appropriate CPU allocation is important for build performance:
   - Too low: Builds may run slowly or time out
   - Too high: May waste resources or prevent builds from being scheduled if nodes don't have sufficient capacity

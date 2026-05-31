@@ -10,11 +10,23 @@ Quick Apps are pre-configured application templates available through the Convox
 
 Quick Apps lets you deploy popular applications directly into your Convox Rack from the Console with minimal configuration. Instead of manually configuring a `convox.yml`, Dockerfile, and database resources, Quick Apps handles infrastructure provisioning, configuration, and application setup for you.
 
+## When to Use Quick Apps
+
+Use Quick Apps when you want to stand up a supported application without authoring a `convox.yml`, building a Dockerfile, or wiring up database resources by hand. Quick Apps is a good fit if you want the Console to provision infrastructure, configure the application, and manage the database lifecycle for you. If you need full control over the application image and manifest, deploy a standard Convox app instead.
+
 ## Drupal
 
 Quick Apps supports deploying a fully functional Drupal site into your Convox Rack. You can set up a new Drupal installation or deploy an existing Git-based site through a streamlined Console wizard.
 
 For a step-by-step walkthrough, check out the **[Guided Tour](https://app.storylane.io/share/dvtwoaxuuakh)**.
+
+### Prerequisites
+
+Before you begin, make sure the following requirement is met. Quick Apps Drupal uses AWS EFS for shared storage, so this is required on AWS racks.
+
+| Requirement | Detail |
+|-------------|--------|
+| EFS storage | Set the rack parameter **`efs_csi_driver_enable=true`** to enable AWS EFS storage. For details, see the [EFS CSI Driver Configuration](/configuration/rack-parameters/aws/efs_csi_driver_enable) page. |
 
 > **Important:**
 > You must set the rack parameter **`efs_csi_driver_enable=true`** to enable AWS EFS storage. For details, see the [EFS CSI Driver Configuration](/configuration/rack-parameters/aws/efs_csi_driver_enable) page.
@@ -31,26 +43,27 @@ For a step-by-step walkthrough, check out the **[Guided Tour](https://app.storyl
 
 You will be prompted to provide the following:
 
-- **Installation Type**
-  - *Standard Installation*: Deploys a default Drupal site with no pre-existing configurations.
-  - *Git Source Installation*: Allows you to deploy from a linked GitHub repository. No special configuration files are required in the repository, but the project must follow the standard Drupal Composer structure. This includes a `composer.json` file, a `config` directory for environment settings, and a `web` directory as the document root.
+| Field | Description |
+|-------|-------------|
+| **Installation Type** | *Standard Installation*: Deploys a default Drupal site with no pre-existing configurations. *Git Source Installation*: Allows you to deploy from a linked GitHub repository. No special configuration files are required in the repository, but the project must follow the standard Drupal Composer structure. This includes a `composer.json` file, a `config` directory for environment settings, and a `web` directory as the document root. |
+| **Choose a Rack** | Select the Convox rack where the Drupal site will be deployed. This determines the cloud region and infrastructure used for the application. |
+| **App Name** | This defines the Convox application name within the selected rack. It is separate from the Drupal site name and is permanent once set. The application name must be unique within the rack and adhere to Convox naming rules (see below). The app name is how Convox identifies and manages your deployment, including routing, scaling, and service configurations. |
 
-- **Choose a Rack**
-  Select the Convox rack where the Drupal site will be deployed. This determines the cloud region and infrastructure used for the application.
+App names must adhere to Convox naming rules:
 
-- **App Name**
-  This defines the Convox application name within the selected rack. It is separate from the Drupal site name and is permanent once set. The application name must be unique within the rack and adhere to Convox naming rules:
-  - Must be lowercase
-  - No special characters except `-`
-  - Can include numbers
-
-  The app name is how Convox identifies and manages your deployment, including routing, scaling, and service configurations.
+- Must be lowercase
+- No special characters except `-`
+- Can include numbers
 
 #### Labels
 Choose whether the application is for **Production**, **Test**, or **Dev** environments.
-- *Production*: Indexed for search results.
-- *Test/Dev*: Used for organization and CI/CD purposes.
-- After installation, custom labels can be added.
+
+| Label | Purpose |
+|-------|---------|
+| *Production* | Indexed for search results. |
+| *Test/Dev* | Used for organization and CI/CD purposes. |
+
+After installation, custom labels can be added.
 
 Custom labels allow users to categorize applications based on internal organization needs. For example, they can be used to tag projects by **client name**, **development phase**, or **team ownership**, making it easier to filter and manage multiple applications.
 
@@ -60,18 +73,11 @@ To simplify the deployment of identical configurations across environments, Conv
 
 #### Step 2: Configure Drupal
 
-- **Site Name**
-  This will be the official name of the Drupal installation.
-
-- **Drupal Version**
-  Displays the core Drupal version that will be installed.
-
-- **Administrator Credentials**
-  - Username
-  - Password
-  - Email address
-
-  These credentials will be used for logging into the Drupal site.
+| Field | Description |
+|-------|-------------|
+| **Site Name** | This will be the official name of the Drupal installation. |
+| **Drupal Version** | Displays the core Drupal version that will be installed. |
+| **Administrator Credentials** | Username, Password, and Email address. These credentials will be used for logging into the Drupal site. |
 
 #### Step 3: Configure Database
 
@@ -85,35 +91,19 @@ To simplify the deployment of identical configurations across environments, Conv
 - **Create a New Managed Database**
   If an existing database is not used, Convox can provision a fully managed AWS RDS-backed database in the same region as the selected rack.
 
-  - **Database Type**: Choose between MySQL, MariaDB, or PostgreSQL.
-  - **Version Selection**:
-    - The dropdown menu includes the most commonly used versions.
-    - A custom version can be manually entered.
-    - For a full list of supported versions and deprecation timelines, refer to the official AWS documentation:
-      - [MySQL Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Concepts.VersionMgmt.html#MySQL.Concepts.VersionMgmt.Supported)
-      - [MariaDB Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MariaDB.Concepts.VersionMgmt.html#MariaDB.Concepts.VersionMgmt.Supported)
-      - [PostgreSQL Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-release-calendar.html#PostgreSQL.Concepts.VersionMgmt.Supported)
-
-  - **Instance Size**:
-    - Convox provides a set of **General Purpose** and **Memory Optimized** instance types based on common usage patterns.
-    - Users may also enter a custom instance type manually.
-    - A complete list of available RDS instance types can be found here: [AWS RDS Instance Types](https://aws.amazon.com/rds/instance-types/).
-    - **Note:** Not all instance types are available in every AWS region. Availability depends on the region where your Convox rack is deployed.
-
-  - **Storage Capacity**: Set the initial storage size (this can be increased later if needed).
-
-  - **Database Options**:
-    - **Deletion Protection**: Prevents accidental database deletion.
-      - If deletion protection is enabled when a Convox site is deleted, the database will persist in your AWS account. It will need to be manually removed from AWS if no longer needed.
-    - **Containerized Database**: Runs the database as a containerized service inside the Convox rack.
-      - Best suited for cost savings in development and testing environments.
-      - Offers lower durability and availability compared to AWS RDS-managed databases.
-      - Not recommended for production workloads due to lack of automated failover and managed backups.
+  | Option | Description |
+  |--------|-------------|
+  | **Database Type** | Choose between MySQL, MariaDB, or PostgreSQL. |
+  | **Version Selection** | The dropdown menu includes the most commonly used versions. A custom version can be manually entered. For a full list of supported versions and deprecation timelines, refer to the official AWS documentation: [MySQL Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MySQL.Concepts.VersionMgmt.html#MySQL.Concepts.VersionMgmt.Supported), [MariaDB Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/MariaDB.Concepts.VersionMgmt.html#MariaDB.Concepts.VersionMgmt.Supported), [PostgreSQL Version Management](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-release-calendar.html#PostgreSQL.Concepts.VersionMgmt.Supported). |
+  | **Instance Size** | Convox provides a set of **General Purpose** and **Memory Optimized** instance types based on common usage patterns. Users may also enter a custom instance type manually. A complete list of available RDS instance types can be found here: [AWS RDS Instance Types](https://aws.amazon.com/rds/instance-types/). **Note:** Not all instance types are available in every AWS region. Availability depends on the region where your Convox rack is deployed. |
+  | **Storage Capacity** | Set the initial storage size (this can be increased later if needed). |
+  | **Deletion Protection** | Prevents accidental database deletion. If deletion protection is enabled when a Convox site is deleted, the database will persist in your AWS account. It will need to be manually removed from AWS if no longer needed. |
+  | **Containerized Database** | Runs the database as a containerized service inside the Convox rack. Best suited for cost savings in development and testing environments. Offers lower durability and availability compared to AWS RDS-managed databases. Not recommended for production workloads due to lack of automated failover and managed backups. |
 
 #### Step 4: Review and Install
 
-- A final review page summarizes the Convox, Drupal, and database configurations before deployment.
-- Click **Complete Installation** to begin deployment.
+1. A final review page summarizes the Convox, Drupal, and database configurations before deployment.
+2. Click **Complete Installation** to begin deployment.
 
 ### Post-Installation
 
@@ -135,19 +125,25 @@ After starting an installation, you will be automatically redirected to the **In
 ### Managing Active Apps
 
 From the **Active Apps** tab in the Quick Apps Console, you can view all existing Drupal sites along with key details such as:
-- **Labels**: Identifies the site as Production, Test, or Dev. Users can also apply **Custom Labels** for internal organization, such as tagging projects, teams, or deployment stages.
-- **App Name**: The unique Convox application name.
-- **Rack Name**: The Convox rack where the site is deployed.
-- **Health Status**: Indicates the current state of the application.
-- **Build/Job Status**: Displays active deployments, pending tasks, and any errors from previous builds. If a build or deployment fails, an error message will be shown here for troubleshooting.
-- **Version**: Displays the current Drupal version in use.
+
+| Detail | Description |
+|--------|-------------|
+| **Labels** | Identifies the site as Production, Test, or Dev. Users can also apply **Custom Labels** for internal organization, such as tagging projects, teams, or deployment stages. |
+| **App Name** | The unique Convox application name. |
+| **Rack Name** | The Convox rack where the site is deployed. |
+| **Health Status** | Indicates the current state of the application. |
+| **Build/Job Status** | Displays active deployments, pending tasks, and any errors from previous builds. If a build or deployment fails, an error message will be shown here for troubleshooting. |
+| **Version** | Displays the current Drupal version in use. |
 
 #### Site Actions
 Each active site includes several management options:
-- **Clone**: Create a new site from an existing one.
-- **View Site**: Open the live site in a new tab.
-- **Configuration & Settings**: Access the site's management dashboard.
-- **Active Installation Job**: During installation, you can click the **wrench icon** next to a site to navigate directly to the active installation job, allowing you to monitor progress and troubleshoot any issues.
+
+| Action | Description |
+|--------|-------------|
+| **Clone** | Create a new site from an existing one. |
+| **View Site** | Open the live site in a new tab. |
+| **Configuration & Settings** | Access the site's management dashboard. |
+| **Active Installation Job** | During installation, you can click the **wrench icon** next to a site to navigate directly to the active installation job, allowing you to monitor progress and troubleshoot any issues. |
 
 ### Site Configuration and Settings
 
@@ -167,9 +163,13 @@ This section includes several subpages:
   - Convox automatically generates a system domain for each application. See [Custom Domains](/deployment/custom-domains) for details.
 - **PHP Memory Limit**: Defines the maximum amount of memory a PHP script can consume. This setting is critical for performance tuning, particularly in high-traffic Drupal environments.
   - **Recommended Values:**
-    - `128MB`: Suitable for small to medium-sized Drupal sites.
-    - `256MB - 512MB`: Recommended for larger sites with complex modules or high concurrent traffic.
-    - `1024MB+`: May be required for resource-intensive applications handling large media files or computational tasks.
+
+    | Value | Suitable For |
+    |-------|--------------|
+    | `128MB` | Suitable for small to medium-sized Drupal sites. |
+    | `256MB - 512MB` | Recommended for larger sites with complex modules or high concurrent traffic. |
+    | `1024MB+` | May be required for resource-intensive applications handling large media files or computational tasks. |
+
   - **Best Practices:**
     - Increase memory allocation gradually based on actual site performance needs.
     - Setting limits too high may lead to inefficient resource utilization.
@@ -194,10 +194,14 @@ This section includes several subpages:
 > - It is recommended to monitor the **RDS instance status** in the AWS Console to ensure changes have fully propagated before making further modifications.
 
 **Resource Allocations**
-- **vCPU**: Adjust CPU allocation (default is `250` millicores).
-- **Memory**: Configure memory allocation (default is `512MB`).
-- **Scale**: Modify the number of application instances.
-  - **Warning**: Changing resource allocations may impact site performance and availability.
+
+| Setting | Description |
+|---------|-------------|
+| **vCPU** | Adjust CPU allocation (default is `250` millicores). |
+| **Memory** | Configure memory allocation (default is `512MB`). |
+| **Scale** | Modify the number of application instances. |
+
+- **Warning**: Changing resource allocations may impact site performance and availability.
 
 **Site Labels**
 - **Managed Labels**: Required Convox-managed labels (Production, Test, or Dev) determine indexing and searchability.
@@ -205,9 +209,11 @@ This section includes several subpages:
   - **Examples**: `team-name`, `feature-branch`, `client-project`.
 
 **Cron Settings (Timer Settings)**
-- **Command**: The script or command to be executed.
-- **Schedule**: Defines the cron execution schedule. See [Timer Documentation](/reference/primitives/app/timer) for cron syntax details.
-  - A scheduling tool is available to simplify configuration.
+
+| Setting | Description |
+|---------|-------------|
+| **Command** | The script or command to be executed. |
+| **Schedule** | Defines the cron execution schedule. See [Timer Documentation](/reference/primitives/app/timer) for cron syntax details. A scheduling tool is available to simplify configuration. |
 
 > **Execution Context:** When a scheduled job runs, Convox executes a **new container/process** to run the job rather than using the existing Drupal site container. This process:
 > - Has access to the **same shared file systems**, databases, and environment variables as the Drupal site.
@@ -219,23 +225,28 @@ This means that while cron jobs have access to necessary application resources, 
 #### Site Operations
 
 **Clone From Site**
-- **Source Application**: Select the site to copy from.
-- **Copy Code**: Clones the entire Drupal codebase, including configurations, modules, and themes.
-- **Copy Config**: Copies only the site settings, such as database configurations and resource allocations.
-- **Sync Database**: Copies the source database into the selected application.
 
-  - **Important**: The selected **source application remains unchanged**. All changes are applied **to the currently selected site**, overwriting any existing configuration.
-  - This ensures that cloned sites remain functionally consistent without affecting the original source site.
+| Option | Description |
+|--------|-------------|
+| **Source Application** | Select the site to copy from. |
+| **Copy Code** | Clones the entire Drupal codebase, including configurations, modules, and themes. |
+| **Copy Config** | Copies only the site settings, such as database configurations and resource allocations. |
+| **Sync Database** | Copies the source database into the selected application. |
+
+- **Important**: The selected **source application remains unchanged**. All changes are applied **to the currently selected site**, overwriting any existing configuration.
+- This ensures that cloned sites remain functionally consistent without affecting the original source site.
 
 **Drupal Core Version**
 - Change the core version of Drupal for the site.
 - **Warning**: Updating Drupal can break module compatibility. Always test in a staging environment before upgrading.
 
 **Backups and Restore**
-- **Create Backup**: Generates a full snapshot of the site.
-- **Restore**: Select a previous backup to roll back changes.
-- **Delete Backup**: Removes a stored backup.
-  - Backups are timestamped for easy identification.
+
+| Action | Description |
+|--------|-------------|
+| **Create Backup** | Generates a full snapshot of the site. |
+| **Restore** | Select a previous backup to roll back changes. |
+| **Delete Backup** | Removes a stored backup. Backups are timestamped for easy identification. |
 
 #### Custom Configuration
 
@@ -250,6 +261,6 @@ This means that while cron jobs have access to necessary application resources, 
 - **Changes apply immediately**, and the service will restart automatically.
 
 #### Deleting a Site
-- Navigate to the **Delete Site** tab.
-- Confirm deletion to permanently remove the application.
-- **Note**: If deletion protection is enabled, the associated RDS database will persist and must be manually removed from AWS.
+1. Navigate to the **Delete Site** tab.
+2. Confirm deletion to permanently remove the application.
+3. **Note**: If deletion protection is enabled, the associated RDS database will persist and must be manually removed from AWS.

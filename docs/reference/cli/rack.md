@@ -36,6 +36,8 @@ url: /reference/cli/rack
 | `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
 | `convox rack mv` | Transfer rack management between user and org |
 
+The subcommand reference below follows the Command Summary grouping above, so the body order matches the table you just read.
+
 ## rack
 
 Get information about the rack
@@ -52,103 +54,6 @@ Get information about the rack
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
     Version   3.23.3
-```
-## rack install
-
-Install a new Rack
-
-> note: To install the rack into the console with the specified runtime, region, and optional [parameters](/configuration/rack-parameters): provide orgname/rackname in place of `<name>`
-
-### Usage
-```bash
-    convox rack install <provider> <name> [option=value]...
-
-    convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
-```
-
-flags:
-  - `runtime`: runtime integration ID
-  - `version`: specify the rack version to install
-
-> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, see [CLI Management](/management/cli-rack-management).
-
-> note: Obtain the runtime ID by running `convox runtimes <orgname>`.
-
-### Examples
-```bash
-    $ convox rack install local dev
-    ...
-
-    $ convox rack install aws production region=eu-west-1 node_type=t3.large
-    ...
-
-    $ convox rack install aws my-org/staging region=us-east-1 --runtime=20e58437-fab7-4124-aa5a-2e5978f1149e
-    ...
-```
-
-## rack kubeconfig
-
-Output a Kubernetes configuration file for connecting to the underlying cluster
-
-### Usage
-```bash
-    convox rack kubeconfig
-```
-### Examples
-```bash
-    $ convox rack kubeconfig
-    apiVersion: v1
-    clusters:
-    - cluster:
-        server: https://api.0a1b2c3d4e5f.convox.cloud/kubernetes/
-    name: kubernetes
-    contexts:
-    - context:
-        cluster: kubernetes
-        user: proxy
-    name: proxy@kubernetes
-    current-context: proxy@kubernetes
-    kind: Config
-    preferences: {}
-    users:
-    - name: proxy
-    user:
-        username: convox
-        password: abcdefghijklmnopqrstuvwxyz
-```
-## rack logs
-
-Get logs for the rack
-
-### Usage
-```bash
-    convox rack logs
-```
-### Examples
-```bash
-    $ convox rack logs
-    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
-    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
-    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
-    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
-    ...
-```
-## rack mv
-
-Transfer the management of a Rack from an individual user to an organization or vice versa.
-> note: rack name should be same
-
-### Usage
-```bash
-    convox rack mv <from> <to>
-```
-### Examples
-```bash
-    $ convox rack mv dev acme/dev
-    moving rack dev to acme/dev... OK
-
-    $ convox rack mv acme/dev dev
-    moving rack acme/dev to dev... OK
 ```
 ## rack ps
 
@@ -205,33 +110,54 @@ List rack processes as well as essential system ones running on the Rack
     router-846b84d544-ndz76  system  router         running  3.23.3        2 weeks ago  router
 ```
 
-## rack runtimes
+## rack logs
 
-List of attachable runtime integrations
-
-### Usage
-```bash
-    convox rack runtimes
-```
-### Examples
-```bash
-    $ convox rack runtimes
-    ID                                    TITLE
-    20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
-```
-
-## rack runtime attach
-
-Attach runtime integration to the rack
+Get logs for the rack
 
 ### Usage
 ```bash
-    convox rack runtime attach <runtime_id>
+    convox rack logs
 ```
 ### Examples
 ```bash
-    $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
-    OK
+    $ convox rack logs
+    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
+    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
+    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
+    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
+    ...
+```
+## rack install
+
+Install a new Rack
+
+> note: To install the rack into the console with the specified runtime, region, and optional [parameters](/configuration/rack-parameters): provide orgname/rackname in place of `<name>`
+
+### Usage
+```bash
+    convox rack install <provider> <name> [option=value]...
+
+    convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
+```
+
+flags:
+  - `runtime`: runtime integration ID
+  - `version`: specify the rack version to install
+
+> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, see [CLI Management](/management/cli-rack-management).
+
+> note: Obtain the runtime ID by running `convox runtimes <orgname>`.
+
+### Examples
+```bash
+    $ convox rack install local dev
+    ...
+
+    $ convox rack install aws production region=eu-west-1 node_type=t3.large
+    ...
+
+    $ convox rack install aws my-org/staging region=us-east-1 --runtime=20e58437-fab7-4124-aa5a-2e5978f1149e
+    ...
 ```
 
 ## rack uninstall
@@ -270,6 +196,78 @@ Updates a Rack to a new version.
 
     api = https://convox:password@api.dev.convox
     provider = local
+    OK
+```
+
+## rack access credential
+
+Generates rack access credential
+
+### Usage
+```bash
+    convox rack access --role [role] --duration-in-hours [duration]
+```
+flags:
+  - `role`: Access role for the credential. Allowed roles are: `read` or `write`
+  - `duration-in-hours`: TTL for the credential.
+
+### Examples
+```bash
+    $ convox rack access --role read --duration-in-hours 1
+    RACK_URL=https://...
+
+    $ export RACK_URL=https://...
+    $ convox rack
+    Name      v3-rack
+    Provider  aws
+    Router    router.convox
+    Status    running
+    Version   ...
+
+```
+
+## rack access key rotation
+
+Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
+
+### Usage
+```bash
+    convox rack access key rotate
+```
+
+### Examples
+```bash
+    $ convox rack access key rotate
+    OK
+
+```
+
+## rack runtimes
+
+List of attachable runtime integrations
+
+### Usage
+```bash
+    convox rack runtimes
+```
+### Examples
+```bash
+    $ convox rack runtimes
+    ID                                    TITLE
+    20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
+```
+
+## rack runtime attach
+
+Attach runtime integration to the rack
+
+### Usage
+```bash
+    convox rack runtime attach <runtime_id>
+```
+### Examples
+```bash
+    $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
     OK
 ```
 
@@ -409,23 +407,6 @@ Use `--force` to bypass the unknown-key and managed-parameter guards. Install-on
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
 
-## rack karpenter cleanup
-
-Clean up orphaned Karpenter nodes after disabling Karpenter. Terminates backing EC2 instances, cordons and drains Kubernetes nodes (respecting PodDisruptionBudgets), strips Karpenter finalizers, and removes stale CRD objects (NodePools, NodeClaims, EC2NodeClasses).
-
-Safe to run multiple times. See [Disabling Karpenter](/configuration/scaling/karpenter#disabling-karpenter) for the full workflow.
-
-### Usage
-```bash
-    convox rack karpenter cleanup
-```
-
-### Examples
-```bash
-    $ convox rack karpenter cleanup -r rackName
-    Cleaning up Karpenter nodes... OK
-```
-
 ## rack releases
 
 List rack version history
@@ -471,47 +452,69 @@ Scale the rack
     Scaling rack... OK
 ```
 
-## rack access credential
+## rack karpenter cleanup
 
-Generates rack access credential
+Clean up orphaned Karpenter nodes after disabling Karpenter. Terminates backing EC2 instances, cordons and drains Kubernetes nodes (respecting PodDisruptionBudgets), strips Karpenter finalizers, and removes stale CRD objects (NodePools, NodeClaims, EC2NodeClasses).
 
-### Usage
-```bash
-    convox rack access --role [role] --duration-in-hours [duration]
-```
-flags:
-  - `role`: Access role for the credential. Allowed roles are: `read` or `write`
-  - `duration-in-hours`: TTL for the credential.
-
-### Examples
-```bash
-    $ convox rack access --role read --duration-in-hours 1
-    RACK_URL=https://...
-
-    $ export RACK_URL=https://...
-    $ convox rack
-    Name      v3-rack
-    Provider  aws
-    Router    router.convox
-    Status    running
-    Version   ...
-
-```
-
-## rack access key rotation
-
-Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
+Safe to run multiple times. See [Disabling Karpenter](/configuration/scaling/karpenter#disabling-karpenter) for the full workflow.
 
 ### Usage
 ```bash
-    convox rack access key rotate
+    convox rack karpenter cleanup
 ```
 
 ### Examples
 ```bash
-    $ convox rack access key rotate
-    OK
+    $ convox rack karpenter cleanup -r rackName
+    Cleaning up Karpenter nodes... OK
+```
 
+## rack kubeconfig
+
+Output a Kubernetes configuration file for connecting to the underlying cluster
+
+### Usage
+```bash
+    convox rack kubeconfig
+```
+### Examples
+```bash
+    $ convox rack kubeconfig
+    apiVersion: v1
+    clusters:
+    - cluster:
+        server: https://api.0a1b2c3d4e5f.convox.cloud/kubernetes/
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: proxy
+    name: proxy@kubernetes
+    current-context: proxy@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: proxy
+    user:
+        username: convox
+        password: abcdefghijklmnopqrstuvwxyz
+```
+## rack mv
+
+Transfer the management of a Rack from an individual user to an organization or vice versa.
+> note: rack name should be same
+
+### Usage
+```bash
+    convox rack mv <from> <to>
+```
+### Examples
+```bash
+    $ convox rack mv dev acme/dev
+    moving rack dev to acme/dev... OK
+
+    $ convox rack mv acme/dev dev
+    moving rack acme/dev to dev... OK
 ```
 
 ## See Also
