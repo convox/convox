@@ -17,6 +17,11 @@ import (
 
 var sequenceTokens sync.Map
 
+var (
+	logRetrySleep              = 3 * time.Second
+	resourceNotFoundMaxRetries = 20
+)
+
 func (p *Provider) Log(name, stream string, ts time.Time, message string) error {
 	group := p.appLogGroup(name)
 
@@ -203,6 +208,7 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 	}
 
 	seen := map[string]bool{}
+	rnf := 0
 
 	for {
 		select {
@@ -217,13 +223,25 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			res, err := p.CloudWatchLogs.FilterLogEvents(req)
 			if err != nil {
 				switch awsErrorCode(err) {
-				case "ThrottlingException", "ResourceNotFoundException":
-					time.Sleep(3 * time.Second)
+				case "ThrottlingException":
+					time.Sleep(logRetrySleep)
+					continue
+				case "ResourceNotFoundException":
+					// The group is created on the app's first log write, so a fresh
+					// tail may briefly miss; retry bounded rather than forever (a group
+					// that never appears would otherwise be a permanent FilterLogEvents storm).
+					rnf++
+					if rnf >= resourceNotFoundMaxRetries {
+						return nil
+					}
+					time.Sleep(logRetrySleep)
 					continue
 				default:
 					return err
 				}
 			}
+
+			rnf = 0
 
 			es := []*cloudwatchlogs.FilteredLogEvent{}
 
