@@ -15,7 +15,13 @@ az account set --subscription ${ARM_SUBSCRIPTION_ID}
 
 clusters=$(az aks list --query "[?starts_with(name, 'ci')].{name: name, resourceGroup: resourceGroup}" -o tsv)
 
-echo "$clusters" | while read -r name resourceGroup; do
+if [ -z "$clusters" ]; then
+  echo "No ci AKS clusters to delete"
+  exit 0
+fi
+
+while read -r name resourceGroup; do
+  [ -z "$name" ] && continue
   echo "Deleting AKS cluster: $name in resource group $resourceGroup"
   az aks delete --name "$name" --resource-group "$resourceGroup" --yes --no-wait
-done
+done <<< "$clusters"
