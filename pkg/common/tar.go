@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	maxTarEntrySize int64 = 10 * 1024 * 1024 * 1024
-	maxTarTotalSize int64 = 50 * 1024 * 1024 * 1024
+	// upper bounds for tar extraction: a backstop that keeps extraction bounded
+	// rather than unbounded, set far above any legitimate build context or artifact.
+	maxTarEntrySize int64 = 512 * 1024 * 1024 * 1024
+	maxTarTotalSize int64 = 2 * 1024 * 1024 * 1024 * 1024
 )
 
 func Archive(file string) (io.Reader, error) {
