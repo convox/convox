@@ -1,7 +1,6 @@
 name: release
 on:
   push:
-    branches-ignore: ["*"]
     tags: ["*"]
   workflow_dispatch:
 jobs:
