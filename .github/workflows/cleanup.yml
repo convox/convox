@@ -14,7 +14,7 @@ jobs:
         provider: [aws]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: AWS secrets
         run: ci/secrets.sh
         env:
@@ -23,12 +23,14 @@ jobs:
       - name: System dependencies
         run: ci/dependencies.sh
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Cache / download Go modules
+        working-directory: ci
         run: go mod download
       - name: AWS cleanup
+        working-directory: ci
         run: |
           go run .
         env:
@@ -41,7 +43,7 @@ jobs:
       fail-fast: false
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: do secrets
         run: ci/secrets.sh
         env:
