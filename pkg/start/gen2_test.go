@@ -89,7 +89,7 @@ func TestStart2Options(t *testing.T) {
 	p.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(io.NopCloser(strings.NewReader(buildLogs)), nil)
 	p.On("BuildGet", "app1", "build1").Return(&structs.Build{Id: "build1", Release: "release1", Status: "complete"}, nil)
 	p.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{Development: options.Bool(true), Force: options.Bool(true), Idle: options.Bool(false), Min: options.Int(0), Timeout: options.Int(300)}).Return(nil)
-	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(io.NopCloser(strings.NewReader(appLogs)), nil).Once()
+	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(io.NopCloser(strings.NewReader(appLogs)), nil)
 	p.On("ReleasePromote", "app1", "old", structs.ReleasePromoteOptions{Development: options.Bool(false), Force: options.Bool(true)}).Return(nil)
 
 	e := &exec.MockInterface{}
