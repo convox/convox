@@ -14,6 +14,11 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
 )
 
+var (
+	maxTarEntrySize int64 = 10 * 1024 * 1024 * 1024
+	maxTarTotalSize int64 = 50 * 1024 * 1024 * 1024
+)
+
 func Archive(file string) (io.Reader, error) {
 	opts := &archive.TarOptions{
 		IncludeFiles: []string{file},
@@ -53,6 +58,9 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 		}
 
 		h.Name = filepath.Join(dst, strings.TrimPrefix(h.Name, src))
+		if !isContained(dst, h.Name) {
+			return nil, fmt.Errorf("illegal file path in archive: %s", h.Name)
+		}
 
 		tw.WriteHeader(h)
 
@@ -112,8 +120,27 @@ func Tarball(dir string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+func isContained(base, path string) bool {
+	rel, err := filepath.Rel(base, path)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
+// SafeExtractPath joins name onto dir and rejects any result that escapes dir.
+func SafeExtractPath(dir, name string) (string, error) {
+	file := filepath.Join(dir, name)
+	if !isContained(dir, file) {
+		return "", fmt.Errorf("illegal file path in archive: %s", name)
+	}
+	return file, nil
+}
+
 func Unarchive(r io.Reader, target string) error {
 	tr := tar.NewReader(r)
+
+	var totalSize int64
 
 	for {
 		h, err := tr.Next()
@@ -124,7 +151,10 @@ func Unarchive(r io.Reader, target string) error {
 			return err
 		}
 
-		file := filepath.Join(target, h.Name)
+		file, err := SafeExtractPath(target, h.Name)
+		if err != nil {
+			return err
+		}
 
 		switch h.Typeflag {
 		case tar.TypeDir:
@@ -141,8 +171,20 @@ func Unarchive(r io.Reader, target string) error {
 				return err
 			}
 
-			if _, err := io.Copy(fd, tr); err != nil {
+			n, err := io.Copy(fd, io.LimitReader(tr, maxTarEntrySize+1))
+			if closeErr := fd.Close(); err == nil {
+				err = closeErr
+			}
+			if err != nil {
 				return err
+			}
+			if n > maxTarEntrySize {
+				return fmt.Errorf("tar entry %q exceeds maximum entry size of %d bytes", h.Name, maxTarEntrySize)
+			}
+
+			totalSize += n
+			if totalSize > maxTarTotalSize {
+				return fmt.Errorf("archive exceeds maximum total size of %d bytes", maxTarTotalSize)
 			}
 		}
 	}
