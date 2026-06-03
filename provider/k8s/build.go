@@ -645,15 +645,23 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 		}
 
 		if strings.HasSuffix(header.Name, ".tar") {
-			f, err := os.Create(fmt.Sprintf("%s/%s", tmp, header.Name))
+			path, err := common.SafeExtractPath(tmp, header.Name)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			f, err := os.Create(path)
 			if err != nil {
 				return nil, errors.Errorf("failed to untar image - %s", err.Error())
 			}
 
 			// skipcq
 			_, err = io.Copy(f, tr)
+			if closeErr := f.Close(); err == nil {
+				err = closeErr
+			}
 			if err != nil {
-				errors.Errorf("failed to write image - %s", err.Error())
+				return nil, errors.Errorf("failed to write image - %s", err.Error())
 			}
 
 			svc := strings.Split(header.Name, ".")[0]
