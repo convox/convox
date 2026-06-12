@@ -95,6 +95,7 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 			GpuCapacity:       gpuCapacity,
 			GpuAllocatable:    gpuAllocatable,
 			Id:                n.ObjectMeta.Name,
+			InstanceType:      nodeInstanceType(&n),
 			Memory:            mem,
 			MemoryCapacity:    memCapacity,
 			MemoryAllocatable: memAllocatable,
