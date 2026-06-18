@@ -215,7 +215,7 @@ resource "random_id" "build_node_additional" {
     ami_id              = each.value.ami_id
     private_subnets_ids = join("-", local.private_subnets_ids)
     public_subnets_ids  = join("-", local.public_subnets_ids)
-    role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
+    role_arn            = local.build_minimal_role_enabled ? replace(aws_iam_role.karpenter_build_nodes[0].arn, "role/convox/", "role/") : replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
     tags                = try(jsonencode(each.value.tags), "")
   }
 }

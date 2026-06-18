@@ -284,7 +284,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
   yaml_body = templatefile("${path.module}/templates/karpenter-ec2nodeclass.yaml.tpl", {
     name                       = "build"
     cluster_name               = var.name
-    karpenter_node_role_name   = aws_iam_role.karpenter_nodes[0].name
+    karpenter_node_role_name   = local.build_minimal_role_enabled ? aws_iam_role.karpenter_build_nodes[0].name : aws_iam_role.karpenter_nodes[0].name
     karpenter_node_volume_type = var.karpenter_node_volume_type
     karpenter_effective_disk   = local.karpenter_effective_disk
     ebs_encrypted              = var.ebs_volume_encryption_enabled
@@ -301,6 +301,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     aws_ec2_tag.private_subnets_karpenter,
     aws_ec2_tag.public_subnets_karpenter,
     aws_ec2_tag.cluster_sg_karpenter,
+    null_resource.karpenter_build_nodes_access_entry,
   ]
 }
 
