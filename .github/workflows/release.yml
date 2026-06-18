@@ -286,7 +286,6 @@ jobs:
         if: always()
   ci-downgrade:
     if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
-    environment: 'UpgradeDowngradeTests'
     needs:
       - create-manifests
       - release-cli-linux
@@ -334,7 +333,6 @@ jobs:
         if: always()
   ci-upgrade:
     if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
-    environment: 'UpgradeDowngradeTests'
     needs:
       - create-manifests
       - release-cli-linux
