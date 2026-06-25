@@ -15,7 +15,8 @@ for v in DIGITALOCEAN_TOKEN DIGITALOCEAN_ACCESS_ID DIGITALOCEAN_SECRET_KEY; do
   fi
 done
 
-# doctl reads DIGITALOCEAN_ACCESS_TOKEN for auth; Spaces uses the S3-compatible keys.
+# doctl authenticates with the DO API token. Spaces is S3-compatible, so the aws s3 calls below
+# reach it via the AWS_* env vars (the only creds the aws CLI reads) set to the DO Spaces keys.
 export DIGITALOCEAN_ACCESS_TOKEN="${DIGITALOCEAN_TOKEN}"
 export AWS_ACCESS_KEY_ID="${DIGITALOCEAN_ACCESS_ID}"
 export AWS_SECRET_ACCESS_KEY="${DIGITALOCEAN_SECRET_KEY}"
