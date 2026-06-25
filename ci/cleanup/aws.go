@@ -20,10 +20,13 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	ecr "github.com/aws/aws-sdk-go-v2/service/ecr"
 	efs "github.com/aws/aws-sdk-go-v2/service/efs"
+	efstypes "github.com/aws/aws-sdk-go-v2/service/efs/types"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks"
 	elb "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
+	elbv2types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 	iam "github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	kms "github.com/aws/aws-sdk-go-v2/service/kms"
 	kmstypes "github.com/aws/aws-sdk-go-v2/service/kms/types"
 	"github.com/aws/smithy-go"
@@ -35,7 +38,13 @@ type Options struct {
 	BaseDelay  time.Duration
 }
 
-// DefaultOptions defaults to us‑east‑1 and us‑east‑2.
+// allowlistedVPCs are never deleted: they back the existing-vpc install test and must persist.
+var allowlistedVPCs = map[string]struct{}{
+	"vpc-0f18b6d1265717215": {},
+	"vpc-00e18642ac66249c5": {},
+}
+
+// DefaultOptions defaults to us-east-1 and us-east-2.
 func DefaultOptions() Options {
 	// Regions
 	reg := []string{"us-east-1", "us-east-2"}
@@ -66,6 +75,82 @@ func DefaultOptions() Options {
 	}
 }
 
+// isCITag reports whether the tags positively identify a convox CI resource: the Rack tag
+// terraform sets to the rack name (ci-*), or an EKS/CNI cluster tag for a ci-* cluster.
+func isCITag(tags []ec2types.Tag) bool {
+	for _, t := range tags {
+		k, v := aws.ToString(t.Key), aws.ToString(t.Value)
+		if k == "Rack" && strings.HasPrefix(v, "ci-") {
+			return true
+		}
+		if strings.HasPrefix(k, "kubernetes.io/cluster/ci-") {
+			return true
+		}
+		if k == "cluster.k8s.amazonaws.com/name" && strings.HasPrefix(v, "ci-") {
+			return true
+		}
+	}
+	return false
+}
+
+// isCITagELBv2 reports whether load balancer tags identify a convox CI resource: the Rack tag the
+// router propagates, or the load balancer controller's cluster tag for a ci-* cluster.
+func isCITagELBv2(tags []elbv2types.Tag) bool {
+	for _, t := range tags {
+		k, v := aws.ToString(t.Key), aws.ToString(t.Value)
+		if k == "Rack" && strings.HasPrefix(v, "ci-") {
+			return true
+		}
+		if k == "elbv2.k8s.aws/cluster" && strings.HasPrefix(v, "ci-") {
+			return true
+		}
+		if strings.HasPrefix(k, "kubernetes.io/cluster/ci-") {
+			return true
+		}
+	}
+	return false
+}
+
+// ciVPCSet returns the ids of CI-owned VPCs in the region: those carrying a ci-* rack tag,
+// excluding the account default VPC and the allowlisted VPCs (which always survive).
+func ciVPCSet(ctx context.Context, ec2Cl *ec2.Client, o Options) (map[string]struct{}, error) {
+	set := map[string]struct{}{}
+	pager := ec2.NewDescribeVpcsPaginator(ec2Cl, &ec2.DescribeVpcsInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("describe vpcs: %w", err)
+		}
+		for _, vpc := range page.Vpcs {
+			vid := aws.ToString(vpc.VpcId)
+			if aws.ToBool(vpc.IsDefault) {
+				continue
+			}
+			if _, ok := allowlistedVPCs[vid]; ok {
+				continue
+			}
+			if isCITag(vpc.Tags) {
+				set[vid] = struct{}{}
+			}
+		}
+	}
+	return set, nil
+}
+
+// reapInVPC reports whether a resource in vpcID is in scope: everything inside a CI VPC, and
+// only CI-tagged resources inside an allowlisted VPC (so a failed existing-vpc test teardown is
+// cleaned without touching the allowlisted VPC itself or any non-CI resource). Resources in the
+// default VPC or any other VPC are never in scope.
+func reapInVPC(vpcID string, ciVPCs map[string]struct{}, tags []ec2types.Tag) bool {
+	if _, ok := ciVPCs[vpcID]; ok {
+		return true
+	}
+	if _, ok := allowlistedVPCs[vpcID]; ok {
+		return isCITag(tags)
+	}
+	return false
+}
+
 func Run(ctx context.Context, opts Options) error {
 	if len(opts.Regions) == 0 {
 		opts.Regions = []string{"us-east-1", "us-east-2"}
@@ -86,7 +171,7 @@ func Run(ctx context.Context, opts Options) error {
 		return err
 	}
 
-	log.Printf("Account alias is correct – proceeding with cleanup")
+	log.Printf("Account alias is correct, proceeding with cleanup")
 
 	var cleanupErr error
 	for _, region := range opts.Regions {
@@ -94,7 +179,7 @@ func Run(ctx context.Context, opts Options) error {
 		if region == "" {
 			continue
 		}
-		log.Printf("────────── REGION: %s ──────────", region)
+		log.Printf("========== REGION: %s ==========", region)
 
 		cfg := rootCfg.Copy()
 		cfg.Region = region
@@ -110,43 +195,38 @@ func Run(ctx context.Context, opts Options) error {
 		ec2Cl := ec2.NewFromConfig(cfg)
 		iamCl := iam.NewFromConfig(cfg)
 
+		// CI-scoped sweeps identified by name prefix or resource tag (no VPC anchor needed).
 		deleteReadyStacks(ctx, cfn, opts)
 		forceDeleteFailedStacks(ctx, cfn, opts)
-
 		deleteECR(ctx, ecrCl, opts)
-
 		deleteLogGroups(ctx, logs, opts)
-
 		scheduleKMSDeletion(ctx, kmsCl, opts)
-
 		deleteEFS(ctx, efsCl, opts)
-
 		deleteEKS(ctx, eksCl, opts)
+		deleteCIAMRoles(ctx, iamCl, opts)
+		deleteOIDCProviders(ctx, iamCl, opts)
 
-		deleteELB(ctx, elbCl, opts)
-
-		deleteELBV2(ctx, albCl, opts)
-
-		deleteNATGateways(ctx, ec2Cl, opts)
-
-		releaseEIPs(ctx, ec2Cl, opts)
-
-		deleteIGWs(ctx, ec2Cl, opts)
-
-		deleteENIs(ctx, ec2Cl, opts)
-
-		deleteSubnets(ctx, ec2Cl, opts)
-
-		// after deleteSubnets: deleting a subnet clears its route-table association
-		deleteRouteTables(ctx, ec2Cl, opts)
-
-		if err := deleteVPCsAndSGs(ctx, ec2Cl, opts); err != nil {
+		// VPC-anchored teardown: only inside CI VPCs (and CI orphans in the allowlisted VPCs).
+		// On a describe failure, skip the network sweep rather than fall back to unfiltered deletes.
+		ciVPCs, err := ciVPCSet(ctx, ec2Cl, opts)
+		if err != nil {
+			log.Printf("   skipping VPC-scoped cleanup in %s: %v", region, err)
 			cleanupErr = errors.Join(cleanupErr, fmt.Errorf("region %s: %w", region, err))
+			continue
 		}
 
-		deleteCIAMRoles(ctx, iamCl, opts)
-
-		deleteOIDCProviders(ctx, iamCl, opts)
+		deleteELB(ctx, elbCl, opts, ciVPCs)
+		deleteELBV2(ctx, albCl, opts, ciVPCs)
+		deleteNATGateways(ctx, ec2Cl, opts, ciVPCs)
+		releaseEIPs(ctx, ec2Cl, opts)
+		deleteIGWs(ctx, ec2Cl, opts, ciVPCs)
+		deleteENIs(ctx, ec2Cl, opts, ciVPCs)
+		deleteSubnets(ctx, ec2Cl, opts, ciVPCs)
+		// after deleteSubnets: deleting a subnet clears its route-table association
+		deleteRouteTables(ctx, ec2Cl, opts, ciVPCs)
+		if err := deleteVPCsAndSGs(ctx, ec2Cl, opts, ciVPCs); err != nil {
+			cleanupErr = errors.Join(cleanupErr, fmt.Errorf("region %s: %w", region, err))
+		}
 	}
 
 	return cleanupErr
@@ -172,7 +252,7 @@ func withRetry(ctx context.Context, maxRetries int, baseDelay time.Duration, f f
 			return nil
 		}
 
-		// If the error is non‑retriable (4xx other than throttling), bail.
+		// Bail on non-retriable errors (4xx other than throttling).
 		var apiErr smithy.APIError
 		if errors.As(err, &apiErr) && apiErr.ErrorCode() != "Throttling" {
 			return err
@@ -181,7 +261,7 @@ func withRetry(ctx context.Context, maxRetries int, baseDelay time.Duration, f f
 		if delay <= 0 || delay > 60*time.Second {
 			delay = 60 * time.Second
 		}
-		log.Printf("   retrying after error: %v (attempt %d/%d) – sleeping %s", err, attempt, maxRetries, delay)
+		log.Printf("   retrying after error: %v (attempt %d/%d), sleeping %s", err, attempt, maxRetries, delay)
 
 		select {
 		case <-time.After(delay):
@@ -193,9 +273,9 @@ func withRetry(ctx context.Context, maxRetries int, baseDelay time.Duration, f f
 	return fmt.Errorf("after %d attempts: %w", maxRetries, err)
 }
 
-// deleteReadyStacks deletes CI‑prefixed stacks in steady states.
+// deleteReadyStacks deletes ci-prefixed stacks in steady states.
 func deleteReadyStacks(ctx context.Context, cfn *cf.Client, o Options) {
-	log.Println("deleting CloudFormation stacks (steady‑state)")
+	log.Println("deleting CloudFormation stacks (steady-state)")
 
 	stacksOut, err := cfn.ListStacks(ctx, &cf.ListStacksInput{
 		StackStatusFilter: []cftypes.StackStatus{
@@ -252,7 +332,7 @@ func deleteReadyStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	}
 }
 
-// forceDeleteFailedStacks forcibly deletes DELETE_FAILED stacks.
+// forceDeleteFailedStacks forcibly deletes DELETE_FAILED ci-prefixed stacks.
 func forceDeleteFailedStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	log.Println("deleting CloudFormation stacks (DELETE_FAILED)")
 
@@ -279,7 +359,7 @@ func forceDeleteFailedStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	}
 
 	for _, name := range targets {
-		log.Printf("   force‑deleting %s", name)
+		log.Printf("   force-deleting %s", name)
 		err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := cfn.DeleteStack(ctx, &cf.DeleteStackInput{
 				StackName:    aws.String(name),
@@ -294,7 +374,8 @@ func forceDeleteFailedStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	}
 }
 
-// deleteECR empties and removes all repositories in a region.
+// deleteECR removes ci-prefixed repositories. Repos are <rackname>/<app> or docker-hub-<rackname>/*,
+// so a ci- / docker-hub-ci- name prefix identifies CI repos (DescribeRepositories returns no tags).
 func deleteECR(ctx context.Context, ecrCl *ecr.Client, o Options) {
 	log.Println("deleting ECR repositories")
 
@@ -305,40 +386,54 @@ func deleteECR(ctx context.Context, ecrCl *ecr.Client, o Options) {
 	}
 	for _, repo := range reposOut.Repositories {
 		name := aws.ToString(repo.RepositoryName)
+		if !strings.HasPrefix(name, "ci-") && !strings.HasPrefix(name, "docker-hub-ci-") {
+			continue
+		}
 		log.Printf("   deleting %s", name)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := ecrCl.DeleteRepository(ctx, &ecr.DeleteRepositoryInput{
 				RepositoryName: aws.String(name),
 				Force:          true,
 			})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete repo %s: %v", name, err)
+		}
 	}
 }
 
-// deleteLogGroups removes every CloudWatch log group.
+// deleteLogGroups removes CI log groups, identified by a ci- rack/cluster name prefix.
 func deleteLogGroups(ctx context.Context, logs *cwlogs.Client, o Options) {
 	log.Println("deleting log groups")
 
-	pager := cwlogs.NewDescribeLogGroupsPaginator(logs, &cwlogs.DescribeLogGroupsInput{})
-	for pager.HasMorePages() {
-		page, err := pager.NextPage(ctx)
-		if err != nil {
-			log.Printf("   describe log groups: %v", err)
-			return
-		}
-		for _, lg := range page.LogGroups {
-			name := aws.ToString(lg.LogGroupName)
-			log.Printf("   deleting %s", name)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := logs.DeleteLogGroup(ctx, &cwlogs.DeleteLogGroupInput{LogGroupName: aws.String(name)})
-				return err
-			})
+	prefixes := []string{"/aws/eks/ci-", "/convox/ci-"}
+	for _, prefix := range prefixes {
+		pager := cwlogs.NewDescribeLogGroupsPaginator(logs, &cwlogs.DescribeLogGroupsInput{
+			LogGroupNamePrefix: aws.String(prefix),
+		})
+		for pager.HasMorePages() {
+			page, err := pager.NextPage(ctx)
+			if err != nil {
+				log.Printf("   describe log groups (%s): %v", prefix, err)
+				break
+			}
+			for _, lg := range page.LogGroups {
+				name := aws.ToString(lg.LogGroupName)
+				log.Printf("   deleting %s", name)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := logs.DeleteLogGroup(ctx, &cwlogs.DeleteLogGroupInput{LogGroupName: aws.String(name)})
+					return err
+				}); err != nil {
+					log.Printf("   failed to delete log group %s: %v", name, err)
+				}
+			}
 		}
 	}
 }
 
-// scheduleKMSDeletion schedules all customer-managed keys for deletion.
+// scheduleKMSDeletion schedules CI-tagged customer-managed keys for deletion. convox creates no
+// customer-managed KMS keys today, so the Rack=ci-* tag gate makes this a safe no-op in practice
+// while never touching a non-CI key.
 func scheduleKMSDeletion(ctx context.Context, kmsCl *kms.Client, o Options) {
 	log.Println("scheduling KMS keys for deletion")
 
@@ -361,18 +456,34 @@ func scheduleKMSDeletion(ctx context.Context, kmsCl *kms.Client, o Options) {
 			continue
 		}
 
+		tagsOut, err := kmsCl.ListResourceTags(ctx, &kms.ListResourceTagsInput{KeyId: key.KeyId})
+		if err != nil || !kmsTagIsCI(tagsOut.Tags) {
+			continue
+		}
+
 		log.Printf("   scheduling deletion of key %s", id)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := kmsCl.ScheduleKeyDeletion(ctx, &kms.ScheduleKeyDeletionInput{
 				KeyId:               key.KeyId,
 				PendingWindowInDays: aws.Int32(7),
 			})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to schedule key %s: %v", id, err)
+		}
 	}
 }
 
-// deleteEFS deletes all EFS file systems (and mount targets).
+func kmsTagIsCI(tags []kmstypes.Tag) bool {
+	for _, t := range tags {
+		if aws.ToString(t.TagKey) == "Rack" && strings.HasPrefix(aws.ToString(t.TagValue), "ci-") {
+			return true
+		}
+	}
+	return false
+}
+
+// deleteEFS deletes CI-tagged EFS file systems (and their mount targets).
 func deleteEFS(ctx context.Context, efsCl *efs.Client, o Options) {
 	log.Println("deleting EFS file systems")
 
@@ -382,26 +493,42 @@ func deleteEFS(ctx context.Context, efsCl *efs.Client, o Options) {
 		return
 	}
 	for _, fs := range fsOut.FileSystems {
+		if !efsTagIsCI(fs.Tags) {
+			continue
+		}
 		id := aws.ToString(fs.FileSystemId)
 		// Delete mount targets first
 		mtOut, _ := efsCl.DescribeMountTargets(ctx, &efs.DescribeMountTargetsInput{FileSystemId: fs.FileSystemId})
 		for _, mt := range mtOut.MountTargets {
 			mtid := aws.ToString(mt.MountTargetId)
 			log.Printf("   deleting mount target %s", mtid)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 				_, err := efsCl.DeleteMountTarget(ctx, &efs.DeleteMountTargetInput{MountTargetId: mt.MountTargetId})
 				return err
-			})
+			}); err != nil {
+				log.Printf("   failed to delete mount target %s: %v", mtid, err)
+			}
 		}
 		log.Printf("   deleting file system %s", id)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := efsCl.DeleteFileSystem(ctx, &efs.DeleteFileSystemInput{FileSystemId: fs.FileSystemId})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete file system %s: %v", id, err)
+		}
 	}
 }
 
-// deleteEKS removes clusters and their node groups.
+func efsTagIsCI(tags []efstypes.Tag) bool {
+	for _, t := range tags {
+		if aws.ToString(t.Key) == "Rack" && strings.HasPrefix(aws.ToString(t.Value), "ci-") {
+			return true
+		}
+	}
+	return false
+}
+
+// deleteEKS removes ci-prefixed clusters and their node groups. The cluster name is the rack name.
 func deleteEKS(ctx context.Context, eksCl *eks.Client, o Options) {
 	log.Println("deleting EKS clusters")
 
@@ -411,6 +538,9 @@ func deleteEKS(ctx context.Context, eksCl *eks.Client, o Options) {
 		return
 	}
 	for _, name := range clustersOut.Clusters {
+		if !strings.HasPrefix(name, "ci-") {
+			continue
+		}
 		log.Printf("   cluster %s", name)
 
 		ngOut, err := eksCl.ListNodegroups(ctx, &eks.ListNodegroupsInput{ClusterName: aws.String(name)})
@@ -421,22 +551,28 @@ func deleteEKS(ctx context.Context, eksCl *eks.Client, o Options) {
 		if len(ngOut.Nodegroups) > 0 {
 			for _, ngName := range ngOut.Nodegroups {
 				log.Printf("     deleting nodegroup %s", ngName)
-				withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 					_, err := eksCl.DeleteNodegroup(ctx, &eks.DeleteNodegroupInput{ClusterName: aws.String(name), NodegroupName: aws.String(ngName)})
 					return err
-				})
+				}); err != nil {
+					log.Printf("     failed to delete nodegroup %s: %v", ngName, err)
+				}
 			}
 		}
 		log.Printf("     deleting cluster %s", name)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := eksCl.DeleteCluster(ctx, &eks.DeleteClusterInput{Name: aws.String(name)})
 			return err
-		})
+		}); err != nil {
+			log.Printf("     failed to delete cluster %s: %v", name, err)
+		}
 	}
 }
 
-// deleteELB deletes classic ELBs.
-func deleteELB(ctx context.Context, elbCl *elb.Client, o Options) {
+// deleteELB deletes classic ELBs inside CI VPCs. Convox provisions NLBs (ELBv2) via the load
+// balancer controller, so classic ELBs are not expected; allowlisted-VPC orphans are handled in
+// deleteELBV2.
+func deleteELB(ctx context.Context, elbCl *elb.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting classic ELBs")
 
 	out, err := elbCl.DescribeLoadBalancers(ctx, &elb.DescribeLoadBalancersInput{})
@@ -445,17 +581,23 @@ func deleteELB(ctx context.Context, elbCl *elb.Client, o Options) {
 		return
 	}
 	for _, lb := range out.LoadBalancerDescriptions {
+		if _, ok := ciVPCs[aws.ToString(lb.VPCId)]; !ok {
+			continue
+		}
 		name := aws.ToString(lb.LoadBalancerName)
 		log.Printf("   deleting %s", name)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := elbCl.DeleteLoadBalancer(ctx, &elb.DeleteLoadBalancerInput{LoadBalancerName: aws.String(name)})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete elb %s: %v", name, err)
+		}
 	}
 }
 
-// deleteELBV2 deletes ALBs/NLBs.
-func deleteELBV2(ctx context.Context, albCl *elbv2.Client, o Options) {
+// deleteELBV2 deletes ALBs/NLBs inside CI VPCs, plus CI-tagged load balancers orphaned inside an
+// allowlisted VPC (a leaked NLB's ENIs keep its CI subnets in use, so it must be reaped first).
+func deleteELBV2(ctx context.Context, albCl *elbv2.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting ELBv2 (ALB/NLB)")
 
 	out, err := albCl.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{})
@@ -465,34 +607,56 @@ func deleteELBV2(ctx context.Context, albCl *elbv2.Client, o Options) {
 	}
 	for _, lb := range out.LoadBalancers {
 		arn := aws.ToString(lb.LoadBalancerArn)
+		vpcID := aws.ToString(lb.VpcId)
+		if _, ok := ciVPCs[vpcID]; !ok {
+			if _, ok := allowlistedVPCs[vpcID]; !ok {
+				continue
+			}
+			tagsOut, err := albCl.DescribeTags(ctx, &elbv2.DescribeTagsInput{ResourceArns: []string{arn}})
+			if err != nil || len(tagsOut.TagDescriptions) == 0 || !isCITagELBv2(tagsOut.TagDescriptions[0].Tags) {
+				continue
+			}
+		}
 		log.Printf("   deleting %s", arn)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := albCl.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{LoadBalancerArn: aws.String(arn)})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete elbv2 %s: %v", arn, err)
+		}
 	}
 }
 
-// deleteNATGateways removes pending/failed/available NAT gateways.
-func deleteNATGateways(ctx context.Context, ec2Cl *ec2.Client, o Options) {
+// deleteNATGateways removes NAT gateways in CI VPCs (and CI orphans in allowlisted VPCs).
+func deleteNATGateways(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting NAT gateways")
 
-	out, err := ec2Cl.DescribeNatGateways(ctx, &ec2.DescribeNatGatewaysInput{})
-	if err != nil {
-		log.Printf("   describe nat: %v", err)
-		return
-	}
-	for _, ng := range out.NatGateways {
-		id := aws.ToString(ng.NatGatewayId)
-		log.Printf("   deleting %s", id)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := ec2Cl.DeleteNatGateway(ctx, &ec2.DeleteNatGatewayInput{NatGatewayId: aws.String(id)})
-			return err
-		})
+	pager := ec2.NewDescribeNatGatewaysPaginator(ec2Cl, &ec2.DescribeNatGatewaysInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe nat: %v", err)
+			return
+		}
+		for _, ng := range page.NatGateways {
+			if !reapInVPC(aws.ToString(ng.VpcId), ciVPCs, ng.Tags) {
+				continue
+			}
+			id := aws.ToString(ng.NatGatewayId)
+			log.Printf("   deleting %s", id)
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := ec2Cl.DeleteNatGateway(ctx, &ec2.DeleteNatGatewayInput{NatGatewayId: aws.String(id)})
+				return err
+			}); err != nil {
+				log.Printf("   failed to delete nat %s: %v", id, err)
+			}
+		}
 	}
 }
 
-// releaseEIPs frees Elastic IP addresses without a private IP.
+// releaseEIPs frees unattached CI-tagged Elastic IPs (the EIPs terraform allocates for NAT gateways).
+// A NAT gateway deleted earlier in the same run still shows its EIP associated, so that EIP is
+// released on the next daily run once the association clears.
 func releaseEIPs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
 	log.Println("releasing Elastic IPs")
 
@@ -502,120 +666,116 @@ func releaseEIPs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
 		return
 	}
 	for _, addr := range out.Addresses {
-		if addr.PrivateIpAddress != nil {
+		if addr.AssociationId != nil {
 			continue // skip those still attached
+		}
+		if !isCITag(addr.Tags) {
+			continue
 		}
 		alloc := aws.ToString(addr.AllocationId)
 		log.Printf("   releasing %s", alloc)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := ec2Cl.ReleaseAddress(ctx, &ec2.ReleaseAddressInput{AllocationId: aws.String(alloc)})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to release eip %s: %v", alloc, err)
+		}
 	}
 }
 
-// deleteIGWs deletes all IGWs except the hard‑coded CI ones.
-func deleteIGWs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
+// deleteIGWs detaches and deletes internet gateways attached to CI VPCs.
+func deleteIGWs(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting Internet gateways")
 
-	out, err := ec2Cl.DescribeInternetGateways(ctx, &ec2.DescribeInternetGatewaysInput{})
-	if err != nil {
-		log.Printf("   describe igw: %v", err)
-		return
-	}
-	skip := map[string]struct{}{
-		"igw-0e2ed6542ed5343f2": {},
-		"igw-01c3d338eecec02a1": {},
-	}
-	for _, igw := range out.InternetGateways {
-		id := aws.ToString(igw.InternetGatewayId)
-		if _, ok := skip[id]; ok {
-			continue
+	pager := ec2.NewDescribeInternetGatewaysPaginator(ec2Cl, &ec2.DescribeInternetGatewaysInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe igw: %v", err)
+			return
 		}
-		log.Printf("   deleting %s", id)
-		// detach from VPCs first
-		for _, att := range igw.Attachments {
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := ec2Cl.DetachInternetGateway(ctx, &ec2.DetachInternetGatewayInput{
-					InternetGatewayId: igw.InternetGatewayId,
-					VpcId:             att.VpcId,
-				})
-				return err
-			})
-		}
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := ec2Cl.DeleteInternetGateway(ctx, &ec2.DeleteInternetGatewayInput{InternetGatewayId: igw.InternetGatewayId})
-			return err
-		})
-	}
-}
-
-// deleteRouteTables removes all non‑main route tables.
-func deleteRouteTables(ctx context.Context, ec2Cl *ec2.Client, o Options) {
-	log.Println("deleting route tables")
-
-	out, err := ec2Cl.DescribeRouteTables(ctx, &ec2.DescribeRouteTablesInput{})
-	if err != nil {
-		log.Printf("   describe rtb: %v", err)
-		return
-	}
-	for _, rtb := range out.RouteTables {
-		id := aws.ToString(rtb.RouteTableId)
-		if len(rtb.Associations) > 0 && rtb.Associations[0].Main != nil && *rtb.Associations[0].Main {
-			continue // skip main tables
-		}
-		log.Printf("   deleting %s", id)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := ec2Cl.DeleteRouteTable(ctx, &ec2.DeleteRouteTableInput{RouteTableId: rtb.RouteTableId})
-			return err
-		})
-	}
-}
-
-// deleteVPCsAndSGs removes security groups (non‑default) then VPCs.
-func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) error {
-	log.Println("deleting VPCs and security groups")
-
-	skip := map[string]struct{}{
-		"vpc-0f18b6d1265717215": {},
-		"vpc-00e18642ac66249c5": {},
-	}
-
-	vpcsOut, err := ec2Cl.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{})
-	if err != nil {
-		return fmt.Errorf("describe vpcs: %w", err)
-	}
-	var errs []error
-	for _, vpc := range vpcsOut.Vpcs {
-		vid := aws.ToString(vpc.VpcId)
-		if _, ok := skip[vid]; ok {
-			continue
-		}
-		if aws.ToBool(vpc.IsDefault) {
-			continue
-		}
-		// Delete SGs first (non‑default)
-		sgsOut, _ := ec2Cl.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
-			Filters: []ec2types.Filter{{
-				Name:   aws.String("vpc-id"),
-				Values: []string{vid},
-			}},
-		})
-		for _, sg := range sgsOut.SecurityGroups {
-			if aws.ToString(sg.GroupName) == "default" {
+		for _, igw := range page.InternetGateways {
+			reap := false
+			for _, att := range igw.Attachments {
+				if reapInVPC(aws.ToString(att.VpcId), ciVPCs, igw.Tags) {
+					reap = true
+					break
+				}
+			}
+			if !reap {
 				continue
 			}
-			sgid := aws.ToString(sg.GroupId)
-			log.Printf("   deleting SG %s", sgid)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := ec2Cl.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: sg.GroupId})
+			id := aws.ToString(igw.InternetGatewayId)
+			log.Printf("   deleting %s", id)
+			// detach from VPCs first
+			for _, att := range igw.Attachments {
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := ec2Cl.DetachInternetGateway(ctx, &ec2.DetachInternetGatewayInput{
+						InternetGatewayId: igw.InternetGatewayId,
+						VpcId:             att.VpcId,
+					})
+					return err
+				}); err != nil {
+					log.Printf("   failed to detach igw %s: %v", id, err)
+				}
+			}
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := ec2Cl.DeleteInternetGateway(ctx, &ec2.DeleteInternetGatewayInput{InternetGatewayId: igw.InternetGatewayId})
 				return err
-			})
+			}); err != nil {
+				log.Printf("   failed to delete igw %s: %v", id, err)
+			}
 		}
-		// Now delete VPC
+	}
+}
+
+// deleteRouteTables removes non-main route tables in CI VPCs (and CI orphans in allowlisted VPCs).
+func deleteRouteTables(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) {
+	log.Println("deleting route tables")
+
+	pager := ec2.NewDescribeRouteTablesPaginator(ec2Cl, &ec2.DescribeRouteTablesInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe rtb: %v", err)
+			return
+		}
+		for _, rtb := range page.RouteTables {
+			if !reapInVPC(aws.ToString(rtb.VpcId), ciVPCs, rtb.Tags) {
+				continue
+			}
+			if len(rtb.Associations) > 0 && rtb.Associations[0].Main != nil && *rtb.Associations[0].Main {
+				continue // skip main tables
+			}
+			id := aws.ToString(rtb.RouteTableId)
+			log.Printf("   deleting %s", id)
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := ec2Cl.DeleteRouteTable(ctx, &ec2.DeleteRouteTableInput{RouteTableId: rtb.RouteTableId})
+				return err
+			}); err != nil {
+				log.Printf("   failed to delete rtb %s: %v", id, err)
+			}
+		}
+	}
+}
+
+// deleteVPCsAndSGs deletes each CI VPC (non-default SGs then the VPC), and reaps CI-tagged security
+// groups orphaned inside the allowlisted VPCs without deleting those VPCs. Returns the joined set of
+// VPC-deletion failures so the caller can surface a non-zero exit.
+func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) error {
+	log.Println("deleting VPCs and security groups")
+
+	// CI orphans inside the allowlisted VPCs (never the VPCs themselves).
+	for allowVPC := range allowlistedVPCs {
+		deleteSGsInVPC(ctx, ec2Cl, o, allowVPC, true)
+	}
+
+	var errs []error
+	for vid := range ciVPCs {
+		deleteSGsInVPC(ctx, ec2Cl, o, vid, false)
 		log.Printf("   deleting VPC %s", vid)
 		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := ec2Cl.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: vpc.VpcId})
+			_, err := ec2Cl.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: aws.String(vid)})
 			return err
 		}); err != nil {
 			log.Printf("   failed to delete VPC %s: %v", vid, err)
@@ -625,49 +785,92 @@ func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) error {
 	return errors.Join(errs...)
 }
 
-// deleteCIAMRoles deletes iam roles that match ^ci-[0-9]+ and their inline/attached policies.
-func deleteCIAMRoles(ctx context.Context, iamCl *iam.Client, o Options) {
-	log.Println("deleting IAM roles + policies")
-
-	rolesOut, err := iamCl.ListRoles(ctx, &iam.ListRolesInput{})
-	if err != nil {
-		log.Printf("   list roles: %v", err)
-		return
-	}
-	for _, role := range rolesOut.Roles {
-		name := aws.ToString(role.RoleName)
-		if !strings.HasPrefix(name, "ci-") {
-			continue
+// deleteSGsInVPC deletes non-default security groups in vpcID. When onlyCITagged is set, only
+// CI-tagged groups are removed (used inside allowlisted VPCs to spare non-CI groups).
+func deleteSGsInVPC(ctx context.Context, ec2Cl *ec2.Client, o Options, vpcID string, onlyCITagged bool) {
+	pager := ec2.NewDescribeSecurityGroupsPaginator(ec2Cl, &ec2.DescribeSecurityGroupsInput{
+		Filters: []ec2types.Filter{{
+			Name:   aws.String("vpc-id"),
+			Values: []string{vpcID},
+		}},
+	})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe sgs %s: %v", vpcID, err)
+			return
 		}
-		log.Printf("   deleting role %s", name)
-		// 1. detach attached policies
-		atts, _ := iamCl.ListAttachedRolePolicies(ctx, &iam.ListAttachedRolePoliciesInput{RoleName: aws.String(name)})
-		for _, p := range atts.AttachedPolicies {
-			arn := aws.ToString(p.PolicyArn)
-			log.Printf("     detaching %s", arn)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := iamCl.DetachRolePolicy(ctx, &iam.DetachRolePolicyInput{RoleName: aws.String(name), PolicyArn: p.PolicyArn})
+		for _, sg := range page.SecurityGroups {
+			if aws.ToString(sg.GroupName) == "default" {
+				continue
+			}
+			if onlyCITagged && !isCITag(sg.Tags) {
+				continue
+			}
+			sgid := aws.ToString(sg.GroupId)
+			log.Printf("   deleting SG %s", sgid)
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := ec2Cl.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: sg.GroupId})
 				return err
-			})
+			}); err != nil {
+				log.Printf("   failed to delete SG %s: %v", sgid, err)
+			}
 		}
-		// 2. delete inline policies
-		ips, _ := iamCl.ListRolePolicies(ctx, &iam.ListRolePoliciesInput{RoleName: aws.String(name)})
-		for _, pname := range ips.PolicyNames {
-			log.Printf("     deleting inline policy %s", pname)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := iamCl.DeleteRolePolicy(ctx, &iam.DeleteRolePolicyInput{RoleName: aws.String(name), PolicyName: aws.String(pname)})
-				return err
-			})
-		}
-		// 3. finally delete role
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := iamCl.DeleteRole(ctx, &iam.DeleteRoleInput{RoleName: aws.String(name)})
-			return err
-		})
 	}
 }
 
-// deleteOIDCProviders removes every OIDC provider.
+// deleteCIAMRoles deletes iam roles that match ci- and their inline/attached policies.
+func deleteCIAMRoles(ctx context.Context, iamCl *iam.Client, o Options) {
+	log.Println("deleting IAM roles + policies")
+
+	pager := iam.NewListRolesPaginator(iamCl, &iam.ListRolesInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   list roles: %v", err)
+			return
+		}
+		for _, role := range page.Roles {
+			name := aws.ToString(role.RoleName)
+			if !strings.HasPrefix(name, "ci-") {
+				continue
+			}
+			log.Printf("   deleting role %s", name)
+			// 1. detach attached policies
+			atts, _ := iamCl.ListAttachedRolePolicies(ctx, &iam.ListAttachedRolePoliciesInput{RoleName: aws.String(name)})
+			for _, p := range atts.AttachedPolicies {
+				arn := aws.ToString(p.PolicyArn)
+				log.Printf("     detaching %s", arn)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := iamCl.DetachRolePolicy(ctx, &iam.DetachRolePolicyInput{RoleName: aws.String(name), PolicyArn: p.PolicyArn})
+					return err
+				}); err != nil {
+					log.Printf("     failed to detach %s: %v", arn, err)
+				}
+			}
+			// 2. delete inline policies
+			ips, _ := iamCl.ListRolePolicies(ctx, &iam.ListRolePoliciesInput{RoleName: aws.String(name)})
+			for _, pname := range ips.PolicyNames {
+				log.Printf("     deleting inline policy %s", pname)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := iamCl.DeleteRolePolicy(ctx, &iam.DeleteRolePolicyInput{RoleName: aws.String(name), PolicyName: aws.String(pname)})
+					return err
+				}); err != nil {
+					log.Printf("     failed to delete inline policy %s: %v", pname, err)
+				}
+			}
+			// 3. finally delete role
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := iamCl.DeleteRole(ctx, &iam.DeleteRoleInput{RoleName: aws.String(name)})
+				return err
+			}); err != nil {
+				log.Printf("   failed to delete role %s: %v", name, err)
+			}
+		}
+	}
+}
+
+// deleteOIDCProviders removes CI-tagged OIDC providers (terraform tags the cluster provider Rack=ci-*).
 func deleteOIDCProviders(ctx context.Context, iamCl *iam.Client, o Options) {
 	log.Println("deleting OIDC providers")
 
@@ -678,68 +881,107 @@ func deleteOIDCProviders(ctx context.Context, iamCl *iam.Client, o Options) {
 	}
 	for _, p := range out.OpenIDConnectProviderList {
 		arn := aws.ToString(p.Arn)
+		desc, err := iamCl.GetOpenIDConnectProvider(ctx, &iam.GetOpenIDConnectProviderInput{OpenIDConnectProviderArn: p.Arn})
+		if err != nil {
+			log.Printf("   get oidc %s: %v", arn, err)
+			continue
+		}
+		if !iamTagIsCI(desc.Tags) {
+			continue
+		}
 		log.Printf("   deleting %s", arn)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := iamCl.DeleteOpenIDConnectProvider(ctx, &iam.DeleteOpenIDConnectProviderInput{OpenIDConnectProviderArn: p.Arn})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete oidc %s: %v", arn, err)
+		}
 	}
 }
 
-// deleteENIs deletes or detaches/then deletes network interfaces.
-func deleteENIs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
+func iamTagIsCI(tags []iamtypes.Tag) bool {
+	for _, t := range tags {
+		if aws.ToString(t.Key) == "Rack" && strings.HasPrefix(aws.ToString(t.Value), "ci-") {
+			return true
+		}
+	}
+	return false
+}
+
+// deleteENIs deletes or detaches/then deletes network interfaces in CI VPCs.
+func deleteENIs(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting ENIs")
 
-	out, err := ec2Cl.DescribeNetworkInterfaces(ctx, &ec2.DescribeNetworkInterfacesInput{})
-	if err != nil {
-		log.Printf("   describe enis: %v", err)
-		return
-	}
 	waiter := ec2.NewNetworkInterfaceAvailableWaiter(ec2Cl)
-	for _, eni := range out.NetworkInterfaces {
-		id := aws.ToString(eni.NetworkInterfaceId)
-		if eni.Status == ec2types.NetworkInterfaceStatusAvailable {
-			log.Printf("   deleting %s", id)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := ec2Cl.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{NetworkInterfaceId: eni.NetworkInterfaceId})
-				return err
-			})
-			continue
+	pager := ec2.NewDescribeNetworkInterfacesPaginator(ec2Cl, &ec2.DescribeNetworkInterfacesInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe enis: %v", err)
+			return
 		}
-		// otherwise detach first (if possible)
-		if eni.Attachment != nil && eni.Attachment.AttachmentId != nil {
-			att := aws.ToString(eni.Attachment.AttachmentId)
-			log.Printf("   detaching %s (attachment %s)", id, att)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := ec2Cl.DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{AttachmentId: aws.String(att), Force: aws.Bool(true)})
-				return err
-			})
-			_ = waiter.Wait(ctx, &ec2.DescribeNetworkInterfacesInput{NetworkInterfaceIds: []string{id}}, 5*time.Minute)
-			withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-				_, err := ec2Cl.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{NetworkInterfaceId: aws.String(id)})
-				return err
-			})
-			continue
+		for _, eni := range page.NetworkInterfaces {
+			if !reapInVPC(aws.ToString(eni.VpcId), ciVPCs, eni.TagSet) {
+				continue
+			}
+			id := aws.ToString(eni.NetworkInterfaceId)
+			if eni.Status == ec2types.NetworkInterfaceStatusAvailable {
+				log.Printf("   deleting %s", id)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := ec2Cl.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{NetworkInterfaceId: eni.NetworkInterfaceId})
+					return err
+				}); err != nil {
+					log.Printf("   failed to delete eni %s: %v", id, err)
+				}
+				continue
+			}
+			// otherwise detach first (if possible)
+			if eni.Attachment != nil && eni.Attachment.AttachmentId != nil {
+				att := aws.ToString(eni.Attachment.AttachmentId)
+				log.Printf("   detaching %s (attachment %s)", id, att)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := ec2Cl.DetachNetworkInterface(ctx, &ec2.DetachNetworkInterfaceInput{AttachmentId: aws.String(att), Force: aws.Bool(true)})
+					return err
+				}); err != nil {
+					log.Printf("   failed to detach eni %s: %v", id, err)
+				}
+				_ = waiter.Wait(ctx, &ec2.DescribeNetworkInterfacesInput{NetworkInterfaceIds: []string{id}}, 5*time.Minute)
+				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+					_, err := ec2Cl.DeleteNetworkInterface(ctx, &ec2.DeleteNetworkInterfaceInput{NetworkInterfaceId: aws.String(id)})
+					return err
+				}); err != nil {
+					log.Printf("   failed to delete eni %s: %v", id, err)
+				}
+				continue
+			}
+			log.Printf("   %s still in use, skipping", id)
 		}
-		log.Printf("   ⚠ %s still in use – skipping", id)
 	}
 }
 
-// deleteSubnets removes every subnet.
-func deleteSubnets(ctx context.Context, ec2Cl *ec2.Client, o Options) {
+// deleteSubnets removes subnets in CI VPCs (and CI orphans in allowlisted VPCs).
+func deleteSubnets(ctx context.Context, ec2Cl *ec2.Client, o Options, ciVPCs map[string]struct{}) {
 	log.Println("deleting subnets")
 
-	out, err := ec2Cl.DescribeSubnets(ctx, &ec2.DescribeSubnetsInput{})
-	if err != nil {
-		log.Printf("   describe subnets: %v", err)
-		return
-	}
-	for _, sn := range out.Subnets {
-		id := aws.ToString(sn.SubnetId)
-		log.Printf("   deleting %s", id)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
-			_, err := ec2Cl.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: sn.SubnetId})
-			return err
-		})
+	pager := ec2.NewDescribeSubnetsPaginator(ec2Cl, &ec2.DescribeSubnetsInput{})
+	for pager.HasMorePages() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			log.Printf("   describe subnets: %v", err)
+			return
+		}
+		for _, sn := range page.Subnets {
+			if !reapInVPC(aws.ToString(sn.VpcId), ciVPCs, sn.Tags) {
+				continue
+			}
+			id := aws.ToString(sn.SubnetId)
+			log.Printf("   deleting %s", id)
+			if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+				_, err := ec2Cl.DeleteSubnet(ctx, &ec2.DeleteSubnetInput{SubnetId: sn.SubnetId})
+				return err
+			}); err != nil {
+				log.Printf("   failed to delete subnet %s: %v", id, err)
+			}
+		}
 	}
 }
