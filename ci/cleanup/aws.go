@@ -88,6 +88,7 @@ func Run(ctx context.Context, opts Options) error {
 
 	log.Printf("Account alias is correct – proceeding with cleanup")
 
+	var cleanupErr error
 	for _, region := range opts.Regions {
 		region = strings.TrimSpace(region)
 		if region == "" {
@@ -132,20 +133,23 @@ func Run(ctx context.Context, opts Options) error {
 
 		deleteIGWs(ctx, ec2Cl, opts)
 
+		deleteENIs(ctx, ec2Cl, opts)
+
+		deleteSubnets(ctx, ec2Cl, opts)
+
+		// after deleteSubnets: deleting a subnet clears its route-table association
 		deleteRouteTables(ctx, ec2Cl, opts)
 
-		deleteVPCsAndSGs(ctx, ec2Cl, opts)
+		if err := deleteVPCsAndSGs(ctx, ec2Cl, opts); err != nil {
+			cleanupErr = errors.Join(cleanupErr, fmt.Errorf("region %s: %w", region, err))
+		}
 
 		deleteCIAMRoles(ctx, iamCl, opts)
 
 		deleteOIDCProviders(ctx, iamCl, opts)
-
-		deleteENIs(ctx, ec2Cl, opts)
-
-		deleteSubnets(ctx, ec2Cl, opts)
 	}
 
-	return nil
+	return cleanupErr
 }
 
 func assertCIAlias(ctx context.Context, iamCl *iam.Client) error {
@@ -173,7 +177,10 @@ func withRetry(ctx context.Context, maxRetries int, baseDelay time.Duration, f f
 		if errors.As(err, &apiErr) && apiErr.ErrorCode() != "Throttling" {
 			return err
 		}
-		delay := time.Duration(math.Pow(float64(baseDelay), float64(attempt)))
+		delay := baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
+		if delay <= 0 || delay > 60*time.Second {
+			delay = 60 * time.Second
+		}
 		log.Printf("   retrying after error: %v (attempt %d/%d) – sleeping %s", err, attempt, maxRetries, delay)
 
 		select {
@@ -566,7 +573,7 @@ func deleteRouteTables(ctx context.Context, ec2Cl *ec2.Client, o Options) {
 }
 
 // deleteVPCsAndSGs removes security groups (non‑default) then VPCs.
-func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
+func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) error {
 	log.Println("deleting VPCs and security groups")
 
 	skip := map[string]struct{}{
@@ -576,12 +583,15 @@ func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
 
 	vpcsOut, err := ec2Cl.DescribeVpcs(ctx, &ec2.DescribeVpcsInput{})
 	if err != nil {
-		log.Printf("   describe vpcs: %v", err)
-		return
+		return fmt.Errorf("describe vpcs: %w", err)
 	}
+	var errs []error
 	for _, vpc := range vpcsOut.Vpcs {
 		vid := aws.ToString(vpc.VpcId)
 		if _, ok := skip[vid]; ok {
+			continue
+		}
+		if aws.ToBool(vpc.IsDefault) {
 			continue
 		}
 		// Delete SGs first (non‑default)
@@ -604,11 +614,15 @@ func deleteVPCsAndSGs(ctx context.Context, ec2Cl *ec2.Client, o Options) {
 		}
 		// Now delete VPC
 		log.Printf("   deleting VPC %s", vid)
-		withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
+		if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 			_, err := ec2Cl.DeleteVpc(ctx, &ec2.DeleteVpcInput{VpcId: vpc.VpcId})
 			return err
-		})
+		}); err != nil {
+			log.Printf("   failed to delete VPC %s: %v", vid, err)
+			errs = append(errs, fmt.Errorf("vpc %s: %w", vid, err))
+		}
 	}
+	return errors.Join(errs...)
 }
 
 // deleteCIAMRoles deletes iam roles that match ^ci-[0-9]+ and their inline/attached policies.
