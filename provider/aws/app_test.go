@@ -84,6 +84,69 @@ func TestAppCreate(t *testing.T) {
 	})
 }
 
+func TestAppCreateImmutableTags(t *testing.T) {
+	tests := []struct {
+		Name       string
+		BucketName string
+		AppName    string
+		Namespace  string
+		Output     *ecr.CreateRepositoryOutput
+		Err        error
+	}{
+		{
+			Name:       "Success",
+			BucketName: "rack1/app1",
+			AppName:    "app1",
+			Namespace:  "rack1-app1",
+			Output: &ecr.CreateRepositoryOutput{
+				Repository: &ecr.Repository{
+					RepositoryUri: awssdk.String("uribucket"),
+				},
+			},
+			Err: nil,
+		},
+	}
+
+	testProvider(t, func(p *aws.Provider) {
+		p.EcrImmutableTagsEnabled = true
+
+		for _, test := range tests {
+			fn := func(t *testing.T) {
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Times(3)
+				aa.On("Apply", test.Namespace, "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+					cfg, ok := args.Get(2).(*atom.ApplyConfig)
+					require.True(t, ok)
+					requireYamlFixture(t, cfg.Template, "app.yml")
+				})
+
+				ecrapi, ok := p.ECR.(*mocks.ECRAPI)
+				require.True(t, ok)
+				ecrapi.On("CreateRepository", &ecr.CreateRepositoryInput{
+					RepositoryName: awssdk.String(test.BucketName),
+					ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
+						ScanOnPush: awssdk.Bool(false),
+					},
+					ImageTagMutability: awssdk.String(ecr.ImageTagMutabilityImmutable),
+				}).Return(test.Output, test.Err)
+
+				a, err := p.AppCreate(test.AppName, structs.AppCreateOptions{})
+				if err == nil {
+					require.NoError(t, err)
+					require.NotNil(t, a)
+					assert.Equal(t, "3", a.Generation)
+					assert.Equal(t, test.AppName, a.Name)
+				} else {
+					assert.Equal(t, test.Err.Error(), err.Error())
+				}
+			}
+
+			t.Run(test.Name, fn)
+		}
+	})
+}
+
 func TestAppDelete(t *testing.T) {
 	tests := []struct {
 		Name       string

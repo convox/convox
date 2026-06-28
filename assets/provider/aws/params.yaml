@@ -136,6 +136,10 @@ Groups:
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l
           &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
           Applies to nginx router only. Has no effect when router_type=contour. &l
+      - name: ecr_immutable_tags_enabled
+        default: "false"
+        type: boolean
+        description: When enabled, newly created app ECR repositories use immutable image tags so an existing tag cannot be overwritten.
       - name: ecr_scan_on_push_enable
         default: "false"
         type: boolean

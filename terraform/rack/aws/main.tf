@@ -39,6 +39,7 @@ module "api" {
   disable_image_manifest_cache              = var.disable_image_manifest_cache
   ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
+  ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
