@@ -22,12 +22,18 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, err
 	}
 
-	res, err := p.ECR.CreateRepository(&ecr.CreateRepositoryInput{
+	input := &ecr.CreateRepositoryInput{
 		RepositoryName: aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), name)),
 		ImageScanningConfiguration: &ecr.ImageScanningConfiguration{
 			ScanOnPush: aws.Bool(p.EcrScanOnPushEnable),
 		},
-	})
+	}
+
+	if p.EcrImmutableTagsEnabled {
+		input.ImageTagMutability = aws.String(ecr.ImageTagMutabilityImmutable)
+	}
+
+	res, err := p.ECR.CreateRepository(input)
 	if err != nil {
 		return nil, err
 	}
