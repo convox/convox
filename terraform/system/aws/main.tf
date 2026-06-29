@@ -166,6 +166,8 @@ module "cluster" {
   karpenter_build_memory_limit_gb     = var.karpenter_build_memory_limit_gb
   karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
   karpenter_build_node_labels         = var.karpenter_build_node_labels
+  karpenter_build_imds_tokens         = var.karpenter_build_imds_tokens
+  karpenter_build_imds_hop_limit      = var.karpenter_build_imds_hop_limit
   additional_karpenter_nodepools      = local.additional_karpenter_nodepools
   keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name

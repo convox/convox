@@ -42,6 +42,7 @@ var preserveEmpty = map[string]bool{
 	"karpenter_node_labels":               true,
 	"karpenter_node_taints":               true,
 	"karpenter_build_node_labels":         true,
+	"karpenter_build_imds_tokens":         true,
 	"karpenter_instance_families":         true,
 	"karpenter_instance_sizes":            true,
 	"karpenter_build_instance_families":   true,
