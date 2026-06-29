@@ -39,7 +39,7 @@ var awsKnownParams = map[string]bool{
 	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
 	"api_feature_gates": true, "availability_zones": true,
 	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
-	"build_node_enabled": true, "build_node_min_count": true,
+	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
 	"cert_duration": true, "cidr": true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
@@ -179,6 +179,7 @@ var boolParams = map[string]bool{
 	"azure_files_enable":              true,
 	"build_disable_convox_resolver":   true,
 	"build_node_enabled":              true,
+	"build_node_minimal_role_enabled": true,
 	"buildkit_host_path_cache_enable": true,
 	"convox_domain_tls_cert_disable":  true,
 	"cost_tracking_enable":            true,
@@ -327,6 +328,7 @@ var paramGroups = map[string]map[string]bool{
 	"security": {
 		// v3 native (snake_case)
 		"access_id":                           true,
+		"build_node_minimal_role_enabled":     true, // dual-listed in build
 		"disable_public_access":               true,
 		"docker_hub_password":                 true,
 		"ebs_volume_encryption_enabled":       true,
@@ -463,6 +465,7 @@ var paramGroups = map[string]map[string]bool{
 		"build_disable_convox_resolver":     true,
 		"build_node_enabled":                true,
 		"build_node_min_count":              true,
+		"build_node_minimal_role_enabled":   true, // dual-listed in security
 		"build_node_type":                   true,
 		"buildkit_enabled":                  true,
 		"buildkit_host_path_cache_enable":   true,

@@ -35,6 +35,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_minimal_role_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "buildkit_host_path_cache_enable" {
   default = false
   type    = bool
