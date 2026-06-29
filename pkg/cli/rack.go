@@ -73,6 +73,7 @@ var awsKnownParams = map[string]bool{
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
 	"karpenter_build_instance_sizes": true, "karpenter_build_memory_limit_gb": true,
+	"karpenter_build_imds_tokens": true, "karpenter_build_imds_hop_limit": true,
 	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
 	"karpenter_config": true, "karpenter_consolidate_after": true,
 	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
@@ -342,6 +343,8 @@ var paramGroups = map[string]map[string]bool{
 		"imds_http_hop_limit":                 true,
 		"imds_http_tokens":                    true,
 		"imds_tags_enable":                    true,
+		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
+		"karpenter_build_imds_tokens":         true, // dual-listed in build
 		"key_pair_name":                       true,
 		"nlb_security_group":                  true,
 		"pod_identity_agent_enable":           true,
@@ -469,6 +472,8 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_build_capacity_types":    true,
 		"karpenter_build_consolidate_after": true,
 		"karpenter_build_cpu_limit":         true,
+		"karpenter_build_imds_hop_limit":    true, // dual-listed in security
+		"karpenter_build_imds_tokens":       true, // dual-listed in security
 		"karpenter_build_instance_families": true,
 		"karpenter_build_instance_sizes":    true,
 		"karpenter_build_memory_limit_gb":   true,
@@ -642,9 +647,10 @@ var clearableParams = map[string]bool{
 	"ssl_ciphers":   true,
 	"ssl_protocols": true,
 	// Optional overrides — clear means "use auto/default"
-	"build_node_type":         true,
-	"key_pair_name":           true,
-	"nginx_additional_config": true,
+	"build_node_type":             true,
+	"key_pair_name":               true,
+	"nginx_additional_config":     true,
+	"karpenter_build_imds_tokens": true,
 	// Credentials — clear means "remove auth"
 	"docker_hub_username": true,
 	"docker_hub_password": true,
@@ -1558,6 +1564,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
 			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
 			"karpenter_node_labels", "karpenter_build_node_labels",
+			"karpenter_build_imds_tokens", "karpenter_build_imds_hop_limit",
 		}
 		for _, rk := range karpenterRevalidateKeys {
 			if _, inCall := params[rk]; !inCall {
@@ -1655,6 +1662,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
 			return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_tokens"]; ok && v != "" {
+		if v != "optional" && v != "required" {
+			return fmt.Errorf("param 'karpenter_build_imds_tokens' must be 'optional' or 'required'")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_hop_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("karpenter_build_imds_hop_limit must be a non-negative integer")
 		}
 	}
 

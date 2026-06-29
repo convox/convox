@@ -802,6 +802,66 @@ func TestValidateAndMutateParams_BuildMemoryLimitGb(t *testing.T) {
 	}
 }
 
+// === Tests for karpenter_build_imds_tokens and karpenter_build_imds_hop_limit ===
+
+func TestValidateAndMutateParams_BuildImdsTokens(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"optional is valid", "optional", false, ""},
+		{"required is valid", "required", false, ""},
+		{"empty is valid (clearable inherit)", "", false, ""},
+		{"junk rejected", "banana", true, "must be 'optional' or 'required'"},
+		{"REQUIRED rejected (case-sensitive)", "REQUIRED", true, "must be 'optional' or 'required'"},
+		{"Optional rejected (case-sensitive)", "Optional", true, "must be 'optional' or 'required'"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_build_imds_tokens": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("karpenter_build_imds_tokens=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_BuildImdsHopLimit(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		{"zero is valid (inherit sentinel)", "0", false, ""},
+		{"one is valid", "1", false, ""},
+		{"two is valid", "2", false, ""},
+		{"three is valid", "3", false, ""},
+		{"negative rejected", "-1", true, "must be a non-negative integer"},
+		{"not a number rejected", "abc", true, "must be a non-negative integer"},
+		{"decimal rejected", "1.5", true, "must be a non-negative integer"},
+		{"empty rejected (non-clearable)", "", true, "requires an explicit value"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_enabled": "true", "karpenter_build_imds_hop_limit": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("karpenter_build_imds_hop_limit=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
+
 // === Tests for karpenter_memory_limit_gb ===
 
 func TestValidateAndMutateParams_MemoryLimitGb(t *testing.T) {
@@ -1643,6 +1703,20 @@ func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
 			"karpenter_cpu_limit must be a positive integer",
 		},
 		{
+			"stale invalid build_imds_hop_limit in currentParams caught on re-enable",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_build_imds_hop_limit": "-5"},
+			true,
+			"karpenter_build_imds_hop_limit must be a non-negative integer",
+		},
+		{
+			"stale invalid build_imds_tokens in currentParams caught on re-enable",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_build_imds_tokens": "banana"},
+			true,
+			"must be 'optional' or 'required'",
+		},
+		{
 			"valid currentParams pass re-enable validation",
 			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
 			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand"},
@@ -1699,6 +1773,21 @@ func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
 			t.Error("injected key karpenter_cpu_limit should have been removed from params after validation")
 		}
 	})
+}
+
+func TestValidateAndMutateParams_BuildImdsParamsNotLaunchTemplateConflict(t *testing.T) {
+	// The build-only IMDS params must NOT be in ltParams, so setting them with
+	// karpenter_enabled=true on a non-HA rack is accepted. currentParams supplies
+	// high_availability=false (read by the gate) and karpenter_auth_mode=true.
+	params := map[string]string{
+		"karpenter_enabled":              "true",
+		"karpenter_build_imds_tokens":    "required",
+		"karpenter_build_imds_hop_limit": "1",
+	}
+	currentParams := map[string]string{"high_availability": "false", "karpenter_auth_mode": "true"}
+	if err := validateAndMutateParams(params, "aws", currentParams, false); err != nil {
+		t.Errorf("build IMDS params alongside karpenter_enabled=true on non-HA rack should be accepted, got: %v", err)
+	}
 }
 
 func TestCheckRackNameRegex(t *testing.T) {
@@ -1955,6 +2044,7 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 		{"empty karpenter_memory_limit_gb", "karpenter_memory_limit_gb", "", true, "requires an explicit value"},
 		{"empty karpenter_build_cpu_limit", "karpenter_build_cpu_limit", "", true, "requires an explicit value"},
 		{"empty karpenter_build_memory_limit_gb", "karpenter_build_memory_limit_gb", "", true, "requires an explicit value"},
+		{"empty karpenter_build_imds_hop_limit", "karpenter_build_imds_hop_limit", "", true, "requires an explicit value"},
 		{"empty karpenter_consolidate_after", "karpenter_consolidate_after", "", true, "requires an explicit value"},
 		{"empty karpenter_build_consolidate_after", "karpenter_build_consolidate_after", "", true, "requires an explicit value"},
 		{"empty karpenter_node_expiry", "karpenter_node_expiry", "", true, "requires an explicit value"},
@@ -2006,6 +2096,7 @@ func TestValidateAndMutateParams_EmptyClearableParams(t *testing.T) {
 		{"karpenter_instance_sizes", "karpenter_instance_sizes"},
 		{"karpenter_build_instance_families", "karpenter_build_instance_families"},
 		{"karpenter_build_instance_sizes", "karpenter_build_instance_sizes"},
+		{"karpenter_build_imds_tokens", "karpenter_build_imds_tokens"},
 	}
 
 	for _, tt := range clearable {

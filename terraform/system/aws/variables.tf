@@ -358,6 +358,16 @@ variable "karpenter_build_node_labels" {
   default = ""
 }
 
+variable "karpenter_build_imds_tokens" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_imds_hop_limit" {
+  type    = number
+  default = 0
+}
+
 variable "additional_karpenter_nodepools_config" {
   type    = string
   default = ""
