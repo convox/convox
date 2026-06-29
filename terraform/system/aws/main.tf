@@ -141,6 +141,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  pod_imds_block_enabled              = var.pod_imds_block_enabled
   eks_access_entries                  = var.eks_access_entries == "true"
   karpenter_auth_mode                 = var.karpenter_auth_mode == "true"
   karpenter_enabled                   = var.karpenter_enabled == "true"
@@ -293,6 +294,7 @@ module "rack" {
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
   prometheus_url                            = var.prometheus_url
   proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
   release                                   = local.release
   releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour

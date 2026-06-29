@@ -101,6 +101,7 @@ type Provider struct {
 	Router                              string
 	RouterType                          string
 	ProxyProtocol                       bool
+	PodImdsBlockEnabled                 bool
 	ContourInternalTLS                  bool
 	Socket                              string
 	Storage                             string
@@ -233,6 +234,7 @@ func FromEnv() (*Provider, error) {
 		Router:                           os.Getenv("ROUTER"),
 		RouterType:                       common.CoalesceString(os.Getenv("ROUTER_TYPE"), "nginx"),
 		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
+		PodImdsBlockEnabled:              os.Getenv("POD_IMDS_BLOCK_ENABLED") == "true",
 		ContourInternalTLS:               os.Getenv("CONTOUR_INTERNAL_TLS") == "true",
 		Socket:                           common.CoalesceString(os.Getenv("SOCKET"), "/var/run/docker.sock"),
 		Storage:                          common.CoalesceString(os.Getenv("STORAGE"), "/var/storage"),
@@ -421,6 +423,8 @@ func (p *Provider) Start() error {
 	go p.runReleasePromoteWatchGC(p.ctx)
 
 	go p.runOrphanedPodReaper(p.ctx)
+
+	go p.runPodImdsBlockReconciler(p.ctx)
 
 	go common.Tick(1*time.Hour, p.heartbeat)
 
