@@ -122,6 +122,11 @@ variable "cost_tracking_enable" {
   default = false
 }
 
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_enabled" {
   type    = bool
   default = false
