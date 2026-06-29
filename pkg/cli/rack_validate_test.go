@@ -412,7 +412,7 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 		"ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
 		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
 		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
-		"telemetry", "vpa_enable",
+		"pod_imds_block_enabled", "telemetry", "vpa_enable",
 	} {
 		t.Run(k, func(t *testing.T) {
 			params := map[string]string{k: "true"}

@@ -104,6 +104,7 @@ locals {
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
     pod_identity_agent_enable = var.pod_identity_agent_enable
     pod_identity_agent_version = var.pod_identity_agent_version
+    pod_imds_block_enabled = var.pod_imds_block_enabled
     private = var.private
     private_eks_host = var.private_eks_host
     private_eks_pass = var.private_eks_pass
@@ -240,6 +241,7 @@ locals {
     pdb_default_min_available_percentage = "50"
     pod_identity_agent_enable = "false"
     pod_identity_agent_version = "v1.3.10-eksbuild.2"
+    pod_imds_block_enabled = "false"
     private = "true"
     private_eks_host = ""
     private_eks_pass = ""

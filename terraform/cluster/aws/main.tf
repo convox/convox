@@ -670,6 +670,10 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_version               = var.vpc_cni_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = var.pod_imds_block_enabled ? jsonencode({
+    enableNetworkPolicy = "true"
+  }) : null
 }
 
 resource "aws_eks_addon" "coredns" {

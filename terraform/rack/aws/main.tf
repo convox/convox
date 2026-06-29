@@ -73,6 +73,7 @@ module "api" {
   router_type                               = var.router_type
   cert_duration                             = var.cert_duration
   proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
   contour_internal_tls                      = var.contour_internal_tls
 }
 
