@@ -44,6 +44,7 @@ module "api" {
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
   efs_file_system_id                        = var.efs_file_system_id
   cost_tracking_enable                      = var.cost_tracking_enable
+  seccomp_default_enabled                   = var.seccomp_default_enabled
   high_availability                         = var.high_availability
   metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image
@@ -83,7 +84,8 @@ module "metrics" {
     kubernetes = kubernetes
   }
 
-  karpenter_enabled = var.karpenter_enabled
+  karpenter_enabled       = var.karpenter_enabled
+  seccomp_default_enabled = var.seccomp_default_enabled
 }
 
 module "resolver" {
@@ -99,6 +101,7 @@ module "resolver" {
   image                     = var.image
   internal_router           = var.internal_router
   karpenter_enabled         = var.karpenter_enabled
+  seccomp_default_enabled   = var.seccomp_default_enabled
   namespace                 = module.k8s.namespace
   rack                      = var.name
   release                   = var.release

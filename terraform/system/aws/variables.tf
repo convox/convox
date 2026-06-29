@@ -63,6 +63,11 @@ variable "cost_tracking_enable" {
   description = "Enable the rack-side cost accumulator and budget enforcement. Opt-in; false preserves existing behaviour."
 }
 
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "convox_domain_tls_cert_disable" {
   default = false
   type    = bool

@@ -29,6 +29,7 @@ module "k8s" {
   disable_image_manifest_cache    = var.disable_image_manifest_cache
   image                           = var.image
   cost_tracking_enable            = var.cost_tracking_enable
+  seccomp_default_enabled         = var.seccomp_default_enabled
   router_type                     = var.router_type
   cert_duration                   = var.cert_duration
   karpenter_enabled               = var.karpenter_enabled

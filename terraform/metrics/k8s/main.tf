@@ -155,6 +155,15 @@ resource "kubernetes_deployment" "metrics" {
           }
         }
 
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
+
         container {
           name              = "metrics-server"
           image             = "registry.k8s.io/metrics-server/metrics-server:v0.7.2"
