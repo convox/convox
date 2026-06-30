@@ -308,6 +308,11 @@ variable "karpenter_node_volume_type" {
   default = "gp3"
 }
 
+variable "karpenter_node_os" {
+  type    = string
+  default = "al2023"
+}
+
 variable "karpenter_node_labels" {
   type    = string
   default = ""

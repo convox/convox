@@ -605,6 +605,13 @@ Groups:
           - gp3
           - io1
           - io2
+      - name: karpenter_node_os
+        default: al2023
+        type: string
+        description: Node OS for Karpenter workload nodes. al2023 (default) or bottlerocket.
+        allowedValues:
+          - al2023
+          - bottlerocket
       - name: karpenter_node_labels
         optional: true
         default: "null"

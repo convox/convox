@@ -80,8 +80,9 @@ var awsKnownParams = map[string]bool{
 	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
 	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
 	"karpenter_node_expiry": true, "karpenter_node_labels": true,
-	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
-	"keda_enable": true, "key_pair_name": true,
+	"karpenter_node_os": true, "karpenter_node_taints": true,
+	"karpenter_node_volume_type": true,
+	"keda_enable":                true, "key_pair_name": true,
 	"kube_proxy_version": true, "kubelet_registry_burst": true,
 	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
 	"min_on_demand_count":     true,
@@ -267,6 +268,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_disk":                   true,
 		"karpenter_node_expiry":                 true,
 		"karpenter_node_labels":                 true,
+		"karpenter_node_os":                     true,
 		"karpenter_node_taints":                 true,
 		"karpenter_node_volume_type":            true,
 		"keda_enable":                           true,
@@ -1542,6 +1544,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if !validVolTypes[v] {
 			return fmt.Errorf("param 'karpenter_node_volume_type' must be gp2, gp3, io1, or io2")
 		}
+	}
+
+	if v, has := params["karpenter_node_os"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "al2023" && lower != "bottlerocket" {
+			return fmt.Errorf("param 'karpenter_node_os' must be 'al2023' or 'bottlerocket'")
+		}
+		params["karpenter_node_os"] = lower
 	}
 
 	// Karpenter parameter validation
