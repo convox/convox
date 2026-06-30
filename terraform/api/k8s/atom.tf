@@ -114,11 +114,42 @@ resource "kubernetes_deployment" "atom" {
           image             = "${var.image}:${var.release}"
           image_pull_policy = "IfNotPresent"
 
+          dynamic "security_context" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              read_only_root_filesystem = true
+            }
+          }
+
+          dynamic "env" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              name  = "HOME"
+              value = "/tmp"
+            }
+          }
+
+          dynamic "volume_mount" {
+            for_each = var.system_readonly_rootfs_enabled ? { "tmp-dir" = "/tmp" } : {}
+            content {
+              name       = volume_mount.key
+              mount_path = volume_mount.value
+            }
+          }
+
           resources {
             requests = {
               cpu    = "32m"
               memory = "32Mi"
             }
+          }
+        }
+
+        dynamic "volume" {
+          for_each = var.system_readonly_rootfs_enabled ? { "tmp-dir" = "/tmp" } : {}
+          content {
+            name = volume.key
+            empty_dir {}
           }
         }
       }

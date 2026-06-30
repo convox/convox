@@ -32,6 +32,7 @@ module "k8s" {
   router_type                     = var.router_type
   cert_duration                   = var.cert_duration
   karpenter_enabled               = var.karpenter_enabled
+  system_readonly_rootfs_enabled  = var.system_readonly_rootfs_enabled
   metrics_scraper_host            = var.metrics_scraper_host
   namespace                       = var.namespace
   prometheus_url                  = var.prometheus_url

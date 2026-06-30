@@ -151,6 +151,13 @@ resource "kubernetes_deployment" "resolver" {
           image             = "${var.image}:${var.release}"
           image_pull_policy = "IfNotPresent"
 
+          dynamic "security_context" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              read_only_root_filesystem = true
+            }
+          }
+
           env {
             name = "NAMESPACE"
             value_from {
