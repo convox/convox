@@ -82,6 +82,7 @@ locals {
     karpenter_node_disk = var.karpenter_node_disk
     karpenter_node_expiry = var.karpenter_node_expiry
     karpenter_node_labels = var.karpenter_node_labels
+    karpenter_node_os = var.karpenter_node_os
     karpenter_node_taints = var.karpenter_node_taints
     karpenter_node_volume_type = var.karpenter_node_volume_type
     keda_enable = var.keda_enable
@@ -218,6 +219,7 @@ locals {
     karpenter_node_disk = "0"
     karpenter_node_expiry = "720h"
     karpenter_node_labels = ""
+    karpenter_node_os = "al2023"
     karpenter_node_taints = ""
     karpenter_node_volume_type = "gp3"
     keda_enable = "false"

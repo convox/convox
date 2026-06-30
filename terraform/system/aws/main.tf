@@ -156,6 +156,7 @@ module "cluster" {
   karpenter_disruption_budget_nodes   = var.karpenter_disruption_budget_nodes
   karpenter_node_disk                 = var.karpenter_node_disk
   karpenter_node_volume_type          = var.karpenter_node_volume_type
+  karpenter_node_os                   = var.karpenter_node_os
   karpenter_node_labels               = var.karpenter_node_labels
   karpenter_node_taints               = var.karpenter_node_taints
   karpenter_config                    = var.karpenter_config != "" ? try(base64decode(var.karpenter_config), var.karpenter_config) : "{}"

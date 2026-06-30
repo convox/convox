@@ -70,6 +70,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_node_disk](/configuration/rack-parameters/aws/karpenter_node_disk)       | EBS volume size for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_expiry](/configuration/rack-parameters/aws/karpenter_node_expiry)   | Maximum Karpenter node lifetime before replacement. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_labels](/configuration/rack-parameters/aws/karpenter_node_labels)   | Custom labels for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_os](/configuration/rack-parameters/aws/karpenter_node_os)           | Node OS (al2023 or bottlerocket) for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_taints](/configuration/rack-parameters/aws/karpenter_node_taints)   | Custom taints for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_volume_type](/configuration/rack-parameters/aws/karpenter_node_volume_type) | EBS volume type for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
 

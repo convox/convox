@@ -4,6 +4,8 @@
 locals {
   karpenter_effective_disk = var.karpenter_node_disk > 0 ? var.karpenter_node_disk : var.node_disk
 
+  karpenter_is_bottlerocket = var.karpenter_node_os == "bottlerocket"
+
   # Parse workload NodePool custom labels from "k1=v1,k2=v2" to map
   karpenter_workload_extra_labels = {
     for pair in compact(split(",", var.karpenter_node_labels)) :
@@ -125,15 +127,34 @@ locals {
   # Workload EC2NodeClass — build defaults, merge overrides, force protected fields
   ###########################################################################
 
-  # blockDeviceMappings: override or params
-  ec2_default_block_devices = [{
-    deviceName = "/dev/xvda"
-    ebs = {
-      volumeType = var.karpenter_node_volume_type
-      volumeSize = "${local.karpenter_effective_disk}Gi"
-      encrypted  = var.ebs_volume_encryption_enabled
-    }
-  }]
+  # blockDeviceMappings: Bottlerocket needs two volumes (OS + data); still overridable
+  ec2_default_block_devices = local.karpenter_is_bottlerocket ? [
+    {
+      deviceName = "/dev/xvda"
+      ebs = {
+        volumeType = "gp3"
+        volumeSize = "4Gi"
+        encrypted  = var.ebs_volume_encryption_enabled
+      }
+    },
+    {
+      deviceName = "/dev/xvdb"
+      ebs = {
+        volumeType = var.karpenter_node_volume_type
+        volumeSize = "${local.karpenter_effective_disk}Gi"
+        encrypted  = var.ebs_volume_encryption_enabled
+      }
+    },
+    ] : [
+    {
+      deviceName = "/dev/xvda"
+      ebs = {
+        volumeType = var.karpenter_node_volume_type
+        volumeSize = "${local.karpenter_effective_disk}Gi"
+        encrypted  = var.ebs_volume_encryption_enabled
+      }
+    },
+  ]
   ec2_final_block_devices = lookup(local.kc_ec2, "blockDeviceMappings", local.ec2_default_block_devices)
 
   # metadataOptions: override or params
@@ -152,8 +173,9 @@ locals {
     { Name = "${var.name}/karpenter/workload", Rack = var.name },
   )
 
-  # amiSelectorTerms: override or default
-  ec2_final_ami = lookup(local.kc_ec2, "amiSelectorTerms", [{ alias = "al2023@latest" }])
+  # amiSelectorTerms: OS-aware default, still overridable
+  ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = "al2023@latest" }]
+  ec2_final_ami   = lookup(local.kc_ec2, "amiSelectorTerms", local.ec2_default_ami)
 
   # Optional fields from override only (no individual params for these)
   ec2_optional_fields = merge(
