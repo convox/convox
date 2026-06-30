@@ -67,6 +67,7 @@ var awsKnownParams = map[string]bool{
 	"high_availability": true,
 	"idle_timeout":      true, "image": true,
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
+	"pod_security_standard": true, "pod_security_mode": true,
 	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
 	"internet_gateway_id": true, "k8s_version": true,
 	"karpenter_arch": true, "karpenter_auth_mode": true,
@@ -342,6 +343,8 @@ var paramGroups = map[string]map[string]bool{
 		"imds_http_hop_limit":                 true,
 		"imds_http_tokens":                    true,
 		"imds_tags_enable":                    true,
+		"pod_security_standard":               true,
+		"pod_security_mode":                   true,
 		"key_pair_name":                       true,
 		"nlb_security_group":                  true,
 		"pod_identity_agent_enable":           true,
@@ -662,6 +665,8 @@ var clearableParams = map[string]bool{
 	"user_data_url": true,
 	// ECR — clear means "detach custom policy"
 	"ecr_additional_policy_arn": true,
+	// PSA standard: clear removes the namespace label
+	"pod_security_standard": true,
 	// Feature gates — clear means "disable all"
 	"api_feature_gates": true,
 	// Private EKS — cleared by console during mode changes
@@ -1355,6 +1360,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v, has := params["pod_security_standard"]; has && v != "" && v != "baseline" && v != "restricted" {
+		return fmt.Errorf("param 'pod_security_standard' must be 'baseline' or 'restricted'")
+	}
+
+	if v, has := params["pod_security_mode"]; has && v != "warn" && v != "audit" && v != "enforce" {
+		return fmt.Errorf("param 'pod_security_mode' must be 'warn', 'audit', or 'enforce'")
+	}
+
 	if v, has := params["node_capacity_type"]; has && v != "" {
 		lower := strings.ToLower(v)
 		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
@@ -1433,6 +1446,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if params["router_type"] == "contour" {
 			fmt.Fprintf(os.Stderr, "WARNING: Router access logs will use Envoy default format. The access_log_retention_in_days param will not apply until a follow-up fluentd update.\n")
 		}
+	}
+
+	effectivePodSecurityStandard := currentParams["pod_security_standard"]
+	if v, ok := params["pod_security_standard"]; ok {
+		effectivePodSecurityStandard = v
+	}
+	effectivePodSecurityMode := currentParams["pod_security_mode"]
+	if v, ok := params["pod_security_mode"]; ok {
+		effectivePodSecurityMode = v
+	}
+	if effectivePodSecurityMode == "enforce" && effectivePodSecurityStandard != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: pod_security_mode=enforce rejects non-conforming app pods at admission.\n")
+		fmt.Fprintf(os.Stderr, "Any service that sets a violating securityContext will fail to deploy.\n")
+		fmt.Fprintf(os.Stderr, "restricted with enforce also rejects default convox pods. Roll out warn, then audit, then enforce.\n")
 	}
 
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {
