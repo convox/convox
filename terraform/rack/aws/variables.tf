@@ -269,6 +269,16 @@ variable "router_type" {
   default = "nginx"
 }
 
+variable "pod_security_standard" {
+  type    = string
+  default = ""
+}
+
+variable "pod_security_mode" {
+  type    = string
+  default = "warn"
+}
+
 variable "cert_duration" {
   type    = string
   default = "2160h"

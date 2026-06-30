@@ -454,6 +454,16 @@ variable "router_type" {
   default = "nginx"
 }
 
+variable "pod_security_standard" {
+  type    = string
+  default = ""
+}
+
+variable "pod_security_mode" {
+  type    = string
+  default = "warn"
+}
+
 variable "contour_cpu_request" {
   type    = string
   default = "100m"

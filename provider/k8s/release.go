@@ -452,11 +452,13 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 	}
 
 	params := map[string]interface{}{
-		"Locked":     a.Locked,
-		"Name":       a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
-		"Owner":      owner,
-		"Parameters": a.Parameters,
+		"Locked":              a.Locked,
+		"Name":                a.Name,
+		"Namespace":           p.AppNamespace(a.Name),
+		"Owner":               owner,
+		"Parameters":          a.Parameters,
+		"PodSecurityStandard": p.PodSecurityStandard,
+		"PodSecurityMode":     p.PodSecurityMode,
 	}
 
 	data, err := p.RenderTemplate("app/app", params)

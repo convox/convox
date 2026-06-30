@@ -444,3 +444,43 @@ func parseCoalesceLiteral(t *testing.T, path, variable string) (string, bool) {
 	}
 	return string(m[1]), true
 }
+
+func TestValidateAndMutateParams_PodSecurity(t *testing.T) {
+	accept := []map[string]string{
+		{"pod_security_standard": "baseline"},
+		{"pod_security_standard": "restricted"},
+		{"pod_security_standard": ""},
+		{"pod_security_mode": "warn"},
+		{"pod_security_mode": "audit"},
+		{"pod_security_mode": "enforce"},
+		{"pod_security_standard": "baseline", "pod_security_mode": "warn"},
+		{"pod_security_standard": "restricted", "pod_security_mode": "enforce"},
+	}
+	for _, p := range accept {
+		if err := validateAndMutateParams(p, "aws", map[string]string{}, false); err != nil {
+			t.Errorf("expected accept for %v, got %v", p, err)
+		}
+	}
+
+	if err := validateAndMutateParams(
+		map[string]string{"pod_security_mode": "enforce"}, "aws",
+		map[string]string{"pod_security_standard": "baseline"}, false,
+	); err != nil {
+		t.Errorf("expected accept for enforce with effective standard, got %v", err)
+	}
+
+	reject := []map[string]string{
+		{"pod_security_standard": "bogus"},
+		{"pod_security_standard": "Baseline"},
+		{"pod_security_standard": "BASELINE"},
+		{"pod_security_standard": " baseline"},
+		{"pod_security_mode": "bogus"},
+		{"pod_security_mode": "Enforce"},
+		{"pod_security_mode": ""},
+	}
+	for _, p := range reject {
+		if err := validateAndMutateParams(p, "aws", map[string]string{}, false); err == nil {
+			t.Errorf("expected reject for %v, got nil", p)
+		}
+	}
+}
