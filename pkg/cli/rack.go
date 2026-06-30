@@ -104,7 +104,7 @@ var awsKnownParams = map[string]bool{
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
 	"settings": true, "ssl_ciphers": true,
 	"ssl_protocols": true, "sync_tf_now": true,
-	"syslog": true, "tags": true,
+	"syslog": true, "system_readonly_rootfs_enabled": true, "tags": true,
 	"telemetry": true, "terraform_update_timeout": true,
 	"user_data": true, "user_data_url": true,
 	"vpa_enable": true, "vpc_cni_version": true,
@@ -201,6 +201,7 @@ var boolParams = map[string]bool{
 	"karpenter_consolidation_enabled": true,
 	"keda_enable":                     true,
 	"pod_identity_agent_enable":       true,
+	"system_readonly_rootfs_enabled":  true,
 	"telemetry":                       true,
 	"vpa_enable":                      true,
 }
@@ -351,6 +352,7 @@ var paramGroups = map[string]map[string]bool{
 		"secret_key":                          true,
 		"ssl_ciphers":                         true,
 		"ssl_protocols":                       true,
+		"system_readonly_rootfs_enabled":      true,
 		"tags":                                true, // dual-listed in cost
 		"token":                               true,
 		"webhook_signing_key":                 true,

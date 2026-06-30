@@ -38,6 +38,11 @@ variable "karpenter_enabled" {
   default = false
 }
 
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internal_router" {
   type    = bool
   default = false

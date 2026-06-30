@@ -48,6 +48,7 @@ module "api" {
   metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image
   karpenter_enabled                         = var.karpenter_enabled
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
   keda_enable                               = var.keda_enable
   name                                      = var.name
   rack_name                                 = var.rack_name
@@ -94,14 +95,15 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  high_availability         = var.high_availability
-  image                     = var.image
-  internal_router           = var.internal_router
-  karpenter_enabled         = var.karpenter_enabled
-  namespace                 = module.k8s.namespace
-  rack                      = var.name
-  release                   = var.release
+  docker_hub_authentication      = module.k8s.docker_hub_authentication
+  high_availability              = var.high_availability
+  image                          = var.image
+  internal_router                = var.internal_router
+  karpenter_enabled              = var.karpenter_enabled
+  system_readonly_rootfs_enabled = var.system_readonly_rootfs_enabled
+  namespace                      = module.k8s.namespace
+  rack                           = var.name
+  release                        = var.release
 }
 
 module "router" {

@@ -228,6 +228,11 @@ variable "imds_tags_enable" {
   default = false
 }
 
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }

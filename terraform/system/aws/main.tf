@@ -262,6 +262,7 @@ module "rack" {
   build_disable_convox_resolver             = var.build_disable_convox_resolver
   cost_tracking_enable                      = var.cost_tracking_enable
   karpenter_enabled                         = var.karpenter_enabled == "true"
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
   build_node_enabled                        = var.build_node_enabled
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   cluster                                   = module.cluster.id
