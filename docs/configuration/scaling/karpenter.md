@@ -126,6 +126,7 @@ These parameters control how Karpenter provisions nodes for your application Ser
 |-----------|------|---------|------------|-------------|
 | `karpenter_node_disk` | number | `0` | >= 0 | EBS volume size in GiB for Karpenter-provisioned nodes. `0` inherits the Rack's [`node_disk`](/configuration/rack-parameters/aws/node_disk) value. |
 | `karpenter_node_volume_type` | string | `gp3` | `gp2`, `gp3`, `io1`, `io2` | EBS volume type for Karpenter-provisioned nodes. |
+| `karpenter_node_os` | string | `al2023` | `al2023`, `bottlerocket` | Node OS for the workload NodePool. `bottlerocket` selects the EKS-optimized Bottlerocket AMI and the required two-volume layout (gp3 OS volume on /dev/xvda, data volume on /dev/xvdb). AWS V3, Karpenter only. |
 
 ### Labels and Taints
 

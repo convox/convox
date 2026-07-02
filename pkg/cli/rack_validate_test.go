@@ -308,6 +308,40 @@ func TestValidateAndMutateParams_KarpenterNodeVolumeType(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_KarpenterNodeOS(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		want    string
+	}{
+		{"al2023 valid", "al2023", false, "al2023"},
+		{"bottlerocket valid", "bottlerocket", false, "bottlerocket"},
+		{"BOTTLEROCKET normalized", "BOTTLEROCKET", false, "bottlerocket"},
+		{"AL2023 normalized", "AL2023", false, "al2023"},
+		{"junk rejected", "ubuntu", true, ""},
+		{"empty rejected", "", true, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_node_os": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %q", tt.value)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %q: %v", tt.value, err)
+			}
+			if got := params["karpenter_node_os"]; got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_WebhookSigningKey_AllProviders(t *testing.T) {
 	for _, provider := range []string{"aws", "gcp", "azure", "do", "metal", "local"} {
 		t.Run(provider, func(t *testing.T) {
