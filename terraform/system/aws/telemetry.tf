@@ -128,6 +128,7 @@ locals {
     ssl_ciphers = var.ssl_ciphers
     ssl_protocols = var.ssl_protocols
     syslog = var.syslog
+    system_readonly_rootfs_enabled = var.system_readonly_rootfs_enabled
     tags = var.tags
     telemetry = var.telemetry
     terraform_update_timeout = var.terraform_update_timeout
@@ -266,6 +267,7 @@ locals {
     ssl_ciphers = ""
     ssl_protocols = ""
     syslog = ""
+    system_readonly_rootfs_enabled = "false"
     tags = ""
     telemetry = "false"
     terraform_update_timeout = "2h"

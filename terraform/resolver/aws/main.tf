@@ -5,13 +5,14 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = var.docker_hub_authentication
-  image                     = var.image
-  internal_router           = var.internal_router
-  karpenter_enabled         = var.karpenter_enabled
-  seccomp_default_enabled   = var.seccomp_default_enabled
-  namespace                 = var.namespace
-  rack                      = var.rack
-  release                   = var.release
-  replicas                  = var.high_availability ? 2 : 1
+  docker_hub_authentication      = var.docker_hub_authentication
+  image                          = var.image
+  internal_router                = var.internal_router
+  karpenter_enabled              = var.karpenter_enabled
+  seccomp_default_enabled        = var.seccomp_default_enabled
+  system_readonly_rootfs_enabled = var.system_readonly_rootfs_enabled
+  namespace                      = var.namespace
+  rack                           = var.rack
+  release                        = var.release
+  replicas                       = var.high_availability ? 2 : 1
 }

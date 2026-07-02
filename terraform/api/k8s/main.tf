@@ -222,6 +222,21 @@ resource "kubernetes_deployment" "api" {
           image             = "${var.image}:${var.release}"
           image_pull_policy = "IfNotPresent"
 
+          dynamic "security_context" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              read_only_root_filesystem = true
+            }
+          }
+
+          dynamic "env" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              name  = "HOME"
+              value = "/tmp"
+            }
+          }
+
           env {
             name  = "BUILDKIT_ENABLED"
             value = var.buildkit_enabled
@@ -412,6 +427,14 @@ resource "kubernetes_deployment" "api" {
               mount_path = volume.value
             }
           }
+
+          dynamic "volume_mount" {
+            for_each = var.system_readonly_rootfs_enabled ? { "tmp-dir" = "/tmp", "var-tmp-dir" = "/var/tmp" } : {}
+            content {
+              name       = volume_mount.key
+              mount_path = volume_mount.value
+            }
+          }
         }
 
         volume {
@@ -431,6 +454,14 @@ resource "kubernetes_deployment" "api" {
             persistent_volume_claim {
               claim_name = "api-${volume.key}"
             }
+          }
+        }
+
+        dynamic "volume" {
+          for_each = var.system_readonly_rootfs_enabled ? { "tmp-dir" = "/tmp", "var-tmp-dir" = "/var/tmp" } : {}
+          content {
+            name = volume.key
+            empty_dir {}
           }
         }
 

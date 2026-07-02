@@ -81,6 +81,11 @@ Groups:
         type: boolean
         description: Enables encryption for EBS volumes on primary node disks using
           AWS-managed keys for data at rest encryption
+      - name: system_readonly_rootfs_enabled
+        default: "false"
+        type: boolean
+        description: Runs the Convox system containers (api, atom, resolver) with a
+          read-only root filesystem for the container image layer
       - name: nlb_security_group
         default: "null"
         sideNote: AWS default created unless set

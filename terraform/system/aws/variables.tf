@@ -248,6 +248,11 @@ variable "pod_imds_block_enabled" {
   default = false
 }
 
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
