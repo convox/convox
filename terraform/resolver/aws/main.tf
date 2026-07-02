@@ -9,6 +9,7 @@ module "k8s" {
   image                     = var.image
   internal_router           = var.internal_router
   karpenter_enabled         = var.karpenter_enabled
+  seccomp_default_enabled   = var.seccomp_default_enabled
   namespace                 = var.namespace
   rack                      = var.rack
   release                   = var.release

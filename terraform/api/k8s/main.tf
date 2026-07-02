@@ -199,6 +199,15 @@ resource "kubernetes_deployment" "api" {
           }
         }
 
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
+
         dynamic "image_pull_secrets" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
           content {

@@ -77,6 +77,15 @@ resource "kubernetes_deployment" "metrics_scraper" {
           }
         }
 
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
+
         container {
           name              = "metrics-scraper"
           image             = "kubernetesui/metrics-scraper:v1.0.7"
