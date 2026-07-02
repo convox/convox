@@ -124,6 +124,7 @@ func fxInstance() *structs.Instance {
 		GpuCapacity:       0,
 		GpuAllocatable:    0,
 		Id:                "instance1",
+		InstanceType:      "t3.xlarge",
 		Memory:            718,
 		MemoryAllocatable: 1000,
 		PrivateIp:         "private",
