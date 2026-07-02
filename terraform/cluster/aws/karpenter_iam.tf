@@ -473,8 +473,8 @@ resource "null_resource" "karpenter_build_nodes_cleanup" {
 }
 
 # Idempotent EC2_LINUX access entry (mirrors null_resource.eks_access_entry_nodes).
-# The role is shared by Karpenter instances and additional build node groups, so a
-# describe-then-create tolerates EKS auto-registering the managed-node-group role.
+# Describe-then-create tolerates EKS auto-registering the managed-node-group role;
+# create retries because EKS rejects freshly created roles until IAM propagates.
 resource "null_resource" "karpenter_build_nodes_access_entry" {
   count = local.build_minimal_role_enabled ? 1 : 0
 
@@ -492,12 +492,21 @@ resource "null_resource" "karpenter_build_nodes_access_entry" {
       C="${self.triggers.cluster_name}"
       R="${self.triggers.region}"
       P="${self.triggers.principal_arn}"
-      if aws eks describe-access-entry --cluster-name "$C" --principal-arn "$P" --region "$R" >/dev/null 2>&1; then
-        echo "Access entry already exists for $P - skipping"
-      else
-        aws eks create-access-entry --cluster-name "$C" --principal-arn "$P" --type EC2_LINUX --region "$R" || \
-          aws eks describe-access-entry --cluster-name "$C" --principal-arn "$P" --region "$R" >/dev/null 2>&1
-      fi
+      i=0
+      until aws eks describe-access-entry --cluster-name "$C" --principal-arn "$P" --region "$R" >/dev/null 2>&1; do
+        if OUT=$(aws eks create-access-entry --cluster-name "$C" --principal-arn "$P" --type EC2_LINUX --region "$R" 2>&1); then
+          break
+        fi
+        i=$((i+1))
+        if [ "$i" -ge 12 ]; then
+          echo "$OUT" >&2
+          echo "ERROR: failed to create access entry for $P after $i attempts" >&2
+          exit 1
+        fi
+        echo "create-access-entry failed (attempt $i/12), retrying in 10s: $OUT"
+        sleep 10
+      done
+      echo "Access entry ready for $P"
     EOF
   }
 
