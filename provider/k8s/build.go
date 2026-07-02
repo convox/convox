@@ -738,7 +738,7 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 		if b.Process == "" {
 			return nil, fmt.Errorf("build %s has running status but no process ID", id)
 		}
-		return p.ProcessLogs(app, b.Process, opts)
+		return p.processLogsNamespace(p.processBuildNamespace(app), b.Process, opts)
 	case "created":
 		return p.buildLogsStreamFromCreated(app, id, opts)
 	default:
@@ -800,7 +800,7 @@ func (p *Provider) streamBuildLogsFromCreated(w io.WriteCloser, app, id string, 
 				}
 				tick.Stop()
 				heartbeat.Stop()
-				p.streamProcessLogs(w, app, b.Process, opts)
+				p.streamProcessLogs(w, p.processBuildNamespace(app), b.Process, opts)
 				return
 			case "failed", "complete":
 				p.writeStoredBuildLogs(w, app, id, b)

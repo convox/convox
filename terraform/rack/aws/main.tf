@@ -73,6 +73,8 @@ module "api" {
   webhook_signing_key                       = var.webhook_signing_key
   api_feature_gates                         = var.api_feature_gates
   router_type                               = var.router_type
+  pod_security_standard                     = var.pod_security_standard
+  pod_security_mode                         = var.pod_security_mode
   cert_duration                             = var.cert_duration
   proxy_protocol                            = var.proxy_protocol
   pod_imds_block_enabled                    = var.pod_imds_block_enabled

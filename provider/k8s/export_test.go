@@ -680,3 +680,16 @@ func HashParamValueForTest(p *Provider, value string) string {
 func ResetRackUIDCacheForTest(namespace string) {
 	rackUIDByNamespace.Delete(namespace)
 }
+
+// ProcessBuildNamespaceForTest exposes processBuildNamespace so external tests
+// can assert the build-pod namespace routing under Pod Security Admission.
+func (p *Provider) ProcessBuildNamespaceForTest(app string) string {
+	return p.processBuildNamespace(app)
+}
+
+// EnsureBuildNamespaceForTest exposes ensureBuildNamespace so external tests can
+// assert the dedicated build namespace is created unlabeled by PSA and without an
+// app label (which would double-count the budget accumulator).
+func (p *Provider) EnsureBuildNamespaceForTest(app string) error {
+	return p.ensureBuildNamespace(app)
+}
