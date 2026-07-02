@@ -1,4 +1,4 @@
-.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider grep-no-monitoring-metrics-provisioned lint lint-new lint-tf lint-security lint-all mocks package release setup sync-dashboards test tools validate vendor verify-dashboards-synced
+.PHONY: all build clean clean-package compress dev generate generate-k8s generate-provider grep-no-monitoring-metrics-provisioned lint lint-new lint-tf lint-security lint-telemetry lint-all mocks package release setup sync-dashboards test tools validate vendor verify-dashboards-synced
 
 commands = api atom build convox docs resolver
 
@@ -79,6 +79,9 @@ grep-no-monitoring-metrics-provisioned:
 	  -not -path './pkg/rack/terraform_bounded_restart_test.go' \
 	  -print0 | xargs -0 grep -n 'monitoring_metrics_provisioned' 2>/dev/null); \
 	if [ -n "$$matches" ]; then printf '%s\n' "$$matches"; echo 'FAIL: monitoring_metrics_provisioned references outside the explicit allowlist'; exit 1; fi
+
+lint-telemetry:
+	go run cmd/telemetry-gen/main.go verify
 
 lint-tf:
 	@for dir in $$(find terraform -name '*.tf' -not -path './vendor/*' -not -path '*/.terraform/*' -exec dirname {} \; | sort -u); do \

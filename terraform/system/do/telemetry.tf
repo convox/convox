@@ -3,7 +3,6 @@
 
 locals {
   telemetry_map = {
-    access_id                = var.access_id
     buildkit_enabled         = var.buildkit_enabled
     cert_duration            = var.cert_duration
     docker_hub_password      = var.docker_hub_password
@@ -18,18 +17,15 @@ locals {
     region                   = var.region
     registry_disk            = var.registry_disk
     release                  = var.release
-    secret_key               = var.secret_key
     settings                 = var.settings
     syslog                   = var.syslog
     telemetry                = var.telemetry
     terraform_update_timeout = var.terraform_update_timeout
-    token                    = var.token
     webhook_signing_key      = var.webhook_signing_key
     whitelist                = var.whitelist
   }
 
   telemetry_default_map = {
-    access_id                = ""
     buildkit_enabled         = "false"
     cert_duration            = "2160h"
     docker_hub_password      = ""
@@ -44,12 +40,10 @@ locals {
     region                   = "nyc3"
     registry_disk            = "50Gi"
     release                  = ""
-    secret_key               = ""
     settings                 = ""
     syslog                   = ""
     telemetry                = "false"
     terraform_update_timeout = "2h"
-    token                    = ""
     webhook_signing_key      = ""
     whitelist                = "0.0.0.0/0"
   }
