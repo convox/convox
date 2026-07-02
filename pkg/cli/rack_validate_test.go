@@ -440,13 +440,15 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 	// ecr_docker_hub_cache=true triggers a dependency rule (requires
 	// docker_hub_username/password); it's covered by a dedicated test below.
 	for _, k := range []string{
-		"build_node_enabled", "buildkit_host_path_cache_enable", "convox_domain_tls_cert_disable",
+		"build_node_enabled", "build_node_minimal_role_enabled", "buildkit_host_path_cache_enable",
+		"convox_domain_tls_cert_disable",
 		"cost_tracking_enable", "deploy_extra_nlb", "disable_convox_resolver",
 		"disable_image_manifest_cache", "ebs_volume_encryption_enabled",
 		"ecr_immutable_tags_enabled", "ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
 		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
 		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
-		"pod_imds_block_enabled", "seccomp_default_enabled", "telemetry", "vpa_enable",
+		"pod_imds_block_enabled", "seccomp_default_enabled", "system_readonly_rootfs_enabled",
+		"telemetry", "vpa_enable",
 	} {
 		t.Run(k, func(t *testing.T) {
 			params := map[string]string{k: "true"}
