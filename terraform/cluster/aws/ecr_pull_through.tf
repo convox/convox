@@ -58,3 +58,10 @@ resource "aws_iam_role_policy_attachment" "karpenter_nodes_ecr_pull_through" {
   role       = aws_iam_role.karpenter_nodes[0].name
   policy_arn = aws_iam_policy.ecr_pull_through[0].arn
 }
+
+resource "aws_iam_role_policy_attachment" "karpenter_build_nodes_ecr_pull_through" {
+  count = local.build_minimal_role_enabled && var.ecr_docker_hub_cache && var.docker_hub_username != "" && var.docker_hub_password != "" ? 1 : 0
+
+  role       = aws_iam_role.karpenter_build_nodes[0].name
+  policy_arn = aws_iam_policy.ecr_pull_through[0].arn
+}

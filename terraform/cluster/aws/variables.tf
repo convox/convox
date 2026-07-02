@@ -34,6 +34,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_minimal_role_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "build_node_type" {
   type = string
 }

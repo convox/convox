@@ -1,6 +1,10 @@
 # Karpenter IAM roles and policies
 # All resources gated on var.karpenter_enabled
 
+locals {
+  build_minimal_role_enabled = var.karpenter_enabled && var.build_node_minimal_role_enabled
+}
+
 ###############################################################################
 # Controller IAM Role (IRSA — same OIDC trust pattern as lbc.tf)
 ###############################################################################
@@ -194,7 +198,7 @@ data "aws_iam_policy_document" "karpenter_controller_ec2" {
     actions = [
       "iam:PassRole",
     ]
-    resources = [aws_iam_role.karpenter_nodes[0].arn]
+    resources = local.build_minimal_role_enabled ? [aws_iam_role.karpenter_nodes[0].arn, aws_iam_role.karpenter_build_nodes[0].arn] : [aws_iam_role.karpenter_nodes[0].arn]
     condition {
       test     = "StringEquals"
       variable = "iam:PassedToService"
@@ -401,4 +405,107 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
   principal_arn = aws_iam_role.karpenter_nodes[0].arn
   type          = "EC2_LINUX"
   tags          = local.tags
+}
+
+###############################################################################
+# Minimal-privilege build node role (build_node_minimal_role_enabled)
+# Drops EBS-CSI and pod-identity vs the shared roles; build nodes need neither.
+###############################################################################
+
+resource "aws_iam_role" "karpenter_build_nodes" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  name               = "${var.name}-build-nodes"
+  assume_role_policy = data.aws_iam_policy_document.assume_ec2.json
+  path               = "/convox/"
+  tags               = local.tags
+}
+
+resource "aws_iam_role_policy_attachment" "karpenter_build_nodes_worker" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  role       = aws_iam_role.karpenter_build_nodes[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "karpenter_build_nodes_cni" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  role       = aws_iam_role.karpenter_build_nodes[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "karpenter_build_nodes_ecr" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  role       = aws_iam_role.karpenter_build_nodes[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy_attachment" "karpenter_build_nodes_ssm" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  role       = aws_iam_role.karpenter_build_nodes[0].name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Detach the role from any instance profile (Karpenter- or managed-node-group-owned)
+# before DeleteRole runs on toggle-off, so the destroy does not hit DeleteConflict.
+resource "null_resource" "karpenter_build_nodes_cleanup" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  depends_on = [aws_iam_role.karpenter_build_nodes]
+
+  triggers = {
+    role_name = aws_iam_role.karpenter_build_nodes[0].name
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOF
+      ROLE="${self.triggers.role_name}"
+      for P in $(aws iam list-instance-profiles-for-role --role-name "$ROLE" --query 'InstanceProfiles[].InstanceProfileName' --output text 2>/dev/null); do
+        aws iam remove-role-from-instance-profile --instance-profile-name "$P" --role-name "$ROLE" 2>/dev/null || true
+      done
+      true
+    EOF
+  }
+}
+
+# Idempotent EC2_LINUX access entry (mirrors null_resource.eks_access_entry_nodes).
+# The role is shared by Karpenter instances and additional build node groups, so a
+# describe-then-create tolerates EKS auto-registering the managed-node-group role.
+resource "null_resource" "karpenter_build_nodes_access_entry" {
+  count = local.build_minimal_role_enabled ? 1 : 0
+
+  depends_on = [null_resource.karpenter_access_config, aws_iam_role.karpenter_build_nodes]
+
+  triggers = {
+    cluster_name  = aws_eks_cluster.cluster.name
+    principal_arn = aws_iam_role.karpenter_build_nodes[0].arn
+    region        = data.aws_region.current.name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -e
+      C="${self.triggers.cluster_name}"
+      R="${self.triggers.region}"
+      P="${self.triggers.principal_arn}"
+      if aws eks describe-access-entry --cluster-name "$C" --principal-arn "$P" --region "$R" >/dev/null 2>&1; then
+        echo "Access entry already exists for $P - skipping"
+      else
+        aws eks create-access-entry --cluster-name "$C" --principal-arn "$P" --type EC2_LINUX --region "$R" || \
+          aws eks describe-access-entry --cluster-name "$C" --principal-arn "$P" --region "$R" >/dev/null 2>&1
+      fi
+    EOF
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOF
+      aws eks delete-access-entry --cluster-name "${self.triggers.cluster_name}" --principal-arn "${self.triggers.principal_arn}" --region "${self.triggers.region}" 2>/dev/null || true
+      true
+    EOF
+  }
 }
