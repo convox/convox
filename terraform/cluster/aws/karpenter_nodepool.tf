@@ -25,6 +25,9 @@ locals {
     trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
   }
 
+  build_imds_tokens    = var.karpenter_build_imds_tokens != "" ? var.karpenter_build_imds_tokens : var.imds_http_tokens
+  build_imds_hop_limit = var.karpenter_build_imds_hop_limit > 0 ? var.karpenter_build_imds_hop_limit : var.imds_http_hop_limit
+
   ###########################################################################
   # karpenter_config overrides — decode user JSON (empty = no overrides)
   ###########################################################################
@@ -288,8 +291,8 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     karpenter_node_volume_type = var.karpenter_node_volume_type
     karpenter_effective_disk   = local.karpenter_effective_disk
     ebs_encrypted              = var.ebs_volume_encryption_enabled
-    imds_http_tokens           = var.imds_http_tokens
-    imds_http_hop_limit        = var.imds_http_hop_limit
+    imds_http_tokens           = local.build_imds_tokens
+    imds_http_hop_limit        = local.build_imds_hop_limit
     extra_tags                 = var.tags
   })
 
