@@ -73,6 +73,11 @@ variable "ecr_full_access" {
   default = false
 }
 
+variable "ecr_immutable_tags_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false

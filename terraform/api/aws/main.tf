@@ -61,6 +61,7 @@ module "k8s" {
     RESOLVER                                  = var.disable_convox_resolver ? "" : var.resolver
     ROUTER                                    = var.router
     SOCKET                                    = "/var/run/docker.sock"
+    ECR_IMMUTABLE_TAGS_ENABLED                = var.ecr_immutable_tags_enabled
     ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
     SUBNET_IDS                                = join(",", var.subnets)
     VPC_ID                                    = var.vpc_id

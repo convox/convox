@@ -31,6 +31,7 @@ locals {
     docker_hub_username = var.docker_hub_username
     ebs_volume_encryption_enabled = var.ebs_volume_encryption_enabled
     ecr_docker_hub_cache = var.ecr_docker_hub_cache
+    ecr_immutable_tags_enabled = var.ecr_immutable_tags_enabled
     ecr_scan_on_push_enable = var.ecr_scan_on_push_enable
     efs_csi_driver_enable = var.efs_csi_driver_enable
     efs_csi_driver_version = var.efs_csi_driver_version
@@ -167,6 +168,7 @@ locals {
     docker_hub_username = ""
     ebs_volume_encryption_enabled = "false"
     ecr_docker_hub_cache = "false"
+    ecr_immutable_tags_enabled = "false"
     ecr_scan_on_push_enable = "false"
     efs_csi_driver_enable = "false"
     efs_csi_driver_version = "v2.3.0-eksbuild.2"
