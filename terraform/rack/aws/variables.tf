@@ -189,6 +189,10 @@ variable "proxy_protocol" {
   default = false
 }
 
+variable "pod_imds_block_enabled" {
+  default = false
+}
+
 variable "release" {
   type = string
 }

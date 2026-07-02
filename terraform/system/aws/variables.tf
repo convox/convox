@@ -238,6 +238,11 @@ variable "imds_tags_enable" {
   default = false
 }
 
+variable "pod_imds_block_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
