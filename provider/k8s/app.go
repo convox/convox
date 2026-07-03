@@ -379,13 +379,21 @@ func (p *Provider) buildNamespace(app string) string {
 	return strings.TrimRight(prefix, "-") + "-" + hex.EncodeToString(sum[:])[:8]
 }
 
-// processBuildNamespace returns where the build pod runs. Under PSA enforce the
-// app namespace's label would reject the build pod, so the build runs in a
-// dedicated unlabeled namespace; otherwise it runs in the app namespace as before.
+// processBuildNamespace returns where the build pod runs. Params enforce or an
+// app namespace still carrying an enforce label (it persists until the next
+// promote after leaving enforce) routes to the dedicated unlabeled namespace.
 func (p *Provider) processBuildNamespace(app string) string {
 	if p.PodSecurityStandard != "" && p.PodSecurityMode == "enforce" {
 		return p.buildNamespace(app)
 	}
+
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
+	if err == nil {
+		if _, ok := ns.Labels["pod-security.kubernetes.io/enforce"]; ok {
+			return p.buildNamespace(app)
+		}
+	}
+
 	return p.AppNamespace(app)
 }
 
