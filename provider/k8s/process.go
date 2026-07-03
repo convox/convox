@@ -402,8 +402,8 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		}
 	}
 
-	// Build pods run in a dedicated namespace under PSA enforce so the app
-	// namespace's enforce label does not reject them. Ensure it before
+	// Build pods run in a dedicated namespace while PSA enforcement applies so
+	// the app namespace's enforce label does not reject them. Ensure it before
 	// podSpecFromRunOptions, which writes the pull secret into this namespace.
 	createNs := p.AppNamespace(app)
 	if opts.IsBuild {
@@ -415,7 +415,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		}
 	}
 
-	s, err := p.podSpecFromRunOptions(app, service, opts)
+	s, err := p.podSpecFromRunOptions(app, service, createNs, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -772,7 +772,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 	return ps, nil
 }
 
-func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) {
+func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) { //nolint:gocritic // by-value opts matches ProcessRun and sibling helpers
 	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""), opts.IsBuild)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -894,11 +894,7 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	}
 
 	if p.hasDockerHubAuth() {
-		secretNs := p.AppNamespace(app)
-		if opts.IsBuild {
-			secretNs = p.processBuildNamespace(app)
-		}
-		if err := p.ensureDockerHubSecret(secretNs); err != nil {
+		if err := p.ensureDockerHubSecret(ns); err != nil {
 			return nil, errors.WithStack(err)
 		}
 

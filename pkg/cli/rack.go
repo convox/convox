@@ -1482,6 +1482,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		fmt.Fprintf(os.Stderr, "WARNING: pod_security_mode=enforce rejects non-conforming app pods at admission.\n")
 		fmt.Fprintf(os.Stderr, "Any service that sets a violating securityContext will fail to deploy.\n")
 		fmt.Fprintf(os.Stderr, "restricted with enforce also rejects default convox pods. Roll out warn, then audit, then enforce.\n")
+		fmt.Fprintf(os.Stderr, "After leaving enforce, each app namespace keeps enforcing until its next promote. Builds route around this automatically.\n")
 	}
 
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {

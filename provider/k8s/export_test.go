@@ -693,3 +693,9 @@ func (p *Provider) ProcessBuildNamespaceForTest(app string) string {
 func (p *Provider) EnsureBuildNamespaceForTest(app string) error {
 	return p.ensureBuildNamespace(app)
 }
+
+// BuildLogsNamespaceForTest exposes buildLogsNamespace so external tests can
+// assert log streaming follows the build pod's actual namespace.
+func (p *Provider) BuildLogsNamespaceForTest(app, process string) string {
+	return p.buildLogsNamespace(app, process)
+}
