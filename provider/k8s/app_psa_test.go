@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -77,6 +78,85 @@ func TestProcessBuildNamespace(t *testing.T) {
 				p.PodSecurityStandard = tc.standard
 				p.PodSecurityMode = tc.mode
 				assert.Equal(t, tc.want, p.ProcessBuildNamespaceForTest("app1"))
+			})
+		})
+	}
+}
+
+func TestProcessBuildNamespaceEnforceTransition(t *testing.T) {
+	enforceLabel := map[string]string{"pod-security.kubernetes.io/enforce": "baseline"}
+
+	cases := []struct {
+		name     string
+		standard string
+		mode     string
+		labels   map[string]string
+		noNs     bool
+		want     string
+	}{
+		{name: "label-persists-after-enforce", standard: "baseline", mode: "warn", labels: enforceLabel, want: "rack1-build-app1"},
+		{name: "label-persists-standard-cleared", standard: "", mode: "warn", labels: enforceLabel, want: "rack1-build-app1"},
+		{name: "unlabeled-warn", standard: "baseline", mode: "warn", want: "rack1-app1"},
+		{name: "warn-label-only", standard: "baseline", mode: "warn", labels: map[string]string{"pod-security.kubernetes.io/warn": "baseline"}, want: "rack1-app1"},
+		{name: "params-enforce-skips-read", standard: "baseline", mode: "enforce", noNs: true, want: "rack1-build-app1"},
+		{name: "read-error-falls-back", standard: "baseline", mode: "warn", noNs: true, want: "rack1-app1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = tc.standard
+				p.PodSecurityMode = tc.mode
+
+				if !tc.noNs {
+					kk, _ := p.Cluster.(*fake.Clientset)
+					_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{
+						ObjectMeta: am.ObjectMeta{Name: "rack1-app1", Labels: tc.labels},
+					}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				assert.Equal(t, tc.want, p.ProcessBuildNamespaceForTest("app1"))
+			})
+		})
+	}
+}
+
+func TestBuildLogsNamespaceFollowsPod(t *testing.T) {
+	enforceLabel := map[string]string{"pod-security.kubernetes.io/enforce": "baseline"}
+
+	cases := []struct {
+		name     string
+		nsLabels map[string]string
+		podNs    string
+		want     string
+	}{
+		{name: "pod-in-build-ns-label-gone", nsLabels: nil, podNs: "rack1-build-app1", want: "rack1-build-app1"},
+		{name: "pod-in-app-ns-label-present", nsLabels: enforceLabel, podNs: "rack1-app1", want: "rack1-app1"},
+		{name: "pod-matches-routing", nsLabels: enforceLabel, podNs: "rack1-build-app1", want: "rack1-build-app1"},
+		{name: "pod-missing-falls-back-to-routing", nsLabels: nil, podNs: "", want: "rack1-app1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = "baseline"
+				p.PodSecurityMode = "warn"
+
+				kk, _ := p.Cluster.(*fake.Clientset)
+				_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{
+					ObjectMeta: am.ObjectMeta{Name: "rack1-app1", Labels: tc.nsLabels},
+				}, am.CreateOptions{})
+				require.NoError(t, err)
+
+				if tc.podNs != "" {
+					_, err := kk.CoreV1().Pods(tc.podNs).Create(context.TODO(), &ac.Pod{
+						ObjectMeta: am.ObjectMeta{Name: "build-xxxxx"},
+					}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				assert.Equal(t, tc.want, p.BuildLogsNamespaceForTest("app1", "build-xxxxx"))
 			})
 		})
 	}

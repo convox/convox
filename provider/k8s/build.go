@@ -725,6 +725,25 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	return target, nil
 }
 
+// buildLogsNamespace anchors log streaming to wherever the build pod actually
+// runs; label-aware routing can change between pod creation and stream attach.
+func (p *Provider) buildLogsNamespace(app, process string) string {
+	ns := p.processBuildNamespace(app)
+	if _, err := p.Cluster.CoreV1().Pods(ns).Get(context.TODO(), process, am.GetOptions{}); err == nil {
+		return ns
+	}
+
+	alt := p.buildNamespace(app)
+	if alt == ns {
+		alt = p.AppNamespace(app)
+	}
+	if _, err := p.Cluster.CoreV1().Pods(alt).Get(context.TODO(), process, am.GetOptions{}); err == nil {
+		return alt
+	}
+
+	return ns
+}
+
 func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	b, err := p.BuildGet(app, id)
 	if err != nil {
@@ -738,7 +757,7 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 		if b.Process == "" {
 			return nil, fmt.Errorf("build %s has running status but no process ID", id)
 		}
-		return p.processLogsNamespace(p.processBuildNamespace(app), b.Process, opts)
+		return p.processLogsNamespace(p.buildLogsNamespace(app, b.Process), b.Process, opts)
 	case "created":
 		return p.buildLogsStreamFromCreated(app, id, opts)
 	default:
@@ -800,7 +819,7 @@ func (p *Provider) streamBuildLogsFromCreated(w io.WriteCloser, app, id string, 
 				}
 				tick.Stop()
 				heartbeat.Stop()
-				p.streamProcessLogs(w, p.processBuildNamespace(app), b.Process, opts)
+				p.streamProcessLogs(w, p.buildLogsNamespace(app, b.Process), b.Process, opts)
 				return
 			case "failed", "complete":
 				p.writeStoredBuildLogs(w, app, id, b)
