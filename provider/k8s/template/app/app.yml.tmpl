@@ -8,6 +8,9 @@ metadata:
   labels:
     type: app
     name: {{.Name}}
+    {{ if .PodSecurityStandard }}
+    pod-security.kubernetes.io/{{ .PodSecurityMode }}: {{ .PodSecurityStandard }}
+    {{ end }}
   ownerReferences:
   - apiVersion: v1 # TODO: populate from .Owner
     blockOwnerDeletion: true

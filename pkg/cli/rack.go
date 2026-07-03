@@ -39,7 +39,7 @@ var awsKnownParams = map[string]bool{
 	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
 	"api_feature_gates": true, "availability_zones": true,
 	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
-	"build_node_enabled": true, "build_node_min_count": true,
+	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
 	"cert_duration": true, "cidr": true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
@@ -48,7 +48,7 @@ var awsKnownParams = map[string]bool{
 	"disable_image_manifest_cache": true, "disable_public_access": true,
 	"dcgm_scrape_interval": true,
 	"docker_hub_password":  true, "docker_hub_username": true,
-	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_scan_on_push_enable": true,
+	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_immutable_tags_enabled": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
 	"eks_access_entries":                  true,
 	"eks_api_server_private_access_cidrs": true,
@@ -67,12 +67,15 @@ var awsKnownParams = map[string]bool{
 	"high_availability": true,
 	"idle_timeout":      true, "image": true,
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
+	"pod_security_standard": true, "pod_security_mode": true,
 	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
-	"internet_gateway_id": true, "k8s_version": true,
+	"pod_imds_block_enabled": true,
+	"internet_gateway_id":    true, "k8s_version": true,
 	"karpenter_arch": true, "karpenter_auth_mode": true,
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
 	"karpenter_build_instance_sizes": true, "karpenter_build_memory_limit_gb": true,
+	"karpenter_build_imds_tokens": true, "karpenter_build_imds_hop_limit": true,
 	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
 	"karpenter_config": true, "karpenter_consolidate_after": true,
 	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
@@ -80,8 +83,9 @@ var awsKnownParams = map[string]bool{
 	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
 	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
 	"karpenter_node_expiry": true, "karpenter_node_labels": true,
-	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
-	"keda_enable": true, "key_pair_name": true,
+	"karpenter_node_os": true, "karpenter_node_taints": true,
+	"karpenter_node_volume_type": true,
+	"keda_enable":                true, "key_pair_name": true,
 	"kube_proxy_version": true, "kubelet_registry_burst": true,
 	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
 	"min_on_demand_count":     true,
@@ -102,9 +106,10 @@ var awsKnownParams = map[string]bool{
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
-	"settings": true, "ssl_ciphers": true,
+	"seccomp_default_enabled": true,
+	"settings":                true, "ssl_ciphers": true,
 	"ssl_protocols": true, "sync_tf_now": true,
-	"syslog": true, "tags": true,
+	"syslog": true, "system_readonly_rootfs_enabled": true, "tags": true,
 	"telemetry": true, "terraform_update_timeout": true,
 	"user_data": true, "user_data_url": true,
 	"vpa_enable": true, "vpc_cni_version": true,
@@ -179,6 +184,7 @@ var boolParams = map[string]bool{
 	"azure_files_enable":              true,
 	"build_disable_convox_resolver":   true,
 	"build_node_enabled":              true,
+	"build_node_minimal_role_enabled": true,
 	"buildkit_host_path_cache_enable": true,
 	"convox_domain_tls_cert_disable":  true,
 	"cost_tracking_enable":            true,
@@ -189,6 +195,7 @@ var boolParams = map[string]bool{
 	"ebs_volume_encryption_enabled":   true,
 	"ecr_docker_hub_cache":            true,
 	"ecr_full_access":                 true,
+	"ecr_immutable_tags_enabled":      true,
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
 	"enable_private_access":           true,
@@ -196,11 +203,14 @@ var boolParams = map[string]bool{
 	"gpu_observability_enable":        true,
 	"gpu_tag_enable":                  true,
 	"imds_tags_enable":                true,
+	"pod_imds_block_enabled":          true,
 	"internal_router":                 true,
 	"contour_internal_tls":            true,
 	"karpenter_consolidation_enabled": true,
 	"keda_enable":                     true,
 	"pod_identity_agent_enable":       true,
+	"seccomp_default_enabled":         true,
+	"system_readonly_rootfs_enabled":  true,
 	"telemetry":                       true,
 	"vpa_enable":                      true,
 }
@@ -267,6 +277,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_disk":                   true,
 		"karpenter_node_expiry":                 true,
 		"karpenter_node_labels":                 true,
+		"karpenter_node_os":                     true,
 		"karpenter_node_taints":                 true,
 		"karpenter_node_volume_type":            true,
 		"keda_enable":                           true,
@@ -327,11 +338,13 @@ var paramGroups = map[string]map[string]bool{
 	"security": {
 		// v3 native (snake_case)
 		"access_id":                           true,
+		"build_node_minimal_role_enabled":     true, // dual-listed in build
 		"disable_public_access":               true,
 		"docker_hub_password":                 true,
 		"ebs_volume_encryption_enabled":       true,
 		"ecr_additional_policy_arn":           true,
 		"ecr_full_access":                     true,
+		"ecr_immutable_tags_enabled":          true,
 		"ecr_scan_on_push_enable":             true,
 		"eks_access_entries":                  true,
 		"eks_api_server_private_access_cidrs": true,
@@ -342,15 +355,22 @@ var paramGroups = map[string]map[string]bool{
 		"imds_http_hop_limit":                 true,
 		"imds_http_tokens":                    true,
 		"imds_tags_enable":                    true,
+		"pod_imds_block_enabled":              true,
+		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
+		"karpenter_build_imds_tokens":         true, // dual-listed in build
+		"pod_security_standard":               true,
+		"pod_security_mode":                   true,
 		"key_pair_name":                       true,
 		"nlb_security_group":                  true,
 		"pod_identity_agent_enable":           true,
 		"private_eks_host":                    true,
 		"private_eks_pass":                    true,
 		"private_eks_user":                    true,
+		"seccomp_default_enabled":             true,
 		"secret_key":                          true,
 		"ssl_ciphers":                         true,
 		"ssl_protocols":                       true,
+		"system_readonly_rootfs_enabled":      true,
 		"tags":                                true, // dual-listed in cost
 		"token":                               true,
 		"webhook_signing_key":                 true,
@@ -463,12 +483,15 @@ var paramGroups = map[string]map[string]bool{
 		"build_disable_convox_resolver":     true,
 		"build_node_enabled":                true,
 		"build_node_min_count":              true,
+		"build_node_minimal_role_enabled":   true, // dual-listed in security
 		"build_node_type":                   true,
 		"buildkit_enabled":                  true,
 		"buildkit_host_path_cache_enable":   true,
 		"karpenter_build_capacity_types":    true,
 		"karpenter_build_consolidate_after": true,
 		"karpenter_build_cpu_limit":         true,
+		"karpenter_build_imds_hop_limit":    true, // dual-listed in security
+		"karpenter_build_imds_tokens":       true, // dual-listed in security
 		"karpenter_build_instance_families": true,
 		"karpenter_build_instance_sizes":    true,
 		"karpenter_build_memory_limit_gb":   true,
@@ -498,6 +521,7 @@ var paramGroups = map[string]map[string]bool{
 		"ecr_additional_policy_arn":    true,
 		"ecr_docker_hub_cache":         true,
 		"ecr_full_access":              true,
+		"ecr_immutable_tags_enabled":   true,
 		"ecr_scan_on_push_enable":      true,
 	},
 	"logging": {
@@ -642,9 +666,10 @@ var clearableParams = map[string]bool{
 	"ssl_ciphers":   true,
 	"ssl_protocols": true,
 	// Optional overrides — clear means "use auto/default"
-	"build_node_type":         true,
-	"key_pair_name":           true,
-	"nginx_additional_config": true,
+	"build_node_type":             true,
+	"key_pair_name":               true,
+	"nginx_additional_config":     true,
+	"karpenter_build_imds_tokens": true,
 	// Credentials — clear means "remove auth"
 	"docker_hub_username": true,
 	"docker_hub_password": true,
@@ -662,6 +687,8 @@ var clearableParams = map[string]bool{
 	"user_data_url": true,
 	// ECR — clear means "detach custom policy"
 	"ecr_additional_policy_arn": true,
+	// PSA standard: clear removes the namespace label
+	"pod_security_standard": true,
 	// Feature gates — clear means "disable all"
 	"api_feature_gates": true,
 	// Private EKS — cleared by console during mode changes
@@ -1355,6 +1382,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v, has := params["pod_security_standard"]; has && v != "" && v != "baseline" && v != "restricted" {
+		return fmt.Errorf("param 'pod_security_standard' must be 'baseline' or 'restricted'")
+	}
+
+	if v, has := params["pod_security_mode"]; has && v != "warn" && v != "audit" && v != "enforce" {
+		return fmt.Errorf("param 'pod_security_mode' must be 'warn', 'audit', or 'enforce'")
+	}
+
 	if v, has := params["node_capacity_type"]; has && v != "" {
 		lower := strings.ToLower(v)
 		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
@@ -1433,6 +1468,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if params["router_type"] == "contour" {
 			fmt.Fprintf(os.Stderr, "WARNING: Router access logs will use Envoy default format. The access_log_retention_in_days param will not apply until a follow-up fluentd update.\n")
 		}
+	}
+
+	effectivePodSecurityStandard := currentParams["pod_security_standard"]
+	if v, ok := params["pod_security_standard"]; ok {
+		effectivePodSecurityStandard = v
+	}
+	effectivePodSecurityMode := currentParams["pod_security_mode"]
+	if v, ok := params["pod_security_mode"]; ok {
+		effectivePodSecurityMode = v
+	}
+	if effectivePodSecurityMode == "enforce" && effectivePodSecurityStandard != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: pod_security_mode=enforce rejects non-conforming app pods at admission.\n")
+		fmt.Fprintf(os.Stderr, "Any service that sets a violating securityContext will fail to deploy.\n")
+		fmt.Fprintf(os.Stderr, "restricted with enforce also rejects default convox pods. Roll out warn, then audit, then enforce.\n")
 	}
 
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {
@@ -1544,6 +1593,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v, has := params["karpenter_node_os"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "al2023" && lower != "bottlerocket" {
+			return fmt.Errorf("param 'karpenter_node_os' must be 'al2023' or 'bottlerocket'")
+		}
+		params["karpenter_node_os"] = lower
+	}
+
 	// Karpenter parameter validation
 	// When enabling Karpenter, temporarily inject current params for re-validation so stale
 	// invalid values saved during a previous karpenter_enabled=false call are caught.
@@ -1558,6 +1615,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
 			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
 			"karpenter_node_labels", "karpenter_build_node_labels",
+			"karpenter_build_imds_tokens", "karpenter_build_imds_hop_limit",
 		}
 		for _, rk := range karpenterRevalidateKeys {
 			if _, inCall := params[rk]; !inCall {
@@ -1655,6 +1713,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
 			return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_tokens"]; ok && v != "" {
+		if v != "optional" && v != "required" {
+			return fmt.Errorf("param 'karpenter_build_imds_tokens' must be 'optional' or 'required'")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_hop_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("karpenter_build_imds_hop_limit must be a non-negative integer")
 		}
 	}
 

@@ -73,6 +73,11 @@ variable "ecr_full_access" {
   default = false
 }
 
+variable "ecr_immutable_tags_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_scan_on_push_enable" {
   type    = bool
   default = false
@@ -122,7 +127,17 @@ variable "cost_tracking_enable" {
   default = false
 }
 
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "system_readonly_rootfs_enabled" {
   type    = bool
   default = false
 }
@@ -181,6 +196,10 @@ variable "prometheus_url" {
 }
 
 variable "proxy_protocol" {
+  default = false
+}
+
+variable "pod_imds_block_enabled" {
   default = false
 }
 
@@ -267,6 +286,16 @@ variable "whitelist" {
 variable "router_type" {
   type    = string
   default = "nginx"
+}
+
+variable "pod_security_standard" {
+  type    = string
+  default = ""
+}
+
+variable "pod_security_mode" {
+  type    = string
+  default = "warn"
 }
 
 variable "cert_duration" {

@@ -142,7 +142,11 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 }
 
 func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
-	pd, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
+	return p.processGet(p.AppNamespace(app), app, pid)
+}
+
+func (p *Provider) processGet(ns, app, pid string) (*structs.Process, error) {
+	pd, err := p.GetPodFromInformer(pid, ns)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -152,7 +156,7 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).Get(context.TODO(), pid, am.GetOptions{})
 	if err != nil {
 		p.logger.Errorf("failed to fetch pod metrics: %s", err)
 	} else if m != nil && len(m.Containers) > 0 {
@@ -275,14 +279,18 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 }
 
 func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	return p.processLogsNamespace(p.AppNamespace(app), pid, opts)
+}
+
+func (p *Provider) processLogsNamespace(ns, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 
-	go p.streamProcessLogs(w, app, pid, opts)
+	go p.streamProcessLogs(w, ns, pid, opts)
 
 	return r, nil
 }
 
-func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts structs.LogsOptions) {
+func (p *Provider) streamProcessLogs(w io.WriteCloser, ns, pid string, opts structs.LogsOptions) {
 	defer w.Close() // skipcq
 
 	lopts := &ac.PodLogOptions{
@@ -313,7 +321,7 @@ pendingLoop:
 				return
 			}
 		case <-tick.C:
-			pp, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
+			pp, err := p.GetPodFromInformer(pid, ns)
 			if err != nil {
 				fmt.Printf("err: %+v\n", err)
 				fmt.Fprintf(w, "waiting for build pod...\n")
@@ -332,7 +340,7 @@ pendingLoop:
 	pendingHeartbeat.Stop()
 
 	for {
-		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream(context.TODO())
+		r, err := p.Cluster.CoreV1().Pods(ns).GetLogs(pid, lopts).Stream(context.TODO())
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
 			fmt.Fprintf(w, "build log stream interrupted, retrying...\n")
@@ -391,6 +399,19 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	if !opts.IsBuild {
 		if err := p.budgetCircuitBreakerTripped(app); err != nil {
 			return nil, errors.WithStack(err)
+		}
+	}
+
+	// Build pods run in a dedicated namespace under PSA enforce so the app
+	// namespace's enforce label does not reject them. Ensure it before
+	// podSpecFromRunOptions, which writes the pull secret into this namespace.
+	createNs := p.AppNamespace(app)
+	if opts.IsBuild {
+		createNs = p.processBuildNamespace(app)
+		if createNs != p.AppNamespace(app) {
+			if err := p.ensureBuildNamespace(app); err != nil {
+				return nil, errors.WithStack(err)
+			}
 		}
 	}
 
@@ -500,7 +521,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		pod.ObjectMeta.Labels["service-type"] = "build"
 	}
 
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
+	pd, err := p.Cluster.CoreV1().Pods(createNs).Create(
 		context.TODO(),
 		pod,
 		am.CreateOptions{},
@@ -509,7 +530,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		return nil, errors.WithStack(err)
 	}
 
-	ps, err := p.ProcessGet(app, pd.ObjectMeta.Name)
+	ps, err := p.processGet(createNs, app, pd.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -873,7 +894,11 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 	}
 
 	if p.hasDockerHubAuth() {
-		if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
+		secretNs := p.AppNamespace(app)
+		if opts.IsBuild {
+			secretNs = p.processBuildNamespace(app)
+		}
+		if err := p.ensureDockerHubSecret(secretNs); err != nil {
 			return nil, errors.WithStack(err)
 		}
 

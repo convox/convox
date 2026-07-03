@@ -39,15 +39,18 @@ module "api" {
   disable_image_manifest_cache              = var.disable_image_manifest_cache
   ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
+  ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
   efs_file_system_id                        = var.efs_file_system_id
   cost_tracking_enable                      = var.cost_tracking_enable
+  seccomp_default_enabled                   = var.seccomp_default_enabled
   high_availability                         = var.high_availability
   metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image
   karpenter_enabled                         = var.karpenter_enabled
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
   keda_enable                               = var.keda_enable
   name                                      = var.name
   rack_name                                 = var.rack_name
@@ -71,8 +74,11 @@ module "api" {
   webhook_signing_key                       = var.webhook_signing_key
   api_feature_gates                         = var.api_feature_gates
   router_type                               = var.router_type
+  pod_security_standard                     = var.pod_security_standard
+  pod_security_mode                         = var.pod_security_mode
   cert_duration                             = var.cert_duration
   proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
   contour_internal_tls                      = var.contour_internal_tls
 }
 
@@ -83,7 +89,8 @@ module "metrics" {
     kubernetes = kubernetes
   }
 
-  karpenter_enabled = var.karpenter_enabled
+  karpenter_enabled       = var.karpenter_enabled
+  seccomp_default_enabled = var.seccomp_default_enabled
 }
 
 module "resolver" {
@@ -94,14 +101,16 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  high_availability         = var.high_availability
-  image                     = var.image
-  internal_router           = var.internal_router
-  karpenter_enabled         = var.karpenter_enabled
-  namespace                 = module.k8s.namespace
-  rack                      = var.name
-  release                   = var.release
+  docker_hub_authentication      = module.k8s.docker_hub_authentication
+  high_availability              = var.high_availability
+  image                          = var.image
+  internal_router                = var.internal_router
+  karpenter_enabled              = var.karpenter_enabled
+  seccomp_default_enabled        = var.seccomp_default_enabled
+  system_readonly_rootfs_enabled = var.system_readonly_rootfs_enabled
+  namespace                      = module.k8s.namespace
+  rack                           = var.name
+  release                        = var.release
 }
 
 module "router" {

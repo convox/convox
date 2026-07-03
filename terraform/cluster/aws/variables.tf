@@ -34,6 +34,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_minimal_role_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "build_node_type" {
   type = string
 }
@@ -100,6 +105,11 @@ variable "imds_http_hop_limit" {
 }
 
 variable "imds_tags_enable" {
+  type    = bool
+  default = false
+}
+
+variable "pod_imds_block_enabled" {
   type    = bool
   default = false
 }
@@ -188,6 +198,11 @@ variable "karpenter_node_volume_type" {
   default = "gp3"
 }
 
+variable "karpenter_node_os" {
+  type    = string
+  default = "al2023"
+}
+
 variable "karpenter_node_labels" {
   type    = string
   default = ""
@@ -237,6 +252,16 @@ variable "karpenter_build_consolidate_after" {
 variable "karpenter_build_node_labels" {
   type    = string
   default = ""
+}
+
+variable "karpenter_build_imds_tokens" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_imds_hop_limit" {
+  type    = number
+  default = 0
 }
 
 variable "additional_karpenter_nodepools" {

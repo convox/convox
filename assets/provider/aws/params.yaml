@@ -81,6 +81,38 @@ Groups:
         type: boolean
         description: Enables encryption for EBS volumes on primary node disks using
           AWS-managed keys for data at rest encryption
+      - name: system_readonly_rootfs_enabled
+        default: "false"
+        type: boolean
+        description: Runs the Convox system containers (api, atom, resolver) with a
+          read-only root filesystem for the container image layer
+      - name: pod_imds_block_enabled
+        default: "false"
+        type: boolean
+        description: Blocks application pods from reaching the EC2 Instance Metadata
+          Service (IMDS), preventing workloads from assuming node IAM credentials.
+      - name: seccomp_default_enabled
+        default: "false"
+        type: boolean
+        description: Applies the RuntimeDefault seccomp profile to the Convox system
+          pods.
+      - name: pod_security_standard
+        default: ""
+        sideNote: Empty disables Pod Security Admission
+        type: string
+        description: Pod Security Admission standard applied to application
+          namespaces.
+        allowedValues:
+              - baseline
+              - restricted
+      - name: pod_security_mode
+        default: warn
+        type: string
+        description: Enforcement mode for Pod Security Admission.
+        allowedValues:
+              - warn
+              - audit
+              - enforce
       - name: nlb_security_group
         default: "null"
         sideNote: AWS default created unless set
@@ -136,6 +168,10 @@ Groups:
           (Nginx)[https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_protocols] &l
           &l They must be listed separated by spaces. &i e.g. &i - TLSv1.2 TLSv1.3 &l
           Applies to nginx router only. Has no effect when router_type=contour. &l
+      - name: ecr_immutable_tags_enabled
+        default: "false"
+        type: boolean
+        description: When enabled, newly created app ECR repositories use immutable image tags so an existing tag cannot be overwritten.
       - name: ecr_scan_on_push_enable
         default: "false"
         type: boolean
@@ -246,6 +282,11 @@ Groups:
         type: boolean
         description: The build node alleviates resource constraint and unnecessary
           scaling during build time.
+      - name: build_node_minimal_role_enabled
+        default: "false"
+        type: boolean
+        description: Assigns Karpenter build nodes a dedicated least-privilege IAM
+          role instead of the shared workload node role.
       - name: build_node_type
         optional: true
         default: "null"
@@ -605,6 +646,13 @@ Groups:
           - gp3
           - io1
           - io2
+      - name: karpenter_node_os
+        default: al2023
+        type: string
+        description: Node OS for Karpenter workload nodes. al2023 (default) or bottlerocket.
+        allowedValues:
+          - al2023
+          - bottlerocket
       - name: karpenter_node_labels
         optional: true
         default: "null"
@@ -679,6 +727,20 @@ Groups:
         type: string
         regex: ^\d+[smh]$
         description: Time before empty build nodes are removed.
+      - name: karpenter_build_imds_tokens
+        default: ""
+        sideNote: Empty inherits the cluster IMDS setting
+        type: string
+        description: Whether the Instance Metadata Service requires session tokens
+          (IMDSv2) on Karpenter build nodes.
+        allowedValues:
+              - optional
+              - required
+      - name: karpenter_build_imds_hop_limit
+        default: "0"
+        sideNote: 0 uses the AWS default
+        type: integer
+        description: IMDS response hop limit for Karpenter build nodes.
       - name: karpenter_config
         optional: true
         default: "null"

@@ -35,7 +35,8 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
-	EcrScanOnPushEnable bool
+	EcrScanOnPushEnable     bool
+	EcrImmutableTagsEnabled bool
 
 	Ec2 *ec2.EC2
 
@@ -59,12 +60,18 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ecrImmutableTagsEnabled, err := strconv.ParseBool(os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED"))
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Provider{
-		Provider:            k,
-		Bucket:              os.Getenv("BUCKET"),
-		EncryptionKey:       os.Getenv("ENCRYPTION_KEY"),
-		Region:              os.Getenv("AWS_REGION"),
-		EcrScanOnPushEnable: ecrScanOnPushEnable,
+		Provider:                k,
+		Bucket:                  os.Getenv("BUCKET"),
+		EncryptionKey:           os.Getenv("ENCRYPTION_KEY"),
+		Region:                  os.Getenv("AWS_REGION"),
+		EcrScanOnPushEnable:     ecrScanOnPushEnable,
+		EcrImmutableTagsEnabled: ecrImmutableTagsEnabled,
 	}
 
 	k.Engine = p

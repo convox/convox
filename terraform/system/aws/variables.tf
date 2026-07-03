@@ -35,6 +35,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "build_node_minimal_role_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "buildkit_host_path_cache_enable" {
   default = false
   type    = bool
@@ -61,6 +66,11 @@ variable "cost_tracking_enable" {
   type        = bool
   default     = false
   description = "Enable the rack-side cost accumulator and budget enforcement. Opt-in; false preserves existing behaviour."
+}
+
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
 }
 
 variable "convox_domain_tls_cert_disable" {
@@ -138,6 +148,11 @@ variable "ecr_additional_policy_arn" {
 }
 
 variable "ecr_full_access" {
+  type    = bool
+  default = false
+}
+
+variable "ecr_immutable_tags_enabled" {
   type    = bool
   default = false
 }
@@ -228,6 +243,16 @@ variable "imds_tags_enable" {
   default = false
 }
 
+variable "pod_imds_block_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }
@@ -308,6 +333,11 @@ variable "karpenter_node_volume_type" {
   default = "gp3"
 }
 
+variable "karpenter_node_os" {
+  type    = string
+  default = "al2023"
+}
+
 variable "karpenter_node_labels" {
   type    = string
   default = ""
@@ -356,6 +386,16 @@ variable "karpenter_build_consolidate_after" {
 variable "karpenter_build_node_labels" {
   type    = string
   default = ""
+}
+
+variable "karpenter_build_imds_tokens" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_build_imds_hop_limit" {
+  type    = number
+  default = 0
 }
 
 variable "additional_karpenter_nodepools_config" {
@@ -452,6 +492,16 @@ variable "nginx_additional_config" {
 variable "router_type" {
   type    = string
   default = "nginx"
+}
+
+variable "pod_security_standard" {
+  type    = string
+  default = ""
+}
+
+variable "pod_security_mode" {
+  type    = string
+  default = "warn"
 }
 
 variable "contour_cpu_request" {

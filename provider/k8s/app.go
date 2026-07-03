@@ -2,7 +2,9 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -162,6 +164,19 @@ func (p *Provider) AppDelete(name string) error {
 	}
 
 	if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Delete the dedicated build namespace if present. The type=build label guards
+	// against an app literally named build-<name> whose namespace name collides
+	// with this one.
+	if bns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.buildNamespace(name), am.GetOptions{}); err == nil {
+		if bns.Labels["type"] == "build" {
+			if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.buildNamespace(name), am.DeleteOptions{}); err != nil && !ae.IsNotFound(err) {
+				return errors.WithStack(err)
+			}
+		}
+	} else if !ae.IsNotFound(err) {
 		return errors.WithStack(err)
 	}
 
@@ -343,6 +358,73 @@ func (p *Provider) AppNamespace(app string) string {
 		}
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
+}
+
+// buildNamespace returns a deterministic, length-safe namespace dedicated to an
+// app's build pod. The natural form can exceed the 63-character namespace limit
+// for long names, so fall back to a hashed form that stays within the limit.
+func (p *Provider) buildNamespace(app string) string {
+	natural := fmt.Sprintf("%s-build-%s", p.Name, app)
+	if p.ContextTID() != "" {
+		natural = fmt.Sprintf("%s-build-%s-%s", p.Name, p.ContextTID(), app)
+	}
+	if len(natural) <= 63 {
+		return natural
+	}
+	sum := sha256.Sum256([]byte(natural))
+	prefix := natural
+	if len(prefix) > 54 {
+		prefix = prefix[:54]
+	}
+	return strings.TrimRight(prefix, "-") + "-" + hex.EncodeToString(sum[:])[:8]
+}
+
+// processBuildNamespace returns where the build pod runs. Under PSA enforce the
+// app namespace's label would reject the build pod, so the build runs in a
+// dedicated unlabeled namespace; otherwise it runs in the app namespace as before.
+func (p *Provider) processBuildNamespace(app string) string {
+	if p.PodSecurityStandard != "" && p.PodSecurityMode == "enforce" {
+		return p.buildNamespace(app)
+	}
+	return p.AppNamespace(app)
+}
+
+func (p *Provider) ensureBuildNamespace(app string) error {
+	name := p.buildNamespace(app)
+
+	ns := &ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"name": app, "type": "build"},
+		},
+	}
+
+	if p.ContextTID() != "" {
+		ns.Labels["tid"] = p.ContextTID()
+	}
+
+	_, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{})
+	if err == nil {
+		return nil
+	}
+
+	if !ae.IsAlreadyExists(err) {
+		return errors.WithStack(err)
+	}
+
+	// The name already exists. Confirm it is our build namespace and not a
+	// collision with another app's namespace (an app named build-<app>) before
+	// a build pod is created in it.
+	existing, gerr := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), name, am.GetOptions{})
+	if gerr != nil {
+		return errors.WithStack(gerr)
+	}
+
+	if existing.Labels["type"] != "build" {
+		return errors.WithStack(fmt.Errorf("build namespace %q collides with an existing namespace; rename the app", name))
+	}
+
+	return nil
 }
 
 func (p *Provider) NamespaceApp(namespace string) (string, error) {

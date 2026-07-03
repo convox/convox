@@ -308,6 +308,40 @@ func TestValidateAndMutateParams_KarpenterNodeVolumeType(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_KarpenterNodeOS(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		want    string
+	}{
+		{"al2023 valid", "al2023", false, "al2023"},
+		{"bottlerocket valid", "bottlerocket", false, "bottlerocket"},
+		{"BOTTLEROCKET normalized", "BOTTLEROCKET", false, "bottlerocket"},
+		{"AL2023 normalized", "AL2023", false, "al2023"},
+		{"junk rejected", "ubuntu", true, ""},
+		{"empty rejected", "", true, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_node_os": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for %q", tt.value)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %q: %v", tt.value, err)
+			}
+			if got := params["karpenter_node_os"]; got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_WebhookSigningKey_AllProviders(t *testing.T) {
 	for _, provider := range []string{"aws", "gcp", "azure", "do", "metal", "local"} {
 		t.Run(provider, func(t *testing.T) {
@@ -406,12 +440,14 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 	// ecr_docker_hub_cache=true triggers a dependency rule (requires
 	// docker_hub_username/password); it's covered by a dedicated test below.
 	for _, k := range []string{
-		"build_node_enabled", "buildkit_host_path_cache_enable", "convox_domain_tls_cert_disable",
+		"build_node_enabled", "build_node_minimal_role_enabled", "buildkit_host_path_cache_enable",
+		"convox_domain_tls_cert_disable",
 		"cost_tracking_enable", "deploy_extra_nlb", "disable_convox_resolver",
 		"disable_image_manifest_cache", "ebs_volume_encryption_enabled",
-		"ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
+		"ecr_immutable_tags_enabled", "ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
 		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
 		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
+		"pod_imds_block_enabled", "seccomp_default_enabled", "system_readonly_rootfs_enabled",
 		"telemetry", "vpa_enable",
 	} {
 		t.Run(k, func(t *testing.T) {

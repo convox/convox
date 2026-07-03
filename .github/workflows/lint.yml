@@ -2,6 +2,19 @@ name: lint
 on: pull_request
 
 jobs:
+  telemetry-manifest-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - name: telemetry manifests match variables
+        run: make lint-telemetry
+
   golangci-lint:
     runs-on: ubuntu-22.04
     steps:

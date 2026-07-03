@@ -122,6 +122,15 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
 
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
+
         affinity {
           pod_anti_affinity {
             preferred_during_scheduling_ignored_during_execution {
@@ -150,6 +159,13 @@ resource "kubernetes_deployment" "resolver" {
           args              = ["resolver"]
           image             = "${var.image}:${var.release}"
           image_pull_policy = "IfNotPresent"
+
+          dynamic "security_context" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              read_only_root_filesystem = true
+            }
+          }
 
           env {
             name = "NAMESPACE"

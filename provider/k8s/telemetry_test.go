@@ -389,6 +389,23 @@ func TestRedactedParamsAlphabeticalOrder(t *testing.T) {
 		"redactedParams must be alphabetical for consistent insertion order")
 }
 
+func TestRedactedParamsExactSet(t *testing.T) {
+	want := []string{
+		"cidr",
+		"docker_hub_password",
+		"internet_gateway_id",
+		"key_pair_name",
+		"private_eks_pass",
+		"prometheus_url",
+		"syslog",
+		"tags",
+		"vpc_id",
+		"webhook_signing_key",
+		"whitelist",
+	}
+	assert.Equal(t, want, strings.Split(*k8s.RedactedParamsForTest, ","))
+}
+
 // TestHashParamValue_SaltedByNamespaceUID pins the security invariant: two
 // Providers backed by namespaces with DIFFERENT UIDs must produce DIFFERENT
 // hashes for the same plaintext; a single Provider must produce the SAME hash

@@ -29,9 +29,11 @@ module "k8s" {
   disable_image_manifest_cache    = var.disable_image_manifest_cache
   image                           = var.image
   cost_tracking_enable            = var.cost_tracking_enable
+  seccomp_default_enabled         = var.seccomp_default_enabled
   router_type                     = var.router_type
   cert_duration                   = var.cert_duration
   karpenter_enabled               = var.karpenter_enabled
+  system_readonly_rootfs_enabled  = var.system_readonly_rootfs_enabled
   metrics_scraper_host            = var.metrics_scraper_host
   namespace                       = var.namespace
   prometheus_url                  = var.prometheus_url
@@ -61,6 +63,7 @@ module "k8s" {
     RESOLVER                                  = var.disable_convox_resolver ? "" : var.resolver
     ROUTER                                    = var.router
     SOCKET                                    = "/var/run/docker.sock"
+    ECR_IMMUTABLE_TAGS_ENABLED                = var.ecr_immutable_tags_enabled
     ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
     SUBNET_IDS                                = join(",", var.subnets)
     VPC_ID                                    = var.vpc_id
@@ -75,6 +78,9 @@ module "k8s" {
     FEATURE_GATES                             = var.api_feature_gates
     ROUTER_TYPE                               = var.router_type
     PROXY_PROTOCOL                            = var.proxy_protocol
+    POD_IMDS_BLOCK_ENABLED                    = var.pod_imds_block_enabled
+    POD_SECURITY_STANDARD                     = var.pod_security_standard
+    POD_SECURITY_MODE                         = var.pod_security_mode
     CONTOUR_INTERNAL_TLS                      = var.contour_internal_tls
   }
 }

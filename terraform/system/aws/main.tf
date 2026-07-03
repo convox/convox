@@ -124,6 +124,7 @@ module "cluster" {
   build_arm_type                      = local.build_arm_type
   availability_zones                  = var.availability_zones
   build_node_enabled                  = var.build_node_enabled
+  build_node_minimal_role_enabled     = var.build_node_minimal_role_enabled
   build_node_min_count                = var.build_node_min_count
   build_node_type                     = var.build_node_type != "" ? var.build_node_type : var.node_type
   cidr                                = var.cidr
@@ -141,6 +142,7 @@ module "cluster" {
   imds_http_tokens                    = var.imds_http_tokens
   imds_http_hop_limit                 = var.imds_http_hop_limit
   imds_tags_enable                    = var.imds_tags_enable
+  pod_imds_block_enabled              = var.pod_imds_block_enabled
   eks_access_entries                  = var.eks_access_entries == "true"
   karpenter_auth_mode                 = var.karpenter_auth_mode == "true"
   karpenter_enabled                   = var.karpenter_enabled == "true"
@@ -156,6 +158,7 @@ module "cluster" {
   karpenter_disruption_budget_nodes   = var.karpenter_disruption_budget_nodes
   karpenter_node_disk                 = var.karpenter_node_disk
   karpenter_node_volume_type          = var.karpenter_node_volume_type
+  karpenter_node_os                   = var.karpenter_node_os
   karpenter_node_labels               = var.karpenter_node_labels
   karpenter_node_taints               = var.karpenter_node_taints
   karpenter_config                    = var.karpenter_config != "" ? try(base64decode(var.karpenter_config), var.karpenter_config) : "{}"
@@ -166,6 +169,8 @@ module "cluster" {
   karpenter_build_memory_limit_gb     = var.karpenter_build_memory_limit_gb
   karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
   karpenter_build_node_labels         = var.karpenter_build_node_labels
+  karpenter_build_imds_tokens         = var.karpenter_build_imds_tokens
+  karpenter_build_imds_hop_limit      = var.karpenter_build_imds_hop_limit
   additional_karpenter_nodepools      = local.additional_karpenter_nodepools
   keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name
@@ -261,7 +266,9 @@ module "rack" {
   api_feature_gates                         = var.api_feature_gates
   build_disable_convox_resolver             = var.build_disable_convox_resolver
   cost_tracking_enable                      = var.cost_tracking_enable
+  seccomp_default_enabled                   = var.seccomp_default_enabled
   karpenter_enabled                         = var.karpenter_enabled == "true"
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
   build_node_enabled                        = var.build_node_enabled
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   cluster                                   = module.cluster.id
@@ -293,6 +300,7 @@ module "rack" {
   pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
   prometheus_url                            = var.prometheus_url
   proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
   release                                   = local.release
   releases_to_retain_after_active           = var.releases_to_retain_after_active
   releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
@@ -309,12 +317,15 @@ module "rack" {
   whitelist                                 = split(",", var.whitelist)
   ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
+  ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
   webhook_signing_key                       = var.webhook_signing_key
   router_type                               = var.router_type
+  pod_security_standard                     = var.pod_security_standard
+  pod_security_mode                         = var.pod_security_mode
   cert_duration                             = var.cert_duration
   contour_cpu_request                       = var.contour_cpu_request
   contour_memory_request                    = var.contour_memory_request
