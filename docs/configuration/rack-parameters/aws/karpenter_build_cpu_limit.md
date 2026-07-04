@@ -19,7 +19,7 @@ The default value is `32`.
 
 ```bash
 $ convox rack params set karpenter_build_cpu_limit=64 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

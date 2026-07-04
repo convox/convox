@@ -31,7 +31,7 @@ The default value is `128Mi`. This default preserves existing behavior, so Racks
 ```bash
 $ convox rack params set contour_memory_request=256Mi -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 
@@ -46,7 +46,7 @@ This parameter is clearable. Clearing it returns the control plane to the defaul
 ```bash
 $ convox rack params set contour_memory_request= -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 The value is a Kubernetes memory quantity (for example `128Mi`, `256Mi`, or `512Mi`). It sets a request, not a limit, so it reserves scheduling capacity rather than capping usage. The parameter applies only when `router_type=contour`; on `router_type=nginx` Racks it has no effect regardless of its value. It is available on AWS Racks only.
 

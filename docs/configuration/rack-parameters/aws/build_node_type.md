@@ -21,7 +21,7 @@ The default value for `build_node_type` is the same as the [node_type](/configur
 To set the `build_node_type` parameter, use the following command:
 ```bash
 $ convox rack params set build_node_type=c5.large -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the build node type to `c5.large`.
 

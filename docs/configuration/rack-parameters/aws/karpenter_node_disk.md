@@ -19,7 +19,7 @@ The default value is `0` (inherits the Rack's [`node_disk`](/configuration/rack-
 
 ```bash
 $ convox rack params set karpenter_node_disk=100 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

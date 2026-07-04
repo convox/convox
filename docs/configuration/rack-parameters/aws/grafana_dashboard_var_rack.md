@@ -26,19 +26,19 @@ Letters, digits, and underscore only. Values containing any other character are 
 To override to `cluster_name`:
 ```bash
 $ convox rack params set grafana_dashboard_var_rack=cluster_name -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set grafana_dashboard_var_rack=rack -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the canonical default `rack`):
 ```bash
 $ convox rack params set grafana_dashboard_var_rack= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

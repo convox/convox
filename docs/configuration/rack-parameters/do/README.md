@@ -24,3 +24,4 @@ The following parameters are available for configuring your Convox rack on Digit
 | [registry_disk](/configuration/rack-parameters/do/registry_disk)         | Specifies the size of the registry disk.                                  |
 | [syslog](/configuration/rack-parameters/do/syslog)                       | Specifies the endpoint to forward logs to a syslog server.                |
 | [terraform_update_timeout](/configuration/rack-parameters/do/terraform_update_timeout) | Controls how long Terraform waits for cluster update operations to complete. |
+| [webhook_signing_key](/configuration/rack-parameters/do/webhook_signing_key) | HMAC secret that signs outbound webhook deliveries with a Convox-Signature header. |

@@ -38,3 +38,4 @@ The following parameters are available for configuring your Convox rack on Micro
 | [syslog](/configuration/rack-parameters/azure/syslog) | Specifies the endpoint to forward logs to a syslog server. |
 | [tags](/configuration/rack-parameters/azure/tags) | Custom Azure resource tags. |
 | [terraform_update_timeout](/configuration/rack-parameters/azure/terraform_update_timeout) | Controls how long Terraform waits for cluster and node pool update operations to complete. |
+| [webhook_signing_key](/configuration/rack-parameters/azure/webhook_signing_key) | Per-rack HMAC secret that signs outbound webhook deliveries with a Convox-Signature header. |

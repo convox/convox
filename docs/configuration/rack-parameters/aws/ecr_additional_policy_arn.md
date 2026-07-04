@@ -29,7 +29,7 @@ Create a custom IAM policy scoped to the repos you need, then attach it:
 
 ```bash
 $ convox rack params set ecr_additional_policy_arn=arn:aws:iam::123456789012:policy/my-ecr-repos -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Clearing
@@ -38,7 +38,7 @@ Clear the parameter to detach the custom policy:
 
 ```bash
 $ convox rack params set ecr_additional_policy_arn= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 This parameter is clearable. Setting it to an empty value detaches the policy cleanly.

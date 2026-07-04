@@ -24,19 +24,19 @@ The default value is an empty string (`""`), which means no additional security 
 Set one or more CIDRs (comma-separated, no spaces):
 ```bash
 $ convox rack params set eks_api_server_private_access_cidrs=10.0.0.0/8 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Multiple CIDRs:
 ```bash
 $ convox rack params set eks_api_server_private_access_cidrs=10.0.0.0/8,172.16.0.0/12,192.168.1.0/24 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To remove all private access rules (revert to default):
 ```bash
 $ convox rack params set eks_api_server_private_access_cidrs= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

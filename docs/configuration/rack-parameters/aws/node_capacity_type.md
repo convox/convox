@@ -25,7 +25,7 @@ The default value for `node_capacity_type` is `on_demand`.
 To set the `node_capacity_type` parameter, use the following command:
 ```bash
 $ convox rack params set node_capacity_type=mixed -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the node capacity type to `mixed`.
 

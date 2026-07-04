@@ -23,7 +23,7 @@ The default value is an empty string (`""`).
 The value should be a comma-separated list of `key=value` pairs. It can be provided as plain text or base64-encoded:
 ```bash
 $ convox rack params set nginx_additional_config=proxy-read-timeout=300,proxy-send-timeout=300 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -19,10 +19,16 @@ The default value is an empty string (`""`), which uses the built-in default ima
 - **Air-Gapped Environments**: Point to an image in a private registry.
 
 ## Setting Parameters
-To set the `nginx_image` parameter, use the following command:
+The `nginx_image` parameter is managed internally by the Rack and is normally updated through `convox rack update`. Setting it directly without the `--force` flag returns an error:
 ```bash
 $ convox rack params set nginx_image=registry.k8s.io/ingress-nginx/controller:v1.12.0 -r rackName
-Setting parameters... OK
+ERROR: param 'nginx_image' is managed internally — to update it use 'convox rack update'. Use --force to override
+```
+
+To set the parameter directly, pass the `--force` flag. The CLI still prints a warning that setting a managed parameter directly may break your Rack:
+```bash
+$ convox rack params set nginx_image=registry.k8s.io/ingress-nginx/controller:v1.12.0 --force -r rackName
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -26,10 +26,12 @@ To list all certificates
 ### Examples
 ```bash
     $ convox certs
-    ID                                     DOMAIN             EXPIRES
-    cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d  *.example.com      364 days from now
-    cert-1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e  myapp.example.org  364 days from now
+    ID                                     DOMAIN             EXPIRES            Status
+    cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d  *.example.com      364 days from now  Ready
+    cert-1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e  myapp.example.org  364 days from now  Ready
 ```
+
+The `Status` column shows `Ready` for issued certificates and `Not Ready` for generated certificates that are still pending issuance.
 
 ## certs generate
 

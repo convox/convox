@@ -21,7 +21,7 @@ The default value for `preemptible` is `true`.
 To set the `preemptible` parameter, use the following command:
 ```bash
 $ convox rack params set preemptible=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the `preemptible` parameter to the specified value.
 

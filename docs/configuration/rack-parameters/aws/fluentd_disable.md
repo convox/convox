@@ -21,7 +21,7 @@ The default value for `fluentd_disable` is `false`.
 To disable Fluentd, use the following command:
 ```bash
 $ convox rack params set fluentd_disable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command disables the installation of Fluentd in your rack.
 

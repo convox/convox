@@ -26,7 +26,7 @@ Name      dev
 Provider  local
 Router    router.dev.localdev.convox.cloud
 Status    running
-Version   3.23.3
+Version   3.24.11
 ```
 
 ## Deploy an example application

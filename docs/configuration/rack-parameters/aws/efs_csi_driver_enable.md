@@ -21,7 +21,7 @@ The default value for `efs_csi_driver_enable` is `false`.
 To enable the EFS CSI driver, use the following command:
 ```bash
 $ convox rack params set efs_csi_driver_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command enables the AWS EFS volume feature for your rack.
 

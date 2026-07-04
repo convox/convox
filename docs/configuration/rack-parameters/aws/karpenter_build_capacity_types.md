@@ -19,7 +19,7 @@ The default value is `on-demand`.
 
 ```bash
 $ convox rack params set karpenter_build_capacity_types=on-demand,spot -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

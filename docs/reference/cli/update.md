@@ -17,7 +17,7 @@ Update the Convox CLI to the latest version.
 ### Examples
 ```bash
     $ convox update
-    Updating to 3.23.4... OK
+    Updating to 3.24.11... OK
 ```
 
 ## Rack Updates

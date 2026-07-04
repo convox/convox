@@ -21,7 +21,7 @@ The default value for `cert_duration` is `2160h` (90 days).
 To set the `cert_duration` parameter, use the following command:
 ```bash
 $ convox rack params set cert_duration=4320h -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the certificate renewal period to 180 days.
 

@@ -36,25 +36,25 @@ The following log types are supported by EKS (case-sensitive):
 Enable audit logging (most common compliance requirement):
 ```bash
 $ convox rack params set eks_log_types=audit -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Enable full SOC 2 coverage:
 ```bash
 $ convox rack params set eks_log_types=api,audit,authenticator -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Enable all log types:
 ```bash
 $ convox rack params set eks_log_types=api,audit,authenticator,controllerManager,scheduler -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable all logging (revert to default):
 ```bash
 $ convox rack params set eks_log_types= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

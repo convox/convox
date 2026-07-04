@@ -22,7 +22,7 @@ The default value for `pdb_default_min_available_percentage` is `50`.
 To set the `pdb_default_min_available_percentage` parameter, use the following command:
 ```bash
 $ convox rack params set pdb_default_min_available_percentage=75 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

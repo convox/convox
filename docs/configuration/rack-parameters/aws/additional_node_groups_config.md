@@ -45,7 +45,7 @@ To set the `additional_node_groups_config` parameter, there are several methods:
 ### Using a JSON File (Recommended)
 ```bash
 $ convox rack params set additional_node_groups_config=/path/to/node-config.json -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 The JSON file should be structured as follows:
@@ -80,7 +80,7 @@ The JSON file should be structured as follows:
 ### Using a Raw JSON String
 ```bash
 $ convox rack params set 'additional_node_groups_config=[{"id":101,"type":"t3.medium","disk":50,"capacity_type":"ON_DEMAND","min_size":1,"max_size":3,"label":"app-workers","tags":"environment=production,team=backend"}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Node Group Identification and Tagging

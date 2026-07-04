@@ -21,7 +21,7 @@ The default value for `min_on_demand_count` is `1`.
 To set the `min_on_demand_count` parameter, use the following command:
 ```bash
 $ convox rack params set min_on_demand_count=2 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the minimum number of on-demand nodes to 2.
 

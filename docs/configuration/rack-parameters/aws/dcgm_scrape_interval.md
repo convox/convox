@@ -30,19 +30,19 @@ The default value is `15s`.
 To bump scrape interval to 30 seconds:
 ```bash
 $ convox rack params set dcgm_scrape_interval=30s -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set dcgm_scrape_interval=15s -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the rack default `15s`):
 ```bash
 $ convox rack params set dcgm_scrape_interval= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

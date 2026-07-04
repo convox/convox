@@ -19,7 +19,7 @@ The default value is `400`.
 
 ```bash
 $ convox rack params set karpenter_memory_limit_gb=800 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

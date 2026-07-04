@@ -21,7 +21,7 @@ The default value for `node_type` is `t3.small`.
 To set the `node_type` parameter, use the following command:
 ```bash
 $ convox rack params set node_type=c5.large -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the node instance type to `c5.large`.
 

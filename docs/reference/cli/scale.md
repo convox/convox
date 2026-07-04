@@ -29,10 +29,7 @@ row only: the same columns, one row.
     web      2        2        256  1024    -    2    2
 ```
 
-If the supplied service does not exist in the app, `convox scale <name>` exits
-non-zero with `service "<name>" not found in app <app>`. The check fires once
-before the watch loop starts, so a typo combined with `--watch-interval` does
-not loop forever printing the same error.
+If the supplied service does not exist in the app, `convox scale <name>` exits non-zero with `service "<name>" not found in app <app>`. The check fires once before the watch loop starts, so a typo combined with `--watch` does not loop forever printing the same error.
 
 ### Examples
 ```bash

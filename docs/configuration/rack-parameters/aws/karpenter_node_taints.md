@@ -19,7 +19,7 @@ The default value is empty (no custom taints).
 
 ```bash
 $ convox rack params set karpenter_node_taints=dedicated=workload:NoSchedule -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

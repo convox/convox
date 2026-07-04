@@ -22,13 +22,13 @@ The default value is the chart version that ships with this rack release, curren
 To pin to a specific chart version:
 ```bash
 $ convox rack params set gpu_observability_chart_version=4.8.2 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the rack default:
 ```bash
 $ convox rack params set gpu_observability_chart_version=4.8.1 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 You must enable [`gpu_observability_enable`](/configuration/rack-parameters/aws/gpu_observability_enable) for the chart to be installed at all. Pinning the version while observability is disabled is a no-op until you enable it.

@@ -19,7 +19,7 @@ The default value is empty (no custom labels).
 
 ```bash
 $ convox rack params set karpenter_build_node_labels=environment=build,team=platform -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

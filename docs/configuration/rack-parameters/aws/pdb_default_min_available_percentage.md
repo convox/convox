@@ -25,7 +25,7 @@ The default value for `pdb_default_min_available_percentage` is `50`.
 To set the default minimum available percentage for Pod Disruption Budgets, use the following command:
 ```bash
 $ convox rack params set pdb_default_min_available_percentage=40 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Choosing a Value

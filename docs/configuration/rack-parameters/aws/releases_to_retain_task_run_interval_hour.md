@@ -26,7 +26,7 @@ The default value for `releases_to_retain_task_run_interval_hour` is `24` hours 
 To set the `releases_to_retain_task_run_interval_hour` parameter, use the following command:
 ```bash
 $ convox rack params set releases_to_retain_task_run_interval_hour=12 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 This command configures the cleanup task to run every 12 hours.

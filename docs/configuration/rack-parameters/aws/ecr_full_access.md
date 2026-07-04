@@ -29,14 +29,14 @@ The default value for `ecr_full_access` is `false`.
 
 ```bash
 $ convox rack params set ecr_full_access=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Disabling
 
 ```bash
 $ convox rack params set ecr_full_access=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Disabling cleanly detaches the managed policy from the API role. The scoped inline policy (always present) continues to grant access to rack-prefixed repositories.
@@ -51,4 +51,5 @@ Disabling cleanly detaches the managed policy from the API role. The scoped inli
 
 - [ecr_additional_policy_arn](/configuration/rack-parameters/aws/ecr_additional_policy_arn) for attaching a custom-scoped IAM policy instead of full access
 - [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) for ECR pull-through cache
+- [ecr_immutable_tags_enabled](/configuration/rack-parameters/aws/ecr_immutable_tags_enabled) for immutable image tags on App ECR repositories
 - [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) for image vulnerability scanning

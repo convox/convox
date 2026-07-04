@@ -26,19 +26,19 @@ The default value is `100`.
 To raise the pod cap to 200:
 ```bash
 $ convox rack params set gpu_metrics_max_pods=200 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set gpu_metrics_max_pods=100 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the default `100`):
 ```bash
 $ convox rack params set gpu_metrics_max_pods= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

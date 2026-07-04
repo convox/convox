@@ -21,7 +21,7 @@ The default value for `node_type` is `n1-standard-1`.
 To set the `node_type` parameter, use the following command:
 ```bash
 $ convox rack params set node_type=n1-standard-1 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the `node_type` parameter to the specified value.
 

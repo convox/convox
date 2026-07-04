@@ -55,7 +55,7 @@ GPU observability is opt-in via two rack params:
 ```bash
 $ convox rack params set gpu_observability_enable=true \
     nvidia_device_plugin_enable=true -r myrack
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 The `nvidia_device_plugin_enable=true` prerequisite is required: the
@@ -84,7 +84,7 @@ or storage is cost-sensitive, raise the interval:
 
 ```bash
 $ convox rack params set dcgm_scrape_interval=30s -r myrack
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Allowed values are Go-format duration strings between `15s` and `5m` (300s).

@@ -22,7 +22,7 @@ The default value for `azure_files_enable` is `false`.
 To enable Azure Files volumes, use the following command:
 ```bash
 $ convox rack params set azure_files_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command enables the Azure Files NFS volume feature for your rack.
 

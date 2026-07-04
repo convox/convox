@@ -23,19 +23,19 @@ The default value is `24h`.
 To change retention:
 ```bash
 $ convox rack params set prometheus_gpu_metrics_retention=48h -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set prometheus_gpu_metrics_retention=24h -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override, equivalent to reverting to default since the Console worker reads the empty value as "use the default":
 ```bash
 $ convox rack params set prometheus_gpu_metrics_retention= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

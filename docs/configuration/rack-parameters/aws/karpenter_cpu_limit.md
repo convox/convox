@@ -19,7 +19,7 @@ The default value is `100`.
 
 ```bash
 $ convox rack params set karpenter_cpu_limit=200 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

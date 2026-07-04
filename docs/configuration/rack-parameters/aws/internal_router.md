@@ -21,7 +21,7 @@ The default value for `internal_router` is `false`.
 To enable the internal router, use the following command:
 ```bash
 $ convox rack params set internal_router=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command installs an internal load balancer within the VPC.
 

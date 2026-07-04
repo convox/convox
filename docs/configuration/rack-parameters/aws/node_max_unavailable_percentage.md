@@ -26,7 +26,7 @@ When set to `0`, no explicit update configuration is applied and AWS EKS uses it
 To set the node max unavailable percentage:
 ```bash
 $ convox rack params set node_max_unavailable_percentage=25 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 The value must be between 1 and 100.
@@ -34,7 +34,7 @@ The value must be between 1 and 100.
 To disable the explicit update configuration and revert to AWS defaults:
 ```bash
 $ convox rack params set node_max_unavailable_percentage=0 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

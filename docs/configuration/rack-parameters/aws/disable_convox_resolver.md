@@ -24,13 +24,13 @@ The default value for `disable_convox_resolver` is `false`, meaning the Convox r
 To disable the Convox resolver and use the Kubernetes resolver instead:
 ```bash
 $ convox rack params set disable_convox_resolver=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To re-enable the Convox resolver (default behavior):
 ```bash
 $ convox rack params set disable_convox_resolver=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Common Configuration Pattern

@@ -19,14 +19,14 @@ The default value is empty (auto-detected from [`node_type`](/configuration/rack
 
 ```bash
 $ convox rack params set karpenter_arch=arm64 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 For mixed-architecture workloads:
 
 ```bash
 $ convox rack params set karpenter_arch=amd64,arm64 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

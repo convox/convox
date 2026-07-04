@@ -22,7 +22,7 @@ The default value for `region` is `eastus`.
 To set the `region` parameter, use the following command:
 ```bash
 $ convox rack params set region=eastus -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the `region` parameter to the specified value.
 

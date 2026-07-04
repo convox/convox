@@ -22,7 +22,7 @@ The default value for `region` is `nyc3`.
 To set the `region` parameter, use the following command:
 ```bash
 $ convox rack params set region=nyc3 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the `region` parameter to the specified value.
 

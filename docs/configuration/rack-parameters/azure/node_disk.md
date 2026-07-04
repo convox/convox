@@ -21,6 +21,6 @@ The default value for `node_disk` is `30`.
 To set the `node_disk` parameter, use the following command:
 ```bash
 $ convox rack params set node_disk=50 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the OS disk size for nodes to `50` GB.

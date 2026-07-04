@@ -24,13 +24,13 @@ The default value for `ebs_volume_encryption_enabled` is `false`.
 To enable EBS volume encryption, use the following command:
 ```bash
 $ convox rack params set ebs_volume_encryption_enabled=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable EBS volume encryption:
 ```bash
 $ convox rack params set ebs_volume_encryption_enabled=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -22,7 +22,7 @@ The default value for `fluentd_memory` is `200Mi`.
 To set the `fluentd_memory` parameter, use the following command:
 ```bash
 $ convox rack params set fluentd_memory=512Mi -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the Fluentd memory allocation to 512Mi.
 

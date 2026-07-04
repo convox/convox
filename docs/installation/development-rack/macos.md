@@ -47,10 +47,10 @@ minikube addons enable ingress-dns
 ### 4. Install the rack
 
 ```bash
-convox rack install local dev -v 3.24.8 os=mac
+convox rack install local dev -v 3.24.11 os=mac
 ```
 
-Replace `3.24.8` with the latest version from the [releases page](https://github.com/convox/convox/releases).
+Replace `3.24.11` with the latest version from the [releases page](https://github.com/convox/convox/releases).
 
 > The `os=mac` parameter is required on macOS. It configures the rack to use `*.macdev.convox.cloud` instead of `*.localdev.convox.cloud`.
 
@@ -77,7 +77,7 @@ Name      dev
 Provider  local
 Router    router.dev.macdev.convox.cloud
 Status    running
-Version   3.24.8
+Version   3.24.11
 ```
 
 ## Using the rack

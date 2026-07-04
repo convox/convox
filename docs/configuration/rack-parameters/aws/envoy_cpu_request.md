@@ -27,7 +27,7 @@ The default value is `100m` (100 millicores). This default preserves existing be
 ```bash
 $ convox rack params set envoy_cpu_request=200m -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 
@@ -44,7 +44,7 @@ This parameter is clearable. Clearing it returns Envoy to the default request of
 ```bash
 $ convox rack params set envoy_cpu_request= -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 The parameter is AWS only and takes effect only when `router_type=contour`. Setting it on an nginx Rack stores the value but changes nothing until the Rack switches to Contour. Changing this request reschedules the Envoy Pods, which is handled as a rolling update of the data plane.
 

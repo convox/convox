@@ -21,7 +21,7 @@ The default value for `tags` is `""`. When set to `""`, no custom tags are appli
 To set the `tags` parameter, use the following command:
 ```bash
 $ convox rack params set tags=key1=val1,key2=val2 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the custom tags to the specified values.
 

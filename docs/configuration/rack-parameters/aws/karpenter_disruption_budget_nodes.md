@@ -19,7 +19,7 @@ The default value is `10%`.
 
 ```bash
 $ convox rack params set karpenter_disruption_budget_nodes=3 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

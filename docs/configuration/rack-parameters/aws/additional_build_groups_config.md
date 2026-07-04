@@ -43,7 +43,7 @@ To set the `additional_build_groups_config` parameter, there are several methods
 ### Using a JSON File (Recommended)
 ```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-config.json -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 The JSON file should be structured as follows:
@@ -66,7 +66,7 @@ The JSON file should be structured as follows:
 ### Using a Raw JSON String
 ```bash
 $ convox rack params set 'additional_build_groups_config=[{"type":"c5.2xlarge","disk":100,"capacity_type":"SPOT","min_size":0,"desired_size":1,"max_size":5,"label":"app-build"}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Directing Build Pods to Specific Node Groups

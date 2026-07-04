@@ -21,7 +21,7 @@ The default value for `idle_timeout` is `3600` seconds (1 hour).
 To set the `idle_timeout` parameter, use the following command:
 ```bash
 $ convox rack params set idle_timeout=600 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the idle timeout value to 600 seconds (10 minutes).
 

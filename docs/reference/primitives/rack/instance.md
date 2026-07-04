@@ -10,7 +10,7 @@ An Instance provides capacity for running [Processes](/reference/primitives/app/
 
 ## List Instances
 ```bash
-    $ convox rack instances
+    $ convox instances
     ID                            STATUS   STARTED         PS  CPU    MEM    PUBLIC         PRIVATE   TYPE
     ip-10-1-1-1.ec2.internal      running  10 minutes ago  8   0.00%  0.00%  18.200.200.99  10.1.1.1  m5.large
     ip-10-1-2-2.ec2.internal      running  10 minutes ago  6   0.00%  0.00%  3.80.240.200   10.1.2.2  m5.large
@@ -19,10 +19,11 @@ An Instance provides capacity for running [Processes](/reference/primitives/app/
 
 ## Attributes
 
-| Attribute  | Description                                    |
-| ---------- | ---------------------------------------------- |
-| **id**     | The unique identifier of the instance          |
-| **status** | The current status of the instance (running)   |
+| Attribute  | Description                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **id**     | The unique identifier of the instance                                                                                          |
+| **status** | The current status of the instance (`pending`, `running`)                                                                      |
+| **type**   | The cloud instance type, read from the node's `node.kubernetes.io/instance-type` label. Empty when the node has no such label. |
 
 ## Management
 
@@ -68,20 +69,20 @@ On Kubernetes-based (v3) racks, `convox instances terminate` performs a safe, dr
 
 Use `convox instances terminate` to clean up a node left behind after an EKS upgrade that could not drain, for example a node running an older kubelet version that failed during a rolling upgrade. Stuck `NotReady` nodes can also cause subsequent rack updates to fail.
 
-Identify the stuck node:
+Identify the stuck node. A NotReady node shows status `pending` in the instance list, even when it started long ago:
 
 ```bash
 $ convox instances -r rackName
-ID                             STATUS     STARTED       PS   CPU     MEM
-ip-10-0-1-42.ec2.internal      NotReady   2 days ago    0    0.00%   0.00%
-ip-10-0-1-87.ec2.internal      Ready      3 hours ago   8    12.40%  34.10%
+ID                         STATUS   STARTED      PS  CPU     MEM     PUBLIC       PRIVATE    TYPE
+ip-10-0-1-42.ec2.internal  pending  2 days ago   0   0.00%   0.00%   3.92.14.106  10.0.1.42  t3.large
+ip-10-0-1-87.ec2.internal  running  3 hours ago  8   12.40%  34.10%  3.92.18.220  10.0.1.87  t3.large
 ```
 
 Terminate it:
 
 ```bash
 $ convox instances terminate ip-10-0-1-42.ec2.internal -r rackName
-OK
+Terminating instance... OK
 ```
 
 On an AWS rack this cordons the node, force-deletes any remaining non-DaemonSet/non-mirror pods (since the node is NotReady), deletes the Kubernetes node object, and terminates the underlying EC2 instance. On other v3 providers, the same cordon/drain/node-deletion flow runs and the cloud VM is left in place.

@@ -41,6 +41,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [contour_memory_request](/configuration/rack-parameters/aws/contour_memory_request) | Sets the memory request for the Contour control plane. Raise on racks with many routes. Applies only when `router_type=contour`. |
 | [envoy_cpu_request](/configuration/rack-parameters/aws/envoy_cpu_request) | Sets the CPU request for the Envoy data plane. Applies only when `router_type=contour`. |
 | [envoy_memory_request](/configuration/rack-parameters/aws/envoy_memory_request) | Sets the memory request for the Envoy data plane. Applies only when `router_type=contour`. |
+| [nginx_additional_config](/configuration/rack-parameters/aws/nginx_additional_config) | Passes additional key-value configuration pairs to the nginx ingress controller ConfigMap. |
 | [router_type](/configuration/rack-parameters/aws/router_type)                       | Selects the rack ingress router: `nginx` (default) or `contour` (Envoy). See [Ingress Router](/configuration/ingress-router). |
 
 ### Karpenter
@@ -53,6 +54,8 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_build_capacity_types](/configuration/rack-parameters/aws/karpenter_build_capacity_types) | Purchasing model for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_consolidate_after](/configuration/rack-parameters/aws/karpenter_build_consolidate_after) | Delay before empty Karpenter build nodes are consolidated. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_cpu_limit](/configuration/rack-parameters/aws/karpenter_build_cpu_limit) | Maximum total vCPUs for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_imds_hop_limit](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | IMDS response hop limit for Karpenter build nodes, independent of the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | IMDS session token requirement (IMDSv2) for Karpenter build nodes, overriding the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_instance_families](/configuration/rack-parameters/aws/karpenter_build_instance_families) | Instance families for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_instance_sizes](/configuration/rack-parameters/aws/karpenter_build_instance_sizes) | Instance sizes for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_memory_limit_gb](/configuration/rack-parameters/aws/karpenter_build_memory_limit_gb) | Maximum total memory for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
@@ -100,10 +103,14 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [build_disable_convox_resolver](/configuration/rack-parameters/aws/build_disable_convox_resolver) | Disables the Convox DNS resolver during builds to address DNS resolution issues. |
 | [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled)         | Enables a dedicated build node for building applications.                |
 | [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count)     | Sets the minimum number of build nodes to keep running.                  |
+| [build_node_minimal_role_enabled](/configuration/rack-parameters/aws/build_node_minimal_role_enabled) | Runs build nodes under a dedicated least-privilege IAM role instead of the shared node role. |
 | [build_node_type](/configuration/rack-parameters/aws/build_node_type)               | Specifies the node type for the build node.                              |
+| [buildkit_host_path_cache_enable](/configuration/rack-parameters/aws/buildkit_host_path_cache_enable) | Persists the BuildKit layer cache on node local disk so repeat Builds on the same node reuse cached layers. |
+| [disable_image_manifest_cache](/configuration/rack-parameters/aws/disable_image_manifest_cache) | Disables the ECR registry-backed BuildKit layer cache stored under a per-Service buildcache tag in each App's ECR repository. |
 | [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
 | [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
 | [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) | Enables ECR pull-through cache for Docker Hub images to avoid rate limits. |
+| [ecr_immutable_tags_enabled](/configuration/rack-parameters/aws/ecr_immutable_tags_enabled) | Creates ECR repositories for new Apps with immutable image tags, so a pushed tag cannot be overwritten. |
 | [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) | Enables automatic vulnerability scanning for images pushed to ECR. |
 | [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst) | Sets the maximum burst rate for image pulls. See also [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps). |
 | [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) | Sets the steady-state rate limit for image pulls (queries per second). See also [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst). |
@@ -145,11 +152,18 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [ecr_additional_policy_arn](/configuration/rack-parameters/aws/ecr_additional_policy_arn) | Attaches a user-provided IAM policy ARN to the Rack API role for custom ECR access control. |
 | [ecr_full_access](/configuration/rack-parameters/aws/ecr_full_access) | Re-attaches the `AmazonEC2ContainerRegistryFullAccess` managed policy, restoring pre-3.24.6 ECR permissions. |
 | [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) | Creates EKS Access Entries for the rack's managing IAM role and nodes role. One-way migration from `aws-auth` ConfigMap. |
+| [imds_http_hop_limit](/configuration/rack-parameters/aws/imds_http_hop_limit)       | Sets the IMDS PUT response hop limit on Rack node launch templates and Karpenter EC2NodeClasses. |
 | [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)             | Determines whether the Instance Metadata Service requires session tokens (IMDSv2). |
+| [imds_tags_enable](/configuration/rack-parameters/aws/imds_tags_enable)             | Exposes EC2 instance tags through the Instance Metadata Service (IMDS) on Rack nodes. |
 | [key_pair_name](/configuration/rack-parameters/aws/key_pair_name)                   | Specifies an EC2 Key Pair for SSH access to cluster nodes.               |
 | [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
+| [pod_imds_block_enabled](/configuration/rack-parameters/aws/pod_imds_block_enabled) | Blocks App pod egress to the EC2 instance metadata service (IMDS) with a CNI-enforced NetworkPolicy in each App namespace. |
+| [pod_security_mode](/configuration/rack-parameters/aws/pod_security_mode)           | Selects how the Pod Security Standard set by `pod_security_standard` is applied to App namespaces: `warn`, `audit`, or `enforce`. |
+| [pod_security_standard](/configuration/rack-parameters/aws/pod_security_standard)   | Applies a Kubernetes Pod Security Standard, `baseline` or `restricted`, to every App namespace. |
+| [seccomp_default_enabled](/configuration/rack-parameters/aws/seccomp_default_enabled) | Applies the RuntimeDefault seccomp profile to the Convox system deployments (api, atom, resolver, metrics-server, metrics-scraper). |
 | [ssl_ciphers](/configuration/rack-parameters/aws/ssl_ciphers)                       | Specifies the SSL ciphers to use for Nginx.                              |
 | [ssl_protocols](/configuration/rack-parameters/aws/ssl_protocols)                   | Specifies the SSL protocols to use for Nginx.                            |
+| [system_readonly_rootfs_enabled](/configuration/rack-parameters/aws/system_readonly_rootfs_enabled) | Runs the Convox system containers (api, atom, and resolver) with a read-only root filesystem, provisioning the writable scratch space they need. |
 | [webhook_signing_key](/configuration/rack-parameters/aws/webhook_signing_key)       | Sets the per-rack HMAC secret for signing outbound webhook deliveries.   |
 
 ### General

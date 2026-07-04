@@ -26,19 +26,19 @@ The default value is `5m`.
 To tighten the GC sweep to 2 minutes:
 ```bash
 $ convox rack params set release_watcher_gc_interval=2m -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set release_watcher_gc_interval=5m -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the default `5m`):
 ```bash
 $ convox rack params set release_watcher_gc_interval= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

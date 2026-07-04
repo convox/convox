@@ -21,7 +21,7 @@ The default value for `ssl_protocols` is an empty string. When set to an empty s
 To set the `ssl_protocols` parameter, use the following command:
 ```bash
 $ convox rack params set ssl_protocols='TLSv1.2 TLSv1.3' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the SSL protocols to the specified values.
 

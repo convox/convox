@@ -28,7 +28,7 @@ This parameter works together with [kubelet_registry_burst](/configuration/rack-
 To enable the `kubelet_registry_pull_qps` parameter, use the following command:
 ```bash
 $ convox rack params set kubelet_registry_pull_qps=value -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Replace value with the desired number of image pull requests per second.

@@ -43,6 +43,8 @@ $ convox rack install aws <name> [param1=value1]...
 ```
 ### Available Parameters
 
+The table below lists common install-time parameters; the complete reference is [AWS Rack Parameters](/configuration/rack-parameters/aws).
+
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
 | **access_log_retention_in_days**   |         7          | Specify nginx access log retention period in cloudwatch logs. The log group name will be `/convox/<rack-name>/system` and stream name `/nginx-access-logs` |

@@ -21,7 +21,7 @@ The default value for `high_availability` is `true`.
 To set the `high_availability` parameter, use the following command:
 ```bash
 $ convox rack params set high_availability=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

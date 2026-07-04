@@ -23,13 +23,13 @@ The default value is the chart version that ships with this rack release, curren
 To pin to a specific chart version:
 ```bash
 $ convox rack params set prometheus_gpu_metrics_chart_version=27.9.1 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the rack default:
 ```bash
 $ convox rack params set prometheus_gpu_metrics_chart_version=27.9.0 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 You must enable monitoring (free plan) in the Convox Console for the free-plan Prometheus chart to be deployed at all. Pinning the version is otherwise a no-op until you enable monitoring. The new chart version takes effect on the next Disable→Enable cycle from the Console.

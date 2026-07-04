@@ -23,7 +23,7 @@ The default value is `0` (time-slicing disabled; each GPU is advertised as a sin
 ## Setting Parameters
 ```bash
 $ convox rack params set nvidia_device_time_slicing_replicas=4 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

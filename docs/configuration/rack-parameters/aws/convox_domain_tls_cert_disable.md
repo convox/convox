@@ -24,13 +24,13 @@ The default value for `convox_domain_tls_cert_disable` is `false`, meaning Convo
 To disable TLS certificate generation for `convox.cloud` domains, use the following command:
 ```bash
 $ convox rack params set convox_domain_tls_cert_disable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To re-enable certificate generation (if needed later), use:
 ```bash
 $ convox rack params set convox_domain_tls_cert_disable=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

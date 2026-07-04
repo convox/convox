@@ -21,7 +21,7 @@ The default value for `terraform_update_timeout` is `2h` (2 hours).
 To set the `terraform_update_timeout` parameter, use the following command:
 ```bash
 $ convox rack params set terraform_update_timeout=3h -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the Terraform update timeout to 3 hours.
 
