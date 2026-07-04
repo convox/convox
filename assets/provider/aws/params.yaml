@@ -44,22 +44,16 @@ Groups:
           name-id of the attached internet gateway.
       - name: private_subnets_ids
         default: "null"
-        sideNote: Convox managed if not set
+        sideNote: "Convox creates these if left blank."
         type: string
         regex: ^(subnet-.+)(,subnet-.+)*$
-        description: |
-          &b Advanced Configuration &b &l This parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l See
-          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/private_subnets_ids/] if you're considering this configuration. &l
+        description: "&b Advanced Configuration &b &l Leave this blank and Convox creates the private subnets for you. &l &l Set it only if you are installing into a VPC you already have and want to reuse private subnets that already exist. Enter their subnet IDs, separated by commas. &l &l With high availability turned on, provide 3 subnets. See the full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/private_subnets_ids/] before using this. &l"
       - name: public_subnets_ids
         default: "null"
-        sideNote: Convox managed if not set
+        sideNote: "Convox creates these if left blank."
         type: string
         regex: ^(subnet-.+)(,subnet-.+)*$
-        description: |
-          &b Advanced Configuration &b &l This parameter is for edge use cases
-          where cluster needs to be installed into existing subnets. &l &l See
-          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/public_subnets_ids/] if you're considering this configuration. &l
+        description: "&b Advanced Configuration &b &l Leave this blank and Convox creates and manages your rack's public subnets for you. Set it only to install into public subnets you already have in AWS, listed by their subnet IDs. &l &l How these subnets get used can change with other settings, such as high availability or running nodes privately. &l &l See full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/public_subnets_ids/] if you're considering this configuration. &l"
   - name: Security & Compliance
     order: 2
     params:
@@ -79,8 +73,7 @@ Groups:
       - name: ebs_volume_encryption_enabled
         default: "false"
         type: boolean
-        description: Enables encryption for EBS volumes on primary node disks using
-          AWS-managed keys for data at rest encryption
+        description: "Encrypts the disk storage (EBS volumes) on all your worker machines with an AWS-managed key, protecting your stored data. Applies to every worker node, including build nodes and nodes that scale up automatically."
       - name: system_readonly_rootfs_enabled
         default: "false"
         type: boolean
@@ -202,23 +195,13 @@ Groups:
       - name: contour_internal_tls
         default: "true"
         type: boolean
-        description: |
-          Applies only when router_type=contour. The Contour internal router
-          serves HTTPS for internal_router services using a certificate issued by
-          the rack's self-signed CA (the internal domain is private, so publicly
-          trusted ACME certificates cannot be issued for it). Set to false to serve
-          the internal router over plain HTTP and skip the per-rack CA and cert
-          resources. No effect on nginx racks.
+        description: "Keeps traffic to your internal-only services (those reachable inside the rack, not the public internet) encrypted, using a certificate Convox creates for you. Turn it off to serve those services over plain, unencrypted HTTP instead."
+        sideNote: "Only applies with the Contour router type."
       - name: proxy_protocol
         default: "false"
         type: boolean
-        description: |
-          With this parameter enabled, the client source IP will be available
-          in the request header &i x-forwarded-for &i key. This is not applicable
-          for &i internal_router &i &l
-          When router_type=contour, if proxy_protocol=false, client IP is preserved
-          via externalTrafficPolicy Local. If proxy_protocol=true, client IP is
-          preserved via PP2 headers populating X-Forwarded-For.
+        description: "With this on, your apps can see each visitor's real IP address (in the &i x-forwarded-for &i request header) instead of an internal load-balancer address. Useful for access logs, geo-lookups, and allow or deny lists. Does not apply to &i internal_router &i services."
+        sideNote: "How the visitor's IP is captured can change with other settings, such as your router type."
       - name: router_type
         default: nginx
         type: string
@@ -264,9 +247,7 @@ Groups:
       - name: disable_convox_resolver
         default: "false"
         type: boolean
-        description: Disables the Convox DNS resolver cluster-wide in favor of the
-          Kubernetes resolver. Required when using &i proxy_protocol=true &i with
-          internal service routing.
+        description: "Turns off the Convox DNS resolver and lets Kubernetes handle name lookups instead. Recommended when you use &i proxy_protocol=true &i with internal routing, so internal addresses resolve reliably."
   - name: Performance & Scaling
     order: 4
     params:
@@ -274,9 +255,8 @@ Groups:
         default: t3.small
         type: string
         regex: ^[a-z][a-z0-9-]*\.[a-z0-9]+(,[a-z][a-z0-9-]*\.[a-z0-9]+)*$
-        description: AWS EC2 (Instance type)[https://aws.amazon.com/ec2/instance-types/]
-          used for cluster nodes. Supports comma-separated list for mixed instance
-          configurations.
+        description: "The AWS EC2 (instance type)[https://aws.amazon.com/ec2/instance-types/] used for your cluster's nodes."
+        sideNote: "How it is used can change with other settings, such as enabling Karpenter or turning on a build node group."
       - name: build_node_enabled
         default: "false"
         type: boolean
@@ -299,22 +279,13 @@ Groups:
       - name: build_node_min_count
         default: "0"
         type: integer
-        description: |
-          &l By default the build node will scale out after 30min of
-          inactivity. &l &l You can set this value to retain a number of build nodes
-          if the node initialization time (~45s) is too long for your use-case &l
+        description: "Number of dedicated build nodes to keep running at all times (default 0). At 0, a build node starts up for each build and shuts down when it is idle; raise it above 0 to keep nodes ready and skip the startup wait."
+        sideNote: "Has no effect when Karpenter is enabled."
         allowedMinValue: 0
       - name: node_capacity_type
         default: on_demand
         type: string
-        description: |
-          &l &b on-demand &b - Will only use on-demand instances (Highest
-          availability/Highest Cost) &l &l &b spot &b - Will use AWS Spot Instances for
-          the cluster nodes. &l &l &b mixed &b - Will create one node group with on-demand
-          instances, and the other 2 with Spot Instances. &l &l Use &b mixed &b with the
-          &i min_on_demand_count &i and &i max_on_demand_count &i parameters to control
-          the minimum acceptable service availability should all spot instances
-          become unavailable. &l
+        description: "&l &b on_demand &b - Uses standard, always-on instances. Most reliable, highest cost. &l &l &b spot &b - Uses AWS Spot Instances (spare capacity, much cheaper but AWS can reclaim them anytime). &l &l &b mixed &b - Runs one node group on on_demand instances and the rest on Spot, balancing cost and reliability. Pair &b mixed &b with &i min_on_demand_count &i and &i max_on_demand_count &i to set how many always-on nodes you keep if Spot capacity runs out. &l"
         allowedValues:
               - on_demand
               - spot
@@ -335,7 +306,8 @@ Groups:
       - name: node_disk
         default: "20"
         type: integer
-        description: Node disk size in GB
+        description: "Disk size in GiB (gibibytes, close to GB) for each node (server) in your cluster."
+        sideNote: "How this is used can change with other settings, such as enabling Karpenter."
         allowedMinValue: 20
       - name: node_max_unavailable_percentage
         default: "0"
@@ -356,13 +328,12 @@ Groups:
       - name: nvidia_device_plugin_enable
         default: "false"
         type: boolean
-        description: Enables the NVIDIA GPU device plugin for GPU-accelerated workloads.
-          Requires GPU-enabled instance types (P3, P4, G4, G5 families).
+        description: "Lets your apps use the NVIDIA GPUs on your machines. Turn this on when your rack runs NVIDIA GPU instances, such as the G or P families (for example G5 or P4)."
+        sideNote: "Only has an effect when your rack includes NVIDIA GPU machines."
       - name: nvidia_device_time_slicing_replicas
         default: "0"
         type: integer
-        description: Number of virtual GPU replicas per physical GPU for time-slicing.
-          Requires &i nvidia_device_plugin_enable=true &i.
+        description: "Splits each physical GPU into this many virtual GPUs so several workloads can share one GPU; leave at 0 to give each workload a whole GPU. More slices fit more work onto a GPU but each runs slower when busy at the same time. Requires &i nvidia_device_plugin_enable=true &i."
         allowedMinValue: 0
       - name: gpu_observability_enable
         default: "false"
@@ -375,10 +346,8 @@ Groups:
       - name: gpu_observability_chart_version
         default: "4.8.1"
         type: string
-        description: Helm chart version for the NVIDIA DCGM exporter.
-          Pin this to a version compatible with the cluster's NVIDIA
-          driver (defaults to chart &i 4.8.1 &i, image tag
-          &i 4.5.2-4.8.1-distroless &i).
+        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. The default, &i 4.8.1 &i, fits most setups; change it only to match a specific GPU driver."
+        sideNote: "Only takes effect when GPU metrics collection is enabled."
       - name: prometheus_gpu_metrics_chart_version
         default: "27.9.0"
         type: string
@@ -412,18 +381,19 @@ Groups:
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
-        description: Minimum percentage of pods that must remain available during
-          disruptions. Set to -1 to disable.
-        allowedMinValue: -1
-        allowedMaxValue: 101
+        description: "The lowest percentage of a service's running copies that must stay up while nodes are updated or replaced."
+        sideNote: "To skip this for one service, add the annotation convox.com/pdb-disabled=true to it."
+        allowedMinValue: 0
+        allowedMaxValue: 100
       - name: kubelet_registry_pull_qps
         default: "5"
         type: integer
-        description: Sets the maximum number of image pull requests in kubelet config.
+        description: "The maximum number of container images that can be downloaded per second from the registry."
+        sideNote: "A separate burst setting lets downloads briefly go above this rate."
       - name: kubelet_registry_burst
         default: "10"
         type: integer
-        description: Sets the maximum number of image pull requests that can be made in a burst, exceeding the registry_pull_qps limit for a short duration.
+        description: "How many container images a node can start downloading at once in a short burst, above the steady rate set by kubelet_registry_pull_qps."
       - name: schedule_rack_scale_down
         optional: true
         sideNote: Not configured by default
@@ -453,11 +423,7 @@ Groups:
         sideNote: Not configured by default
         optional: true
         type: string
-        description: |
-          &b Advanced Configuration &b &l JSON array of additional node group
-          configurations for workload-specific optimization. &l &l See
-          full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/additional_node_groups_config/]
-          for configuration format. &l
+        description: "&b Advanced Configuration &b &l Most users leave this off. It adds extra groups of servers (nodes) tuned for specific workloads, such as larger instances, more disk, or a pool reserved for certain apps. &l &l Set it as a JSON array; see the full (documentation)[https://docs.convox.com/configuration/rack-parameters/aws/additional_node_groups_config/] for the format. &l &l With Karpenter (automatic node scaling) enabled, extra capacity is usually added through the Karpenter settings instead. &l"
       - name: additional_build_groups_config
         default: "null"
         sideNote: Not configured by default
@@ -505,11 +471,9 @@ Groups:
       - name: access_log_retention_in_days
         default: "7"
         type: integer
-        description: Number of days to retain Nginx access logs in CloudWatch.
-          Set to -1 to disable retention limits. When router_type=contour,
-          Envoy access logs use a different format and do not flow to the
-          dedicated nginx log stream until a future update.
-        allowedMinValue: -1
+        description: "How many days CloudWatch keeps your Nginx access logs. Use a value AWS allows for log retention, such as 1, 3, 7, 14, 30, up to 365."
+        sideNote: "How these logs are collected can change with other settings, such as the router type."
+        allowedMinValue: 1
       - name: syslog
         default: "null"
         sideNote: Not forwarded by default
@@ -520,8 +484,7 @@ Groups:
       - name: fluentd_disable
         default: "false"
         type: boolean
-        description: Disable fluentd if you're using another monitoring solution. &l This
-          will disable CloudWatch metrics. &l
+        description: "Stops shipping your logs to CloudWatch. &l Enable this if you use another logging service. &l"
       - name: fluentd_memory
         default: 200Mi
         type: string
@@ -534,15 +497,7 @@ Groups:
       - name: karpenter_auth_mode
         default: "false"
         type: boolean
-        description: |
-          Enable Karpenter authentication mode prerequisites. &l Migrates
-          the EKS cluster to API_AND_CONFIG_MAP access mode and applies
-          karpenter.sh/discovery tags to subnets and security groups. &l &l
-          &b Warning: &b This is a one-way migration and cannot be disabled
-          once enabled (matching AWS EKS behavior). &l &l Must be set to
-          true before or alongside &i karpenter_enabled=true &i. Can be
-          combined in one call: &l
-          &i convox rack params set karpenter_auth_mode=true karpenter_enabled=true &i &l
+        description: "Prepares your rack to use Karpenter autoscaling. &l Sets up the AWS permissions and tags that Karpenter needs. &l &l &b Warning: &b Once turned on, this cannot be turned off, because it changes an AWS cluster setting that AWS does not let you undo. Leave it off unless you plan to use Karpenter. &l &l Turn it on together with &i karpenter_enabled=true &i by running: &l &l &i convox rack params set karpenter_auth_mode=true karpenter_enabled=true &i &l"
       - name: karpenter_enabled
         default: "false"
         type: boolean
@@ -681,12 +636,10 @@ Groups:
       - name: karpenter_build_instance_families
         optional: true
         default: "null"
-        sideNote: Uses workload families if not set
+        sideNote: "If unset, any instance family can be used."
         type: string
         regex: ^[a-z0-9]+(,[a-z0-9]+)*$
-        description: |
-          Instance families for the build NodePool. &l
-          Only applies when &i build_node_enabled &i is true. &l
+        description: "Restricts which EC2 instance families (groups like c5, m5, r5) can run your builds. &l Only used when a separate build node is enabled (&i build_node_enabled &i). &l"
       - name: karpenter_build_instance_sizes
         optional: true
         default: "null"
@@ -738,40 +691,21 @@ Groups:
               - required
       - name: karpenter_build_imds_hop_limit
         default: "0"
-        sideNote: 0 uses the AWS default
+        sideNote: "0 uses the rack's default metadata hop limit."
         type: integer
-        description: IMDS response hop limit for Karpenter build nodes.
+        description: "Controls how far AWS instance metadata (which can include login credentials) can travel from a build node. A lower number keeps it reachable only from the node itself, not from the containers running on it."
       - name: karpenter_config
         optional: true
         default: "null"
         sideNote: Use defaults unless you need advanced configuration
         type: string
-        description: |
-          JSON overrides for the workload NodePool and EC2NodeClass Karpenter
-          configuration. Accepts raw JSON, base64-encoded JSON, or a path to
-          a .json file. &l &l Override any Karpenter setting — instance
-          requirements, disruption budgets with schedules, consolidation
-          policy, AMI selection, block device mappings, metadata options,
-          userData, and more. &l &l Individual karpenter_* parameters set
-          defaults. This config overrides them at the section level. &l &l
-          Protected fields (managed by Convox): &i role &i,
-          &i subnetSelectorTerms &i, &i securityGroupSelectorTerms &i,
-          &i nodeClassRef &i &l &l See
-          (documentation)[https://docs.convox.com/configuration/karpenter/]
-          for the full schema and examples. &l
+        description: "Advanced setting for fine-tuning the worker machines Convox runs for your apps. Supply your own JSON to override the other karpenter_* settings. &l Accepts raw JSON, base64-encoded JSON, or a path to a .json file. A few values are managed by Convox and can't be changed. &l &l Most users can leave this blank. See (documentation)[https://docs.convox.com/configuration/karpenter/] for the full list of options and examples. &l"
       - name: additional_karpenter_nodepools_config
         optional: true
         default: "null"
-        sideNote: No additional NodePools by default
+        sideNote: "No extra node groups by default."
         type: string
-        description: |
-          JSON array of custom Karpenter NodePool configurations. Accepts raw
-          JSON, base64-encoded JSON, or a path to a .json file. &l &l Each
-          NodePool gets its own EC2NodeClass and can have custom labels,
-          taints, instance constraints, and resource limits. &l &l See
-          (documentation)[https://docs.convox.com/configuration/karpenter/]
-          for the full schema. &l &l Example: &l
-          &i [{"name":"gpu","instance_families":"g5,g6","labels":"gpu=true","taints":"gpu=true:NoSchedule","cpu_limit":64}] &i
+        description: "&b Advanced Configuration &b &l Add extra groups of nodes (the servers your apps run on) for special workloads like GPU or high-memory jobs, each with its own instance types and limits. &l &l Provide the settings as JSON, a base64 version of it, or a path to a .json file; see (documentation)[https://docs.convox.com/configuration/karpenter/] for the format and an example. &l &l These groups only take effect when Karpenter (automatic node scaling) is turned on. &l"
   - name: Cost & Budget
     order: 7
     params:
