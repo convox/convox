@@ -21,9 +21,17 @@ The default value for `build_node_enabled` is `false`.
 To enable a dedicated build node, use the following command:
 ```bash
 $ convox rack params set build_node_enabled=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command enables the dedicated build node for your rack.
 
 ## Additional Information
 Enabling a dedicated build node can improve the reliability and performance of your builds, especially for large or complex applications. This setup is particularly useful in CI/CD pipelines where frequent builds are required. Ensure that the build node type and configuration are suitable for your build requirements.
+
+## See Also
+
+- [build_node_type](/configuration/rack-parameters/aws/build_node_type)
+- [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count)
+- [build_node_minimal_role_enabled](/configuration/rack-parameters/aws/build_node_minimal_role_enabled) for a dedicated least-privilege build node IAM role
+- [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) and [karpenter_build_imds_hop_limit](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) for build node IMDS hardening
+- [Karpenter](/configuration/scaling/karpenter) for build node behavior on Karpenter-enabled Racks

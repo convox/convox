@@ -21,7 +21,7 @@ The default value for `access_log_retention_in_days` is `7`.
 To set the `access_log_retention_in_days` parameter, use the following command:
 ```bash
 $ convox rack params set access_log_retention_in_days=30 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the access log retention period to 30 days.
 

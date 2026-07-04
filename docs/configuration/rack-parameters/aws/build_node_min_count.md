@@ -21,7 +21,7 @@ The default value for `build_node_min_count` is `0`.
 To set the `build_node_min_count` parameter, use the following command:
 ```bash
 $ convox rack params set build_node_min_count=2 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the minimum number of build nodes to 2.
 

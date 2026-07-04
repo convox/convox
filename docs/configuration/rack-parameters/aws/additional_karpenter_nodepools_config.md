@@ -23,7 +23,7 @@ The default value is empty (no custom NodePools).
 
 ```bash
 $ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Target Services to the GPU pool using `nodeSelectorLabels` and `scale.gpu` in `convox.yml`:
@@ -44,7 +44,7 @@ services:
 
 ```bash
 $ convox rack params set additional_karpenter_nodepools_config=/path/to/nodepools.json -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information
@@ -54,7 +54,7 @@ Setting parameters... OK
 - **Pool name validation:** Lowercase alphanumeric with dashes, max 63 chars. Reserved names: `workload`, `build`, `default`, `system`. Duplicate names are rejected.
 - **Pool isolation:** Set `"dedicated": true` on a pool entry to automatically add a `dedicated-node={name}:NoSchedule` taint. Convox auto-injects the matching toleration for Services targeting the pool via `nodeSelectorLabels`. This is the simplest way to isolate a pool without manual taint configuration.
 - For pools with custom taints beyond `dedicated`, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
-- See the [Karpenter](/configuration/scaling/karpenter#additional_karpenter_nodepools_config--custom-nodepools) feature page for the full per-pool field reference and examples.
+- See the [Karpenter](/configuration/scaling/karpenter#additional_karpenter_nodepools_config-custom-nodepools) feature page for the full per-pool field reference and examples.
 
 ## See Also
 

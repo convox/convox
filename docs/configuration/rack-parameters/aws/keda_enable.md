@@ -22,7 +22,7 @@ The default value for `keda_enable` is `false`.
 To enable KEDA on your rack, use the following command:
 ```bash
 $ convox rack params set keda_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

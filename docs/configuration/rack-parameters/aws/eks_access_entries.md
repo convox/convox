@@ -38,7 +38,7 @@ EKS Access Entries operate at the AWS API layer, are AWS-managed, provide CloudT
 
 ```bash
 $ convox rack params set eks_access_entries=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 After the update completes, verify the entries exist:

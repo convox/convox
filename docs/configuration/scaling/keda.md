@@ -24,7 +24,7 @@ Enable KEDA on your rack:
 
 ```bash
 $ convox rack params set keda_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Defining KEDA Triggers in convox.yml

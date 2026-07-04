@@ -24,13 +24,13 @@ The default value for `nvidia_device_plugin_enable` is `false`.
 To enable the NVIDIA GPU device plugin, use the following command:
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable the NVIDIA GPU device plugin:
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -135,5 +135,5 @@ $ convox cloud apps params set <Key=Value> [Key=Value]... -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud apps params set BuildMem=2048 -a myapp -i production
-Setting parameters... OK
+Updating parameters... OK
 ```

@@ -24,7 +24,7 @@ Name     production
 Provider aws
 Router   router.production.convox
 Status   running
-Version  3.23.3
+Version  3.24.11
 ```
 ## Get an example application
 

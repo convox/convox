@@ -19,7 +19,7 @@ The default value is `true`.
 
 ```bash
 $ convox rack params set karpenter_consolidation_enabled=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

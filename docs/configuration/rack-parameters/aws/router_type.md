@@ -33,7 +33,7 @@ The default value is `nginx`. This default preserves existing behavior: a Rack t
 ```bash
 $ convox rack params set router_type=contour -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 

@@ -23,7 +23,7 @@ The default value for `proxy_protocol` is `false`.
 To set the `proxy_protocol` parameter, use the following command:
 ```bash
 $ convox rack params set proxy_protocol=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command enables the Proxy Protocol for your rack.
 

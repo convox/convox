@@ -24,7 +24,7 @@ A Rack is a platform to build, deploy and host your [Apps](/reference/primitives
     Provider  aws
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   3.23.3
+    Version   3.24.11
 
     $ convox rack params -r myrack
 ```

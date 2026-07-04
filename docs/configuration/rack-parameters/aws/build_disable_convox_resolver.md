@@ -25,13 +25,13 @@ The default value for `build_disable_convox_resolver` is `false`.
 To disable the Convox DNS resolver during builds, use the following command:
 ```bash
 $ convox rack params set build_disable_convox_resolver=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To re-enable the Convox DNS resolver (if needed):
 ```bash
 $ convox rack params set build_disable_convox_resolver=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

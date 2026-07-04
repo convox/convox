@@ -22,7 +22,7 @@ The default value is an empty string (`""`), which uses the nginx default protoc
 To set the `ssl_protocols` parameter, use the following command:
 ```bash
 $ convox rack params set ssl_protocols=TLSv1.2+TLSv1.3 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

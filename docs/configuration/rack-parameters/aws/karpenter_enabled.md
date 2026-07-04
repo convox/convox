@@ -15,7 +15,7 @@ Requires [`karpenter_auth_mode=true`](/configuration/rack-parameters/aws/karpent
 
 ```bash
 $ convox rack params set karpenter_auth_mode=true karpenter_enabled=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Default Value
@@ -32,14 +32,14 @@ The default value is `false`.
 
 ```bash
 $ convox rack params set karpenter_enabled=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable Karpenter:
 
 ```bash
 $ convox rack params set karpenter_enabled=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Enablement Validation (3.24.7+)

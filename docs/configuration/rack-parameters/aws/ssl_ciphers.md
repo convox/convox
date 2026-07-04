@@ -31,7 +31,7 @@ DHE-RSA-AES256-GCM-SHA384
 To set the `ssl_ciphers` parameter, use the following command:
 ```bash
 $ convox rack params set ssl_ciphers=ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the SSL ciphers to the specified values.
 

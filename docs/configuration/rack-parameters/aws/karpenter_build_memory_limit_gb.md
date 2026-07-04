@@ -19,7 +19,7 @@ The default value is `256`.
 
 ```bash
 $ convox rack params set karpenter_build_memory_limit_gb=512 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

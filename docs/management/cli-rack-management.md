@@ -102,7 +102,7 @@ Rack parameters control infrastructure-level settings like node sizes, disk allo
 ### Setting parameters
 ```bash
     $ convox rack params set node_disk=30 node_type=c5.large
-    Setting parameters... OK
+    Updating parameters... OK
 ```
 
 After running `convox rack params set`, the rack enters an `updating` state while the infrastructure changes are applied. Monitor progress the same way as a version update:

@@ -26,13 +26,13 @@ The default value for `user_data` is an empty string, meaning no additional comm
 To set the `user_data` parameter, use the following command:
 ```bash
 $ convox rack params set user_data="<command>" -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ### Example
 ```bash
 $ convox rack params set user_data="echo 'Hello, world!' >> /tmp/init.log" -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

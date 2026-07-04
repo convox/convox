@@ -27,19 +27,19 @@ The default value for `gpu_observability_enable` is `false`.
 To enable the DCGM exporter, also enable the NVIDIA device plugin in the same call (the DCGM exporter relies on the device plugin's pod-resources socket for pod-to-GPU attribution):
 ```bash
 $ convox rack params set gpu_observability_enable=true nvidia_device_plugin_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 If `nvidia_device_plugin_enable` is already set to `true` on your rack, you can enable observability alone:
 ```bash
 $ convox rack params set gpu_observability_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable:
 ```bash
 $ convox rack params set gpu_observability_enable=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Disabling cleanly uninstalls the DCGM exporter Helm release (DaemonSet, Service, RBAC, ConfigMap, ServiceAccount). The chart installs zero CRDs and zero admission webhooks, so there are no orphan resources to clean up after disable. Console-deployed Prometheus charts are managed independently via the Convox Console. Disable monitoring in the Console to remove them.

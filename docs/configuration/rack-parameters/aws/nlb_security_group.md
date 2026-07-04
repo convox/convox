@@ -21,7 +21,7 @@ The default value for `nlb_security_group` is an empty string. When set to an em
 To set the `nlb_security_group` parameter, use the following command:
 ```bash
 $ convox rack params set nlb_security_group=sg-12345678 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command attaches the specified security group to the NLB.
 

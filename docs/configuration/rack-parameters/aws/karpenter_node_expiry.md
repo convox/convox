@@ -19,14 +19,14 @@ The default value is `720h` (30 days).
 
 ```bash
 $ convox rack params set karpenter_node_expiry=336h -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable automatic replacement:
 
 ```bash
 $ convox rack params set karpenter_node_expiry=Never -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

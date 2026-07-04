@@ -21,7 +21,7 @@ The default value for `imds_http_tokens` is `optional`.
 To set the `imds_http_tokens` parameter, use the following command:
 ```bash
 $ convox rack params set imds_http_tokens=required -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the IMDSv2 tokens requirement to `required`.
 
@@ -33,3 +33,12 @@ The `imds_http_tokens` parameter can be set to:
 - `required`: Requires a session token to access the metadata service.
 
 Setting `imds_http_tokens` to `required` ensures that all requests to the Instance Metadata Service are authenticated using a session token, providing an additional layer of security.
+
+On Racks running [Karpenter](/configuration/scaling/karpenter), build nodes inherit this setting unless it is overridden with [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens). To block App Pod access to the instance metadata service entirely, use [pod_imds_block_enabled](/configuration/rack-parameters/aws/pod_imds_block_enabled).
+
+## See Also
+
+- [imds_http_hop_limit](/configuration/rack-parameters/aws/imds_http_hop_limit)
+- [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens)
+- [karpenter_build_imds_hop_limit](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit)
+- [pod_imds_block_enabled](/configuration/rack-parameters/aws/pod_imds_block_enabled)

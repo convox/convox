@@ -26,7 +26,7 @@ The default value for `releases_to_retain_after_active` is **unset** (no automat
 To set the `releases_to_retain_after_active` parameter, use the following command:
 ```bash
 $ convox rack params set releases_to_retain_after_active=100 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 This command configures the rack to retain the active release plus 100 releases after it.

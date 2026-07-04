@@ -22,7 +22,7 @@ The default value is an empty string (`""`), which means no additional tags are 
 The value should be a comma-separated list of `key=value` pairs. It can be provided as plain text or base64-encoded:
 ```bash
 $ convox rack params set tags=env=production,team=platform -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -21,7 +21,7 @@ The default value for `node_disk` is `100`.
 To set the `node_disk` parameter, use the following command:
 ```bash
 $ convox rack params set node_disk=200 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

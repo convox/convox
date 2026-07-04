@@ -25,7 +25,7 @@ The default value for `pod_identity_agent_enable` is `false`.
 To enable the AWS Pod Identity Agent, use the following command:
 ```bash
 $ convox rack params set pod_identity_agent_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Using with Applications

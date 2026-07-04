@@ -26,19 +26,19 @@ The default value is `10`.
 To raise concurrency to 20:
 ```bash
 $ convox rack params set gpu_metrics_max_concurrent=20 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set gpu_metrics_max_concurrent=10 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the default `10`):
 ```bash
 $ convox rack params set gpu_metrics_max_concurrent= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

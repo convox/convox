@@ -26,7 +26,7 @@ These application-specific parameters complement the rack-level configuration av
 To set an app parameter, use the following command:
 ```bash
 $ convox apps params set parameterName=value -a appName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 For example, to set the `BuildLabels` parameter:

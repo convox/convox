@@ -21,7 +21,7 @@ Not set (anonymous Docker Hub access).
 Set both `docker_hub_username` and `docker_hub_password` together:
 ```bash
 $ convox rack params set docker_hub_username=myuser docker_hub_password=dckr_pat_xxxxx -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Generate a read-only access token from [Docker Hub Account Settings](https://hub.docker.com/settings/security) rather than using your account password.

@@ -19,6 +19,7 @@ url: /reference/cli/rack
 | `convox rack install` | Install a new rack |
 | `convox rack uninstall` | Uninstall a rack |
 | `convox rack update` | Update rack to a new version |
+| `convox rack sync` | Sync v2 rack API URL |
 | **Access** | |
 | `convox rack access` | Generate rack access credential |
 | `convox rack access key rotate` | Rotate rack access key |
@@ -54,7 +55,7 @@ Get information about the rack
     Provider  aws
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   3.23.3
+    Version   3.24.11
 ```
 ## rack ps
 
@@ -215,7 +216,7 @@ Generates rack access credential
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `role` | | Access role for the credential. Allowed roles are: `read` or `write` |
+| `role` | | Access role for the credential. Allowed roles are: `read`, `write`, and `admin`. Requesting an `admin` credential requires the caller to already hold the `admin` role. |
 | `duration-in-hours` | | TTL for the credential. |
 
 ### Examples
@@ -392,7 +393,7 @@ Set rack parameters
 ### Examples
 ```bash
     $ convox rack params set node_type=t3.large
-    Setting parameters... OK
+    Updating parameters... OK
 ```
 
 ### Parameter Validation

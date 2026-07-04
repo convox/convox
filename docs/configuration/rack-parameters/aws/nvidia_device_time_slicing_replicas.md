@@ -25,7 +25,7 @@ The NVIDIA device plugin must be enabled on your rack before using time slicing:
 
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Setting Parameters
@@ -33,7 +33,7 @@ To configure GPU time slicing, set the number of virtual replicas each physical 
 
 ```bash
 $ convox rack params set nvidia_device_time_slicing_replicas=5 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To disable GPU time slicing:

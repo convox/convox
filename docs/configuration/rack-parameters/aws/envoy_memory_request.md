@@ -27,7 +27,7 @@ The default value is `256Mi`. This default preserves existing behavior, so Racks
 ```bash
 $ convox rack params set envoy_memory_request=512Mi -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 
@@ -44,7 +44,7 @@ This parameter is clearable. Clearing it returns the Envoy data plane to the `25
 ```bash
 $ convox rack params set envoy_memory_request= -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 Because this parameter only takes effect when `router_type=contour`, setting it on a Rack still running nginx records the value but does not change any running pods until you switch the Rack to Contour.
 

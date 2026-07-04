@@ -21,7 +21,7 @@ The default value for `max_on_demand_count` is `100`.
 To set the `max_on_demand_count` parameter, use the following command:
 ```bash
 $ convox rack params set max_on_demand_count=50 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the maximum number of on-demand nodes to 50.
 

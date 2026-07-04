@@ -81,7 +81,7 @@ This command displays the current values of all rack parameters for the specifie
 To set a rack parameter, use the following command:
 ```bash
 $ convox rack params set parameterName=value -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the specified parameter to the given value.
 

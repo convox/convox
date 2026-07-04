@@ -24,19 +24,19 @@ Letters, digits, and underscore only. Values containing any other character are 
 To override to `application`:
 ```bash
 $ convox rack params set grafana_dashboard_var_app=application -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set grafana_dashboard_var_app=app -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the canonical default `app`):
 ```bash
 $ convox rack params set grafana_dashboard_var_app= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

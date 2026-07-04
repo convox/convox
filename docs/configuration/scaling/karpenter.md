@@ -46,7 +46,7 @@ Most users enable Karpenter with a single command:
 
 ```bash
 $ convox rack params set karpenter_auth_mode=true karpenter_enabled=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Karpenter uses a two-parameter enablement model:
@@ -79,7 +79,7 @@ Once Karpenter is enabled, the system (EKS managed) node group continues running
 
 ```bash
 $ convox rack params set node_type=t3.medium -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 System nodes only need to run core Rack services (API server, router, resolver, Karpenter controller, and pinned add-on controllers). A smaller instance type like `t3.medium` is typically sufficient. Changing `node_type` triggers a rolling update of the managed node group. Kubernetes drains pods off old nodes and Karpenter provisions right-sized workload nodes to absorb them.
@@ -126,7 +126,7 @@ These parameters control how Karpenter provisions nodes for your application Ser
 |-----------|------|---------|------------|-------------|
 | `karpenter_node_disk` | number | `0` | >= 0 | EBS volume size in GiB for Karpenter-provisioned nodes. `0` inherits the Rack's [`node_disk`](/configuration/rack-parameters/aws/node_disk) value. |
 | `karpenter_node_volume_type` | string | `gp3` | `gp2`, `gp3`, `io1`, `io2` | EBS volume type for Karpenter-provisioned nodes. |
-| `karpenter_node_os` | string | `al2023` | `al2023`, `bottlerocket` | Node OS for the workload NodePool. `bottlerocket` selects the EKS-optimized Bottlerocket AMI and the required two-volume layout (gp3 OS volume on /dev/xvda, data volume on /dev/xvdb). AWS V3, Karpenter only. |
+| `karpenter_node_os` | string | `al2023` | `al2023`, `bottlerocket` | Node OS for the workload NodePool. `bottlerocket` selects the EKS-optimized Bottlerocket AMI and the two-volume layout it requires (a `gp3` OS volume on `/dev/xvda` and a data volume on `/dev/xvdb`). |
 
 ### Labels and Taints
 
@@ -147,6 +147,8 @@ These parameters control the dedicated build NodePool. The build NodePool is onl
 | `karpenter_build_cpu_limit` | number | `32` | > 0 | Maximum total vCPUs for the build NodePool. |
 | `karpenter_build_memory_limit_gb` | number | `256` | > 0 | Maximum total memory (GiB) for the build NodePool. |
 | `karpenter_build_consolidate_after` | string | `60s` | `^\d+[smh]$` | Delay before empty build nodes are consolidated. |
+| [`karpenter_build_imds_tokens`](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | string | _(none)_ | `optional`, `required` | IMDSv2 token requirement for build nodes. Unset inherits the Rack's [`imds_http_tokens`](/configuration/rack-parameters/aws/imds_http_tokens) value. |
+| [`karpenter_build_imds_hop_limit`](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | number | `0` | >= 0 | IMDS response hop limit for build nodes. `0` inherits the Rack's [`imds_http_hop_limit`](/configuration/rack-parameters/aws/imds_http_hop_limit) value. |
 | `karpenter_build_node_labels` | string | _(none)_ | Comma-separated `key=value`; no double quotes; `convox-build` and `convox.io/nodepool` reserved | Extra labels added alongside default `convox-build=true` and `convox.io/nodepool=build` labels. |
 
 ### Build Node Behavior with Karpenter
@@ -158,6 +160,7 @@ When Karpenter is enabled and `build_node_enabled=true`:
 - Build nodes have a `dedicated=build:NoSchedule` taint, so only build pods run on them
 - Build nodes scale back to zero after the last build completes (configurable via `karpenter_build_consolidate_after`, default 60s)
 - Architecture is auto-detected from `build_node_type`
+- Build nodes can run under a dedicated least-privilege IAM role by setting [`build_node_minimal_role_enabled`](/configuration/rack-parameters/aws/build_node_minimal_role_enabled), and their IMDS options can be set independently of workload nodes with `karpenter_build_imds_tokens` and `karpenter_build_imds_hop_limit`
 - The existing `build_node_min_count` parameter does not apply when Karpenter manages builds
 
 ## Advanced Configuration
@@ -218,7 +221,7 @@ Individual `karpenter_*` parameters build the defaults. `karpenter_config` overr
 | `ec2NodeClass.detailedMonitoring` | Enable CloudWatch detailed monitoring |
 | `ec2NodeClass.associatePublicIPAddress` | Associate public IP with Karpenter nodes |
 | `ec2NodeClass.instanceStorePolicy` | Instance store disk policy (e.g., `RAID0`) |
-| `ec2NodeClass.amiSelectorTerms` | Custom AMI selection (default: `al2023@latest`) |
+| `ec2NodeClass.amiSelectorTerms` | Custom AMI selection. The default follows [`karpenter_node_os`](/configuration/rack-parameters/aws/karpenter_node_os): `al2023@latest` or `bottlerocket@latest`. An explicit `amiSelectorTerms` overrides it. |
 | `ec2NodeClass.metadataOptions` | EC2 instance metadata options (IMDSv2 settings) |
 | `ec2NodeClass.blockDeviceMappings` | Custom EBS volume configuration beyond `karpenter_node_disk` / `karpenter_node_volume_type` |
 
@@ -239,7 +242,7 @@ Individual `karpenter_*` parameters build the defaults. `karpenter_config` overr
 
 ```bash
 $ convox rack params set karpenter_config='{"nodePool":{"disruption":{"budgets":[{"nodes":"10%"},{"nodes":"0","schedule":"0 9 * * mon-fri","duration":"8h"}]}}}' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ### `additional_karpenter_nodepools_config` (Custom NodePools)
@@ -286,7 +289,7 @@ services:
 
 ```bash
 $ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","dedicated":true}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ```yaml
@@ -308,7 +311,7 @@ With `dedicated: true`, only services targeting this pool (via `nodeSelectorLabe
 
 ```bash
 $ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200},{"name":"high-mem","instance_families":"r5,r6i","instance_sizes":"xlarge,2xlarge,4xlarge","capacity_types":"on-demand,spot","cpu_limit":200,"memory_limit_gb":1600,"labels":"pool=high-mem"}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ### Using Taints to Protect Nodes
@@ -339,7 +342,7 @@ You must also enable the NVIDIA device plugin on the Rack:
 
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 #### Dedicated pools
@@ -358,7 +361,7 @@ You can also use a JSON file:
 
 ```bash
 $ convox rack params set additional_karpenter_nodepools_config=/path/to/nodepools.json -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## System Node Behavior
@@ -402,7 +405,7 @@ When disabling Karpenter, set `node_type` to a larger instance alongside `karpen
 
 ```bash
 $ convox rack params set karpenter_enabled=false node_type=t3.xlarge -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 This triggers the following sequence:

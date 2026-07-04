@@ -47,7 +47,7 @@ Name      convox
 Provider  gcp
 Router    router.0a1b2c3d4e5f.convox.cloud
 Status    running
-Version   3.23.4
+Version   3.24.11
 ```
 In this example you would set up the following DNS entry:
 ```bash

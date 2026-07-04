@@ -31,7 +31,7 @@ The default value is `true`. With Contour active, `internalRouter` Services serv
 ```bash
 $ convox rack params set contour_internal_tls=false -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 

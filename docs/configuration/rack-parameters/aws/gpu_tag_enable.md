@@ -21,7 +21,7 @@ The default value for `gpu_tag_enable` is `false`.
 To enable GPU tagging, use the following command:
 ```bash
 $ convox rack params set gpu_tag_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command enables GPU tagging for your instances.
 

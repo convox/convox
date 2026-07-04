@@ -27,7 +27,7 @@ The default value is `100m`. This default preserves existing behavior: a Rack th
 ```bash
 $ convox rack params set contour_cpu_request=250m -r rackName
 ```
-Setting parameters... OK
+Updating parameters... OK
 
 ## Viewing Current Configuration
 

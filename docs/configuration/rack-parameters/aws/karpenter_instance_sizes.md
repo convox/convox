@@ -19,7 +19,7 @@ The default value is empty (all sizes are allowed).
 
 ```bash
 $ convox rack params set karpenter_instance_sizes=large,xlarge,2xlarge -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

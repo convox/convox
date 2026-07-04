@@ -22,7 +22,7 @@ The default value is an empty string (`""`), which uses the nginx default cipher
 To set the `ssl_ciphers` parameter, use the following command:
 ```bash
 $ convox rack params set ssl_ciphers=ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

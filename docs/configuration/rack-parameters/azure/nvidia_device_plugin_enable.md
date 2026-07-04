@@ -32,7 +32,7 @@ $ convox rack install azure <name> nvidia_device_plugin_enable=true
 Or updated after installation:
 ```bash
 $ convox rack params set nvidia_device_plugin_enable=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

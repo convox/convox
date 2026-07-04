@@ -26,14 +26,14 @@ Enable the cache together with Docker Hub credentials in a single `params set` c
 
 ```bash
 $ convox rack params set ecr_docker_hub_cache=true docker_hub_username=myuser docker_hub_password=dckr_pat_xxxxx -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 If `docker_hub_username` and `docker_hub_password` are already set on the rack, you can enable the cache on its own:
 
 ```bash
 $ convox rack params set ecr_docker_hub_cache=true -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Enabling the cache without both credentials present (either already applied or being set in the same call) returns a validation error from the CLI:
@@ -50,7 +50,7 @@ We recommend using a [Docker Hub personal access token](https://docs.docker.com/
 
 ```bash
 $ convox rack params set ecr_docker_hub_cache=false -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Disabling tears down the ECR pull-through cache rule, the Secrets Manager secret holding the Docker Hub credentials, and the IAM policy granting nodes `ecr:CreateRepository` and `ecr:BatchImportUpstreamImage` permissions. Resource pods revert to pulling directly from Docker Hub on their next deploy.

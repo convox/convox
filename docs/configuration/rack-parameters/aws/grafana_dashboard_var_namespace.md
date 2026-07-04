@@ -24,19 +24,19 @@ Letters, digits, and underscore only. Values containing any other character are 
 To override to `k8s_namespace`:
 ```bash
 $ convox rack params set grafana_dashboard_var_namespace=k8s_namespace -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To revert to the default:
 ```bash
 $ convox rack params set grafana_dashboard_var_namespace=namespace -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To clear the override (falls back to the canonical default `namespace`):
 ```bash
 $ convox rack params set grafana_dashboard_var_namespace= -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Operational Notes

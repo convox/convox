@@ -26,7 +26,7 @@ When not set, no SSH key is installed on the cluster nodes, which effectively di
 To assign an existing EC2 key pair to your rack nodes:
 ```bash
 $ convox rack params set key_pair_name=my-keypair -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 To rotate the key pair using the CLI:

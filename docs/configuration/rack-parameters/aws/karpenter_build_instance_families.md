@@ -19,7 +19,7 @@ The default value is empty (falls back to [`karpenter_instance_families`](/confi
 
 ```bash
 $ convox rack params set karpenter_build_instance_families=c5,c6i -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

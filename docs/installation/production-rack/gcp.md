@@ -87,7 +87,7 @@ Name      myrack
 Provider  gcp
 Router    router.0a1b2c3d4e5f.convox.cloud
 Status    running
-Version   3.23.3
+Version   3.24.11
 ```
 
 Installation typically takes 10-20 minutes while GKE provisions the cluster and node pools.

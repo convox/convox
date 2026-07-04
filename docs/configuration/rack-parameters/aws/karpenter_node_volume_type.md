@@ -19,7 +19,7 @@ The default value is `gp3`.
 
 ```bash
 $ convox rack params set karpenter_node_volume_type=io1 -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

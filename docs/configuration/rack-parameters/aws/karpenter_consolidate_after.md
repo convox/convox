@@ -19,7 +19,7 @@ The default value is `30s`.
 
 ```bash
 $ convox rack params set karpenter_consolidate_after=5m -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information

@@ -21,7 +21,7 @@ The default value for `syslog` is an empty string. When set to an empty string, 
 To set the `syslog` parameter, use the following command:
 ```bash
 $ convox rack params set syslog='tcp+tls://example.org:1234' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the syslog endpoint to the specified value.
 

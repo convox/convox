@@ -23,7 +23,7 @@ If the `schedule_rack_scale_up` parameter is set to an empty string, no scale-up
 To set the `schedule_rack_scale_up` parameter, use the following command:
 ```bash
 $ convox rack params set schedule_rack_scale_up="0 0 * * 0" -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the rack scale up schedule to every Sunday at midnight UTC.
 

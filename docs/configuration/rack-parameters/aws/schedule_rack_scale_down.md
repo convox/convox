@@ -23,7 +23,7 @@ If the `schedule_rack_scale_down` parameter is set to an empty string, no scale-
 To set the `schedule_rack_scale_down` parameter, use the following command:
 ```bash
 $ convox rack params set schedule_rack_scale_down="0 18 * * 5" -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 This command sets the rack scale down schedule to every Friday at 6 PM UTC.
 

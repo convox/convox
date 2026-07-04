@@ -43,7 +43,7 @@ Build node pools automatically get the following labels and taints:
 ### Using a JSON File (Recommended)
 ```bash
 $ convox rack params set additional_build_groups_config=/path/to/build-config.json -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 Example JSON file:
@@ -64,7 +64,7 @@ Example JSON file:
 ### Using a Raw JSON String
 ```bash
 $ convox rack params set 'additional_build_groups_config=[{"id":201,"type":"Standard_D8s_v3","disk":100,"min_size":0,"max_size":3,"label":"builds"}]' -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Architecture Compatibility

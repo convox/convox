@@ -162,7 +162,7 @@ Set app parameters
 ### Examples
 ```bash
     $ convox apps params set BuildCpu=1000 BuildMem=4096 -a myapp
-    Setting parameters... OK
+    Updating parameters... OK
 ```
 
 ## apps unlock

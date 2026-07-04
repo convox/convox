@@ -26,13 +26,13 @@ The default value for `user_data_url` is an empty string, meaning no additional 
 To set the `user_data_url` parameter, use the following command:
 ```bash
 $ convox rack params set user_data_url=<url_endpoint> -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ### Example
 ```bash
 $ convox rack params set user_data_url=https://example.com/scripts/instance-setup.sh -r rackName
-Setting parameters... OK
+Updating parameters... OK
 ```
 
 ## Additional Information
