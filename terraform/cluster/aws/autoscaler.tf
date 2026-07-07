@@ -204,6 +204,24 @@ resource "kubernetes_cluster_role" "autoscaler" {
   }
 
   rule {
+    api_groups = ["resource.k8s.io"]
+    resources  = ["resourceclaims", "resourceslices", "deviceclasses"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["podtemplates"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["autoscaling.x-k8s.io"]
+    resources  = ["provisioningrequests", "provisioningrequests/status"]
+    verbs      = ["get", "list", "watch", "update", "patch"]
+  }
+
+  rule {
     api_groups = [""]
     resources  = ["configmaps"]
     verbs      = ["get", "list", "watch"]
