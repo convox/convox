@@ -33,7 +33,7 @@ locals {
     docker_hub_username      = ""
     fluentd_memory           = "200Mi"
     image                    = "convox/convox"
-    k8s_version              = "1.34"
+    k8s_version              = "1.35"
     name                     = ""
     nginx_additional_config  = ""
     node_disk                = "100"

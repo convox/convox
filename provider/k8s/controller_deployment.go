@@ -178,6 +178,11 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 		}
 	}
 
+	// a percentage-based minAvailable on a single replica rounds up to 1,
+	// which vetoes every voluntary eviction and blocks node drains
+	// (Karpenter drift, consolidation, expiry) indefinitely
+	singleReplica := (d.Spec.Replicas == nil || *d.Spec.Replicas <= 1) && minAvailableAnnoVal == ""
+
 	if remove {
 		c.Provider.Cluster.PolicyV1().PodDisruptionBudgets(d.Namespace).Delete(c.Provider.ctx, d.Name, am.DeleteOptions{})
 		return nil
@@ -187,7 +192,14 @@ func (c *DeployController) SyncPDB(d *apps.Deployment, remove bool) error {
 			Namespace: d.Namespace,
 		}, func(pdb *policyv1.PodDisruptionBudget) *policyv1.PodDisruptionBudget {
 			pdb.Labels = d.Labels
-			pdb.Spec.MinAvailable = pdbMinAvailable
+			if singleReplica {
+				one := intstr.FromInt32(1)
+				pdb.Spec.MinAvailable = nil
+				pdb.Spec.MaxUnavailable = &one
+			} else {
+				pdb.Spec.MinAvailable = pdbMinAvailable
+				pdb.Spec.MaxUnavailable = nil
+			}
 			pdb.Spec.Selector = d.Spec.Selector
 			pdb.Spec.Selector.MatchLabels["type"] = "service"
 			alwaysAllow := policyv1.AlwaysAllow

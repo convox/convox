@@ -8,7 +8,7 @@ sudo apt-get update && sudo apt-get -y install jq unzip
 curl -s https://download.docker.com/linux/static/stable/x86_64/docker-29.5.2.tgz | sudo tar -C /usr/bin --strip-components 1 -xz
 
 # install kubectl (match the rack's EKS k8s_version)
-curl -Ls https://dl.k8s.io/release/v1.34.8/bin/linux/amd64/kubectl -o /tmp/kubectl && \
+curl -Ls https://dl.k8s.io/release/v1.35.6/bin/linux/amd64/kubectl -o /tmp/kubectl && \
 	sudo mv /tmp/kubectl /usr/bin/kubectl && sudo chmod +x /usr/bin/kubectl
 
 # install terraform (1.x required by the hashicorp/aws 5.x provider the modules pin)
