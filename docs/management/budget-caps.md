@@ -24,7 +24,7 @@ how spend is computed see [Cost Tracking](/management/cost-tracking).
 
 Budget enforcement (`monthlyCapUsd`, `alertThresholdPercent`, `atCapAction`)
 requires the rack-level cost accumulator. Without it, no spend is computed, so
-caps and alerts persist as config but never trip. Enable it on AWS racks:
+caps and alerts persist as config but never trip. Enable it on AWS (3.24.6+) or Azure (3.25.1+) racks:
 
 ```bash
 $ convox rack params set cost_tracking_enable=true
@@ -35,10 +35,7 @@ against a rack with `cost_tracking_enable=false`, the rack rejects the request
 with HTTP 422 and a message pointing at this command. Set the rack parameter,
 wait for the apply to complete (~3 min), then redeploy or retry.
 
-`cost_tracking_enable` is AWS-only today; non-AWS racks (Azure, GCP,
-DigitalOcean, Equinix Metal, Local) cannot enforce budgets in the current
-release. Recovery operations (`convox budget clear`, `convox budget reset`)
-remain available regardless of cost tracking state so you can always clean up.
+`cost_tracking_enable` is supported on AWS (rack 3.24.6+) and Azure (rack 3.25.1+); GCP, DigitalOcean, Equinix Metal, and Local racks cannot enforce budgets in the current release. Recovery operations (`convox budget clear`, `convox budget reset`) remain available regardless of cost tracking state so you can always clean up.
 
 ## Set a monthly cap <a id="set-a-cap"></a>
 

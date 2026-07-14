@@ -18,6 +18,7 @@ The following parameters are available for configuring your Convox rack on Micro
 | [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) | Configures additional customized node pools for the cluster. |
 | [azure_files_enable](/configuration/rack-parameters/azure/azure_files_enable) | Enable Azure Files NFS volumes for shared persistent storage. |
 | [cert_duration](/configuration/rack-parameters/azure/cert_duration) | Certificate renewal period. |
+| [cost_tracking_enable](/configuration/rack-parameters/azure/cost_tracking_enable) | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [docker_hub_password](/configuration/rack-parameters/azure/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/azure/docker_hub_username) | Docker Hub username for authenticated image pulls. |
 | [fluentd_memory](/configuration/rack-parameters/azure/fluentd_memory) | Configures memory allocation for the Fluentd log collector DaemonSet. |

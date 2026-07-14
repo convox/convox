@@ -48,6 +48,7 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
+  cost_tracking_enable      = var.cost_tracking_enable
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
   domain_internal           = var.domain_internal

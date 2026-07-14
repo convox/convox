@@ -868,7 +868,7 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 			warnings++
 			continue
 		}
-		price, ok := billing.PriceForInstance(instanceType)
+		price, ok := billing.PriceForInstanceOn(p.Provider, instanceType)
 		if !ok {
 			warnings++
 			continue
@@ -939,6 +939,15 @@ func nodeCapacityType(n *v1.Node) string {
 		return "spot"
 	case "ON_DEMAND":
 		return "on-demand"
+	}
+	switch strings.ToLower(n.Labels["kubernetes.azure.com/priority"]) {
+	case "spot":
+		return "spot"
+	case "regular":
+		return "on-demand"
+	}
+	if strings.EqualFold(n.Labels["kubernetes.azure.com/scalesetpriority"], "spot") {
+		return "spot"
 	}
 	return ""
 }
