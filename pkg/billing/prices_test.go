@@ -35,6 +35,25 @@ func TestPriceForInstance_CpuOnly(t *testing.T) {
 	assert.Equal(t, "", p.GpuType)
 }
 
+func TestPriceForInstanceOn(t *testing.T) {
+	p, ok := billing.PriceForInstanceOn("azure", "Standard_D4s_v5")
+	require.True(t, ok)
+	assert.Greater(t, p.OnDemandUsdPerHour, 0.0)
+
+	_, ok = billing.PriceForInstanceOn("azure", "m5.large")
+	assert.False(t, ok)
+
+	p, ok = billing.PriceForInstanceOn("aws", "m5.large")
+	require.True(t, ok)
+	assert.Greater(t, p.OnDemandUsdPerHour, 0.0)
+
+	_, ok = billing.PriceForInstanceOn("gcp", "Standard_D4s_v5")
+	assert.False(t, ok)
+
+	_, ok = billing.PriceForInstanceOn("do", "unknown-type")
+	assert.False(t, ok)
+}
+
 func TestPricingTableVersion(t *testing.T) {
 	v := billing.PricingTableVersion()
 	require.NotEmpty(t, v)
@@ -46,12 +65,16 @@ func TestPricingTableVersion(t *testing.T) {
 // instance family so a regeneration that accidentally drops a family fails CI.
 func TestPriceTable_FamilyCoverage(t *testing.T) {
 	families := []string{
-		"g4dn", "g5", "g6",
+		"g4dn", "g5", "g6", "g6e",
 		"p3", "p4d", "p5",
 		"inf1", "inf2", "trn1",
 		"m5", "c5", "r5",
-		"t2", "t3", "t3a",
+		"t2", "t3", "t3a", "t4g",
 		"m4", "c4", "r4",
+		"m7a", "c7a", "r7a",
+		"m6g", "c6g", "r6g",
+		"m7g", "c7g", "r7g",
+		"m8g", "c8g", "r8g",
 	}
 
 	for _, fam := range families {

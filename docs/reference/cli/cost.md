@@ -36,14 +36,14 @@ Default per-service / per-variant breakdown on a 3.24.6+ rack:
 
 Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.
 
-Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.
+Spot pricing applies a discount automatically when nodes are provisioned via Karpenter, an EKS spot ASG, or an AKS spot node pool. Capacity "unknown" means the node carried no capacity label.
 
 Aggregated app totals via `--aggregate`:
 
 ```bash
     $ convox cost --app myapp --aggregate
     APP    SPEND-USD  AS-OF        PRICING-SOURCE
-    myapp  $0.45      2 minutes ago  pricing-table:2026-04-29
+    myapp  $0.45      2 minutes ago  pricing-table:2026-07-14
 ```
 
 ### Output table (3.24.6+)
@@ -132,7 +132,8 @@ $ convox rack params set cost_tracking_enable=true
 The 422 rejection applies only to the WRITE paths: `convox budget set` and
 `convox deploy` against a manifest with a `budget:` block. See
 [Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
-for the full enable instructions. Functional scope is AWS-only today.
+for the full enable instructions. Cost tracking is available on AWS racks
+(3.24.6+) and Azure racks (3.25.1+).
 
 ### Unpriced instance types
 

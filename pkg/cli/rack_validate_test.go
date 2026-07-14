@@ -468,6 +468,25 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_CostTrackingEnable_AzureCoverage(t *testing.T) {
+	params := map[string]string{"cost_tracking_enable": "true"}
+	if err := validateAndMutateParams(params, "azure", map[string]string{}, false); err != nil {
+		t.Errorf("cost_tracking_enable=true should pass for azure, got: %v", err)
+	}
+	params2 := map[string]string{"cost_tracking_enable": "garbage"}
+	if err := validateAndMutateParams(params2, "azure", map[string]string{}, false); err == nil {
+		t.Errorf("cost_tracking_enable=garbage should be rejected for azure")
+	}
+	params3 := map[string]string{"cost_tracking_enable": "true"}
+	if err := validateAndMutateParams(params3, "do", map[string]string{}, false); err == nil {
+		t.Errorf("cost_tracking_enable should stay unknown for do provider")
+	}
+	params4 := map[string]string{"cost_tracking_enable": "true"}
+	if err := validateAndMutateParams(params4, "gcp", map[string]string{}, false); err == nil {
+		t.Errorf("cost_tracking_enable should stay unknown for gcp provider")
+	}
+}
+
 func TestValidateAndMutateParams_BoolParam_EcrDockerHubCacheDepsAndType(t *testing.T) {
 	// ecr_docker_hub_cache=garbage is rejected by the bool sweep AFTER the
 	// dependency check; with deps satisfied, =true passes and =garbage

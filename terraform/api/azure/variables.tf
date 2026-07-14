@@ -7,6 +7,11 @@ variable "azure_files_enable" {
   type    = bool
 }
 
+variable "cost_tracking_enable" {
+  default = false
+  type    = bool
+}
+
 variable "fluentd_memory" {
   type    = string
   default = "200Mi"

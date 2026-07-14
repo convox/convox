@@ -7,6 +7,7 @@ locals {
     additional_node_groups_config        = var.additional_node_groups_config
     azure_files_enable                   = var.azure_files_enable
     cert_duration                        = var.cert_duration
+    cost_tracking_enable                 = var.cost_tracking_enable
     docker_hub_password                  = var.docker_hub_password
     docker_hub_username                  = var.docker_hub_username
     fluentd_memory                       = var.fluentd_memory
@@ -43,6 +44,7 @@ locals {
     additional_node_groups_config        = ""
     azure_files_enable                   = "false"
     cert_duration                        = "2160h"
+    cost_tracking_enable                 = "false"
     docker_hub_password                  = ""
     docker_hub_username                  = ""
     fluentd_memory                       = "200Mi"

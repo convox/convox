@@ -28,7 +28,7 @@ actionable message pointing at the enable command. Recovery operations
 (`convox budget clear`, `convox budget reset`) remain available regardless
 of cost-tracking state.
 
-Enable on AWS racks:
+Enable on AWS (3.24.6+) or Azure (3.25.1+) racks:
 
 ```bash
 $ convox rack params set cost_tracking_enable=true
@@ -39,11 +39,7 @@ The first accumulator tick after the apply (default tick interval is 10
 minutes) starts populating spend. The Console budget panel and `convox cost`
 become populated from that tick onward.
 
-`cost_tracking_enable` is **AWS-only**. Non-AWS racks (Azure, GCP,
-DigitalOcean, Equinix Metal, Local) cannot enable cost tracking; their
-built-in pricing tables and instance-type introspection paths only cover
-AWS. Cost-tracking-dependent features (Console budget panel populated,
-`convox cost`, per-service spend attribution) are AWS-only.
+Cost tracking is supported on AWS racks (version 3.24.6 or later) and Azure racks (version 3.25.1 or later). Other providers (GCP, DigitalOcean, Equinix Metal, Local) cannot enable cost tracking; their pricing tables and instance-type introspection paths are not wired yet. Spend is priced from built-in list-price tables: us-east-1 Linux list prices on AWS and eastus Linux list prices on Azure. Spot capacity is modeled from node capacity-type labels (Karpenter and EKS spot node groups on AWS; AKS spot node pools on Azure) and discounted automatically. Budget caps and enforcement (alerts, block-new-deploys, auto-shutdown) behave identically on both providers.
 
 ## How spend is computed
 
