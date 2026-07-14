@@ -130,7 +130,7 @@ var gcpKnownParams = map[string]bool{
 
 var azureKnownParams = map[string]bool{
 	"additional_build_groups_config": true, "additional_node_groups_config": true,
-	"azure_files_enable": true, "cert_duration": true,
+	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true,
 	"docker_hub_password": true, "docker_hub_username": true,
 	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
 	"image": true, "k8s_version": true, "max_on_demand_count": true,

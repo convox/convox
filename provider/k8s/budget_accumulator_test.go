@@ -891,6 +891,112 @@ func TestBudgetAccumulator_ChargesRunningPod(t *testing.T) {
 	})
 }
 
+// Azure provider resolves ARM SKU names via the Azure price table.
+func TestBudgetAccumulator_AzureProviderResolvesAzureSku(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.Provider = "azure"
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  0,
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name: "node1",
+				Labels: map[string]string{
+					"node.kubernetes.io/instance-type": "Standard_D4s_v5",
+					"kubernetes.azure.com/priority":    "regular",
+				},
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:    *resource.NewMilliQuantity(4000, resource.DecimalSI),
+					ac.ResourceMemory: *resource.NewQuantity(16<<30, resource.BinarySI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec: ac.PodSpec{
+				NodeName: "node1",
+				Containers: []ac.Container{{
+					Name: "web",
+					Resources: ac.ResourceRequirements{
+						Requests: ac.ResourceList{
+							ac.ResourceCPU:    *resource.NewMilliQuantity(4000, resource.DecimalSI),
+							ac.ResourceMemory: *resource.NewQuantity(16<<30, resource.BinarySI),
+						},
+					},
+				}},
+			},
+			Status: ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.InDelta(t, 0.192, state.CurrentMonthSpendUsd, 0.001,
+			"Standard_D4s_v5 full allocation for 1h should charge ~$0.192")
+		assert.Equal(t, 0, state.WarningCount)
+	})
+}
+
+// Azure provider does not resolve AWS instance types: warning, no charge.
+func TestBudgetAccumulator_AzureProviderWarnsOnUnknownSku(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.Provider = "azure"
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name:   "node1",
+				Labels: map[string]string{"node.kubernetes.io/instance-type": "m5.large"},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec:       ac.PodSpec{NodeName: "node1", Containers: []ac.Container{{Name: "web"}}},
+			Status:     ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.Equal(t, 0.0, state.CurrentMonthSpendUsd)
+		assert.Equal(t, 1, state.WarningCount)
+	})
+}
+
 // Pod on a node without an instance-type label → warnings++, no charge.
 func TestBudgetAccumulator_UnlabeledNodeIncrementsWarnings(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {

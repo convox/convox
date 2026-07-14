@@ -124,7 +124,7 @@ func formatRateUsdPerHour(rate float64) (string, bool) {
 	return fmt.Sprintf("$%.2f", rate), false
 }
 
-const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter or an EKS spot ASG. Capacity "unknown" means the node carried neither label.`
+const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter, an EKS spot ASG, or an AKS spot node pool. Capacity "unknown" means the node carried no capacity label.`
 
 const accumulationNote = `Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.`
 

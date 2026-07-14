@@ -255,6 +255,35 @@ func TestNodeCapacityType_DualSignal(t *testing.T) {
 			node:     nil,
 			expected: "",
 		},
+		{
+			name:     "AKS_priority_spot",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"kubernetes.azure.com/priority": "spot"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "AKS_priority_regular_maps_to_on_demand",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"kubernetes.azure.com/priority": "regular"}, nil),
+			expected: "on-demand",
+		},
+		{
+			name:     "AKS_deprecated_scalesetpriority_spot_fallback",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"kubernetes.azure.com/scalesetpriority": "spot"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "AKS_no_capacity_label_returns_empty",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"kubernetes.azure.com/agentpool": "nodepool1"}, nil),
+			expected: "",
+		},
+		{
+			name: "AWS_labels_take_priority_over_AKS_labels",
+			node: nodeWithLabelsAndAnnotations(
+				map[string]string{
+					"karpenter.sh/capacity-type":    "on-demand",
+					"kubernetes.azure.com/priority": "spot",
+				}, nil),
+			expected: "on-demand",
+		},
 	}
 
 	for _, c := range cases {
