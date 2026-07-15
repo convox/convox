@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -59,7 +60,7 @@ func (c *SecretController) Informer() cache.SharedInformer {
 }
 
 func (c *SecretController) ListOptions(opts *am.ListOptions) {
-	opts.LabelSelector = "system=convox,type=state"
+	opts.LabelSelector = "system=convox,type in (state,letsencrypt-certificate)"
 }
 
 func (c *SecretController) Run() {
@@ -116,7 +117,8 @@ func (c *SecretController) Update(prev, cur interface{}) error {
 		}
 	}
 
-	if ss.Labels["system"] == "convox" && ss.Labels["type"] == "letsencrypt-certificate" {
+	// rack-namespace certs are the only ones with copies in app namespaces to keep in sync
+	if ss.Labels["system"] == "convox" && ss.Labels["type"] == "letsencrypt-certificate" && ss.Namespace == c.Provider.Namespace {
 		c.syncSecretCertData(ss)
 	}
 	return nil
@@ -136,11 +138,18 @@ func (c *SecretController) syncSecretCertData(certSecret *v1.Secret) {
 		})
 		if err != nil {
 			c.log.Errorf("failed to list secrets: %s", err)
+			return
 		}
 
 		for i := range sList.Items {
+			if sList.Items[i].Namespace == certSecret.Namespace {
+				continue
+			}
 			if sList.Items[i].Annotations[AnnotationSecretDataHash] != dataHash {
 				_, err := c.Provider.PatchSecret(context.TODO(), &sList.Items[i], func(s *v1.Secret) *v1.Secret {
+					if s.Annotations == nil {
+						s.Annotations = map[string]string{}
+					}
 					s.Annotations[AnnotationSecretDataHash] = dataHash
 					s.Data = certSecret.Data
 					return s
@@ -169,7 +178,12 @@ func assertSecret(v interface{}) (*ac.Secret, error) {
 
 func secretDataHash(s *v1.Secret) (string, error) {
 	h := sha1.New()
+	keys := make([]string, 0, len(s.Data))
 	for k := range s.Data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
 		_, err := h.Write(s.Data[k])
 		if err != nil {
 			return "", err
