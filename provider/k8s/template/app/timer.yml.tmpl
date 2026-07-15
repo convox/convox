@@ -136,6 +136,7 @@ spec:
           - name: {{ . }}
           {{ end }}
           {{ end }}
+          terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
           restartPolicy: Never
           shareProcessNamespace: {{.Service.Init}}
           serviceAccountName: timer-{{.Timer.Name}}
