@@ -532,6 +532,241 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 	}
 }
 
+func TestKarpenterNodeOverlay_Validate(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	intPtr := func(i int) *int { return &i }
+	req := func(op string, values ...string) KarpenterNodeOverlayRequirement {
+		return KarpenterNodeOverlayRequirement{Key: "node.kubernetes.io/instance-type", Operator: op, Values: values}
+	}
+
+	tests := []struct {
+		name    string
+		overlay KarpenterNodeOverlay
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			"minimal capacity valid",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			false, "",
+		},
+		{
+			"priceAdjustment percent valid",
+			KarpenterNodeOverlay{Name: "spot", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, PriceAdjustment: strPtr("-30%")},
+			false, "",
+		},
+		{
+			"priceAdjustment absolute valid",
+			KarpenterNodeOverlay{Name: "spot", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, PriceAdjustment: strPtr("+5")},
+			false, "",
+		},
+		{
+			"priceAdjustment positive percent valid",
+			KarpenterNodeOverlay{Name: "spot", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, PriceAdjustment: strPtr("+50%")},
+			false, "",
+		},
+		{
+			"priceAdjustment floor -100% valid",
+			KarpenterNodeOverlay{Name: "spot", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, PriceAdjustment: strPtr("-100%")},
+			false, "",
+		},
+		{
+			"price valid",
+			KarpenterNodeOverlay{Name: "fixed", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, Price: strPtr("0.50")},
+			false, "",
+		},
+		{
+			"weight min 1 valid",
+			KarpenterNodeOverlay{Name: "w", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}, Weight: intPtr(1)},
+			false, "",
+		},
+		{
+			"weight max 10000 valid",
+			KarpenterNodeOverlay{Name: "w", Requirements: []KarpenterNodeOverlayRequirement{req("In", "c6g.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}, Weight: intPtr(10000)},
+			false, "",
+		},
+		{
+			"requirement Exists no values valid",
+			KarpenterNodeOverlay{Name: "e", Requirements: []KarpenterNodeOverlayRequirement{{Key: "karpenter.sh/capacity-type", Operator: "Exists"}}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			false, "",
+		},
+		{
+			"requirement Gt one value valid",
+			KarpenterNodeOverlay{Name: "g", Requirements: []KarpenterNodeOverlayRequirement{{Key: "karpenter.k8s.aws/instance-memory", Operator: "Gt", Values: []string{"1024"}}}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			false, "",
+		},
+		{
+			"empty name",
+			KarpenterNodeOverlay{Name: "", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "name is required",
+		},
+		{
+			"invalid name uppercase",
+			KarpenterNodeOverlay{Name: "G6F", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "lowercase alphanumeric",
+		},
+		{
+			"empty requirements",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "requirements must not be empty",
+		},
+		{
+			"requirement missing key",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{{Operator: "In", Values: []string{"g6f.large"}}}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "must set a key",
+		},
+		{
+			"requirement bad operator",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("Includes", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "invalid requirement operator",
+		},
+		{
+			"requirement In no values",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "at least one value",
+		},
+		{
+			"requirement Gt two values",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{{Key: "k", Operator: "Gt", Values: []string{"1", "2"}}}, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+			true, "exactly one value",
+		},
+		{
+			"capacity standard resource cpu",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"cpu": "4"}},
+			true, "standard resource",
+		},
+		{
+			"capacity standard resource memory",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"memory": "8Gi"}},
+			true, "standard resource",
+		},
+		{
+			"capacity empty value",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": ""}},
+			true, "must not be empty",
+		},
+		{
+			"price and priceAdjustment mutually exclusive",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Price: strPtr("0.5"), PriceAdjustment: strPtr("-10%")},
+			true, "mutually exclusive",
+		},
+		{
+			"priceAdjustment unsigned percent rejected",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, PriceAdjustment: strPtr("50%")},
+			true, "signed number or percentage",
+		},
+		{
+			"priceAdjustment unsigned absolute rejected",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, PriceAdjustment: strPtr("1.5")},
+			true, "signed number or percentage",
+		},
+		{
+			"weight 0 rejected",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}, Weight: intPtr(0)},
+			true, "weight must be 1-10000",
+		},
+		{
+			"weight 10001 rejected",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{"nvidia.com/gpu": "1"}, Weight: intPtr(10001)},
+			true, "weight must be 1-10000",
+		},
+		{
+			"nothing to apply rejected",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}},
+			true, "at least one of",
+		},
+		{
+			"empty capacity counts as absent",
+			KarpenterNodeOverlay{Name: "g6f", Requirements: []KarpenterNodeOverlayRequirement{req("In", "g6f.large")}, Capacity: map[string]string{}},
+			true, "at least one of",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.overlay.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("got err=%v, wantErr=%v", err, tt.wantErr)
+			}
+			if tt.wantErr && err != nil && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestKarpenterNodeOverlays_Validate(t *testing.T) {
+	reqs := []KarpenterNodeOverlayRequirement{{Key: "k", Operator: "In", Values: []string{"v"}}}
+
+	if err := (KarpenterNodeOverlays{}).Validate(); err != nil {
+		t.Errorf("empty overlays should validate (clear round-trip), got %v", err)
+	}
+
+	dup := KarpenterNodeOverlays{
+		{Name: "a", Requirements: reqs, Capacity: map[string]string{"nvidia.com/gpu": "1"}},
+		{Name: "a", Requirements: reqs, Capacity: map[string]string{"nvidia.com/gpu": "2"}},
+	}
+	if err := dup.Validate(); err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Errorf("duplicate names should be rejected, got %v", err)
+	}
+}
+
+func TestValidateAndMutateParams_KarpenterNodeOverlays(t *testing.T) {
+	overlays := []map[string]interface{}{
+		{
+			"name":         "g6f",
+			"requirements": []map[string]interface{}{{"key": "node.kubernetes.io/instance-type", "operator": "In", "values": []string{"g6f.large"}}},
+			"capacity":     map[string]string{"nvidia.com/gpu": "1"},
+			"weight":       100,
+		},
+	}
+	raw, _ := json.Marshal(overlays)
+
+	heterogeneous, _ := json.Marshal([]map[string]interface{}{
+		{"name": "a", "requirements": []map[string]interface{}{{"key": "node.kubernetes.io/instance-type", "operator": "In", "values": []string{"g6f.large"}}}, "capacity": map[string]string{"nvidia.com/gpu": "1"}},
+		{"name": "b", "requirements": []map[string]interface{}{{"key": "karpenter.k8s.aws/instance-family", "operator": "In", "values": []string{"c6g"}}}, "priceAdjustment": "-30%"},
+	})
+
+	badCapacity, _ := json.Marshal([]map[string]interface{}{
+		{"name": "bad", "requirements": []map[string]interface{}{{"key": "k", "operator": "In", "values": []string{"v"}}}, "capacity": map[string]string{"cpu": "4"}},
+	})
+
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"raw JSON array", string(raw), false},
+		{"base64 encoded", base64.StdEncoding.EncodeToString(raw), false},
+		{"heterogeneous entries", string(heterogeneous), false},
+		{"invalid JSON", "[bad", true},
+		{"standard resource capacity", string(badCapacity), true},
+		{"empty clears", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_node_overlays_config": tt.input}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("input=%q: got err=%v, wantErr=%v", tt.input, err, tt.wantErr)
+			}
+			if err == nil {
+				decoded, derr := base64.StdEncoding.DecodeString(params["karpenter_node_overlays_config"])
+				if derr != nil {
+					t.Errorf("stored value not base64: %v", derr)
+				}
+				var out []map[string]interface{}
+				if jerr := json.Unmarshal(decoded, &out); jerr != nil {
+					t.Errorf("stored value not a JSON array: %v", jerr)
+				}
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_KarpenterDoubleQuoteRejection(t *testing.T) {
 	tests := []struct {
 		name    string
