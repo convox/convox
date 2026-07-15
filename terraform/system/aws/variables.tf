@@ -403,6 +403,11 @@ variable "additional_karpenter_nodepools_config" {
   default = ""
 }
 
+variable "karpenter_node_overlays_config" {
+  type    = string
+  default = ""
+}
+
 variable "keda_enable" {
   type    = bool
   default = false

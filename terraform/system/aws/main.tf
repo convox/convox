@@ -94,6 +94,7 @@ locals {
   additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
 
   additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
+  karpenter_node_overlays        = try(jsondecode(var.karpenter_node_overlays_config), jsondecode(base64decode(var.karpenter_node_overlays_config)), [])
 
   public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
   private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
@@ -172,6 +173,7 @@ module "cluster" {
   karpenter_build_imds_tokens         = var.karpenter_build_imds_tokens
   karpenter_build_imds_hop_limit      = var.karpenter_build_imds_hop_limit
   additional_karpenter_nodepools      = local.additional_karpenter_nodepools
+  karpenter_node_overlays             = local.karpenter_node_overlays
   keda_enable                         = var.keda_enable
   key_pair_name                       = var.key_pair_name
   kube_proxy_version                  = var.kube_proxy_version

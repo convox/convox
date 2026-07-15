@@ -83,9 +83,9 @@ var awsKnownParams = map[string]bool{
 	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
 	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
 	"karpenter_node_expiry": true, "karpenter_node_labels": true,
-	"karpenter_node_os": true, "karpenter_node_taints": true,
-	"karpenter_node_volume_type": true,
-	"keda_enable":                true, "key_pair_name": true,
+	"karpenter_node_os": true, "karpenter_node_overlays_config": true,
+	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
+	"keda_enable": true, "key_pair_name": true,
 	"kube_proxy_version": true, "kubelet_registry_burst": true,
 	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
 	"min_on_demand_count":     true,
@@ -278,6 +278,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_expiry":                 true,
 		"karpenter_node_labels":                 true,
 		"karpenter_node_os":                     true,
+		"karpenter_node_overlays_config":        true,
 		"karpenter_node_taints":                 true,
 		"karpenter_node_volume_type":            true,
 		"keda_enable":                           true,
@@ -700,6 +701,7 @@ var clearableParams = map[string]bool{
 	"additional_build_groups_config":        true,
 	"additional_karpenter_nodepools_config": true,
 	"karpenter_config":                      true,
+	"karpenter_node_overlays_config":        true,
 	// External Prometheus URL — must be set explicitly post-3.24.6 (no rack-side auto-resolution)
 	"prometheus_url": true,
 	// External Grafana URL — clear means "Open in your Grafana" deep-link button
@@ -1159,6 +1161,102 @@ func (knp KarpenterNodePools) Validate() error {
 			return fmt.Errorf("duplicate karpenter nodepool name: %s", knp[i].Name)
 		}
 		nameMap[knp[i].Name] = true
+	}
+	return nil
+}
+
+type KarpenterNodeOverlayRequirement struct {
+	Key      string   `json:"key"`
+	Operator string   `json:"operator"`
+	Values   []string `json:"values,omitempty"`
+}
+
+type KarpenterNodeOverlay struct {
+	Name            string                            `json:"name"`
+	Requirements    []KarpenterNodeOverlayRequirement `json:"requirements"`
+	Capacity        map[string]string                 `json:"capacity,omitempty"`
+	Price           *string                           `json:"price,omitempty"`
+	PriceAdjustment *string                           `json:"priceAdjustment,omitempty"`
+	Weight          *int                              `json:"weight,omitempty"`
+}
+
+var karpenterPriceAdjustmentRe = regexp.MustCompile(`^(([+-]{1}(\d*\.?\d+))|(\+{1}\d*\.?\d+%)|(-\d{1,2}(\.\d+)?%)|(-100%))$`)
+
+func (o *KarpenterNodeOverlay) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("karpenter node overlay name is required")
+	}
+	if !karpenterNameRe.MatchString(o.Name) {
+		return fmt.Errorf("karpenter node overlay name '%s' must be lowercase alphanumeric with dashes, max 63 chars", o.Name)
+	}
+
+	if len(o.Requirements) == 0 {
+		return fmt.Errorf("karpenter node overlay '%s': requirements must not be empty", o.Name)
+	}
+	validOps := map[string]bool{"In": true, "NotIn": true, "Exists": true, "DoesNotExist": true, "Gt": true, "Lt": true}
+	for _, r := range o.Requirements {
+		if r.Key == "" {
+			return fmt.Errorf("karpenter node overlay '%s': each requirement must set a key", o.Name)
+		}
+		if !validOps[r.Operator] {
+			return fmt.Errorf("karpenter node overlay '%s': invalid requirement operator '%s' (must be In, NotIn, Exists, DoesNotExist, Gt, or Lt)", o.Name, r.Operator)
+		}
+		switch r.Operator {
+		case "Exists", "DoesNotExist":
+		case "Gt", "Lt":
+			if len(r.Values) != 1 {
+				return fmt.Errorf("karpenter node overlay '%s': requirement operator %s requires exactly one value", o.Name, r.Operator)
+			}
+		default:
+			if len(r.Values) == 0 {
+				return fmt.Errorf("karpenter node overlay '%s': requirement operator %s requires at least one value", o.Name, r.Operator)
+			}
+		}
+	}
+
+	blockedCapacity := map[string]bool{"cpu": true, "memory": true, "ephemeral-storage": true, "pods": true}
+	for k, v := range o.Capacity {
+		if blockedCapacity[k] {
+			return fmt.Errorf("karpenter node overlay '%s': capacity key '%s' is a standard resource rejected by Karpenter; use an extended resource such as nvidia.com/gpu", o.Name, k)
+		}
+		if v == "" {
+			return fmt.Errorf("karpenter node overlay '%s': capacity value for '%s' must not be empty", o.Name, k)
+		}
+	}
+
+	if o.Price != nil && o.PriceAdjustment != nil {
+		return fmt.Errorf("karpenter node overlay '%s': price and priceAdjustment are mutually exclusive", o.Name)
+	}
+	if o.Price != nil && *o.Price == "" {
+		return fmt.Errorf("karpenter node overlay '%s': price must not be empty", o.Name)
+	}
+	if o.PriceAdjustment != nil && !karpenterPriceAdjustmentRe.MatchString(*o.PriceAdjustment) {
+		return fmt.Errorf("karpenter node overlay '%s': priceAdjustment '%s' must be a signed number or percentage, e.g. +5, -30%%, or -100%%", o.Name, *o.PriceAdjustment)
+	}
+
+	if o.Weight != nil && (*o.Weight < 1 || *o.Weight > 10000) {
+		return fmt.Errorf("karpenter node overlay '%s': weight must be 1-10000", o.Name)
+	}
+
+	if len(o.Capacity) == 0 && o.Price == nil && o.PriceAdjustment == nil {
+		return fmt.Errorf("karpenter node overlay '%s': at least one of capacity, price, or priceAdjustment must be set", o.Name)
+	}
+
+	return nil
+}
+
+type KarpenterNodeOverlays []KarpenterNodeOverlay
+
+func (ko KarpenterNodeOverlays) Validate() error {
+	nameMap := map[string]bool{}
+	for i := range ko {
+		if err := ko[i].Validate(); err != nil {
+			return err
+		}
+		if nameMap[ko[i].Name] {
+			return fmt.Errorf("duplicate karpenter node overlay name: %s", ko[i].Name)
+		}
+		nameMap[ko[i].Name] = true
 	}
 	return nil
 }
@@ -1782,7 +1880,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	// Normalize empty values for JSON config params — users clear with param= or param=""
 	// but TF needs valid base64-encoded JSON (empty array or empty object).
-	for _, k := range []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config"} {
+	for _, k := range []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_node_overlays_config"} {
 		if v, ok := params[k]; ok && (v == "" || v == `""`) {
 			params[k] = base64.StdEncoding.EncodeToString([]byte("[]"))
 		}
@@ -1928,6 +2026,49 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		})
 
 		data, err := json.Marshal(npCfgs)
+		if err != nil {
+			return fmt.Errorf("failed to process param '%s': %s", k, err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// karpenter_node_overlays_config: validate NodeOverlay entries and re-encode
+	if params["karpenter_node_overlays_config"] != "" {
+		k := "karpenter_node_overlays_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "[") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		const maxKarpenterNodeOverlaysSize = 64 * 1024
+		if len(cfgData) > maxKarpenterNodeOverlaysSize {
+			return fmt.Errorf("karpenter_node_overlays_config exceeds maximum size of 64KB (%d bytes)", len(cfgData))
+		}
+
+		overlays := KarpenterNodeOverlays{}
+		if err := json.Unmarshal(cfgData, &overlays); err != nil {
+			return fmt.Errorf("invalid karpenter_node_overlays_config JSON: %s", err)
+		}
+
+		if err := overlays.Validate(); err != nil {
+			return err
+		}
+
+		sort.Slice(overlays, func(i, j int) bool {
+			return overlays[i].Name < overlays[j].Name
+		})
+
+		data, err := json.Marshal(overlays)
 		if err != nil {
 			return fmt.Errorf("failed to process param '%s': %s", k, err)
 		}
@@ -2446,7 +2587,7 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 		keys = append(keys, k)
 	}
 
-	b64Keys := []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_config"}
+	b64Keys := []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_config", "karpenter_node_overlays_config"}
 	for _, k := range b64Keys {
 		if params[k] != "" {
 			v, err := base64.StdEncoding.DecodeString(params[k])

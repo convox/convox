@@ -314,6 +314,45 @@ $ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","
 Updating parameters... OK
 ```
 
+### Node Overlays (Fractional GPUs)
+
+A NodeOverlay adjusts how Karpenter simulates a set of instance types without changing the NodePool itself. Overlays can advertise extended resources, override the price Karpenter uses in its cost model, or apply a percentage price adjustment. Configure them with the [`karpenter_node_overlays_config`](/configuration/rack-parameters/aws/karpenter_node_overlays_config) parameter, which also enables the Karpenter `NodeOverlay` feature gate when non-empty.
+
+The main use is fractional-GPU instance families such as `g6f` and `gr6f`. AWS reports these types with a GPU count of zero, so Karpenter prices them but will not provision them for `nvidia.com/gpu` requests. An overlay that advertises `nvidia.com/gpu` on those types lets Karpenter schedule GPU workloads onto them.
+
+**Walkthrough: schedule a GPU service on g6f**
+
+1. Advertise the GPU resource on the g6f/gr6f types with an overlay:
+
+   ```bash
+   $ convox rack params set karpenter_node_overlays_config='[{"name":"g6f-fractional-gpu","weight":100,"requirements":[{"key":"node.kubernetes.io/instance-type","operator":"In","values":["g6f.large","g6f.xlarge","g6f.2xlarge","g6f.4xlarge","gr6f.4xlarge"]}],"capacity":{"nvidia.com/gpu":"1"}}]' -r rackName
+   Updating parameters... OK
+   ```
+
+2. Create a g6f NodePool and enable the device plugin so the advertised GPU is real:
+
+   ```bash
+   $ convox rack params set additional_karpenter_nodepools_config='[{"name":"g6f","instance_families":"g6f","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","labels":"pool=g6f"}]' nvidia_device_plugin_enable=true -r rackName
+   Updating parameters... OK
+   ```
+
+3. Target the pool from `convox.yml`. GPU services auto-tolerate the `nvidia.com/gpu` taint:
+
+   ```yaml
+   # convox.yml
+   services:
+     ml-worker:
+       build: .
+       scale:
+         gpu:
+           count: 1
+           vendor: nvidia
+       nodeSelectorLabels:
+         convox.io/nodepool: g6f
+   ```
+
+> The overlay's `capacity` affects scheduling simulation only. The node still needs the NVIDIA device plugin to advertise a real `nvidia.com/gpu`, and `nvidia_device_time_slicing_replicas` (if set) multiplies fractional GPUs the same way it does full ones.
+
 ### Using Taints to Protect Nodes
 
 Without taints, any pod can land on a custom NodePool's nodes if they have spare capacity, even pods that don't need those resources. For example, a basic web service could get scheduled to an expensive GPU instance. Taints prevent this by rejecting pods that lack a matching toleration.

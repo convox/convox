@@ -135,7 +135,7 @@ variable "karpenter_enabled" {
 
 variable "karpenter_version" {
   type    = string
-  default = "1.10.0"
+  default = "1.13.1"
 }
 
 variable "karpenter_instance_families" {
@@ -266,6 +266,11 @@ variable "karpenter_build_imds_hop_limit" {
 
 variable "additional_karpenter_nodepools" {
   type    = list(map(any))
+  default = []
+}
+
+variable "karpenter_node_overlays" {
+  type    = any
   default = []
 }
 

@@ -118,6 +118,7 @@ func TestClearableMatchesPreserveEmpty(t *testing.T) {
 		"additional_build_groups_config":        true,
 		"additional_karpenter_nodepools_config": true,
 		"karpenter_config":                      true,
+		"karpenter_node_overlays_config":        true,
 	}
 	for k := range clearableParams {
 		if jsonConfigCarveouts[k] {

@@ -108,6 +108,12 @@ resource "helm_release" "karpenter" {
     type  = "string"
   }
 
+  # Enable the NodeOverlay feature gate only when overlays are configured
+  set {
+    name  = "settings.featureGates.nodeOverlay"
+    value = length(var.karpenter_node_overlays) > 0 ? "true" : "false"
+  }
+
   # Topology spread for HA — distribute controller replicas across nodes
   values = var.high_availability ? [yamlencode({
     topologySpreadConstraints = [{
