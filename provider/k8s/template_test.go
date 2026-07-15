@@ -515,6 +515,38 @@ timers:
 	}
 }
 
+func TestRenderTimerTerminationGrace(t *testing.T) {
+	set := `services:
+  worker:
+    build: .
+    termination:
+      grace: 300
+timers:
+  nightly:
+    schedule: "0 0 * * ? *"
+    command: "echo hi"
+    service: worker
+`
+	p, params := gpuTemplateFixture(t, set)
+	data, err := p.RenderTemplate("app/timer", params)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "terminationGracePeriodSeconds: 300")
+
+	unset := `services:
+  worker:
+    build: .
+timers:
+  nightly:
+    schedule: "0 0 * * ? *"
+    command: "echo hi"
+    service: worker
+`
+	p, params = gpuTemplateFixture(t, unset)
+	data, err = p.RenderTemplate("app/timer", params)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "terminationGracePeriodSeconds: 30")
+}
+
 func TestRenderServiceEmptyDirSizeLimit(t *testing.T) {
 	src := `services:
   web:

@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/validate/content"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -500,25 +502,66 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		s.PriorityClassName = "system-node-critical"
 	}
 
+	labels := map[string]string{
+		"app":     app,
+		"rack":    p.Name,
+		"release": release,
+		"service": service,
+		"system":  "convox",
+		"type":    "process",
+		"name":    service,
+	}
+
+	if opts.IsBuild {
+		labels["service-type"] = "build"
+	}
+
+	if opts.Annotations != nil {
+		kv, err := parseRunKV(*opts.Annotations)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range kv {
+			if msgs := content.IsLabelKey(k); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid annotation key %q: %s", k, strings.Join(msgs, "; "))
+			}
+			if _, ok := ans[k]; ok {
+				continue
+			}
+			ans[k] = v
+		}
+	}
+
+	if opts.Labels != nil {
+		reserved := map[string]bool{
+			"app": true, "rack": true, "service": true, "system": true,
+			"type": true, "name": true, "release": true, "service-type": true,
+		}
+		kv, err := parseRunKV(*opts.Labels)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range kv {
+			if reserved[k] {
+				return nil, structs.ErrBadRequest("label key %q is reserved by convox", k)
+			}
+			if msgs := content.IsLabelKey(k); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid label key %q: %s", k, strings.Join(msgs, "; "))
+			}
+			if msgs := content.IsLabelValue(v); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid label value %q: %s", v, strings.Join(msgs, "; "))
+			}
+			labels[k] = v
+		}
+	}
+
 	pod := &ac.Pod{
 		ObjectMeta: am.ObjectMeta{
 			Annotations:  ans,
 			GenerateName: fmt.Sprintf("%s-", service),
-			Labels: map[string]string{
-				"app":     app,
-				"rack":    p.Name,
-				"release": release,
-				"service": service,
-				"system":  "convox",
-				"type":    "process",
-				"name":    service,
-			},
+			Labels:       labels,
 		},
 		Spec: *s,
-	}
-
-	if opts.IsBuild {
-		pod.ObjectMeta.Labels["service-type"] = "build"
 	}
 
 	pd, err := p.Cluster.CoreV1().Pods(createNs).Create(
@@ -608,6 +651,7 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 
 	serviceAccountName := ""
 	var nodeSelectorLabels map[string]string
+	var graceSecs *int64
 	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
@@ -679,6 +723,9 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 
 			nodeSelectorLabels = s.NodeSelectorLabels
 
+			g := int64(s.Termination.Grace)
+			graceSecs = &g
+
 			if sc := serviceSecurityContext(s); sc != nil {
 				c.SecurityContext = sc
 			}
@@ -694,6 +741,10 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		Containers:            []ac.Container{c},
 		ShareProcessNamespace: options.Bool(true),
 		Volumes:               vs,
+	}
+
+	if graceSecs != nil {
+		ps.TerminationGracePeriodSeconds = graceSecs
 	}
 
 	if len(nodeSelectorLabels) > 0 {
@@ -770,6 +821,109 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 	}
 
 	return ps, nil
+}
+
+func parseRunKV(csv string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		parts := strings.SplitN(seg, "=", 2)
+		if len(parts) != 2 || parts[0] == "" {
+			return nil, structs.ErrBadRequest("invalid entry %q, use format key=value", seg)
+		}
+		out[parts[0]] = parts[1]
+	}
+	return out, nil
+}
+
+func parseRunNodeAffinity(csv string) ([]ac.PreferredSchedulingTerm, error) {
+	var terms []ac.PreferredSchedulingTerm
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		weight := 100
+		kv := seg
+		if i := strings.Index(seg, ":"); i >= 0 {
+			kv = seg[:i]
+			w, err := strconv.Atoi(seg[i+1:])
+			if err != nil || w < 1 || w > 100 {
+				return nil, structs.ErrBadRequest("invalid node-affinity weight in %q, must be an integer 1-100", seg)
+			}
+			weight = w
+		}
+		parts := strings.SplitN(kv, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, structs.ErrBadRequest("invalid node-affinity entry %q, use format key=value[:weight]", seg)
+		}
+		key, value := parts[0], parts[1]
+		if msgs := content.IsLabelKey(key); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid node-affinity key %q: %s", key, strings.Join(msgs, "; "))
+		}
+		if msgs := content.IsLabelValue(value); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid node-affinity value %q: %s", value, strings.Join(msgs, "; "))
+		}
+		terms = append(terms, ac.PreferredSchedulingTerm{
+			Weight: int32(weight), //nolint:gosec // weight range-checked to [1,100]
+			Preference: ac.NodeSelectorTerm{
+				MatchExpressions: []ac.NodeSelectorRequirement{
+					{Key: key, Operator: ac.NodeSelectorOpIn, Values: []string{value}},
+				},
+			},
+		})
+	}
+	return terms, nil
+}
+
+func parseRunTolerations(csv string) ([]ac.Toleration, error) {
+	validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+	var tols []ac.Toleration
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		left := seg
+		effect := ""
+		if colon := strings.SplitN(seg, ":", 2); len(colon) == 2 {
+			left = colon[0]
+			effect = colon[1]
+		}
+		if effect != "" && !validEffects[effect] {
+			return nil, structs.ErrBadRequest("invalid toleration effect %q (must be NoSchedule, PreferNoSchedule, or NoExecute)", effect)
+		}
+		key := left
+		value := ""
+		hasValue := false
+		if eq := strings.SplitN(left, "=", 2); len(eq) == 2 {
+			key, value, hasValue = eq[0], eq[1], true
+		}
+		if key == "" {
+			return nil, structs.ErrBadRequest("invalid toleration entry %q, key must not be empty", seg)
+		}
+		if hasValue && value == "" {
+			return nil, structs.ErrBadRequest("invalid toleration entry %q, value must not be empty after '='", seg)
+		}
+		if msgs := content.IsLabelKey(key); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid toleration key %q: %s", key, strings.Join(msgs, "; "))
+		}
+		t := ac.Toleration{Key: key, Effect: ac.TaintEffect(effect)}
+		if hasValue {
+			if msgs := content.IsLabelValue(value); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid toleration value %q: %s", value, strings.Join(msgs, "; "))
+			}
+			t.Operator = ac.TolerationOpEqual
+			t.Value = value
+		} else {
+			t.Operator = ac.TolerationOpExists
+		}
+		tols = append(tols, t)
+	}
+	return tols, nil
 }
 
 func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) { //nolint:gocritic // by-value opts matches ProcessRun and sibling helpers
@@ -891,6 +1045,80 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 				Effect:   ac.TaintEffectNoSchedule,
 			})
 		}
+	}
+
+	if opts.NodeAffinity != nil {
+		terms, err := parseRunNodeAffinity(*opts.NodeAffinity)
+		if err != nil {
+			return nil, err
+		}
+		if len(terms) > 0 {
+			if s.Affinity == nil {
+				s.Affinity = &ac.Affinity{}
+			}
+			if s.Affinity.NodeAffinity == nil {
+				s.Affinity.NodeAffinity = &ac.NodeAffinity{}
+			}
+			s.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+				s.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, terms...)
+		}
+	}
+
+	if opts.Tolerations != nil {
+		tols, err := parseRunTolerations(*opts.Tolerations)
+		if err != nil {
+			return nil, err
+		}
+		s.Tolerations = append(s.Tolerations, tols...)
+	}
+
+	if opts.UseServiceLifecycle != nil && *opts.UseServiceLifecycle {
+		release := common.DefaultString(opts.Release, "")
+		if release == "" {
+			a, err := p.AppGet(app)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			release = a.Release
+		}
+
+		m, _, err := common.ReleaseManifest(p, app, release)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		svc, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if svc.Lifecycle.PostStart != "" || svc.Lifecycle.PreStop != "" {
+			s.Containers[0].Lifecycle = &ac.Lifecycle{}
+
+			if svc.Lifecycle.PostStart != "" {
+				cmd, err := shellquote.Split(svc.Lifecycle.PostStart)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				s.Containers[0].Lifecycle.PostStart = &ac.LifecycleHandler{Exec: &ac.ExecAction{Command: cmd}}
+			}
+
+			if svc.Lifecycle.PreStop != "" {
+				cmd, err := shellquote.Split(svc.Lifecycle.PreStop)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				s.Containers[0].Lifecycle.PreStop = &ac.LifecycleHandler{Exec: &ac.ExecAction{Command: cmd}}
+			}
+		}
+	}
+
+	if opts.TerminationGrace != nil {
+		if *opts.TerminationGrace < 0 {
+			return nil, structs.ErrBadRequest("termination-grace must be a non-negative integer")
+		}
+		g := int64(*opts.TerminationGrace)
+		s.TerminationGracePeriodSeconds = &g
 	}
 
 	if p.hasDockerHubAuth() {

@@ -72,8 +72,16 @@ type ProcessRunOptions struct {
 	Privileged       *bool             `header:"Privileged"`
 	NodeLabels       *string           `flag:"node-labels" header:"Node-Labels"`
 	SystemCritical   *bool             `flag:"system-critical" header:"System-Critical"`
-	IsBuild          bool
-	BuildArch        *string
+
+	TerminationGrace    *int    `flag:"termination-grace" header:"Termination-Grace"`
+	Annotations         *string `flag:"annotations" header:"Run-Annotations"`
+	Labels              *string `flag:"labels" header:"Run-Labels"`
+	UseServiceLifecycle *bool   `flag:"use-service-lifecycle" header:"Use-Service-Lifecycle"`
+	NodeAffinity        *string `flag:"node-affinity" header:"Node-Affinity"`
+	Tolerations         *string `flag:"tolerations" header:"Run-Tolerations"`
+
+	IsBuild   bool
+	BuildArch *string
 }
 
 func (p *Process) sortKey() string {
