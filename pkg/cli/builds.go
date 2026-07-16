@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -77,7 +78,7 @@ func resolveSrcCredsPass(c *stdcli.Context) (*string, error) {
 
 func init() {
 	register("build", "create a build", Build, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagRack, flagApp, flagId),
+		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagRack, flagApp, flagId, flagForce),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
 	}, WithCloud())
@@ -157,7 +158,70 @@ func Build(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
+// checkPendingEnvDrop stops a build whose newest release drops env vars still
+// set in the running release (the env-unset-without-promote trap that surfaces
+// as a confusing "required env" failure). Fail-open; --force overrides.
+func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) error {
+	a, _ := rack.AppGet(appName)
+	if a == nil || a.Release == "" {
+		return nil
+	}
+
+	rs, _ := rack.ReleaseList(appName, structs.ReleaseListOptions{Limit: options.Int(1)})
+	if len(rs) == 0 {
+		return nil
+	}
+
+	newest := rs[0]
+	if newest.Id == a.Release {
+		return nil
+	}
+
+	// A running release newer than the listed newest means the release cache
+	// is lagging; skip rather than compare against stale data.
+	runningRel, _ := rack.ReleaseGet(appName, a.Release)
+	if runningRel == nil || runningRel.Created.After(newest.Created) {
+		return nil
+	}
+
+	runningEnv := structs.Environment{}
+	_ = runningEnv.Load([]byte(runningRel.Env))
+
+	newestEnv := structs.Environment{}
+	if err := newestEnv.Load([]byte(newest.Env)); err != nil {
+		return nil //nolint:nilerr // fail-open: an unparseable newest env must not block the build
+	}
+
+	dropped := []string{}
+	for k := range runningEnv {
+		if _, ok := newestEnv[k]; !ok {
+			dropped = append(dropped, k)
+		}
+	}
+	if len(dropped) == 0 {
+		return nil
+	}
+	sort.Strings(dropped)
+
+	if !c.Bool("force") {
+		return fmt.Errorf("this build will drop env var(s) that are set in your running release %s: %s\n\n"+
+			"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+			"To keep them, set them again with --promote before deploying, for example:\n"+
+			"    convox env set %s=... --promote\n\n"+
+			"If you meant to drop these vars, or you believe this is a false alarm, re-run with --force",
+			a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+	}
+
+	fmt.Fprintf(c.Writer().Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: %s\n", strings.Join(dropped, ", "))
+
+	return nil
+}
+
 func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Build, error) {
+	if err := checkPendingEnvDrop(rack, c, app(c)); err != nil {
+		return nil, err
+	}
+
 	var opts structs.BuildCreateOptions
 
 	if development {
