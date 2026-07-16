@@ -19,6 +19,8 @@ import (
 
 func TestBuild(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -49,6 +51,8 @@ func TestBuild(t *testing.T) {
 func TestBuildFinalizeLogs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -80,6 +84,8 @@ func TestBuildFinalizeLogs(t *testing.T) {
 func TestBuildError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -101,6 +107,8 @@ func TestBuildError(t *testing.T) {
 func TestBuildClassic(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("BuildCreateUpload", "app1", mock.Anything, structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
@@ -120,6 +128,104 @@ func TestBuildClassic(t *testing.T) {
 			"Build:   build1",
 			"Release: release1",
 		})
+	})
+}
+
+func TestBuildEnvDropBlocked(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "this build will drop env var(s) that are set in your running release release1: SECRET_KEY")
+		require.Contains(t, res.Stderr, "re-run with --force")
+		i.AssertNotCalled(t, "BuildCreate", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildEnvDropForce(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo --force", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: SECRET_KEY")
+	})
+}
+
+// diverged newest that only adds/changes vars (drops none) must proceed silently
+func TestBuildEnvDivergeNoDrop(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=changed\nKEEP=1\nNEW=x", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "FOO=bar\nKEEP=1", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
+	})
+}
+
+// running release newer than the listed newest (stale release cache) must skip the guard
+func TestBuildEnvStaleListSkips(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release2", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release1", App: "app1", Env: "FOO=bar", Created: fxStarted}}, nil)
+		i.On("ReleaseGet", "app1", "release2").Return(&structs.Release{Id: "release2", App: "app1", Env: "FOO=bar\nSECRET_KEY=abc", Created: fxStarted.Add(time.Hour)}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
+	})
+}
+
+// running-release fetch failure must fail open (proceed), never block
+func TestBuildEnvDropFailOpen(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(nil, fmt.Errorf("boom"))
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
 	})
 }
 
