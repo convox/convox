@@ -469,6 +469,17 @@ func patchBytes(patch map[string]interface{}) ([]byte, error) {
 	return gojson.Marshal(patch)
 }
 
+// appBuildArch returns the app's BuildArch parameter when it names a supported
+// architecture, otherwise "". Runtime pods pin to it so a single-arch image is
+// not scheduled onto a mismatched node on a mixed-arch rack.
+func appBuildArch(params map[string]string) string {
+	switch params[structs.AppParamBuildArch] {
+	case "amd64", "arm64":
+		return params[structs.AppParamBuildArch]
+	}
+	return ""
+}
+
 // serviceSecurityContext maps a manifest service's Privileged flag and
 // ServiceSecurityContext block to a Kubernetes container SecurityContext.
 // Returns nil when no settings are configured so callers can leave the

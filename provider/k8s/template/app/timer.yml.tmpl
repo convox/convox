@@ -51,10 +51,10 @@ spec:
             {{.Key}}: "{{.Value}}"
             {{ end }}
         spec:
-          {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
+          {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) (.BuildArch) }}
           affinity:
             nodeAffinity:
-              {{ if .Service.NodeSelectorLabels }}
+              {{ if or (.Service.NodeSelectorLabels) (.BuildArch) }}
               requiredDuringSchedulingIgnoredDuringExecution:
                 nodeSelectorTerms:
                 - matchExpressions:
@@ -63,6 +63,12 @@ spec:
                     operator: In
                     values:
                     - {{ .Value }}
+                  {{ end }}
+                  {{ if .BuildArch }}
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - {{ .BuildArch }}
                   {{ end }}
               {{ end }}
               {{ if .Service.NodeAffinityLabels }}
