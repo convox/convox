@@ -1066,6 +1066,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		params := map[string]interface{}{
 			"Annotations":            s.AnnotationsMap(),
 			"App":                    a,
+			"BuildArch":              appBuildArch(a.Parameters),
 			"Environment":            env,
 			"MaxSurge":               max - 100,
 			"MaxUnavailable":         100 - min,
@@ -1215,6 +1216,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	params := map[string]interface{}{
 		"Annotations":          t.AnnotationsMap(),
 		"App":                  a,
+		"BuildArch":            appBuildArch(a.Parameters),
 		"Namespace":            p.AppNamespace(a.Name),
 		"Rack":                 p.Name,
 		"Release":              r,

@@ -747,7 +747,18 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		ps.TerminationGracePeriodSeconds = graceSecs
 	}
 
-	if len(nodeSelectorLabels) > 0 {
+	var archReq *ac.NodeSelectorRequirement
+	if !isBuild {
+		if arch := appBuildArch(a.Parameters); arch != "" {
+			archReq = &ac.NodeSelectorRequirement{
+				Key:      "kubernetes.io/arch",
+				Operator: ac.NodeSelectorOpIn,
+				Values:   []string{arch},
+			}
+		}
+	}
+
+	if len(nodeSelectorLabels) > 0 || archReq != nil {
 		matchExpressions := []ac.NodeSelectorRequirement{}
 		for k, v := range nodeSelectorLabels {
 			matchExpressions = append(matchExpressions, ac.NodeSelectorRequirement{
@@ -755,6 +766,9 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 				Operator: ac.NodeSelectorOpIn,
 				Values:   []string{v},
 			})
+		}
+		if archReq != nil {
+			matchExpressions = append(matchExpressions, *archReq)
 		}
 		ps.Affinity = &ac.Affinity{
 			NodeAffinity: &ac.NodeAffinity{
@@ -1012,6 +1026,17 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 					s.NodeSelector = map[string]string{}
 				}
 				s.NodeSelector[parts[0]] = parts[1]
+			}
+		}
+
+		if !opts.IsBuild {
+			if a, err := p.AppGet(app); err == nil {
+				if arch := appBuildArch(a.Parameters); arch != "" {
+					if s.NodeSelector == nil {
+						s.NodeSelector = map[string]string{}
+					}
+					s.NodeSelector["kubernetes.io/arch"] = arch
+				}
 			}
 		}
 
