@@ -65,7 +65,7 @@ func TestPricingTableVersion(t *testing.T) {
 // instance family so a regeneration that accidentally drops a family fails CI.
 func TestPriceTable_FamilyCoverage(t *testing.T) {
 	families := []string{
-		"g4dn", "g5", "g6", "g6e",
+		"g4dn", "g4ad", "g5", "g5g", "g6", "g6e",
 		"p3", "p4d", "p5",
 		"inf1", "inf2", "trn1",
 		"m5", "c5", "r5",
@@ -75,6 +75,11 @@ func TestPriceTable_FamilyCoverage(t *testing.T) {
 		"m6g", "c6g", "r6g",
 		"m7g", "c7g", "r7g",
 		"m8g", "c8g", "r8g",
+		"c5a", "c6a", "c5n", "c6in",
+		"m5n", "m6in",
+		"r5a", "r6a", "r5n", "r6in",
+		"i3", "i3en", "i4i", "i4g", "im4gn", "is4gen", "d3", "d3en",
+		"x2idn", "x2iedn", "x2gd", "z1d",
 	}
 
 	for _, fam := range families {

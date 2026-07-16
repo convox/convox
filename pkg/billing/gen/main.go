@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	genDate      = "2026-07-14"
-	docCheckDate = "2026-07-14"
+	genDate      = "2026-07-16"
+	docCheckDate = "2026-07-16"
 )
 
 func main() {
@@ -164,6 +164,7 @@ var azureFamilies = []azureFamily{
 	{"Das", "// General purpose: Das v4 to v6 (AMD)", regexp.MustCompile(`^Standard_D\d+as_v[456]$`)},
 	{"Dads", "// General purpose: Dads v5 to v6 (AMD)", regexp.MustCompile(`^Standard_D\d+ads_v[56]$`)},
 	{"Dps", "// General purpose: Dps and Dpds v5 to v6 (ARM)", regexp.MustCompile(`^Standard_D\d+pd?s_v[56]$`)},
+	{"Dls", "// General purpose: Dls and Dlds v5 to v6 (low-memory)", regexp.MustCompile(`^Standard_D\d+ld?s_v[56]$`)},
 	{"Fsv2", "// Compute optimized: Fs v2", regexp.MustCompile(`^Standard_F\d+s_v2$`)},
 	{"Fasv6", "// Compute optimized: Fas v6", regexp.MustCompile(`^Standard_F\d+as_v6$`)},
 	{"Ev3", "// Memory optimized: E and Es v3", regexp.MustCompile(`^Standard_E\d+i?s?_v3$`)},
@@ -172,7 +173,11 @@ var azureFamilies = []azureFamily{
 	{"Ev5", "// Memory optimized: E, Ed, Es, Eds v5", regexp.MustCompile(`^Standard_E\d+i?d?s?_v5$`)},
 	{"Easv56", "// Memory optimized: Eas and Eads v5 to v6 (AMD)", regexp.MustCompile(`^Standard_E\d+i?ad?s_v[56]$`)},
 	{"Esv6", "// Memory optimized: Es v6", regexp.MustCompile(`^Standard_E\d+i?s_v6$`)},
+	{"Eps", "// Memory optimized: Eps and Epds v5 to v6 (ARM)", regexp.MustCompile(`^Standard_E\d+pd?s_v[56]$`)},
 	{"M", "// Memory optimized: M series", nil},
+	{"Lsv2", "// Storage optimized: Ls v2", regexp.MustCompile(`^Standard_L\d+s_v2$`)},
+	{"Lsv3", "// Storage optimized: Ls v3", regexp.MustCompile(`^Standard_L\d+s_v3$`)},
+	{"Lasv3", "// Storage optimized: Las v3 (AMD)", regexp.MustCompile(`^Standard_L\d+as_v3$`)},
 	{"NCasT4", "// GPU: NCas T4 v3 (T4)", regexp.MustCompile(`^Standard_NC\d+as_T4_v3$`)},
 	{"NCA100", "// GPU: NC A100 v4 (A100)", regexp.MustCompile(`^Standard_NC\d+ads_A100_v4$`)},
 	{"NDA100", "// GPU: ND A100 v4 (A100)", regexp.MustCompile(`^Standard_ND96(asr_v4|ams_A100_v4|amsr_A100_v4)$`)},
@@ -198,6 +203,9 @@ var azureRatios = []struct {
 	{regexp.MustCompile(`^Standard_E\d+i?d?s?_v[345]$`), 8},
 	{regexp.MustCompile(`^Standard_E\d+i?ad?s_v[456]$`), 8},
 	{regexp.MustCompile(`^Standard_E\d+i?s_v6$`), 8},
+	{regexp.MustCompile(`^Standard_E\d+pd?s_v[56]$`), 8},
+	{regexp.MustCompile(`^Standard_D\d+ld?s_v[56]$`), 2},
+	{regexp.MustCompile(`^Standard_L\d+a?s_v[23]$`), 8},
 }
 
 var azureMemDeviants = []struct {
@@ -211,6 +219,8 @@ var azureMemDeviants = []struct {
 	{regexp.MustCompile(`^Standard_E96ad?s_v6$`), 672},
 	{regexp.MustCompile(`^Standard_E192i\w*_v6$`), 1832},
 	{regexp.MustCompile(`^Standard_D64pd?s_v5$`), 208},
+	{regexp.MustCompile(`^Standard_E32pd?s_v5$`), 208},
+	{regexp.MustCompile(`^Standard_E96pd?s_v6$`), 672},
 }
 
 var (
@@ -493,7 +503,9 @@ type awsKept struct {
 
 var awsGpuModels = map[string]string{
 	"g4dn": "T4",
+	"g4ad": "V520",
 	"g5":   "A10G",
+	"g5g":  "T4G",
 	"g6":   "L4",
 	"g6e":  "L40S",
 	"p3":   "V100",
@@ -509,6 +521,13 @@ var awsNewFamilies = map[string]bool{
 	"m6g": true, "c6g": true, "r6g": true,
 	"m7g": true, "c7g": true, "r7g": true,
 	"m8g": true, "c8g": true, "r8g": true,
+	"c5a": true, "c6a": true, "c5n": true, "c6in": true,
+	"m5n": true, "m6in": true,
+	"r5a": true, "r6a": true, "r5n": true, "r6in": true,
+	"g4ad": true, "g5g": true,
+	"i3": true, "i3en": true, "i4i": true, "i4g": true,
+	"im4gn": true, "is4gen": true, "d3": true, "d3en": true,
+	"x2idn": true, "x2iedn": true, "x2gd": true, "z1d": true,
 }
 
 var awsFamilyComments = []struct {
@@ -516,7 +535,9 @@ var awsFamilyComments = []struct {
 	comment string
 }{
 	{"g4dn", "// GPU: g4dn (T4)"},
+	{"g4ad", "// GPU: g4ad (V520)"},
 	{"g5", "// GPU: g5 (A10G)"},
+	{"g5g", "// GPU: g5g (T4G)"},
 	{"g6", "// GPU: g6 (L4)"},
 	{"g6e", "// GPU: g6e (L40S)"},
 	{"p3", "// GPU: p3 (V100)"},
@@ -527,31 +548,53 @@ var awsFamilyComments = []struct {
 	{"trn1", "// Neuron: trn1 (Trainium1)"},
 	{"m5", "// CPU general: m5"},
 	{"m5a", "// CPU general: m5a"},
+	{"m5n", "// CPU general: m5n (network-optimized)"},
 	{"m6i", "// CPU general: m6i"},
 	{"m6a", "// CPU general: m6a"},
+	{"m6in", "// CPU general: m6in (network-optimized)"},
 	{"m7i", "// CPU general: m7i"},
 	{"m7a", "// CPU general: m7a"},
 	{"m6g", "// CPU general: m6g (Graviton2)"},
 	{"m7g", "// CPU general: m7g (Graviton3)"},
 	{"m8g", "// CPU general: m8g (Graviton4)"},
 	{"c5", "// CPU compute: c5"},
+	{"c5a", "// CPU compute: c5a (AMD-EPYC)"},
+	{"c5n", "// CPU compute: c5n (network-optimized)"},
 	{"c6i", "// CPU compute: c6i"},
+	{"c6a", "// CPU compute: c6a (AMD-EPYC)"},
+	{"c6in", "// CPU compute: c6in (network-optimized)"},
 	{"c7i", "// CPU compute: c7i"},
 	{"c7a", "// CPU compute: c7a"},
 	{"c6g", "// CPU compute: c6g (Graviton2)"},
 	{"c7g", "// CPU compute: c7g (Graviton3)"},
 	{"c8g", "// CPU compute: c8g (Graviton4)"},
 	{"r5", "// CPU memory: r5"},
+	{"r5a", "// CPU memory: r5a (AMD-EPYC)"},
+	{"r5n", "// CPU memory: r5n (network-optimized)"},
 	{"r6i", "// CPU memory: r6i"},
+	{"r6a", "// CPU memory: r6a (AMD-EPYC)"},
+	{"r6in", "// CPU memory: r6in (network-optimized)"},
 	{"r7i", "// CPU memory: r7i"},
 	{"r7a", "// CPU memory: r7a"},
 	{"r6g", "// CPU memory: r6g (Graviton2)"},
 	{"r7g", "// CPU memory: r7g (Graviton3)"},
 	{"r8g", "// CPU memory: r8g (Graviton4)"},
+	{"x2idn", "// CPU memory: x2idn (Intel high-memory)"},
+	{"x2iedn", "// CPU memory: x2iedn (Intel high-memory, extended)"},
+	{"x2gd", "// CPU memory: x2gd (Graviton2 high-memory)"},
+	{"z1d", "// CPU memory: z1d (high-frequency)"},
 	{"t2", "// CPU general: t2 (legacy burstable, no Nitro)"},
 	{"t3", "// CPU general: t3 (Nitro burstable, AMD64)"},
 	{"t3a", "// CPU general: t3a (AMD-EPYC variant of t3)"},
 	{"t4g", "// CPU general: t4g (Graviton2 burstable)"},
+	{"i3", "// Storage optimized: i3 (NVMe SSD)"},
+	{"i3en", "// Storage optimized: i3en (dense NVMe SSD)"},
+	{"i4i", "// Storage optimized: i4i (Intel NVMe SSD)"},
+	{"i4g", "// Storage optimized: i4g (Graviton2 NVMe SSD)"},
+	{"im4gn", "// Storage optimized: im4gn (Graviton2 NVMe SSD)"},
+	{"is4gen", "// Storage optimized: is4gen (Graviton2 dense NVMe SSD)"},
+	{"d3", "// Storage optimized: d3 (dense HDD)"},
+	{"d3en", "// Storage optimized: d3en (dense HDD)"},
 	{"m4", "// CPU general: m4 (legacy, pre-Nitro)"},
 	{"c4", "// CPU compute: c4 (legacy)"},
 	{"r4", "// CPU memory: r4 (legacy)"},
