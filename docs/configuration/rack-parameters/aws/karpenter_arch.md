@@ -31,9 +31,12 @@ Updating parameters... OK
 
 ## Additional Information
 
-- **Validation:** Must be `amd64`, `arm64`, `amd64,arm64`, or empty.
-- When empty, Karpenter auto-detects the architecture from the Rack's `node_type` instance family.
+- **Validation:** Must be `amd64`, `arm64`, or `amd64,arm64`. Empty is the initial default (auto-detect), not a settable value.
+- Write the mixed value with no spaces: `amd64,arm64`.
+- When unset, Karpenter auto-detects the architecture from the Rack's `node_type` instance family.
 - When both architectures are specified, Karpenter selects the optimal architecture based on pod requirements and instance availability.
+- Once set, the parameter cannot be cleared back to auto-detect; set it explicitly to the desired value instead.
+- Images built by Convox are single-architecture (the architecture of the build node), so on a mixed-architecture rack, pin each such service to its image's architecture with `nodeSelectorLabels`. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
 
 ## See Also
 

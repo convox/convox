@@ -16,6 +16,16 @@ Run tests
 ```bash
     convox test
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--description` | `-d` | string | Description for the build |
+| `--force` | | bool | Proceed even when the environment drop guard detects a pending drop. Requires CLI version 3.25.1+ |
+| `--release` | | string | Use an existing release to run tests instead of building |
+| `--timeout` | `-t` | number | Timeout for the test run |
+
 ### Examples
 ```bash
     $ convox test
@@ -26,6 +36,8 @@ Run tests
 ```
 
 Tests are defined using the `test` attribute on each service in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for configuration details.
+
+Because `convox test` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build`, and `--force` bypasses it the same way. When `--release` is passed, no build is created and the guard does not run.
 
 ## See Also
 

@@ -23,6 +23,7 @@ Create a build
 | `--description` | `-d` | string | Description for the build |
 | `--development` | | bool | Build in development mode |
 | `--external` | | bool | Use external build |
+| `--force` | | bool | Proceed even when the environment drop guard detects a pending drop. Requires CLI version 3.25.1+ |
 | `--id` | | bool | Output only the build ID |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
 | `--no-cache` | | bool | Build without using the Docker cache |
@@ -44,6 +45,25 @@ Create a build
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```
+
+### Environment Drop Guard
+
+Starting with CLI version 3.25.1, `convox build`, `convox deploy`, and `convox test` run a preflight check before creating a build. New builds inherit their environment from the app's newest release, which can differ from the currently running release when environment changes are staged with `convox env set` or `convox env unset` without `--promote`. If the release the build is about to inherit from is missing environment variables that are set in the running release, the CLI stops before building:
+
+```
+    ERROR: this build will drop env var(s) that are set in your running release RABC123: SECRET_KEY
+
+    These vars are present in the running release (RABC123) but missing from the latest release (RDEF456), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.
+
+    To keep them, set them again with --promote before deploying, for example:
+        convox env set SECRET_KEY=... --promote
+
+    If you meant to drop these vars, or you believe this is a false alarm, re-run with --force
+```
+
+The check only triggers when one or more variables set in the running release are absent from the newest release. Adding new variables or changing values never triggers it. If the drop is intentional, `--force` bypasses the guard and prints a warning naming the dropped variables.
+
+The check runs entirely in the CLI using read-only API calls, so it works with apps on any rack version. It does not cover `convox builds import` or `convox builds import-image`.
 
 ### External Builds
 

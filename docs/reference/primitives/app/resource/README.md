@@ -64,6 +64,46 @@ MAIN_PORT=port
 MAIN_NAME=database
 ```
 
+### Linking to a Custom Environment Variable Name
+
+Each entry in a service's `resources:` list accepts two forms:
+
+| Form | Result |
+|------|--------|
+| `- main` | Injects all six credential variables (`MAIN_URL`, `MAIN_USER`, `MAIN_PASS`, `MAIN_HOST`, `MAIN_PORT`, `MAIN_NAME`) |
+| `- main:MY_ENV_NAME` | Injects a single variable named `MY_ENV_NAME` containing one credential of `main` |
+
+Use the aliased form when your application expects a credential under a specific name, such as `DATABASE_URL` or `SPRING_DATASOURCE_URL`. The credential placed in the variable is selected by the last `_`-separated segment of the name you choose:
+
+| Name ends in | Credential injected |
+|--------------|---------------------|
+| `_URL` | Connection URL |
+| `_USER` | Username |
+| `_PASS` | Password |
+| `_HOST` | Host |
+| `_PORT` | Port |
+| `_NAME` | Database name |
+| anything else | Connection URL |
+
+The suffix match is case-sensitive and matches the entire last segment, so `DB_PASSWORD` does not match `_PASS` and receives the connection URL.
+
+```yaml
+services:
+  web:
+    resources:
+      - main:DATABASE_URL        # ends in _URL, gets the URL
+      - main:DB_HOST             # ends in _HOST, gets only the host
+      - main:POSTGRES_DSN        # _DSN is not a credential suffix, gets the URL
+```
+
+The variable is created entirely by the resource link. Do not also list it under `environment:`.
+
+> Write the entry with no space after the colon. `- main:DATABASE_URL` is a YAML string and parses correctly; `- main: DATABASE_URL` is a YAML map and fails to load with `cannot unmarshal !!map into string`.
+
+Both linking forms behave identically for every resource type, including the `rds-*` and `elasticache-*` types, and apply to [Timer](/reference/primitives/app/timer) pods and `convox run` processes as well as Service processes.
+
+Resource credentials are injected into the container at runtime. They do not appear in `convox env` output, and they are not visible to `${}` interpolation in `convox.yml`. See [Environment Variables: Interpolation](/configuration/environment#interpolation).
+
 ## Custom Images
 
 You can also pass a compatible custom image for all resource types.

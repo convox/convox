@@ -67,6 +67,25 @@ services:
   web:
     health: ${HEALTH_CHECK_PATH}
 ```
+
+`${VAR}` interpolation is resolved at release time and only sees variables in the release environment (set with `convox env set` or through the Console). Credentials injected by [Resource](/reference/primitives/app/resource) links (`METADB_URL`, `METADB_USER`, and so on) are added to the container at runtime and are not visible to interpolation, so referencing them resolves to an empty string:
+
+```yaml
+# Does NOT work: METADB_URL is not in the release environment,
+# so this resolves to an empty string at release time.
+environment:
+  - SOME_VAR=${METADB_URL}
+```
+
+To place a resource credential into an environment variable name of your choosing, use the resource link alias form instead. See [Resource Linking](/reference/primitives/app/resource#linking):
+
+```yaml
+services:
+  web:
+    resources:
+      - metadb:SOME_VAR
+```
+
 ## Setting Environment Variables
 
 You can set values for your environment variables using `convox env set`:
@@ -84,6 +103,8 @@ your changes you will need to promote this release.
 
 > Environment variables can be set using the CLI or through the Console and their values will be available to the
 > [Service](/reference/primitives/app/service).
+
+> Starting with CLI version 3.25.1, if environment changes staged with `convox env set` or `convox env unset` (without `--promote`) would cause the next build to drop variables that are set in the running release, `convox build`, `convox deploy`, and `convox test` stop and report the pending drop before building. See [Environment Drop Guard](/reference/cli/build#environment-drop-guard).
 
 ### Release-Based Environment Management
 

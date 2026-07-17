@@ -580,6 +580,8 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------ |
 | **grace**    | number  | 30      | The number of seconds to wait for [Processes](/reference/primitives/app/process) to gracefully exit before killing them |
 
+> Starting with rack version 3.25.1, `termination.grace` also applies to [Timer](/reference/primitives/app/timer) pods and `convox run` processes, matching the behavior of service deployments. A single run can override it with the `--termination-grace` flag; see [run](/reference/cli/run).
+
 
 
 ### tls
