@@ -162,6 +162,12 @@ services:
 
 This allows you to securely use the same SSL certificate across multiple apps or services, reducing the administrative overhead of managing multiple certificates.
 
+### Certificate Renewal Propagation
+
+Certificates generated with `convox certs generate --issuer letsencrypt` live in the rack namespace and are renewed automatically on their normal schedule. When a service references one through the `certificate:` option, the Rack copies the certificate into the app's namespace at deploy time.
+
+Starting with rack version 3.25.1, the Rack also propagates each renewal to those copies as soon as it is observed, so running services always serve the current certificate without requiring a new deploy. Each renewal updates only the copies of that same certificate, and certificates issued per-service from the `domain:` attribute are managed in place and need no propagation.
+
 ## Summary
 
 Convox integrates Let's Encrypt for both standard HTTP-01 validation and more advanced DNS-01 challenges. The DNS-01 challenge is currently supported on AWS racks using Route53.

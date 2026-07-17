@@ -46,11 +46,11 @@ Updating parameters... OK
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | yes | Lowercase alphanumeric with dashes, max 63 chars. Unique across entries. |
+| `name` | yes | Lowercase alphanumeric with dashes, starting with a letter, max 63 chars. Unique across entries. |
 | `requirements` | yes | Non-empty array of `{key, operator, values}` selecting the instance types the overlay applies to. `operator` is one of `In`, `NotIn`, `Exists`, `DoesNotExist`, `Gt`, `Lt`. `values` is required except for `Exists`/`DoesNotExist`; `Gt`/`Lt` take exactly one value. |
 | `capacity` | no | Extended resources to advertise, for example `{"nvidia.com/gpu":"1"}`. Standard resources (`cpu`, `memory`, `ephemeral-storage`, `pods`) are not allowed. |
 | `price` | no | Absolute hourly price used in Karpenter's cost model. Mutually exclusive with `priceAdjustment`. |
-| `priceAdjustment` | no | Signed adjustment to the computed price, either absolute (`+5`, `-1.5`) or percentage (`-30%`, capped at `-100%`). Mutually exclusive with `price`. |
+| `priceAdjustment` | no | Signed adjustment to the computed price, either absolute (`+5`, `-1.5`) or percentage (`+30%`, `-30%`, capped at `-100%`); the sign is always required. Mutually exclusive with `price`. |
 | `weight` | no | Integer 1-10000. Higher weight wins when multiple overlays match the same instance type. |
 
 Each entry must set at least one of `capacity`, `price`, or `priceAdjustment`.
@@ -58,7 +58,7 @@ Each entry must set at least one of `capacity`, `price`, or `priceAdjustment`.
 ## Additional Information
 
 - **Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.
-- Requires `karpenter_enabled=true` to take effect. The value is accepted and stored on any rack, but NodeOverlays are only created once Karpenter is enabled.
+- Requires `karpenter_enabled=true` to take effect. The value is accepted and stored on any AWS rack, but NodeOverlays are only created once Karpenter is enabled.
 - `capacity` affects scheduling simulation only; the node must actually provide the resource. For GPUs this means the [NVIDIA device plugin](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) must be running so the advertised `nvidia.com/gpu` is real.
 - Overlay changes can take a few minutes to affect provisioning decisions, and enabling the first overlay restarts the Karpenter controller (a brief provisioning pause).
 - NodeOverlay is an alpha upstream API (`karpenter.sh/v1alpha1`). Revalidate overlay configurations when the Karpenter chart is upgraded.

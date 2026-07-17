@@ -33,5 +33,7 @@ Mixing architectures (for example, `node_type=t3.small` with `build_node_type=t4
 
 When `build_node_type` is not set, it defaults to the value of `node_type`, which avoids this issue.
 
+On racks with [Karpenter](/configuration/scaling/karpenter) enabled, workload nodes follow [`karpenter_arch`](/configuration/rack-parameters/aws/karpenter_arch) rather than `node_type`, so match `build_node_type` to the workload architecture set by `karpenter_arch`. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
+
 ## Additional Information
 Selecting the appropriate `build_node_type` can significantly impact the performance and cost of your build processes. Consider the resource requirements of your builds when choosing an instance type.

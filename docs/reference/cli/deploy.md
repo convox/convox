@@ -23,7 +23,7 @@ Create and promote a build
 | `--description` | `-d` | string | Description for the build |
 | `--development` | | bool | Build in development mode |
 | `--external` | | bool | Use external build |
-| `--force` | | bool | Force deployment |
+| `--force` | | bool | Promote without waiting for the app to be ready, and bypass the environment drop guard |
 | `--id` | | bool | Output only the build/release ID |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
 | `--no-cache` | | bool | Build without using the Docker cache |
@@ -77,6 +77,10 @@ You can pass env vars that will only exist at build time.
     2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
+
+### Environment Drop Guard
+
+Because `convox deploy` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build` (requires CLI version 3.25.1+). If variables set in the running release would be dropped by the new build, the deploy stops with an explanation and an example `convox env set KEY=... --promote` command to keep them. Passing `--force` bypasses the guard in addition to its existing meaning of forcing the promote without waiting for readiness.
 
 ### External Builds
 

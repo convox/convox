@@ -27,7 +27,7 @@ When Karpenter is enabled, your Rack's node provisioning is split into three tie
 
 Karpenter replaces Cluster Autoscaler for workload and build node scaling. System nodes always remain as EKS managed node groups to protect the Karpenter controller's own availability. System pods are pinned to system nodes via `nodeSelector` when Karpenter is enabled.
 
-**Karpenter version:** `1.10.0` (pinned, not user-configurable)
+**Karpenter version:** `1.13.1` (pinned, not user-configurable)
 
 ### Why Karpenter Over Cluster Autoscaler
 
@@ -101,8 +101,30 @@ These parameters control how Karpenter provisions nodes for your application Ser
 |-----------|------|---------|------------|-------------|
 | `karpenter_instance_families` | string | _(all families)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Comma-separated EC2 instance families (e.g., `c5,m6i,r5`). All general-purpose families if unset. |
 | `karpenter_instance_sizes` | string | _(all sizes)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Comma-separated instance sizes (e.g., `large,xlarge,2xlarge`). All sizes if unset. |
-| `karpenter_arch` | string | _(auto-detect)_ | `amd64`, `arm64`, `amd64,arm64`, or empty | CPU architecture. Empty = auto-detect from `node_type`. |
+| `karpenter_arch` | string | _(auto-detect)_ | `amd64`, `arm64`, or `amd64,arm64` | CPU architecture. Unset = auto-detect from `node_type`. Cannot be cleared once set. |
 | `karpenter_capacity_types` | string | `on-demand` | `on-demand`, `spot`, or `on-demand,spot` | EC2 purchasing model. When both are set, Karpenter optimizes for cost and falls back to on-demand when spot is unavailable. |
+
+### Architecture Selection and Mixed-Architecture Racks
+
+`karpenter_arch` accepts `amd64`, `arm64`, or `amd64,arm64` (write the value with no spaces). With `amd64,arm64`, Karpenter may provision either architecture and picks the cheapest instance that satisfies each pod's requirements, which often favors arm64 Graviton instances. Once set, `karpenter_arch` cannot be cleared back to auto-detect; set it explicitly to the desired value instead.
+
+Scheduling on a mixed-architecture pool follows standard Kubernetes behavior: service pods carry no architecture constraint by default, so a pod can land on a node of either architecture. Whether that works depends on the image:
+
+- **Images built by Convox are single-architecture.** A build produces an image for the architecture of the node the build pod runs on. With dedicated build nodes enabled ([`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled)), that architecture follows [`build_node_type`](/configuration/rack-parameters/aws/build_node_type). Without dedicated build nodes, build pods schedule with no architecture constraint, so on a rack running more than one architecture the image's architecture is not deterministic. A single-architecture image scheduled onto a node of the other architecture fails with an exec format error.
+- **Multi-architecture images run anywhere.** Convox system images are multi-arch, and services that reference an external multi-arch image with `image:` can schedule onto either architecture freely.
+
+For apps built by Convox, keep the Rack's architecture uniform: set `karpenter_arch` to a single value matching the architecture of `node_type`, and if dedicated build nodes are enabled, use a `build_node_type` of the same architecture (for example `t4g.medium` for arm64). Reserve `karpenter_arch=amd64,arm64` for racks whose workloads are multi-arch images.
+
+To pin an individual service to one architecture on a mixed pool, set `nodeSelectorLabels` on the service against the standard architecture label:
+
+```yaml
+services:
+  web:
+    nodeSelectorLabels:
+      kubernetes.io/arch: arm64
+```
+
+This renders as a required node affinity on the service's deployment, timers, and `convox run` pods, so its processes only schedule onto nodes matching the image's architecture. See [Workload Placement](/configuration/scaling/workload-placement) for the full `nodeSelectorLabels` reference.
 
 ### Resource Limits
 
@@ -162,6 +184,8 @@ When Karpenter is enabled and `build_node_enabled=true`:
 - Architecture is auto-detected from `build_node_type`
 - Build nodes can run under a dedicated least-privilege IAM role by setting [`build_node_minimal_role_enabled`](/configuration/rack-parameters/aws/build_node_minimal_role_enabled), and their IMDS options can be set independently of workload nodes with `karpenter_build_imds_tokens` and `karpenter_build_imds_hop_limit`
 - The existing `build_node_min_count` parameter does not apply when Karpenter manages builds
+
+Keep `karpenter_build_instance_families` consistent with the build architecture: restricting build nodes to families of the other architecture (for example `c7g` while `build_node_type` is amd64) leaves no instance type satisfying both constraints, and builds cannot schedule. Clear the restriction with `convox rack params set karpenter_build_instance_families=`.
 
 ## Advanced Configuration
 
