@@ -450,7 +450,6 @@ func (p *Provider) NamespaceApp(namespace string) (string, error) {
 
 func (p *Provider) AppParameters() map[string]string {
 	return map[string]string{
-		structs.AppParamBuildArch:   "",
 		structs.AppParamBuildCpu:    "",
 		structs.AppParamBuildMem:    "",
 		structs.AppParamBuildLabels: "",
