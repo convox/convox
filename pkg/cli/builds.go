@@ -158,9 +158,9 @@ func Build(rack sdk.Interface, c *stdcli.Context) error {
 	return nil
 }
 
-// checkPendingEnvDrop stops a build whose newest release drops env vars still
-// set in the running release (the env-unset-without-promote trap that surfaces
-// as a confusing "required env" failure). Fail-open; --force overrides.
+// checkPendingEnvDrop warns when the newest release drops env vars still set
+// in the running release (the env-unset-without-promote trap). Fail-open;
+// CONVOX_ENV_DROP_GUARD=strict blocks instead; --force shortens the warning.
 func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) error {
 	a, _ := rack.AppGet(appName)
 	if a == nil || a.Release == "" {
@@ -204,12 +204,23 @@ func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) 
 	sort.Strings(dropped)
 
 	if !c.Bool("force") {
-		return fmt.Errorf("this build will drop env var(s) that are set in your running release %s: %s\n\n"+
+		if os.Getenv("CONVOX_ENV_DROP_GUARD") == "strict" {
+			return fmt.Errorf("this build will drop env var(s) that are set in your running release %s: %s\n\n"+
+				"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+				"To keep them, set them again with --promote before deploying, for example:\n"+
+				"    convox env set %s=... --promote\n\n"+
+				"If you meant to drop these vars, or you believe this is a false alarm, re-run with --force",
+				a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+		}
+
+		fmt.Fprintf(c.Writer().Stderr, "WARNING: this build will drop env var(s) that are set in your running release %s: %s\n\n"+
 			"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
 			"To keep them, set them again with --promote before deploying, for example:\n"+
 			"    convox env set %s=... --promote\n\n"+
-			"If you meant to drop these vars, or you believe this is a false alarm, re-run with --force",
+			"If this drop is intentional, pass --force to reduce this to a one-line notice. To make this check blocking, set CONVOX_ENV_DROP_GUARD=strict.\n",
 			a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+
+		return nil
 	}
 
 	fmt.Fprintf(c.Writer().Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: %s\n", strings.Join(dropped, ", "))
