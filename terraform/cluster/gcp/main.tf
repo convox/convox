@@ -113,6 +113,16 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
 }
 
+provider "helm" {
+  alias = "direct"
+
+  kubernetes {
+    host                   = "https://${google_container_cluster.rack.endpoint}"
+    token                  = data.google_client_config.current.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
+  }
+}
+
 resource "kubernetes_cluster_role_binding" "client" {
   provider = kubernetes.direct
 

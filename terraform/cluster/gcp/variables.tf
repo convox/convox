@@ -32,3 +32,18 @@ variable "preemptible" {
 variable "project_id" {
   type = string
 }
+
+variable "gpu_observability_enable" {
+  type    = bool
+  default = false
+}
+
+variable "gpu_observability_chart_version" {
+  type    = string
+  default = "4.8.1"
+}
+
+variable "dcgm_scrape_interval" {
+  type    = string
+  default = "15s"
+}
