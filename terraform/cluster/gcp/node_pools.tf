@@ -16,6 +16,7 @@ locals {
       zones        = compact(split(",", lookup(ng, "zones", "")))
       gpu_type     = lookup(ng, "gpu_type", null)
       gpu_count    = tonumber(lookup(ng, "gpu_count", 1))
+      tpu_topology = lookup(ng, "tpu_topology", null)
       resource_labels = {
         for pair in compact(split(",", lookup(ng, "tags", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
@@ -83,6 +84,14 @@ resource "google_container_node_pool" "additional" {
           gpu_driver_version = "DEFAULT"
         }
       }
+    }
+  }
+
+  dynamic "placement_policy" {
+    for_each = each.value.tpu_topology != null ? [1] : []
+    content {
+      type         = "COMPACT"
+      tpu_topology = each.value.tpu_topology
     }
   }
 

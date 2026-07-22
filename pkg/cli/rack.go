@@ -975,7 +975,10 @@ type NodeGroupConfigParam struct {
 	Zones        *string `json:"zones,omitempty"`
 	GpuType      *string `json:"gpu_type,omitempty"`
 	GpuCount     *int    `json:"gpu_count,omitempty"`
+	TpuTopology  *string `json:"tpu_topology,omitempty"`
 }
+
+var tpuTopologyPattern = regexp.MustCompile(`^[0-9]+x[0-9]+(x[0-9]+)?$`)
 
 func (n *NodeGroupConfigParam) Validate() error {
 	if n.Type == "" {
@@ -1010,6 +1013,18 @@ func (n *NodeGroupConfigParam) Validate() error {
 
 	if n.GpuCount != nil && n.GpuType == nil {
 		return fmt.Errorf("gpu_type is required when gpu_count is set")
+	}
+
+	if n.TpuTopology != nil {
+		if !tpuTopologyPattern.MatchString(*n.TpuTopology) {
+			return fmt.Errorf("invalid tpu_topology '%s', expected NxM or NxMxP (e.g. 2x4 or 2x2x2)", *n.TpuTopology)
+		}
+		if n.GpuType != nil {
+			return fmt.Errorf("gpu_type and tpu_topology cannot be combined on one node group")
+		}
+		if !strings.HasPrefix(n.Type, "ct") && !strings.HasPrefix(n.Type, "tpu") {
+			return fmt.Errorf("tpu_topology requires a TPU machine type (e.g. ct5lp-*, ct6e-*, tpu7x-*), found: '%s'", n.Type)
+		}
 	}
 
 	if n.Tags != nil {
