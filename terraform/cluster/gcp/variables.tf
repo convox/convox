@@ -1,3 +1,8 @@
+variable "additional_node_groups" {
+  type    = list(map(any))
+  default = []
+}
+
 variable "k8s_version" {
   type    = string
   default = "1.35"
