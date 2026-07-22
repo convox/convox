@@ -14,6 +14,7 @@ The following parameters are available for configuring your Convox rack on Googl
 
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
+| [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) | Configures additional customized node pools for the cluster, including GPU pools. |
 | [cert_duration](/configuration/rack-parameters/gcp/cert_duration)         | Certificate renewal period.                                               |
 | [docker_hub_password](/configuration/rack-parameters/gcp/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/gcp/docker_hub_username) | Docker Hub username for authenticated image pulls. |

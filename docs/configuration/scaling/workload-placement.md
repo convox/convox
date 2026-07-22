@@ -1,6 +1,6 @@
 ---
 title: "Workload Placement"
-description: "Control where Convox apps and build processes run with custom node groups, node selectors, and dedicated node pools on AWS and Azure racks."
+description: "Control where Convox apps and build processes run with custom node groups, node selectors, and dedicated node pools on AWS, Azure, and GCP racks."
 slug: workload-placement
 url: /configuration/scaling/workload-placement
 ---
@@ -9,7 +9,7 @@ url: /configuration/scaling/workload-placement
 
 Convox provides powerful tools to control where your applications and build processes run within your Kubernetes cluster. By leveraging node group configurations and service placement rules, you can optimize resource usage, improve cost efficiency, and ensure the right workloads run on the right infrastructure.
 
-> Workload Placement is available on AWS and Azure racks.
+> Workload Placement is available on AWS, Azure, and GCP racks. GCP supports additional node groups only, not build node groups.
 
 Reach for workload placement when the default single node group is no longer the right fit: when you want to run builds on separate hardware from production services, use cheaper spot instances for non-critical work, match instance types to specific workload profiles, isolate sensitive services on dedicated nodes, or mix CPU architectures within one rack. If your apps run fine on the rack's standard nodes, you do not need any of this.
 
@@ -45,6 +45,9 @@ At the rack level, you can define custom node groups using provider-specific rac
 - [`additional_node_groups_config`](/configuration/rack-parameters/azure/additional_node_groups_config): Creates general-purpose node pools
 - [`additional_build_groups_config`](/configuration/rack-parameters/azure/additional_build_groups_config): Creates node pools specifically for build processes
 
+**GCP:**
+- [`additional_node_groups_config`](/configuration/rack-parameters/gcp/additional_node_groups_config): Creates general-purpose node pools, including GPU node pools via the `gpu_type` and `gpu_count` fields
+
 These parameters allow you to specify:
 - Instance types (EC2 instance types on AWS, VM sizes on Azure)
 - Disk sizes
@@ -63,7 +66,7 @@ Each node group configuration supports the following fields:
 | Field | Required | Description | Default |
 |-------|----------|-------------|---------|
 | `id` | No | Unique integer identifier for the node group | Auto-generated |
-| `type` | Yes | The instance type to use (AWS EC2 type or Azure VM size) | |
+| `type` | Yes | The instance type to use (AWS EC2 type, Azure VM size, or GCP machine type) | |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
@@ -72,7 +75,9 @@ Each node group configuration supports the following fields:
 | `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
 | `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
 | `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
-| `zones` | No | Comma-separated list of availability zones (Azure only) | None |
+| `zones` | No | Comma-separated list of availability zones (Azure and GCP) | None |
+
+GCP node groups support additional fields (`gpu_type`, `gpu_count`, `disk_type`), and `min_size`/`max_size` apply per zone (GCP racks use regional clusters) rather than as totals — see [Rack Parameters: additional_node_groups_config (GCP)](/configuration/rack-parameters/gcp/additional_node_groups_config).
 
 #### About the `id` field
 

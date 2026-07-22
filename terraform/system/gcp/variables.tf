@@ -1,3 +1,8 @@
+variable "additional_node_groups_config" {
+  type    = string
+  default = ""
+}
+
 variable "buildkit_enabled" {
   default = false
 }

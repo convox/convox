@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -653,6 +654,52 @@ func TestValidateAndMutateParams_PrometheusUrl_SSRF(t *testing.T) {
 			}
 			if tt.wantErr && tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("error %q should contain %q", err.Error(), tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestAdditionalNodeGroupsConfigFieldRoundTrip(t *testing.T) {
+	in := `[{"id":200,"type":"g2-standard-8","disk":100,"disk_type":"pd-ssd","capacity_type":"SPOT","min_size":0,"max_size":3,"label":"gpu-workers","zones":"us-east1-b,us-east1-c","gpu_type":"nvidia-l4","gpu_count":2}]`
+
+	params := map[string]string{"additional_node_groups_config": in}
+	if err := validateAndMutateParams(params, "gcp", map[string]string{}, false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(params["additional_node_groups_config"])
+	if err != nil {
+		t.Fatalf("expected base64 output: %v", err)
+	}
+
+	// every provider-specific field must survive the validate/marshal round-trip
+	for _, field := range []string{`"disk_type":"pd-ssd"`, `"zones":"us-east1-b,us-east1-c"`, `"gpu_type":"nvidia-l4"`, `"gpu_count":2`, `"capacity_type":"SPOT"`, `"min_size":0`} {
+		if !strings.Contains(string(decoded), field) {
+			t.Errorf("field %s stripped by param round-trip: %s", field, decoded)
+		}
+	}
+}
+
+func TestAdditionalNodeGroupsConfigGpuValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		wantErr string
+	}{
+		{"gpu_count without gpu_type", `[{"id":1,"type":"g2-standard-8","gpu_count":1}]`, "gpu_type is required"},
+		{"zero gpu_count", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":0}]`, "invalid gpu_count"},
+		{"negative gpu_count", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":-1}]`, "invalid gpu_count"},
+		{"valid gpu pool", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":1}]`, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"additional_node_groups_config": tt.config}
+			err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
 			}
 		})
 	}
