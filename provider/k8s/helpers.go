@@ -431,6 +431,8 @@ func gpuResourceKey(vendor string) string {
 		return "nvidia.com/gpu"
 	case "amd", "amd.com":
 		return "amd.com/gpu"
+	case "google", "google.com", "tpu":
+		return "google.com/tpu"
 	default:
 		return "nvidia.com/gpu"
 	}
@@ -444,6 +446,7 @@ func gpuResourceKey(vendor string) string {
 var gpuKeyToVendor = map[string]string{
 	"nvidia.com/gpu": "nvidia",
 	"amd.com/gpu":    "amd",
+	"google.com/tpu": "google",
 }
 
 func resourceSubstitutionId(app, rType, rName string) string {
