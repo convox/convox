@@ -62,7 +62,7 @@ See [Karpenter](/configuration/scaling/karpenter) for details.
 Control which nodes your services run on using custom node groups, node selectors, and dedicated node pools. Use this to isolate workloads, target GPU nodes, or optimize cost by routing services to specific instance types.
 
 See [Workload Placement](/configuration/scaling/workload-placement) for details.
-> AWS and Azure
+> AWS, Azure, and GCP
 
 ## Console Autoscale Triggers
 

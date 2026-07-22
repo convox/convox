@@ -118,7 +118,8 @@ var awsKnownParams = map[string]bool{
 }
 
 var gcpKnownParams = map[string]bool{
-	"buildkit_enabled": true, "cert_duration": true, "docker_hub_password": true,
+	"additional_node_groups_config": true,
+	"buildkit_enabled":              true, "cert_duration": true, "docker_hub_password": true,
 	"docker_hub_username": true, "fluentd_memory": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
@@ -961,6 +962,7 @@ type NodeGroupConfigParam struct {
 	Id           *int    `json:"id"`
 	Type         string  `json:"type"`
 	Disk         *int    `json:"disk,omitempty"`
+	DiskType     *string `json:"disk_type,omitempty"`
 	CapacityType *string `json:"capacity_type,omitempty"`
 	MinSize      *int    `json:"min_size,omitempty"`
 	MaxSize      *int    `json:"max_size,omitempty"`
@@ -968,6 +970,9 @@ type NodeGroupConfigParam struct {
 	AmiID        *string `json:"ami_id,omitempty"`
 	Dedicated    *bool   `json:"dedicated,omitempty"`
 	Tags         *string `json:"tags,omitempty"`
+	Zones        *string `json:"zones,omitempty"`
+	GpuType      *string `json:"gpu_type,omitempty"`
+	GpuCount     *int    `json:"gpu_count,omitempty"`
 }
 
 func (n *NodeGroupConfigParam) Validate() error {
@@ -995,6 +1000,14 @@ func (n *NodeGroupConfigParam) Validate() error {
 
 	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
 		return fmt.Errorf("label is required when dedicated option is set")
+	}
+
+	if n.GpuCount != nil && *n.GpuCount < 1 {
+		return fmt.Errorf("invalid gpu_count: '%d'", *n.GpuCount)
+	}
+
+	if n.GpuCount != nil && n.GpuType == nil {
+		return fmt.Errorf("gpu_type is required when gpu_count is set")
 	}
 
 	if n.Tags != nil {

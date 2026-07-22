@@ -24,6 +24,9 @@ locals {
   rack_name = lower(var.rack_name)
   current   = jsondecode(data.http.releases.response_body).tag_name
   release   = coalesce(var.release, local.current)
+
+  # a malformed non-empty value must fail the plan, not silently become [] and destroy the pools
+  additional_node_groups = var.additional_node_groups_config == "" ? [] : try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)))
 }
 
 module "cluster" {
@@ -33,6 +36,7 @@ module "cluster" {
     google = google
   }
 
+  additional_node_groups   = local.additional_node_groups
   k8s_version              = var.k8s_version
   name                     = local.name
   node_disk                = var.node_disk
