@@ -41,6 +41,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 | `zones` | No | Comma-separated list of GCP zones (e.g., `us-east1-b,us-east1-c`) | None (region default) |
 | `gpu_type` | No | NVIDIA accelerator type to attach (e.g., `nvidia-l4`, `nvidia-tesla-t4`). When set, GKE installs the NVIDIA driver and device plugin automatically and taints the pool with `nvidia.com/gpu:NoSchedule` | None |
 | `gpu_count` | No | Number of GPUs to attach per node (only applies when `gpu_type` is set) | 1 |
+| `tpu_topology` | No | TPU slice topology (e.g., `1x1`, `2x2`, `2x4`) for a Cloud TPU node pool. When set, the pool gets a `COMPACT` placement policy with this topology. Use a TPU machine type (e.g., `ct5lp-hightpu-8t`) as `type`. Single-host slices only | None |
 
 ## Setting Parameters
 To set the `additional_node_groups_config` parameter, there are several methods:
@@ -106,6 +107,47 @@ services:
 ```
 
 > **Zone availability**: A given accelerator type is only available in specific zones. If the pool's zones (the rack region's default zones, or the `zones` you specify) do not offer the requested `gpu_type`, GKE will fail to create the pool. Consult the [GCP GPU regions and zones documentation](https://cloud.google.com/compute/docs/gpus/gpu-regions-zones) and set `zones` accordingly.
+
+## TPU Node Pools
+
+To run Cloud TPU workloads, use a TPU machine type as `type` and set `tpu_topology`. The machine type implies the TPU generation (for example `ct5lp-hightpu-8t` for TPU v5e), so no `gpu_type` is needed. GKE installs the TPU device plugin automatically; no DaemonSet is required. GKE taints TPU node pools with `google.com/tpu:NoSchedule`; Convox automatically adds the matching toleration to services with `scale.gpu.vendor: google`, so no manual toleration is needed either way.
+
+Only single-host TPU slices are supported. Multi-host slices (which require JobSet or Kueue orchestration) are not supported.
+
+TPUs are only available in specific zones for each generation. Pin the pool to a zone that offers your TPU type with the `zones` field, or the pool will fail to create.
+
+The following example creates a scale-to-zero Spot pool of `ct5lp-hightpu-8t` machines (TPU v5e) with a single-host `2x4` topology, pinned to a v5e zone:
+
+```json
+[
+  {
+    "id": 300,
+    "type": "ct5lp-hightpu-8t",
+    "capacity_type": "SPOT",
+    "min_size": 0,
+    "max_size": 1,
+    "label": "tpu-workers",
+    "zones": "us-west4-a",
+    "tpu_topology": "2x4"
+  }
+]
+```
+
+A matching `convox.yml` service requests the TPU with `scale.gpu` (vendor `google`) and selects the TPU pool with `nodeSelectorLabels`. Unlike GPUs, TPU workloads must set the `cloud.google.com/gke-tpu-accelerator` and `cloud.google.com/gke-tpu-topology` node selectors so the scheduler places them on the right slice:
+
+```yaml
+services:
+  trainer:
+    scale:
+      gpu:
+        count: 8
+        vendor: google
+    nodeSelectorLabels:
+      cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
+      cloud.google.com/gke-tpu-topology: 2x4
+```
+
+Convox maps `vendor: google` to the `google.com/tpu` resource request and limit, and `count` is the number of TPU chips requested per pod (8 for a `ct5lp-hightpu-8t` node). The accelerator label value depends on the TPU generation (`tpu-v5-lite-podslice` for v5e); consult the [GKE TPU documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/tpus) for the value that matches your machine type.
 
 ## Node Pool Identification
 

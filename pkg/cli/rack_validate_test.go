@@ -660,7 +660,7 @@ func TestValidateAndMutateParams_PrometheusUrl_SSRF(t *testing.T) {
 }
 
 func TestAdditionalNodeGroupsConfigFieldRoundTrip(t *testing.T) {
-	in := `[{"id":200,"type":"g2-standard-8","disk":100,"disk_type":"pd-ssd","capacity_type":"SPOT","min_size":0,"max_size":3,"label":"gpu-workers","zones":"us-east1-b,us-east1-c","gpu_type":"nvidia-l4","gpu_count":2}]`
+	in := `[{"id":200,"type":"g2-standard-8","disk":100,"disk_type":"pd-ssd","capacity_type":"SPOT","min_size":0,"max_size":3,"label":"gpu-workers","zones":"us-east1-b,us-east1-c","gpu_type":"nvidia-l4","gpu_count":2},{"id":300,"type":"ct5lp-hightpu-8t","min_size":0,"max_size":1,"zones":"us-west4-a","tpu_topology":"2x4"}]`
 
 	params := map[string]string{"additional_node_groups_config": in}
 	if err := validateAndMutateParams(params, "gcp", map[string]string{}, false); err != nil {
@@ -673,7 +673,7 @@ func TestAdditionalNodeGroupsConfigFieldRoundTrip(t *testing.T) {
 	}
 
 	// every provider-specific field must survive the validate/marshal round-trip
-	for _, field := range []string{`"disk_type":"pd-ssd"`, `"zones":"us-east1-b,us-east1-c"`, `"gpu_type":"nvidia-l4"`, `"gpu_count":2`, `"capacity_type":"SPOT"`, `"min_size":0`} {
+	for _, field := range []string{`"disk_type":"pd-ssd"`, `"zones":"us-east1-b,us-east1-c"`, `"gpu_type":"nvidia-l4"`, `"gpu_count":2`, `"tpu_topology":"2x4"`, `"capacity_type":"SPOT"`, `"min_size":0`} {
 		if !strings.Contains(string(decoded), field) {
 			t.Errorf("field %s stripped by param round-trip: %s", field, decoded)
 		}
@@ -690,6 +690,32 @@ func TestAdditionalNodeGroupsConfigGpuValidation(t *testing.T) {
 		{"zero gpu_count", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":0}]`, "invalid gpu_count"},
 		{"negative gpu_count", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":-1}]`, "invalid gpu_count"},
 		{"valid gpu pool", `[{"id":1,"type":"g2-standard-8","gpu_type":"nvidia-l4","gpu_count":1}]`, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"additional_node_groups_config": tt.config}
+			err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
+			if tt.wantErr == "" && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.wantErr != "" && (err == nil || !strings.Contains(err.Error(), tt.wantErr)) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestAdditionalNodeGroupsConfigTpuValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  string
+		wantErr string
+	}{
+		{"bad topology format", `[{"id":1,"type":"ct5lp-hightpu-8t","tpu_topology":"2*4"}]`, "invalid tpu_topology"},
+		{"topology with gpu_type", `[{"id":1,"type":"ct5lp-hightpu-8t","gpu_type":"nvidia-l4","tpu_topology":"2x4"}]`, "cannot be combined"},
+		{"topology on non-tpu machine", `[{"id":1,"type":"g2-standard-8","tpu_topology":"2x4"}]`, "requires a TPU machine type"},
+		{"valid 2d topology", `[{"id":1,"type":"ct5lp-hightpu-8t","tpu_topology":"2x4"}]`, ""},
+		{"valid 3d topology", `[{"id":1,"type":"ct5p-hightpu-4t","tpu_topology":"2x2x2"}]`, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

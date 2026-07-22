@@ -46,7 +46,7 @@ At the rack level, you can define custom node groups using provider-specific rac
 - [`additional_build_groups_config`](/configuration/rack-parameters/azure/additional_build_groups_config): Creates node pools specifically for build processes
 
 **GCP:**
-- [`additional_node_groups_config`](/configuration/rack-parameters/gcp/additional_node_groups_config): Creates general-purpose node pools, including GPU node pools via the `gpu_type` and `gpu_count` fields
+- [`additional_node_groups_config`](/configuration/rack-parameters/gcp/additional_node_groups_config): Creates general-purpose node pools, GPU node pools (via the `gpu_type` and `gpu_count` fields), and single-host Cloud TPU node pools (via a TPU machine type and the `tpu_topology` field)
 
 These parameters allow you to specify:
 - Instance types (EC2 instance types on AWS, VM sizes on Azure)

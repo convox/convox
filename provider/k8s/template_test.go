@@ -619,6 +619,9 @@ func TestGpuResourceKey(t *testing.T) {
 		{"nvidia.com", "nvidia.com/gpu"},
 		{"amd", "amd.com/gpu"},
 		{"amd.com", "amd.com/gpu"},
+		{"google", "google.com/tpu"},
+		{"google.com", "google.com/tpu"},
+		{"tpu", "google.com/tpu"},
 		{"bogus", "nvidia.com/gpu"},
 		{"neuron", "nvidia.com/gpu"},
 	}
