@@ -36,14 +36,17 @@ module "cluster" {
     google = google
   }
 
-  additional_node_groups   = local.additional_node_groups
-  k8s_version              = var.k8s_version
-  name                     = local.name
-  node_disk                = var.node_disk
-  node_type                = var.node_type
-  terraform_update_timeout = var.terraform_update_timeout
-  preemptible              = var.preemptible
-  project_id               = module.project.id
+  additional_node_groups          = local.additional_node_groups
+  k8s_version                     = var.k8s_version
+  name                            = local.name
+  node_disk                       = var.node_disk
+  node_type                       = var.node_type
+  terraform_update_timeout        = var.terraform_update_timeout
+  preemptible                     = var.preemptible
+  project_id                      = module.project.id
+  gpu_observability_enable        = var.gpu_observability_enable
+  gpu_observability_chart_version = var.gpu_observability_chart_version
+  dcgm_scrape_interval            = var.dcgm_scrape_interval
 }
 
 module "rack" {

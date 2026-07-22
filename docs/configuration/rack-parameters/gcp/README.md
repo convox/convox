@@ -16,9 +16,12 @@ The following parameters are available for configuring your Convox rack on Googl
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) | Configures additional customized node pools for the cluster, including GPU pools. |
 | [cert_duration](/configuration/rack-parameters/gcp/cert_duration)         | Certificate renewal period.                                               |
+| [dcgm_scrape_interval](/configuration/rack-parameters/gcp/dcgm_scrape_interval) | Prometheus scrape interval hint annotated on the DCGM exporter for GPU metrics. |
 | [docker_hub_password](/configuration/rack-parameters/gcp/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/gcp/docker_hub_username) | Docker Hub username for authenticated image pulls. |
 | [fluentd_memory](/configuration/rack-parameters/gcp/fluentd_memory)       | Configures memory allocation for the Fluentd log collector DaemonSet.     |
+| [gpu_observability_chart_version](/configuration/rack-parameters/gcp/gpu_observability_chart_version) | Pins the Helm chart version for the NVIDIA DCGM exporter. |
+| [gpu_observability_enable](/configuration/rack-parameters/gcp/gpu_observability_enable) | Installs the NVIDIA DCGM exporter to emit GPU telemetry for a user-installed or Google Managed Prometheus. |
 | [nginx_additional_config](/configuration/rack-parameters/gcp/nginx_additional_config) | Passes additional key-value configuration pairs to the nginx ingress controller ConfigMap. |
 | [node_disk](/configuration/rack-parameters/gcp/node_disk)                 | Size of the root disk (in GB) for each node.                              |
 | [node_type](/configuration/rack-parameters/gcp/node_type)                 | Specifies the node instance type.                                         |
