@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"sort"
@@ -278,31 +279,39 @@ func TestBoolCanonicalization(t *testing.T) {
 // default while cleared params fall through to the coalesce literal — a
 // silent split between cohorts.
 func TestCoalesceLiteralsMatchTFDefaults(t *testing.T) {
+	for _, provider := range []string{"aws", "gcp"} {
+		testCoalesceLiteralsForProvider(t, provider)
+	}
+}
+
+func testCoalesceLiteralsForProvider(t *testing.T, provider string) {
+	t.Helper()
+
 	coalesceSites := []struct {
 		variable string
 		file     string
 	}{
-		{"gpu_observability_chart_version", "../../terraform/cluster/aws/dcgm.tf"},
-		{"dcgm_scrape_interval", "../../terraform/cluster/aws/dcgm.tf"},
+		{"gpu_observability_chart_version", fmt.Sprintf("../../terraform/cluster/%s/dcgm.tf", provider)},
+		{"dcgm_scrape_interval", fmt.Sprintf("../../terraform/cluster/%s/dcgm.tf", provider)},
 	}
 
-	clusterDefaults := parseTFVariableDefaults(t, "../../terraform/cluster/aws/variables.tf")
-	systemDefaults := parseTFVariableDefaults(t, "../../terraform/system/aws/variables.tf")
+	clusterDefaults := parseTFVariableDefaults(t, fmt.Sprintf("../../terraform/cluster/%s/variables.tf", provider))
+	systemDefaults := parseTFVariableDefaults(t, fmt.Sprintf("../../terraform/system/%s/variables.tf", provider))
 
 	for _, site := range coalesceSites {
 		clusterDefault, ok := clusterDefaults[site.variable]
 		if !ok {
-			t.Errorf("variable %q has no `default = \"...\"` declaration in cluster/aws/variables.tf", site.variable)
+			t.Errorf("variable %q has no `default = \"...\"` declaration in cluster/%s/variables.tf", site.variable, provider)
 			continue
 		}
 		systemDefault, ok := systemDefaults[site.variable]
 		if !ok {
-			t.Errorf("variable %q has no `default = \"...\"` declaration in system/aws/variables.tf", site.variable)
+			t.Errorf("variable %q has no `default = \"...\"` declaration in system/%s/variables.tf", site.variable, provider)
 			continue
 		}
 		if clusterDefault != systemDefault {
-			t.Errorf("variable %q default drift: cluster/aws/variables.tf = %q vs system/aws/variables.tf = %q",
-				site.variable, clusterDefault, systemDefault)
+			t.Errorf("variable %q default drift: cluster/%s/variables.tf = %q vs system/%s/variables.tf = %q",
+				site.variable, provider, clusterDefault, provider, systemDefault)
 		}
 		got, ok := parseCoalesceLiteral(t, site.file, site.variable)
 		if !ok {
@@ -316,8 +325,8 @@ func TestCoalesceLiteralsMatchTFDefaults(t *testing.T) {
 				site.variable, site.variable, site.file)
 		}
 		if got != clusterDefault {
-			t.Errorf("coalesce literal for var.%s in %s is %q; cluster/aws/variables.tf declares default = %q (drift)",
-				site.variable, site.file, got, clusterDefault)
+			t.Errorf("coalesce literal for var.%s in %s is %q; cluster/%s/variables.tf declares default = %q (drift)",
+				site.variable, site.file, got, provider, clusterDefault)
 		}
 	}
 }
@@ -362,7 +371,6 @@ func parseTFVariableDefaults(t *testing.T, path string) map[string]string {
 //   - single-line:                     `coalesce(var.X, "Y")`
 //   - multi-line with trailing comma:  `coalesce(\n  var.X,\n  "Y",\n)`
 //   - multi-line without trailing comma
-//
 func TestRouterTypeEnumValidation(t *testing.T) {
 	cases := []struct {
 		name    string

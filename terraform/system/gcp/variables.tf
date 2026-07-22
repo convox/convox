@@ -96,3 +96,21 @@ variable "webhook_signing_key" {
 variable "whitelist" {
   default = "0.0.0.0/0"
 }
+
+variable "gpu_observability_enable" {
+  type        = bool
+  default     = false
+  description = "Install the DCGM exporter (NVIDIA GPU metrics on port 9400) and GPU Grafana dashboard ConfigMaps. GKE manages the device plugin. Metrics are exposed via pod annotations for a user-installed or Google Managed Prometheus to scrape."
+}
+
+variable "gpu_observability_chart_version" {
+  type        = string
+  default     = "4.8.1"
+  description = "Pin the nvidia/dcgm-exporter Helm chart version. Default tracked by TestCoalesceLiteralsMatchTFDefaults."
+}
+
+variable "dcgm_scrape_interval" {
+  type        = string
+  default     = "15s"
+  description = "Prometheus scrape interval hint set as a pod annotation on the DCGM exporter. Range 15s-300s enforced by pkg/cli/rack.go validator."
+}

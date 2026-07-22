@@ -642,8 +642,12 @@ func PriceForInstance(instanceType string) (InstancePrice, bool) {
 }
 
 func PriceForInstanceOn(provider, instanceType string) (InstancePrice, bool) {
-	if provider == "azure" {
+	switch provider {
+	case "azure":
 		p, ok := AzureInstancePricing[instanceType]
+		return p, ok
+	case "gcp":
+		p, ok := GcpInstancePricing[instanceType]
 		return p, ok
 	}
 	return PriceForInstance(instanceType)
