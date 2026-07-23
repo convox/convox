@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/docker/docker/pkg/archive"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
+	archive "github.com/moby/go-archive"
+	"github.com/moby/go-archive/compression"
+	"github.com/moby/patternmatcher/ignorefile"
 )
 
 var (
@@ -92,7 +93,7 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	excludes, err := dockerignore.ReadAll(bytes.NewReader(data))
+	excludes, err := ignorefile.ReadAll(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func Tarball(dir string) ([]byte, error) {
 	}
 
 	opts := &archive.TarOptions{
-		Compression:     archive.Gzip,
+		Compression:     compression.Gzip,
 		ExcludePatterns: excludes,
 		IncludeFiles:    []string{"."},
 	}

@@ -25,7 +25,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/prefix"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/moby/buildkit/frontend/dockerfile/dockerignore"
+	"github.com/moby/patternmatcher/ignorefile"
 )
 
 const (
@@ -585,7 +585,7 @@ func buildIgnores(root, service string) ([]string, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return dockerignore.ReadAll(fd)
+	return ignorefile.ReadAll(fd)
 }
 
 func buildSources(m *manifest.Manifest, root, service string) ([]buildSource, error) {
