@@ -575,7 +575,7 @@ variable "private_subnets_ids" {
 variable "prometheus_url" {
   type        = string
   default     = ""
-  description = "External Prometheus URL for KEDA autoscale triggers and observability. User-set value enables GPU enrichment in `convox ps`. When empty (default), GPU fields show em-dash sentinels even when a chart is installed via the Convox Console. Set to the in-cluster service URL for Convox-Console-managed monitoring (paid: `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`; free: `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`) or to your external Prometheus."
+  description = "External Prometheus URL for KEDA autoscaling triggers and for GPU metrics in `convox ps`. Setting it enables the GPU metric columns; when empty (the default) those columns show no data even if a Prometheus chart is installed through the Convox Console. Set it to the in-cluster service URL for Console-managed monitoring (paid: `http://convox-kube-prometheus-sta-prometheus.convox-monitoring.svc.cluster.local:9090`; free: `http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80`) or to your own external Prometheus."
 }
 
 variable "prometheus_gpu_metrics_chart_version" {
@@ -583,14 +583,10 @@ variable "prometheus_gpu_metrics_chart_version" {
   default = "27.9.0"
 }
 
-# User-facing Grafana base URL for the Console "Open in your Grafana"
-# deep-link button. Empty default keeps the button inert (renders a hint
-# instead of a link). Reconciler-safe: additive new variable with safe
-# zero-value default; downgrade leaves the rack working.
 variable "grafana_url" {
   type        = string
   default     = ""
-  description = "User-facing Grafana base URL for the Console deep-link button. Optional. Empty default keeps the button inert."
+  description = "Base URL of your Grafana instance for the Console deep-link button. Optional; when empty the button shows a hint instead of a link."
 }
 
 variable "prometheus_gpu_metrics_retention" {
@@ -598,52 +594,30 @@ variable "prometheus_gpu_metrics_retention" {
   default = "24h"
 }
 
-# DCGM exporter scrape interval. Read by the Console-installed Prometheus
-# scrape config (Console writes the operator override into the Prometheus
-# Helm values; rack TF declares the variable so the reconciler accepts it
-# on upgrade and strips it cleanly on downgrade). Range 15s-300s; empty
-# defaults to 15s.
 variable "dcgm_scrape_interval" {
   type        = string
   default     = "15s"
-  description = "DCGM exporter scrape interval (e.g. 15s, 30s). Empty defaults to 15s. Read by the Console-installed Prometheus scrape config; rack TF declares the variable so reconciler accepts it on upgrade and strips on downgrade."
+  description = "DCGM exporter scrape interval for GPU metrics (e.g. 15s, 30s). Range 15s-300s; empty defaults to 15s."
 }
 
-# Per-service GPU time-range query handler caps. The rack-side handler bounds
-# the number of pods returned and the number of concurrent Prom QueryRange
-# calls to prevent a fan-out DoS from a busy app (many pods) or many
-# simultaneous chart fetches. Plumbed system->rack->api->env map so the rack
-# api Deployment surfaces GPU_METRICS_MAX_PODS / GPU_METRICS_MAX_CONCURRENT
-# which the handler reads at request time. String-typed (matches
-# release_watcher_gc_interval pattern) so empty/unset falls back to handler
-# defaults cleanly without type coercion in the api/aws/main.tf env block.
 variable "gpu_metrics_max_pods" {
   type        = string
   default     = "100"
-  description = "Max pods returned by the GPU metrics handler per request. Range 1-500; default 100. Read by the handler at request time via GPU_METRICS_MAX_PODS env on the api Deployment."
+  description = "Maximum number of pods a single GPU metrics request may include. Range 1-500; default 100."
 }
 
 variable "gpu_metrics_max_concurrent" {
   type        = string
   default     = "10"
-  description = "Max concurrent GPU metrics QueryRange calls. Range 1-50; default 10. Read by the handler at request time via GPU_METRICS_MAX_CONCURRENT env on the api Deployment."
+  description = "Maximum number of GPU metrics requests processed at once. Range 1-50; default 10."
 }
 
-# Release-watcher GC sweep interval. Read once at provider Initialize from
-# the RELEASE_WATCHER_GC_INTERVAL env var on the api Deployment; updates the
-# package-level `releasePromoteWatchGCTickInterval` var which controls the
-# periodic GC ticker. Range 60s-1h; empty defaults to 5m. Process-config.
 variable "release_watcher_gc_interval" {
   type        = string
   default     = "5m"
-  description = "Release-watcher GC sweep interval (e.g. 5m, 30m). Range 60s-1h; empty defaults to 5m. Read by the provider at Initialize via RELEASE_WATCHER_GC_INTERVAL env on the api Deployment."
+  description = "Interval for cleaning up tracked release-promotion state (e.g. 5m, 30m). Range 60s-1h; empty defaults to 5m."
 }
 
-# Grafana deep-link template variable name overrides. Operators with imported
-# dashboards using non-default var names (e.g. `var-cluster_name` instead of
-# `var-rack`) configure the substitutions here. Console reads from the rack
-# params response and substitutes into Grafana URLs; absent → falls back to
-# canonical defaults (rack/namespace/service/app). Process-config.
 variable "grafana_dashboard_var_rack" {
   type        = string
   default     = "rack"
