@@ -967,10 +967,11 @@ type NodeGroupConfigParam struct {
 	Label        *string `json:"label,omitempty"`
 	AmiID        *string `json:"ami_id,omitempty"`
 	Dedicated    *bool   `json:"dedicated,omitempty"`
+	Zones        *string `json:"zones,omitempty"`
 	Tags         *string `json:"tags,omitempty"`
 }
 
-func (n *NodeGroupConfigParam) Validate() error {
+func (n *NodeGroupConfigParam) Validate(provider string) error {
 	if n.Type == "" {
 		return fmt.Errorf("node type is required: '%s'", n.Type)
 	}
@@ -986,8 +987,19 @@ func (n *NodeGroupConfigParam) Validate() error {
 	if n.MinSize != nil && n.MaxSize != nil && *n.MinSize > *n.MaxSize {
 		return fmt.Errorf("invalid min size: '%d' must be less or equal to max size", *n.MinSize)
 	}
-	if n.CapacityType != nil && (*n.CapacityType != "ON_DEMAND" && *n.CapacityType != "SPOT" && *n.CapacityType != "Regular" && *n.CapacityType != "Spot") {
-		return fmt.Errorf("allowed capacity type: ON_DEMAND, SPOT, Regular, or Spot, found: '%s'", *n.CapacityType)
+	if n.CapacityType != nil {
+		var allowed []string
+		switch provider {
+		case "aws":
+			allowed = []string{"ON_DEMAND", "SPOT"}
+		case "azure":
+			allowed = []string{"ON_DEMAND", "SPOT", "Regular", "Spot"}
+		default:
+			allowed = []string{"ON_DEMAND", "SPOT", "Regular", "Spot"}
+		}
+		if !common.ContainsInStringSlice(allowed, *n.CapacityType) {
+			return fmt.Errorf("allowed capacity type for %s: %s, found: '%s'", provider, strings.Join(allowed, ", "), *n.CapacityType)
+		}
 	}
 	if n.Label != nil && !manifest.NameValidator.MatchString(*n.Label) {
 		return fmt.Errorf("label value '%s' invalid, %s", *n.Label, manifest.ValidNameDescription)
@@ -1263,11 +1275,11 @@ func (ko KarpenterNodeOverlays) Validate() error {
 
 type AdditionalNodeGroups []NodeGroupConfigParam
 
-func (an AdditionalNodeGroups) Validate() error {
+func (an AdditionalNodeGroups) Validate(provider string) error {
 	idCnt := 0
 	idMap := map[int]bool{}
 	for i := range an {
-		if err := an[i].Validate(); err != nil {
+		if err := an[i].Validate(provider); err != nil {
 			return err
 		}
 		if an[i].Id != nil {
@@ -1275,6 +1287,7 @@ func (an AdditionalNodeGroups) Validate() error {
 			if idMap[*an[i].Id] {
 				return fmt.Errorf("duplicate node group id is found: %d", *an[i].Id)
 			}
+			idMap[*an[i].Id] = true
 		}
 	}
 
@@ -1948,7 +1961,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				}
 			}
 
-			if err := nCfgs.Validate(); err != nil {
+			if err := nCfgs.Validate(provider); err != nil {
 				return err
 			}
 
