@@ -365,7 +365,7 @@ variable "gpu_observability_chart_version" {
 variable "dcgm_scrape_interval" {
   type        = string
   default     = "15s"
-  description = "DCGM exporter scrape interval applied to the helm release values (e.g. 15s, 30s). Empty value falls back to 15s via coalesce() in dcgm.tf. Range 15s-300s enforced by pkg/cli/rack.go validator."
+  description = "DCGM exporter scrape interval for GPU metrics (e.g. 15s, 30s). Range 15s-300s; empty defaults to 15s."
 }
 
 variable "pod_identity_agent_enable" {
