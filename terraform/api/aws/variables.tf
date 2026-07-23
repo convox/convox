@@ -198,19 +198,19 @@ variable "releases_to_retain_task_run_interval_hour" {
 variable "release_watcher_gc_interval" {
   type        = string
   default     = "5m"
-  description = "Release-watcher GC sweep interval (e.g. 5m, 30m). Range 60s-1h enforced by pkg/cli/rack.go validator. Becomes RELEASE_WATCHER_GC_INTERVAL env var on the api Deployment via the env map at api/aws/main.tf."
+  description = "Interval for cleaning up tracked release-promotion state (e.g. 5m, 30m). Range 60s-1h; empty defaults to 5m."
 }
 
 variable "gpu_metrics_max_pods" {
   type        = string
   default     = "100"
-  description = "Max pods returned by the GPU metrics handler per request. Range 1-500 enforced by pkg/cli/rack.go validator. Becomes GPU_METRICS_MAX_PODS env var on the api Deployment via the env map at api/aws/main.tf; empty falls back to handler default 100."
+  description = "Maximum number of pods a single GPU metrics request may include. Range 1-500; default 100."
 }
 
 variable "gpu_metrics_max_concurrent" {
   type        = string
   default     = "10"
-  description = "Max concurrent GPU metrics QueryRange calls. Range 1-50 enforced by pkg/cli/rack.go validator. Becomes GPU_METRICS_MAX_CONCURRENT env var on the api Deployment via the env map at api/aws/main.tf; empty falls back to handler default 10."
+  description = "Maximum number of GPU metrics requests processed at once. Range 1-50; default 10."
 }
 
 variable "resolver" {
