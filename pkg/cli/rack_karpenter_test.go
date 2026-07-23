@@ -2082,7 +2082,7 @@ func TestAdditionalNodeGroups_Validate_AutoAssignIdsFromZero(t *testing.T) {
 		{Type: "m5.large"},
 		{Type: "c5.xlarge"},
 	}
-	if err := ngs.Validate(); err != nil {
+	if err := ngs.Validate("aws"); err != nil {
 		t.Fatal(err)
 	}
 	if ngs[0].Id == nil || *ngs[0].Id != 0 {
@@ -2162,6 +2162,84 @@ func TestValidateAndMutateParams_PreserveExistingNodeGroupIds(t *testing.T) {
 				t.Errorf("expected id=%d, got id=%d", tt.wantId, *result[0].Id)
 			}
 		})
+	}
+}
+
+func TestAdditionalNodeGroups_ZonesRoundTrip(t *testing.T) {
+	t.Run("zones survives re-marshal", func(t *testing.T) {
+		params := map[string]string{
+			"additional_node_groups_config": `[{"type":"Standard_D2s_v3","zones":"1,2"}]`,
+		}
+		if err := validateAndMutateParams(params, "azure", map[string]string{}, false); err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := base64.StdEncoding.DecodeString(params["additional_node_groups_config"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		var result AdditionalNodeGroups
+		if err := json.Unmarshal(decoded, &result); err != nil {
+			t.Fatal(err)
+		}
+		if result[0].Zones == nil || *result[0].Zones != "1,2" {
+			t.Errorf("expected zones=1,2 to survive, got %v", result[0].Zones)
+		}
+	})
+
+	t.Run("no zones emits no zones key", func(t *testing.T) {
+		params := map[string]string{
+			"additional_node_groups_config": `[{"type":"m5.large"}]`,
+		}
+		if err := validateAndMutateParams(params, "aws", map[string]string{}, false); err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := base64.StdEncoding.DecodeString(params["additional_node_groups_config"])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(decoded), "zones") {
+			t.Errorf("expected no zones key, got %s", decoded)
+		}
+	})
+}
+
+func TestAdditionalNodeGroups_CapacityTypePerProvider(t *testing.T) {
+	tests := []struct {
+		name         string
+		provider     string
+		capacityType string
+		wantErr      bool
+	}{
+		{"aws rejects Regular", "aws", "Regular", true},
+		{"aws rejects Spot", "aws", "Spot", true},
+		{"aws accepts SPOT", "aws", "SPOT", false},
+		{"aws accepts ON_DEMAND", "aws", "ON_DEMAND", false},
+		{"azure accepts Regular", "azure", "Regular", false},
+		{"azure accepts SPOT", "azure", "SPOT", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"additional_node_groups_config": `[{"type":"m5.large","capacity_type":"` + tt.capacityType + `"}]`,
+			}
+			err := validateAndMutateParams(params, tt.provider, map[string]string{}, false)
+			if tt.wantErr && err == nil {
+				t.Errorf("expected rejection of capacity_type=%s on %s", tt.capacityType, tt.provider)
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("unexpected error for capacity_type=%s on %s: %v", tt.capacityType, tt.provider, err)
+			}
+		})
+	}
+}
+
+func TestAdditionalNodeGroups_DuplicateIdRejected(t *testing.T) {
+	params := map[string]string{
+		"additional_node_groups_config": `[{"id":1,"type":"m5.large"},{"id":1,"type":"c5.large"}]`,
+	}
+	err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+	if err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Errorf("expected duplicate id rejection, got %v", err)
 	}
 }
 

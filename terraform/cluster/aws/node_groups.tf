@@ -65,6 +65,10 @@ resource "random_id" "additional_node_groups" {
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
     tags                = try(jsonencode(each.value.tags), "")
   }
+
+  lifecycle {
+    ignore_changes = [keepers["tags"]]
+  }
 }
 
 data "aws_ec2_instance_type" "additional_node_type" {
@@ -119,7 +123,8 @@ resource "aws_eks_node_group" "cluster_additional" {
   }
 
   lifecycle {
-    ignore_changes = [scaling_config[0].desired_size]
+    create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
   }
 
   labels = {
@@ -218,6 +223,10 @@ resource "random_id" "build_node_additional" {
     role_arn            = local.build_minimal_role_enabled ? replace(aws_iam_role.karpenter_build_nodes[0].arn, "role/convox/", "role/") : replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
     tags                = try(jsonencode(each.value.tags), "")
   }
+
+  lifecycle {
+    ignore_changes = [keepers["tags"]]
+  }
 }
 
 data "aws_ec2_instance_type" "build_node_type" {
@@ -281,6 +290,9 @@ resource "aws_eks_node_group" "build_additional" {
     create = "1h"
   }
 
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_launch_template" "build_additional" {
