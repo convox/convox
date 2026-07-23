@@ -453,6 +453,8 @@ func (t Terraform) apply() error {
 		return err
 	}
 
+	t.reconcileStuckHelmReleases()
+
 	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}
