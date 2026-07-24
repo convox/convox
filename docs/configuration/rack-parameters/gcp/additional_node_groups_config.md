@@ -32,15 +32,15 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 | `capacity_type` | No | Whether to use on-demand or spot VMs. Accepts `ON_DEMAND` or `SPOT` (`Regular` and `Spot` are also accepted, for configs shared with Azure) | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes per zone. `0` is allowed for scale-to-zero pools | 1 |
 | `max_size` | No | Maximum number of nodes per zone | 100 |
-
-> **Counts are per zone, not totals.** GCP racks use regional GKE clusters, so `min_size` and `max_size` apply to each zone in the region. In a 3-zone region, `min_size: 1` runs 3 nodes and `max_size: 100` allows up to 300. This differs from AWS and Azure, where the same values are totals. For expensive pools (such as GPU pools), set `min_size: 0` or pin a single zone with `zones`.
 | `label` | No | Custom label value for the node pool. Applied as `convox.io/label: <label-value>` | None |
 | `id` | No | A unique integer identifier for the node pool that persists across updates | Auto-generated |
 | `tags` | No | Custom GCP resource labels specified as comma-separated key-value pairs (e.g., `environment=production,team=backend`) | None |
 | `dedicated` | No | When `true`, only services with matching node pool labels will be scheduled on these nodes (adds a `dedicated-node` NoSchedule taint) | `false` |
 | `zones` | No | Comma-separated list of GCP zones (e.g., `us-east1-b,us-east1-c`) | None (region default) |
-| `gpu_type` | No | NVIDIA accelerator type to attach (e.g., `nvidia-l4`, `nvidia-tesla-t4`). When set, GKE installs the NVIDIA driver and device plugin automatically and taints the pool with `nvidia.com/gpu:NoSchedule` | None |
+| `gpu_type` | No | NVIDIA accelerator type to attach (e.g., `nvidia-l4`, `nvidia-tesla-t4`). When set, GKE installs the NVIDIA driver and device plugin automatically and taints the pool with `nvidia.com/gpu=present:NoSchedule` | None |
 | `gpu_count` | No | Number of GPUs to attach per node (only applies when `gpu_type` is set) | 1 |
+
+> **Counts are per zone, not totals.** GCP racks use regional GKE clusters, so `min_size` and `max_size` apply to each zone in the region. In a 3-zone region, `min_size: 1` runs 3 nodes and `max_size: 100` allows up to 300. This differs from AWS and Azure, where the same values are totals. For expensive pools (such as GPU pools), set `min_size: 0` or pin a single zone with `zones`.
 
 ## Setting Parameters
 To set the `additional_node_groups_config` parameter, there are several methods:
@@ -75,7 +75,7 @@ Updating parameters... OK
 
 ## GPU Node Pools
 
-To run GPU workloads, set `gpu_type` (and optionally `gpu_count`) on a node pool. GKE manages the NVIDIA driver and device plugin for you, and automatically applies the `nvidia.com/gpu:NoSchedule` taint. Convox services that request GPUs (via `scale.gpu.count` in `convox.yml`) get the matching resource request and toleration automatically, so they schedule onto these nodes.
+To run GPU workloads, set `gpu_type` (and optionally `gpu_count`) on a node pool. GKE manages the NVIDIA driver and device plugin for you, and automatically applies the `nvidia.com/gpu=present:NoSchedule` taint. Convox services that request GPUs (via `scale.gpu.count` in `convox.yml`) get the matching resource request and toleration automatically, so they schedule onto these nodes.
 
 Node pools use the rack's node service account. For workloads that call GCP APIs (including GPU workloads running third-party code), use [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity) rather than relying on node credentials.
 
