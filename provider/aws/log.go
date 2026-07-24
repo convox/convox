@@ -23,6 +23,10 @@ var (
 )
 
 func (p *Provider) Log(name, stream string, ts time.Time, message string) error {
+	if p.CloudwatchDisable {
+		return nil
+	}
+
 	group := p.appLogGroup(name)
 
 	req := &cloudwatchlogs.PutLogEventsInput{
@@ -74,6 +78,9 @@ func (p *Provider) Log(name, stream string, ts time.Time, message string) error 
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	if p.CloudwatchDisable {
+		return io.NopCloser(strings.NewReader("")), nil
+	}
 	if p.ContextTID() != "" {
 		name = fmt.Sprintf("%s-%s", p.ContextTID(), name)
 	}
@@ -81,6 +88,9 @@ func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
+	if p.CloudwatchDisable {
+		return io.NopCloser(strings.NewReader("")), nil
+	}
 	return p.subscribeLogs(p.Context(), p.appLogGroup("system"), "", opts)
 }
 
@@ -113,6 +123,9 @@ func (p *Provider) createLogGroup(app string) error {
 }
 
 func (p *Provider) UpdateOrDisableLogGroupRetention(app string, retentionDays int, disableRetention bool) error {
+	if p.CloudwatchDisable {
+		return nil
+	}
 
 	// disable retention policy
 	if disableRetention {

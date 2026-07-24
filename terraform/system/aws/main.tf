@@ -322,6 +322,7 @@ module "rack" {
   ecr_full_access                           = var.ecr_full_access
   ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  cloudwatch_disable                        = var.cloudwatch_disable
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable
