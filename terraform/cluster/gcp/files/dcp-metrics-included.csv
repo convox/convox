@@ -11,7 +11,7 @@
 #   - DCGM_FI_DEV_ECC_SBE_VOL_TOTAL       (D5 panel 4)
 #   - DCGM_FI_DEV_ECC_DBE_VOL_TOTAL       (D5 panel 3)
 #   - DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL  (D5 panel 5)
-#   - DCGM_FI_DEV_CLOCKS_EVENT_REASONS    (D5 panel 6, D1 panel 8 —
+#   - DCGM_FI_DEV_CLOCKS_EVENT_REASONS    (D5 panel 6, D1 panel 8,
 #     renamed from the deprecated alias in DCGM 4.x)
 #   - DCGM_FI_DEV_XID_ERRORS              (D5 panels 1+2; explicitly enabled
 #     here to guarantee emission across chart versions)
@@ -77,7 +77,7 @@ DCGM_FI_DEV_VGPU_LICENSE_STATUS, gauge, vGPU License status.
 # Driver
 DCGM_FI_DRIVER_VERSION, label, Driver Version.
 
-# Profiling — leading ML efficiency metrics (D1, D2)
+# Profiling: leading ML efficiency metrics (D1, D2)
 DCGM_FI_PROF_GR_ENGINE_ACTIVE,   gauge, Ratio of time the graphics engine is active.
 DCGM_FI_PROF_SM_ACTIVE,          gauge, The ratio of cycles an SM has at least 1 warp assigned.
 DCGM_FI_PROF_PIPE_TENSOR_ACTIVE, gauge, Ratio of cycles the tensor (HMMA) pipe is active.

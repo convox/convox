@@ -18,7 +18,7 @@
       "targets": [
         {"_source": "GpuTensorActiveByPod", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, avg by (pod) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{namespace=~\"$namespace\"}) * 100)", "legendFormat": "{{pod}}", "refId": "A"}
       ],
-      "title": "Tensor Core Active — Top 10 Pods",
+      "title": "Tensor Core Active: Top 10 Pods",
       "type": "timeseries"
     },
     {
@@ -32,7 +32,7 @@
       "targets": [
         {"_source": "GpuSmActiveByPod", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(10, avg by (pod) (DCGM_FI_PROF_SM_ACTIVE{namespace=~\"$namespace\"}) * 100)", "legendFormat": "{{pod}}", "refId": "A"}
       ],
-      "title": "SM Active — Top 10 Pods",
+      "title": "SM Active: Top 10 Pods",
       "type": "timeseries"
     },
     {
@@ -121,7 +121,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Convox GPU — Per-App Usage",
+  "title": "Convox GPU: Per-App Usage",
   "uid": "convox-gpu-per-app",
   "version": 1,
   "weekStart": ""

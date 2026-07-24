@@ -67,7 +67,7 @@
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "description": "Replica count by service (cross-joins kube_pod_status_phase × kube_pod_labels — requires KSM allowlist arg).",
+      "description": "Replica count by service (cross-joins kube_pod_status_phase × kube_pod_labels, requires KSM allowlist arg).",
       "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}}, "overrides": []},
       "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
       "id": 5,
@@ -138,7 +138,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Convox GPU — Inference Performance",
+  "title": "Convox GPU: Inference Performance",
   "uid": "convox-gpu-inference-performance",
   "version": 1,
   "weekStart": ""

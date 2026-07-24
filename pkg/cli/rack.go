@@ -1683,7 +1683,8 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	// gpu_observability_enable requires nvidia_device_plugin_enable (DCGM needs the device plugin socket).
-	if params["gpu_observability_enable"] == "true" && currentParams["gpu_observability_enable"] != "true" {
+	// GKE manages the device plugin on GCP, so the requirement applies only to self-managed providers.
+	if provider != "gcp" && params["gpu_observability_enable"] == "true" && currentParams["gpu_observability_enable"] != "true" {
 		if currentParams["nvidia_device_plugin_enable"] != "true" && params["nvidia_device_plugin_enable"] != "true" {
 			return fmt.Errorf("gpu_observability_enable=true requires nvidia_device_plugin_enable=true.\n  Set both in the same `convox rack params set` invocation, or enable\n  the device plugin first.")
 		}

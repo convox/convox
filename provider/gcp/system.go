@@ -10,14 +10,10 @@ func (p *Provider) SystemStatus() (string, error) {
 	return "running", nil
 }
 
-// gcpGpuMachinePrefixes are GKE machine families that ship with attached NVIDIA GPUs.
-// g2- (L4), a2- (A100), a3- (H100), a4- (B200), g4- (RTX PRO 6000).
-// N1 machines can have GPUs attached à la carte, so they cannot be detected by
-// machine-type name alone. GKE also stamps GPU nodes with the label
-// cloud.google.com/gke-accelerator, but the node controller (controller_node.go)
-// already keys off node.kubernetes.io/instance-type, so name-prefix matching here
-// stays consistent with that flow without restructuring the controller.
-var gcpGpuMachinePrefixes = []string{"g2-", "a2-", "a3-", "a4-", "g4-"}
+// gcpGpuMachinePrefixes are GKE machine families that ship with attached NVIDIA GPUs:
+// g2 (L4), a2 (A100), a3 (H100), a4/a4x (B200, GB200), g4 (RTX PRO 6000). N1 can attach
+// GPUs by choice and is not name-detectable, so it is intentionally not matched here.
+var gcpGpuMachinePrefixes = []string{"g2-", "a2-", "a3-", "a4", "g4-"}
 
 // GPUIntanceList returns the subset of the given machine types that have NVIDIA GPUs.
 func (p *Provider) GPUIntanceList(instanceTypes []string) ([]string, error) {
