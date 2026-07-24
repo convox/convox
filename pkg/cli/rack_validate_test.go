@@ -722,6 +722,7 @@ func TestAdditionalNodeGroupsConfigTpuValidation(t *testing.T) {
 		wantErr string
 	}{
 		{"bad topology format", `[{"id":1,"type":"ct5lp-hightpu-8t","tpu_topology":"2*4"}]`, "invalid tpu_topology"},
+		{"zero topology dimension", `[{"id":1,"type":"ct5lp-hightpu-8t","tpu_topology":"0x0"}]`, "invalid tpu_topology"},
 		{"topology with gpu_type", `[{"id":1,"type":"ct5lp-hightpu-8t","gpu_type":"nvidia-l4","tpu_topology":"2x4"}]`, "cannot be combined"},
 		{"topology on non-tpu machine", `[{"id":1,"type":"g2-standard-8","tpu_topology":"2x4"}]`, "requires a TPU machine type"},
 		{"valid 2d topology", `[{"id":1,"type":"ct5lp-hightpu-8t","tpu_topology":"2x4"}]`, ""},

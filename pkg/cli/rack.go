@@ -978,7 +978,7 @@ type NodeGroupConfigParam struct {
 	TpuTopology  *string `json:"tpu_topology,omitempty"`
 }
 
-var tpuTopologyPattern = regexp.MustCompile(`^[0-9]+x[0-9]+(x[0-9]+)?$`)
+var tpuTopologyPattern = regexp.MustCompile(`^[1-9][0-9]*x[1-9][0-9]*(x[1-9][0-9]*)?$`)
 
 func (n *NodeGroupConfigParam) Validate() error {
 	if n.Type == "" {
