@@ -1,6 +1,7 @@
 package rack
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,7 +15,12 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -394,6 +400,10 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
+	if err := t.reconcileAdditionalNodeGroupDesired(vars); err != nil {
+		return err
+	}
+
 	if err := t.apply(); err != nil {
 		return err
 	}
@@ -437,6 +447,10 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 	}
 
 	if err := t.reconcileVarsWithModule(version); err != nil {
+		return err
+	}
+
+	if err := t.reconcileAdditionalNodeGroupDesired(vars); err != nil {
 		return err
 	}
 
@@ -563,6 +577,156 @@ func (t Terraform) reconcileVarsWithModule(release string) error {
 	}
 
 	return t.update(release, vars)
+}
+
+type nodeGroupDesired struct {
+	Id      *int `json:"id"`
+	MinSize *int `json:"min_size"`
+	MaxSize *int `json:"max_size"`
+}
+
+// reconcileAdditionalNodeGroupDesired raises each additional node group's EKS
+// desiredSize to its new min_size before apply. AWS only, best-effort.
+func (t Terraform) reconcileAdditionalNodeGroupDesired(vars map[string]string) error {
+	if t.provider != "aws" {
+		return nil
+	}
+
+	raw := vars["additional_node_groups_config"]
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	data := []byte(raw)
+	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+		data = decoded
+	}
+
+	var groups []nodeGroupDesired
+	if err := json.Unmarshal(data, &groups); err != nil || len(groups) == 0 {
+		return nil //nolint:nilerr // best-effort: malformed or empty config is a no-op, not an apply blocker
+	}
+
+	region := common.CoalesceString(vars["region"], os.Getenv("AWS_REGION"), os.Getenv("AWS_DEFAULT_REGION"))
+
+	s, err := session.NewSession(aws.NewConfig().WithRegion(region))
+	if err != nil {
+		nodeGroupDebugf("build aws session: %v", err)
+		return nil
+	}
+
+	return reconcileNodeGroupDesired(eks.New(s), common.CoalesceString(vars["name"], t.name), groups)
+}
+
+func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nodeGroupDesired) error {
+	listed, err := api.ListNodegroups(&eks.ListNodegroupsInput{ClusterName: aws.String(cluster)})
+	if err != nil {
+		nodeGroupDebugf("list node groups for %s: %v", cluster, err)
+		return nil
+	}
+
+	type pendingUpdate struct {
+		nodegroup string
+		id        string
+	}
+	var pending []pendingUpdate
+
+	for i, g := range groups {
+		if g.MinSize == nil {
+			continue
+		}
+
+		key := i
+		if g.Id != nil {
+			key = *g.Id
+		}
+		prefix := fmt.Sprintf("%s-additional-%d-", cluster, key)
+
+		name := ""
+		for _, n := range listed.Nodegroups {
+			if strings.HasPrefix(aws.StringValue(n), prefix) {
+				name = aws.StringValue(n)
+				break
+			}
+		}
+		if name == "" {
+			continue
+		}
+
+		desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+		})
+		if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
+			nodeGroupDebugf("describe node group %s: %v", name, err)
+			continue
+		}
+
+		newMin := int64(*g.MinSize)
+		currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
+		currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
+
+		if newMin <= currentDesired {
+			continue
+		}
+
+		// widen max too: EKS validates desired <= max against the pre-apply live max.
+		scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
+		if newMin > currentMax {
+			scaling.MaxSize = aws.Int64(newMin)
+		}
+
+		out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+			ScalingConfig: scaling,
+		})
+		if err != nil {
+			nodeGroupDebugf("raise desired on %s: %v", name, err)
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
+
+		if out.Update != nil {
+			pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
+		}
+	}
+
+	for _, p := range pending {
+		waitForNodeGroupUpdate(api, cluster, p.nodegroup, p.id)
+	}
+
+	return nil
+}
+
+func waitForNodeGroupUpdate(api eksiface.EKSAPI, cluster, nodegroup, id string) {
+	if id == "" {
+		return
+	}
+
+	// 80 polls x 30s ~ 40min, matching the SDK nodegroup-active waiter.
+	for i := 0; i < 80; i++ {
+		out, err := api.DescribeUpdate(&eks.DescribeUpdateInput{
+			Name:          aws.String(cluster),
+			NodegroupName: aws.String(nodegroup),
+			UpdateId:      aws.String(id),
+		})
+		if err != nil {
+			nodeGroupDebugf("describe update %s/%s: %v", nodegroup, id, err)
+			return
+		}
+		if out.Update == nil || aws.StringValue(out.Update.Status) != eks.UpdateStatusInProgress {
+			return
+		}
+		time.Sleep(30 * time.Second)
+	}
+}
+
+func nodeGroupDebugf(format string, args ...interface{}) {
+	if os.Getenv("CONVOX_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: node group desired reconcile: "+format+"\n", args...)
+	}
 }
 
 func (t Terraform) create(release string, vars map[string]string, state []byte) error {
