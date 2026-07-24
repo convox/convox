@@ -169,6 +169,7 @@ module "cluster" {
   karpenter_build_cpu_limit           = var.karpenter_build_cpu_limit
   karpenter_build_memory_limit_gb     = var.karpenter_build_memory_limit_gb
   karpenter_build_consolidate_after   = var.karpenter_build_consolidate_after
+  karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
   karpenter_build_node_labels         = var.karpenter_build_node_labels
   karpenter_build_imds_tokens         = var.karpenter_build_imds_tokens
   karpenter_build_imds_hop_limit      = var.karpenter_build_imds_hop_limit

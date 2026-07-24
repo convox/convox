@@ -583,7 +583,7 @@ Groups:
       - name: karpenter_disruption_budget_nodes
         default: "10%"
         type: string
-        regex: ^\d+%?$
+        regex: ^((100|[0-9]{1,2})%|[0-9]+)$
         description: Maximum nodes that can be disrupted simultaneously. &l &i e.g. &i 10%, 3 &l
       - name: karpenter_node_disk
         default: "0"
@@ -680,6 +680,11 @@ Groups:
         type: string
         regex: ^\d+[smh]$
         description: Time before empty build nodes are removed.
+      - name: karpenter_build_disruption_budget_nodes
+        default: "100%"
+        type: string
+        regex: ^((100|[0-9]{1,2})%|[0-9]+)$
+        description: Maximum empty build nodes reclaimed simultaneously. &l &i e.g. &i 100%, 1 &l
       - name: karpenter_build_imds_tokens
         default: ""
         sideNote: Empty inherits the cluster IMDS setting

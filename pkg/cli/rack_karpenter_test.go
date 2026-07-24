@@ -8,7 +8,7 @@ import (
 )
 
 func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
-	tests := []struct {
+	cases := []struct {
 		name    string
 		value   string
 		wantErr bool
@@ -16,25 +16,30 @@ func TestValidateAndMutateParams_BudgetRegex(t *testing.T) {
 		{"plain number", "3", false},
 		{"percentage", "10%", false},
 		{"zero", "0", false},
+		{"zero percent", "0%", false},
 		{"hundred percent", "100%", false},
 		{"double percent", "10%%", true},
 		{"text", "abc", true},
 		{"empty", "", true}, // empty is now rejected (clearableParams guard)
 		{"negative", "-1", true},
 		{"decimal", "1.5", true},
+		{"over hundred percent", "101%", true},
+		{"way over hundred percent", "200%", true},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			params := map[string]string{
-				"karpenter_enabled":                 "true",
-				"karpenter_disruption_budget_nodes": tt.value,
-			}
-			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("budget=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
-			}
-		})
+	for _, param := range []string{"karpenter_disruption_budget_nodes", "karpenter_build_disruption_budget_nodes"} {
+		for _, tt := range cases {
+			t.Run(param+"/"+tt.name, func(t *testing.T) {
+				params := map[string]string{
+					"karpenter_enabled": "true",
+					param:               tt.value,
+				}
+				err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
+				if (err != nil) != tt.wantErr {
+					t.Errorf("%s=%q: got err=%v, wantErr=%v", param, tt.value, err, tt.wantErr)
+				}
+			})
+		}
 	}
 }
 
@@ -513,6 +518,11 @@ func TestKarpenterNodePoolConfigParam_Validate(t *testing.T) {
 		{
 			"invalid budget double percent",
 			KarpenterNodePoolConfigParam{Name: "test", DisruptionBudgetNodes: strPtr("10%%")},
+			true, "disruption_budget_nodes",
+		},
+		{
+			"invalid budget over one hundred percent",
+			KarpenterNodePoolConfigParam{Name: "test", DisruptionBudgetNodes: strPtr("200%")},
 			true, "disruption_budget_nodes",
 		},
 	}
@@ -1952,6 +1962,13 @@ func TestValidateAndMutateParams_KarpenterReenableValidation(t *testing.T) {
 			"must be 'optional' or 'required'",
 		},
 		{
+			"stale invalid build_disruption_budget_nodes in currentParams caught on re-enable",
+			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
+			map[string]string{"karpenter_auth_mode": "true", "karpenter_build_disruption_budget_nodes": "200%"},
+			true,
+			"karpenter_build_disruption_budget_nodes must be a node count or a percentage",
+		},
+		{
 			"valid currentParams pass re-enable validation",
 			map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"},
 			map[string]string{"karpenter_auth_mode": "true", "karpenter_capacity_types": "on-demand"},
@@ -2284,6 +2301,7 @@ func TestValidateAndMutateParams_EmptyParamRejection(t *testing.T) {
 		{"empty karpenter_build_consolidate_after", "karpenter_build_consolidate_after", "", true, "requires an explicit value"},
 		{"empty karpenter_node_expiry", "karpenter_node_expiry", "", true, "requires an explicit value"},
 		{"empty karpenter_disruption_budget_nodes", "karpenter_disruption_budget_nodes", "", true, "requires an explicit value"},
+		{"empty karpenter_build_disruption_budget_nodes", "karpenter_build_disruption_budget_nodes", "", true, "requires an explicit value"},
 		{"empty karpenter_auth_mode", "karpenter_auth_mode", "", true, "requires an explicit value"},
 		{"empty karpenter_enabled", "karpenter_enabled", "", true, "requires an explicit value"},
 		// Non-karpenter params also rejected when empty
