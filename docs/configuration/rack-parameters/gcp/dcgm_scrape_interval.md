@@ -44,4 +44,4 @@ Updating parameters... OK
 - [gpu_observability_chart_version](/configuration/rack-parameters/gcp/gpu_observability_chart_version): Pin the DCGM exporter chart version.
 
 ## Version Requirements
-This parameter requires at least Convox rack version `3.25.2`.
+This parameter requires at least Convox rack version `3.25.3`.

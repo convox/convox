@@ -42,4 +42,4 @@ You must enable [`gpu_observability_enable`](/configuration/rack-parameters/gcp/
 - [dcgm_scrape_interval](/configuration/rack-parameters/gcp/dcgm_scrape_interval): Scrape interval hint set as a pod annotation on the DCGM exporter.
 
 ## Version Requirements
-This feature requires at least Convox rack version `3.25.2`.
+This feature requires at least Convox rack version `3.25.3`.

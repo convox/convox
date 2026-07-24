@@ -15,6 +15,7 @@ func TestGPUIntanceList(t *testing.T) {
 		"a2-megagpu-16g", // A100
 		"a3-highgpu-8g",  // H100
 		"a4-highgpu-8g",  // B200
+		"a4x-highgpu-4g", // GB200
 		"g4-standard-48", // RTX PRO 6000
 		"n1-standard-4",  // GPU-attachable but undetectable by name
 		"e2-standard-4",  // CPU only
@@ -31,6 +32,7 @@ func TestGPUIntanceList(t *testing.T) {
 		"a2-megagpu-16g",
 		"a3-highgpu-8g",
 		"a4-highgpu-8g",
+		"a4x-highgpu-4g",
 		"g4-standard-48",
 		"G2-STANDARD-4",
 	}, got)
