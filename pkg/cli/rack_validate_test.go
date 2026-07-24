@@ -2,9 +2,31 @@ package cli
 
 import (
 	"encoding/base64"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
+
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	fn()
+
+	w.Close()
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	return string(out)
+}
 
 func TestLevenshtein(t *testing.T) {
 	tests := []struct {
@@ -739,5 +761,101 @@ func TestAdditionalNodeGroupsConfigTpuValidation(t *testing.T) {
 				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestValidateAndMutateParams_CloudwatchDisableWarnings(t *testing.T) {
+	const warnA = "cloudwatch_disable stops Convox"
+	const warnB = "disabling fluentd stops application logs"
+
+	cases := []struct {
+		name         string
+		params       map[string]string
+		current      map[string]string
+		provider     string
+		wantContains []string
+		wantAbsent   []string
+	}{
+		{
+			name:         "A fires: cloudwatch_disable=true, fluentd enabled",
+			params:       map[string]string{"cloudwatch_disable": "true"},
+			wantContains: []string{warnA},
+			wantAbsent:   []string{warnB},
+		},
+		{
+			name:         "A fires for non-canonical bool form",
+			params:       map[string]string{"cloudwatch_disable": "1"},
+			wantContains: []string{warnA},
+		},
+		{
+			name:         "B fires: fluentd_disable=true, cloudwatch enabled",
+			params:       map[string]string{"fluentd_disable": "true"},
+			wantContains: []string{warnB},
+			wantAbsent:   []string{warnA},
+		},
+		{
+			name:         "B fires for non-canonical bool form",
+			params:       map[string]string{"fluentd_disable": "1"},
+			wantContains: []string{warnB},
+		},
+		{
+			name:       "both set in one call fires neither",
+			params:     map[string]string{"fluentd_disable": "true", "cloudwatch_disable": "true"},
+			wantAbsent: []string{warnA, warnB},
+		},
+		{
+			name:       "A suppressed when fluentd already disabled",
+			params:     map[string]string{"cloudwatch_disable": "true"},
+			current:    map[string]string{"fluentd_disable": "true"},
+			wantAbsent: []string{warnA, warnB},
+		},
+		{
+			name:       "B suppressed when cloudwatch already disabled",
+			params:     map[string]string{"fluentd_disable": "true"},
+			current:    map[string]string{"cloudwatch_disable": "true"},
+			wantAbsent: []string{warnA, warnB},
+		},
+		{
+			name:       "no warning on unrelated param set",
+			params:     map[string]string{"cost_tracking_enable": "true"},
+			wantAbsent: []string{warnA, warnB},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			current := tc.current
+			if current == nil {
+				current = map[string]string{}
+			}
+			out := captureStderr(t, func() {
+				if err := validateAndMutateParams(tc.params, "aws", current, false); err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			})
+			for _, s := range tc.wantContains {
+				if !strings.Contains(out, s) {
+					t.Errorf("expected stderr to contain %q, got %q", s, out)
+				}
+			}
+			for _, s := range tc.wantAbsent {
+				if strings.Contains(out, s) {
+					t.Errorf("expected stderr NOT to contain %q, got %q", s, out)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_CloudwatchDisableBoolValidation(t *testing.T) {
+	captureStderr(t, func() {
+		for _, v := range []string{"true", "false", "1", "0", "t", "F"} {
+			if err := validateAndMutateParams(map[string]string{"cloudwatch_disable": v}, "aws", map[string]string{}, false); err != nil {
+				t.Errorf("cloudwatch_disable=%q: unexpected error: %v", v, err)
+			}
+		}
+	})
+	if err := validateAndMutateParams(map[string]string{"cloudwatch_disable": "maybe"}, "aws", map[string]string{}, false); err == nil {
+		t.Error("cloudwatch_disable=maybe: expected error, got nil")
 	}
 }

@@ -41,6 +41,7 @@ module "api" {
   ecr_full_access                           = var.ecr_full_access
   ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  cloudwatch_disable                        = var.cloudwatch_disable
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
   efs_file_system_id                        = var.efs_file_system_id

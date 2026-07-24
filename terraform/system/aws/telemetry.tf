@@ -18,6 +18,7 @@ locals {
     buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
     cert_duration                             = var.cert_duration
     cidr                                      = var.cidr
+    cloudwatch_disable                        = var.cloudwatch_disable
     contour_cpu_request                       = var.contour_cpu_request
     contour_internal_tls                      = var.contour_internal_tls
     contour_memory_request                    = var.contour_memory_request
@@ -172,6 +173,7 @@ locals {
     buildkit_host_path_cache_enable           = "false"
     cert_duration                             = "2160h"
     cidr                                      = "10.1.0.0/16"
+    cloudwatch_disable                        = "false"
     contour_cpu_request                       = "100m"
     contour_internal_tls                      = "true"
     contour_memory_request                    = "128Mi"
