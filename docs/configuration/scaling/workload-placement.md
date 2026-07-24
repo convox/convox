@@ -77,7 +77,7 @@ Each node group configuration supports the following fields:
 | `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
 | `zones` | No | Comma-separated list of availability zones (Azure and GCP) | None |
 
-GCP node groups support additional fields (`gpu_type`, `gpu_count`, `disk_type`), and `min_size`/`max_size` apply per zone (GCP racks use regional clusters) rather than as totals — see [Rack Parameters: additional_node_groups_config (GCP)](/configuration/rack-parameters/gcp/additional_node_groups_config).
+GCP node groups support additional fields (`gpu_type`, `gpu_count`, `disk_type`), and `min_size`/`max_size` apply per zone (GCP racks use regional clusters) rather than as totals. See [Rack Parameters: additional_node_groups_config (GCP)](/configuration/rack-parameters/gcp/additional_node_groups_config).
 
 #### About the `id` field
 

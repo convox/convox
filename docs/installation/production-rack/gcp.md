@@ -71,7 +71,7 @@ $ convox rack install gcp <name> [param1=value1]...
 
 | Name          | Default         | Description                                                                              |
 | ------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| **additional_node_groups_config** |   | JSON definition of additional node pools, including GPU pools — see [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) |
+| **additional_node_groups_config** |   | JSON definition of additional node pools, including GPU pools, see [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) |
 | **cert_duration** | **2160h**         | Certificate renewal period                                                                 |
 | **node_type**     | **n1-standard-1** | Node instance type                                                                         |
 | **preemptible**   | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances   |
