@@ -74,7 +74,8 @@ var awsKnownParams = map[string]bool{
 	"karpenter_arch": true, "karpenter_auth_mode": true,
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
-	"karpenter_build_instance_sizes": true, "karpenter_build_memory_limit_gb": true,
+	"karpenter_build_disruption_budget_nodes": true,
+	"karpenter_build_instance_sizes":          true, "karpenter_build_memory_limit_gb": true,
 	"karpenter_build_imds_tokens": true, "karpenter_build_imds_hop_limit": true,
 	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
 	"karpenter_config": true, "karpenter_consolidate_after": true,
@@ -254,34 +255,35 @@ var paramGroups = map[string]map[string]bool{
 		"tags":                            true,
 	},
 	"karpenter": {
-		"additional_karpenter_nodepools_config": true,
-		"karpenter_arch":                        true,
-		"karpenter_auth_mode":                   true,
-		"karpenter_build_capacity_types":        true,
-		"karpenter_build_consolidate_after":     true,
-		"karpenter_build_cpu_limit":             true,
-		"karpenter_build_instance_families":     true,
-		"karpenter_build_instance_sizes":        true,
-		"karpenter_build_memory_limit_gb":       true,
-		"karpenter_build_node_labels":           true,
-		"karpenter_capacity_types":              true,
-		"karpenter_config":                      true,
-		"karpenter_consolidate_after":           true,
-		"karpenter_consolidation_enabled":       true,
-		"karpenter_cpu_limit":                   true,
-		"karpenter_disruption_budget_nodes":     true,
-		"karpenter_enabled":                     true,
-		"karpenter_instance_families":           true,
-		"karpenter_instance_sizes":              true,
-		"karpenter_memory_limit_gb":             true,
-		"karpenter_node_disk":                   true,
-		"karpenter_node_expiry":                 true,
-		"karpenter_node_labels":                 true,
-		"karpenter_node_os":                     true,
-		"karpenter_node_overlays_config":        true,
-		"karpenter_node_taints":                 true,
-		"karpenter_node_volume_type":            true,
-		"keda_enable":                           true,
+		"additional_karpenter_nodepools_config":   true,
+		"karpenter_arch":                          true,
+		"karpenter_auth_mode":                     true,
+		"karpenter_build_capacity_types":          true,
+		"karpenter_build_consolidate_after":       true,
+		"karpenter_build_cpu_limit":               true,
+		"karpenter_build_disruption_budget_nodes": true,
+		"karpenter_build_instance_families":       true,
+		"karpenter_build_instance_sizes":          true,
+		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_node_labels":             true,
+		"karpenter_capacity_types":                true,
+		"karpenter_config":                        true,
+		"karpenter_consolidate_after":             true,
+		"karpenter_consolidation_enabled":         true,
+		"karpenter_cpu_limit":                     true,
+		"karpenter_disruption_budget_nodes":       true,
+		"karpenter_enabled":                       true,
+		"karpenter_instance_families":             true,
+		"karpenter_instance_sizes":                true,
+		"karpenter_memory_limit_gb":               true,
+		"karpenter_node_disk":                     true,
+		"karpenter_node_expiry":                   true,
+		"karpenter_node_labels":                   true,
+		"karpenter_node_os":                       true,
+		"karpenter_node_overlays_config":          true,
+		"karpenter_node_taints":                   true,
+		"karpenter_node_volume_type":              true,
+		"keda_enable":                             true,
 	},
 	"gpu": {
 		"additional_karpenter_nodepools_config": true, // dual-listed in karpenter
@@ -399,19 +401,20 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"scaling": {
 		// v3 native (snake_case)
-		"build_node_min_count":                 true,
-		"high_availability":                    true,
-		"karpenter_disruption_budget_nodes":    true,
-		"karpenter_enabled":                    true,
-		"keda_enable":                          true,
-		"max_on_demand_count":                  true,
-		"min_on_demand_count":                  true,
-		"node_max_unavailable_percentage":      true,
-		"pdb_default_min_available_percentage": true,
-		"schedule_rack_scale_down":             true,
-		"schedule_rack_scale_up":               true,
-		"terraform_update_timeout":             true,
-		"vpa_enable":                           true,
+		"build_node_min_count":                    true,
+		"high_availability":                       true,
+		"karpenter_build_disruption_budget_nodes": true, // dual-listed in build
+		"karpenter_disruption_budget_nodes":       true,
+		"karpenter_enabled":                       true,
+		"keda_enable":                             true,
+		"max_on_demand_count":                     true,
+		"min_on_demand_count":                     true,
+		"node_max_unavailable_percentage":         true,
+		"pdb_default_min_available_percentage":    true,
+		"schedule_rack_scale_down":                true,
+		"schedule_rack_scale_up":                  true,
+		"terraform_update_timeout":                true,
+		"vpa_enable":                              true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"Autoscale":                      true,
 		"AutoscaleExtra":                 true,
@@ -480,23 +483,24 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"build": {
 		// v3 native (snake_case)
-		"additional_build_groups_config":    true,
-		"build_disable_convox_resolver":     true,
-		"build_node_enabled":                true,
-		"build_node_min_count":              true,
-		"build_node_minimal_role_enabled":   true, // dual-listed in security
-		"build_node_type":                   true,
-		"buildkit_enabled":                  true,
-		"buildkit_host_path_cache_enable":   true,
-		"karpenter_build_capacity_types":    true,
-		"karpenter_build_consolidate_after": true,
-		"karpenter_build_cpu_limit":         true,
-		"karpenter_build_imds_hop_limit":    true, // dual-listed in security
-		"karpenter_build_imds_tokens":       true, // dual-listed in security
-		"karpenter_build_instance_families": true,
-		"karpenter_build_instance_sizes":    true,
-		"karpenter_build_memory_limit_gb":   true,
-		"karpenter_build_node_labels":       true,
+		"additional_build_groups_config":          true,
+		"build_disable_convox_resolver":           true,
+		"build_node_enabled":                      true,
+		"build_node_min_count":                    true,
+		"build_node_minimal_role_enabled":         true, // dual-listed in security
+		"build_node_type":                         true,
+		"buildkit_enabled":                        true,
+		"buildkit_host_path_cache_enable":         true,
+		"karpenter_build_capacity_types":          true,
+		"karpenter_build_consolidate_after":       true,
+		"karpenter_build_cpu_limit":               true,
+		"karpenter_build_disruption_budget_nodes": true, // dual-listed in scaling
+		"karpenter_build_imds_hop_limit":          true, // dual-listed in security
+		"karpenter_build_imds_tokens":             true, // dual-listed in security
+		"karpenter_build_instance_families":       true,
+		"karpenter_build_instance_sizes":          true,
+		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_node_labels":             true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"BuildCpu":                    true,
 		"BuildImage":                  true,
@@ -1086,9 +1090,9 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 	}
 
 	if np.DisruptionBudgetNodes != nil {
-		budgetRe := regexp.MustCompile(`^\d+%?$`)
+		budgetRe := regexp.MustCompile(`^((100|[0-9]{1,2})%|[0-9]+)$`)
 		if !budgetRe.MatchString(*np.DisruptionBudgetNodes) {
-			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a number or percentage", np.Name)
+			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a node count or a percentage from 0%% to 100%%", np.Name)
 		}
 	}
 
@@ -1711,6 +1715,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"karpenter_capacity_types", "karpenter_cpu_limit", "karpenter_memory_limit_gb",
 			"karpenter_consolidate_after", "karpenter_build_consolidate_after",
 			"karpenter_node_expiry", "karpenter_disruption_budget_nodes",
+			"karpenter_build_disruption_budget_nodes",
 			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
 			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
 			"karpenter_node_labels", "karpenter_build_node_labels",
@@ -1785,10 +1790,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
-	if v, ok := params["karpenter_disruption_budget_nodes"]; ok && v != "" {
-		budgetRe := regexp.MustCompile(`^\d+%?$`)
-		if !budgetRe.MatchString(v) {
-			return fmt.Errorf("karpenter_disruption_budget_nodes must be a number or percentage (e.g. 10%%)")
+	// Pattern matches the Karpenter NodePool CRD validation for disruption budgets,
+	// so an out-of-range percentage fails here instead of at terraform apply.
+	budgetRe := regexp.MustCompile(`^((100|[0-9]{1,2})%|[0-9]+)$`)
+	for _, bk := range []string{"karpenter_disruption_budget_nodes", "karpenter_build_disruption_budget_nodes"} {
+		if v, ok := params[bk]; ok && v != "" {
+			if !budgetRe.MatchString(v) {
+				return fmt.Errorf("%s must be a node count or a percentage from 0%% to 100%% (e.g. 100%%)", bk)
+			}
 		}
 	}
 

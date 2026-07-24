@@ -74,6 +74,7 @@ locals {
     karpenter_build_capacity_types            = var.karpenter_build_capacity_types
     karpenter_build_consolidate_after         = var.karpenter_build_consolidate_after
     karpenter_build_cpu_limit                 = var.karpenter_build_cpu_limit
+    karpenter_build_disruption_budget_nodes   = var.karpenter_build_disruption_budget_nodes
     karpenter_build_imds_hop_limit            = var.karpenter_build_imds_hop_limit
     karpenter_build_imds_tokens               = var.karpenter_build_imds_tokens
     karpenter_build_instance_families         = var.karpenter_build_instance_families
@@ -227,6 +228,7 @@ locals {
     karpenter_build_capacity_types            = "on-demand"
     karpenter_build_consolidate_after         = "60s"
     karpenter_build_cpu_limit                 = "32"
+    karpenter_build_disruption_budget_nodes   = "100%"
     karpenter_build_imds_hop_limit            = "0"
     karpenter_build_imds_tokens               = ""
     karpenter_build_instance_families         = ""

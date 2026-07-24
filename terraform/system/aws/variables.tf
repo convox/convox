@@ -383,6 +383,11 @@ variable "karpenter_build_consolidate_after" {
   default = "60s"
 }
 
+variable "karpenter_build_disruption_budget_nodes" {
+  type    = string
+  default = "100%"
+}
+
 variable "karpenter_build_node_labels" {
   type    = string
   default = ""

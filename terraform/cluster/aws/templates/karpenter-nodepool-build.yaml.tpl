@@ -44,3 +44,8 @@ spec:
   disruption:
     consolidationPolicy: WhenEmpty
     consolidateAfter: ${karpenter_build_consolidate_after}
+    budgets:
+      - nodes: "${karpenter_build_disruption_budget_nodes}"
+        reasons: ["Empty"]
+      - nodes: "10%"
+        reasons: ["Drifted", "Underutilized"]
