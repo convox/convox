@@ -39,7 +39,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 | `zones` | No | Comma-separated list of GCP zones (e.g., `us-east1-b,us-east1-c`) | None (region default) |
 | `gpu_type` | No | NVIDIA accelerator type to attach (e.g., `nvidia-l4`, `nvidia-tesla-t4`). When set, GKE installs the NVIDIA driver and device plugin automatically and taints the pool with `nvidia.com/gpu=present:NoSchedule` | None |
 | `gpu_count` | No | Number of GPUs to attach per node (only applies when `gpu_type` is set) | 1 |
-| `tpu_topology` | No | TPU slice topology (e.g., `1x1`, `2x2`, `2x4`) for a Cloud TPU node pool. When set, the pool gets a `COMPACT` placement policy with this topology. Use a TPU machine type (e.g., `ct5lp-hightpu-8t`) as `type`. Single-host slices only | None |
+| `tpu_topology` | No | TPU slice topology for a Cloud TPU node pool, matched to the machine type (e.g., `2x4` for `ct5lp-hightpu-8t`). When set, the pool gets a `COMPACT` placement policy with this topology. Requires a TPU machine type as `type`. Single-host slices only | None |
 
 > **Counts are per zone, not totals.** GCP racks use regional GKE clusters, so `min_size` and `max_size` apply to each zone in the region. In a 3-zone region, `min_size: 1` runs 3 nodes and `max_size: 100` allows up to 300. This differs from AWS and Azure, where the same values are totals. For expensive pools (such as GPU pools), set `min_size: 0` or pin a single zone with `zones`.
 
