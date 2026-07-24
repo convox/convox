@@ -108,7 +108,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Convox GPU — Cluster Overview",
+  "title": "Convox GPU: Cluster Overview",
   "uid": "convox-gpu-cluster-overview",
   "version": 1,
   "weekStart": ""

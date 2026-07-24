@@ -114,7 +114,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Convox GPU — Health & Errors",
+  "title": "Convox GPU: Health & Errors",
   "uid": "convox-gpu-health",
   "version": 1,
   "weekStart": ""

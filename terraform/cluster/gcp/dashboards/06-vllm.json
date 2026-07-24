@@ -1,7 +1,7 @@
 {
   "annotations": {"list": []},
   "convox_source_check": "upstream",
-  "description": "Adapted from https://github.com/vllm-project/vllm — Apache License 2.0. See examples/gpu-llm/grafana/LICENSE-vllm.txt for the full upstream license text. Convox-authored extension panels are tagged with `_source: \"convox-authored:*\"` annotations.",
+  "description": "Adapted from https://github.com/vllm-project/vllm, Apache License 2.0. See examples/gpu-llm/grafana/LICENSE-vllm.txt for the full upstream license text. Convox-authored extension panels are tagged with `_source: \"convox-authored:*\"` annotations.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -97,7 +97,7 @@
   "time": {"from": "now-1h", "to": "now"},
   "timepicker": {},
   "timezone": "",
-  "title": "Convox GPU — vLLM Inference",
+  "title": "Convox GPU: vLLM Inference",
   "uid": "convox-gpu-vllm",
   "version": 1,
   "weekStart": ""

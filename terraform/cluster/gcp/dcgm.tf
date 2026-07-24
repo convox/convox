@@ -1,10 +1,6 @@
-# DCGM exporter — NVIDIA GPU metrics on port 9400.
-# Chart: nvidia/dcgm-exporter (no CRDs, no webhooks, fully reversible).
-# Gate: gpu_observability_enable. GKE manages the NVIDIA device plugin, so there is
-# no nvidia_device_plugin_enable gate here (mirrors cluster/aws/dcgm.tf otherwise).
-# Metrics are exposed via pod annotations for a user-installed or Google Managed
-# Prometheus to scrape; the Convox GCP rack does not run its own Prometheus.
-# Custom counter CSV overrides stock defaults via extraConfigMapVolumes.
+# DCGM exporter: NVIDIA GPU metrics on port 9400. Chart nvidia/dcgm-exporter (no CRDs/webhooks, reversible).
+# Gated on gpu_observability_enable only; GKE manages the device plugin, so no nvidia_device_plugin_enable
+# gate here (mirrors cluster/aws/dcgm.tf otherwise). Custom counter CSV loaded via extraConfigMapVolumes.
 
 resource "kubernetes_config_map" "dcgm_metrics_convox" {
   provider = kubernetes.direct

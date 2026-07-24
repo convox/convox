@@ -603,6 +603,16 @@ func TestValidateRackParams_GPUObservability_RequiresDevicePlugin(t *testing.T) 
 		}
 	})
 
+	t.Run("gcp accepts without device plugin (GKE manages it)", func(t *testing.T) {
+		// GCP has no nvidia_device_plugin_enable param; GKE installs the device
+		// plugin natively, so the precondition must not apply.
+		params := map[string]string{"gpu_observability_enable": "true"}
+		err := validateAndMutateParams(params, "gcp", map[string]string{}, false)
+		if err != nil {
+			t.Errorf("gcp gpu_observability_enable=true should be accepted without nvidia_device_plugin_enable, got: %v", err)
+		}
+	})
+
 	t.Run("disable gpu_observability_enable does not require device plugin", func(t *testing.T) {
 		params := map[string]string{"gpu_observability_enable": "false"}
 		current := map[string]string{
