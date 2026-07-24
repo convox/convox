@@ -66,6 +66,60 @@ func TestStreamLogsStopsOnMissingLogGroup(t *testing.T) {
 	m.AssertNumberOfCalls(t, "FilterLogEvents", 3)
 }
 
+// With cloudwatch_disable=true, Log short-circuits before any CloudWatch call,
+// so no log group is created or written. A mock with no expectations panics if
+// the guard is bypassed.
+func TestLogCloudwatchDisableShortCircuits(t *testing.T) {
+	m := &mocks.CloudWatchLogsAPI{}
+	p := &Provider{CloudWatchLogs: m, CloudwatchDisable: true}
+
+	if err := p.Log("app", "stream", time.Now(), "msg"); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	m.AssertNumberOfCalls(t, "PutLogEvents", 0)
+	m.AssertNumberOfCalls(t, "CreateLogGroup", 0)
+}
+
+func TestAppAndSystemLogsCloudwatchDisableReturnEmpty(t *testing.T) {
+	m := &mocks.CloudWatchLogsAPI{}
+	p := &Provider{CloudWatchLogs: m, CloudwatchDisable: true}
+
+	for _, tc := range []struct {
+		name string
+		open func() (io.ReadCloser, error)
+	}{
+		{"AppLogs", func() (io.ReadCloser, error) { return p.AppLogs("app", structs.LogsOptions{}) }},
+		{"SystemLogs", func() (io.ReadCloser, error) { return p.SystemLogs(structs.LogsOptions{}) }},
+	} {
+		r, err := tc.open()
+		if err != nil {
+			t.Fatalf("%s: expected nil error, got %v", tc.name, err)
+		}
+		b, err := io.ReadAll(r)
+		if err != nil {
+			t.Fatalf("%s: read: %v", tc.name, err)
+		}
+		if len(b) != 0 {
+			t.Fatalf("%s: expected empty reader, got %q", tc.name, b)
+		}
+	}
+	m.AssertNumberOfCalls(t, "FilterLogEvents", 0)
+}
+
+func TestUpdateOrDisableLogGroupRetentionCloudwatchDisable(t *testing.T) {
+	m := &mocks.CloudWatchLogsAPI{}
+	p := &Provider{CloudWatchLogs: m, CloudwatchDisable: true}
+
+	if err := p.UpdateOrDisableLogGroupRetention("app", 30, false); err != nil {
+		t.Fatalf("set retention: expected nil, got %v", err)
+	}
+	if err := p.UpdateOrDisableLogGroupRetention("app", 0, true); err != nil {
+		t.Fatalf("disable retention: expected nil, got %v", err)
+	}
+	m.AssertNumberOfCalls(t, "PutRetentionPolicy", 0)
+	m.AssertNumberOfCalls(t, "DeleteRetentionPolicy", 0)
+}
+
 // A successful FilterLogEvents must reset the consecutive-miss counter, so an
 // eventual-consistency blip while a group is being created never kills a tail.
 func TestStreamLogsResourceNotFoundResetsOnSuccess(t *testing.T) {

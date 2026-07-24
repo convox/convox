@@ -83,6 +83,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "cloudwatch_disable" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_docker_hub_cache_prefix" {
   type    = string
   default = ""

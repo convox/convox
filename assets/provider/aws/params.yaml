@@ -485,6 +485,10 @@ Groups:
         default: "false"
         type: boolean
         description: "Stops shipping your logs to CloudWatch. &l Enable this if you use another logging service. &l"
+      - name: cloudwatch_disable
+        default: "false"
+        type: boolean
+        description: "Stops Convox from creating, writing, or reading its own CloudWatch log groups (/convox/<rack>/<app>). &l Turn this on together with fluentd_disable if you route logs elsewhere; on its own it only hides the rack-side CloudWatch view. &l Note: convox logs and convox rack logs return empty while this is on. &l"
       - name: fluentd_memory
         default: 200Mi
         type: string

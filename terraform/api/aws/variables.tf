@@ -93,6 +93,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "cloudwatch_disable" {
+  type    = bool
+  default = false
+}
+
 variable "efs_file_system_id" {
   type = string
 }
