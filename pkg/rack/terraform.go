@@ -642,54 +642,63 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nod
 		}
 		prefix := fmt.Sprintf("%s-additional-%d-", cluster, key)
 
-		name := ""
+		var matches []string
 		for _, n := range listed.Nodegroups {
 			if strings.HasPrefix(aws.StringValue(n), prefix) {
-				name = aws.StringValue(n)
-				break
+				matches = append(matches, aws.StringValue(n))
 			}
 		}
-		if name == "" {
+		if len(matches) == 0 {
 			continue
 		}
 
-		desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
-			ClusterName:   aws.String(cluster),
-			NodegroupName: aws.String(name),
-		})
-		if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
-			nodeGroupDebugf("describe node group %s: %v", name, err)
-			continue
+		// create_before_destroy can leave more than one node group per pool, and
+		// which one survives is not knowable here, so raise every match: missing
+		// the survivor is what blocks the apply.
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: node group id %d matches %d node groups: %s\n", key, len(matches), strings.Join(matches, ", "))
 		}
 
 		newMin := int64(*g.MinSize)
-		currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
-		currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
 
-		if newMin <= currentDesired {
-			continue
-		}
+		for _, name := range matches {
+			desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
+				ClusterName:   aws.String(cluster),
+				NodegroupName: aws.String(name),
+			})
+			if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
+				nodeGroupDebugf("describe node group %s: %v", name, err)
+				continue
+			}
 
-		// widen max too: EKS validates desired <= max against the pre-apply live max.
-		scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
-		if newMin > currentMax {
-			scaling.MaxSize = aws.Int64(newMin)
-		}
+			currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
+			currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
 
-		out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
-			ClusterName:   aws.String(cluster),
-			NodegroupName: aws.String(name),
-			ScalingConfig: scaling,
-		})
-		if err != nil {
-			nodeGroupDebugf("raise desired on %s: %v", name, err)
-			continue
-		}
+			if newMin <= currentDesired {
+				continue
+			}
 
-		fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
+			// widen max too: EKS validates desired <= max against the pre-apply live max.
+			scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
+			if newMin > currentMax {
+				scaling.MaxSize = aws.Int64(newMin)
+			}
 
-		if out.Update != nil {
-			pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
+			out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
+				ClusterName:   aws.String(cluster),
+				NodegroupName: aws.String(name),
+				ScalingConfig: scaling,
+			})
+			if err != nil {
+				nodeGroupDebugf("raise desired on %s: %v", name, err)
+				continue
+			}
+
+			fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
+
+			if out.Update != nil {
+				pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
+			}
 		}
 	}
 
