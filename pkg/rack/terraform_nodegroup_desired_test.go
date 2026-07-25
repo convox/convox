@@ -143,6 +143,77 @@ func TestReconcileNodeGroupDesired(t *testing.T) {
 			wantDesired: 3,
 		},
 		{
+			name:       "create before destroy leaves two groups sharing a prefix, both get raised",
+			nodegroups: []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-additional-0-aaaa": scaling(1, 1, 5),
+				"rack-additional-0-bbbb": scaling(1, 1, 5),
+			},
+			groups:      []nodeGroupDesired{{Id: intp(0), MinSize: intp(3), MaxSize: intp(9)}},
+			wantNames:   []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			wantDesired: 3,
+		},
+		{
+			name:       "a shared prefix on one id does not disturb another id",
+			nodegroups: []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb", "rack-additional-1-cccc"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-additional-0-aaaa": scaling(1, 1, 5),
+				"rack-additional-0-bbbb": scaling(1, 1, 5),
+				"rack-additional-1-cccc": scaling(1, 1, 5),
+			},
+			groups: []nodeGroupDesired{
+				{Id: intp(0), MinSize: intp(3), MaxSize: intp(9)},
+				{Id: intp(1), MinSize: intp(3), MaxSize: intp(9)},
+			},
+			wantNames:   []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb", "rack-additional-1-cccc"},
+			wantDesired: 3,
+		},
+		{
+			name:       "a build node group is not treated as a shared prefix match",
+			nodegroups: []string{"rack-build-additional-0-aaaa", "rack-additional-0-bbbb"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-build-additional-0-aaaa": scaling(1, 1, 5),
+				"rack-additional-0-bbbb":       scaling(1, 1, 5),
+			},
+			groups:      []nodeGroupDesired{{Id: intp(0), MinSize: intp(3), MaxSize: intp(9)}},
+			wantNames:   []string{"rack-additional-0-bbbb"},
+			wantDesired: 3,
+		},
+		{
+			name:       "only the under provisioned side of a shared prefix is raised",
+			nodegroups: []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-additional-0-aaaa": scaling(3, 1, 5),
+				"rack-additional-0-bbbb": scaling(1, 1, 5),
+			},
+			groups:      []nodeGroupDesired{{Id: intp(0), MinSize: intp(3), MaxSize: intp(9)}},
+			wantNames:   []string{"rack-additional-0-bbbb"},
+			wantDesired: 3,
+		},
+		{
+			name:       "describe failure on one side of a shared prefix still raises the other",
+			nodegroups: []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-additional-0-bbbb": scaling(1, 1, 5),
+			},
+			groups:      []nodeGroupDesired{{Id: intp(0), MinSize: intp(3), MaxSize: intp(9)}},
+			wantNames:   []string{"rack-additional-0-bbbb"},
+			wantDesired: 3,
+		},
+		{
+			name:       "both sides of a shared prefix widen max independently",
+			nodegroups: []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-additional-0-aaaa": scaling(1, 1, 2),
+				"rack-additional-0-bbbb": scaling(1, 1, 2),
+			},
+			groups:      []nodeGroupDesired{{Id: intp(0), MinSize: intp(8), MaxSize: intp(20)}},
+			wantNames:   []string{"rack-additional-0-aaaa", "rack-additional-0-bbbb"},
+			wantDesired: 8,
+			wantMaxSet:  true,
+			wantMax:     8,
+		},
+		{
 			name:    "list error is best-effort no-op",
 			listErr: fmt.Errorf("throttled"),
 			groups:  []nodeGroupDesired{{Id: intp(0), MinSize: intp(3)}},
@@ -167,11 +238,11 @@ func TestReconcileNodeGroupDesired(t *testing.T) {
 			}
 			assert.Equal(t, tc.wantNames, gotNames)
 
-			if tc.wantMaxSet {
-				assert.Equal(t, tc.wantMax, aws.Int64Value(f.updates[0].ScalingConfig.MaxSize))
-			} else {
-				for _, u := range f.updates {
-					assert.Nil(t, u.ScalingConfig.MaxSize)
+			for _, u := range f.updates {
+				if tc.wantMaxSet {
+					assert.Equal(t, tc.wantMax, aws.Int64Value(u.ScalingConfig.MaxSize), aws.StringValue(u.NodegroupName))
+				} else {
+					assert.Nil(t, u.ScalingConfig.MaxSize, aws.StringValue(u.NodegroupName))
 				}
 			}
 		})

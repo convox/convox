@@ -288,16 +288,16 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
   count = var.build_node_enabled && var.karpenter_enabled ? 1 : 0
 
   yaml_body = templatefile("${path.module}/templates/karpenter-nodepool-build.yaml.tpl", {
-    karpenter_node_expiry             = var.karpenter_node_expiry
-    karpenter_build_capacity_types    = var.karpenter_build_capacity_types
-    karpenter_build_instance_families = var.karpenter_build_instance_families
-    karpenter_build_instance_sizes    = var.karpenter_build_instance_sizes
-    karpenter_build_cpu_limit         = var.karpenter_build_cpu_limit
-    karpenter_build_memory_limit_gb   = var.karpenter_build_memory_limit_gb
-    karpenter_build_consolidate_after = var.karpenter_build_consolidate_after
+    karpenter_node_expiry                   = var.karpenter_node_expiry
+    karpenter_build_capacity_types          = var.karpenter_build_capacity_types
+    karpenter_build_instance_families       = var.karpenter_build_instance_families
+    karpenter_build_instance_sizes          = var.karpenter_build_instance_sizes
+    karpenter_build_cpu_limit               = var.karpenter_build_cpu_limit
+    karpenter_build_memory_limit_gb         = var.karpenter_build_memory_limit_gb
+    karpenter_build_consolidate_after       = var.karpenter_build_consolidate_after
     karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
-    karpenter_build_arch              = var.build_arm_type ? "arm64" : "amd64"
-    extra_labels                      = local.karpenter_build_extra_labels
+    karpenter_build_arch                    = var.build_arm_type ? "arm64" : "amd64"
+    extra_labels                            = local.karpenter_build_extra_labels
   })
 
   wait       = true
