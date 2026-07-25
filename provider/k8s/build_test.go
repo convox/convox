@@ -264,6 +264,49 @@ func TestBuildCreate(t *testing.T) {
 	})
 }
 
+func TestBuildCreateBuildArch(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
+		aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+		require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+			"convox.com/params": `{"BuildArch":"arm64"}`,
+		}))
+
+		_, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{})
+		require.NoError(t, err)
+
+		pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, pods.Items, 1)
+
+		envs := map[string]string{}
+		for _, e := range pods.Items[0].Spec.Containers[0].Env {
+			envs[e.Name] = e.Value
+		}
+		assert.Equal(t, "arm64", envs["BUILD_ARCHS"])
+	})
+
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
+		aa.On("Status", "rack1-app2", "app").Return("Creating", "R1234567", nil)
+
+		require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app2", map[string]string{
+			"convox.com/params": `{"BuildArch":"bogus"}`,
+		}))
+
+		_, err := p.BuildCreate("app2", "object://app2/object.tgz", structs.BuildCreateOptions{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid BuildArch")
+	})
+}
+
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := buildFixture(fixture)
 	if err != nil {
@@ -410,6 +453,52 @@ func TestBuildImportImage(t *testing.T) {
 			require.NotEmpty(t, authContents, "authfile must exist during skopeo invocation")
 			assert.Contains(t, authContents, "repo1", "authfile must scope to destination host")
 			assert.Contains(t, authContents, "dW4xOnB3MQ==", "authfile must carry base64(un1:pw1) for dest")
+		})
+	})
+
+	t.Run("MultiArchRackRelaysAllPlatforms", func(t *testing.T) {
+		t.Setenv("BUILD_ARCHS", "amd64,arm64")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build8", "basic"))
+
+			var capturedArgs []string
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				capturedArgs = append([]string(nil), args...)
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build8", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.NoError(t, err)
+
+			waitForBuildStatus(t, p, "app1", "build8", "complete")
+			assertArgsShape(t, capturedArgs)
+			assert.Contains(t, capturedArgs, "--all")
+		})
+	})
+
+	t.Run("SingleArchRackRelayUnchanged", func(t *testing.T) {
+		t.Setenv("BUILD_ARCHS", "")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build9", "basic"))
+
+			var capturedArgs []string
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				capturedArgs = append([]string(nil), args...)
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build9", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.NoError(t, err)
+
+			waitForBuildStatus(t, p, "app1", "build9", "complete")
+			assertArgsShape(t, capturedArgs)
+			assert.NotContains(t, capturedArgs, "--all")
 		})
 	})
 
