@@ -208,15 +208,28 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	}
 
 	args := []string{"build"}
-	args = append(args, "--frontend", "dockerfile.v0")                                // skipcq
-	args = append(args, "--local", fmt.Sprintf("context=%s", path))                   // skipcq
-	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))                // skipcq
-	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
+	args = append(args,
+		"--frontend", "dockerfile.v0",
+		"--local", fmt.Sprintf("context=%s", path),
+		"--local", fmt.Sprintf("dockerfile=%s", path),
+		"--opt", fmt.Sprintf("filename=%s", dockerfile),
+	) // skipcq
 	outputOpt := fmt.Sprintf("type=image,name=%s,push=true", tag)
 	if os.Getenv("PROVIDER") == "local" {
 		outputOpt = fmt.Sprintf("type=image,name=%s,push=true,registry.insecure=true", tag)
 	}
 	args = append(args, "--output", outputOpt) // skipcq
+
+	archs := common.BuildArchs(os.Getenv("BUILD_ARCHS"))
+	platformed := len(archs) > 0 && !bb.Development
+
+	if platformed {
+		platforms := make([]string, len(archs))
+		for i, a := range archs {
+			platforms[i] = "linux/" + a
+		}
+		args = append(args, "--opt", fmt.Sprintf("platform=%s", strings.Join(platforms, ","))) // skipcq
+	}
 
 	localCacheAdded := false
 
@@ -273,6 +286,9 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		}
 	} else {
 		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
+			if platformed && strings.Contains(bb.logs.String(), "no match for platform") {
+				return fmt.Errorf("an image in this build is not published for the requested build architectures (%s): set the BuildArch app parameter to an architecture the image supports (convox apps params set BuildArch=amd64 -a %s) or use multi-arch images", strings.Join(archs, ","), bb.App)
+			}
 			return err
 		}
 	}

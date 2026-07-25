@@ -90,6 +90,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"PROVIDER":                        os.Getenv("PROVIDER"),
 		"DISABLE_IMAGE_MANIFEST_CACHE":    os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
 		"BUILDKIT_HOST_PATH_CACHE_ENABLE": os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE"),
+		"BUILD_ARCHS":                     os.Getenv("BUILD_ARCHS"),
 		"RACK_URL":                        fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
 		"CONVOX_TID":                      p.ContextTID(),
 		// Propagate audit actor so build pod callbacks don't use the rack password as actor.
@@ -128,6 +129,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 			return nil, fmt.Errorf("invalid BuildArch: %s, must be amd64 or arm64", arch)
 		}
 		psOpts.BuildArch = options.String(arch)
+		env["BUILD_ARCHS"] = arch
 	}
 
 	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
@@ -253,7 +255,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		from := fmt.Sprintf("docker://%s:%s.%s", repo, service, build.Id)
 		to := fmt.Sprintf("oci-archive:%s/%s.%s.tar", tmp, service, build.Id)
 
-		if err := exec.Command("skopeo", "copy", "--src-creds", fmt.Sprintf("%s:%s", user, pass), from, to).Run(); err != nil {
+		if err := exec.Command("skopeo", "copy", "--all", "--src-creds", fmt.Sprintf("%s:%s", user, pass), from, to).Run(); err != nil { //nolint:gosec // fixed argv; refs derive from rack build records
 			return errors.WithStack(err)
 		}
 	}
@@ -591,13 +593,11 @@ func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest
 		}
 		dst := fmt.Sprintf("%s:%s.%s", repo, svc.Name, b.Id)
 
-		args := []string{
-			"copy",
-			"--authfile", authPath,
-			"--",
-			fmt.Sprintf("docker://%s", src),
-			fmt.Sprintf("docker://%s", dst),
+		args := []string{"copy", "--authfile", authPath}
+		if len(common.BuildArchs(os.Getenv("BUILD_ARCHS"))) > 1 {
+			args = append(args, "--all")
 		}
+		args = append(args, "--", fmt.Sprintf("docker://%s", src), fmt.Sprintf("docker://%s", dst))
 
 		ctx, cancel := context.WithTimeout(context.Background(), skopeoCopyTimeout)
 		out, runErr := skopeoExec(ctx, args...)
@@ -695,9 +695,9 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	for svc, img := range imgBySvc {
 		dst := fmt.Sprintf("%s:%s.%s", repo, svc, target.Id)
 
-		b, err := exec.Command("skopeo", "copy", "--dest-creds", fmt.Sprintf("%s:%s", user, pass), fmt.Sprintf("oci-archive:%s", img), fmt.Sprintf("docker://%s", dst)).CombinedOutput()
+		b, err := exec.Command("skopeo", "copy", "--all", "--dest-creds", fmt.Sprintf("%s:%s", user, pass), fmt.Sprintf("oci-archive:%s", img), fmt.Sprintf("docker://%s", dst)).CombinedOutput() //nolint:gosec // fixed argv; refs derive from rack build records
 		if err != nil {
-			errors.Errorf("failed to push image - %s\n%s", err.Error(), string(b))
+			return nil, errors.Errorf("failed to push image - %s\n%s", err.Error(), string(b))
 		}
 	}
 

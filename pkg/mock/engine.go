@@ -16,7 +16,7 @@ func (*TestEngine) AppIdles(_ string) (bool, error) {
 }
 
 func (*TestEngine) AppParameters() map[string]string {
-	return map[string]string{"Test": "foo"}
+	return map[string]string{"BuildArch": "", "Test": "foo"}
 }
 
 func (*TestEngine) Heartbeat() (map[string]interface{}, error) {

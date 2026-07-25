@@ -96,6 +96,13 @@ locals {
   additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
   karpenter_node_overlays        = try(jsondecode(var.karpenter_node_overlays_config), jsondecode(base64decode(var.karpenter_node_overlays_config)), [])
 
+  karpenter_arch_effective = var.karpenter_arch != "" ? var.karpenter_arch : (local.arm_type ? "arm64" : "amd64")
+  karpenter_arch_all = distinct(compact([for a in flatten([
+    split(",", local.karpenter_arch_effective),
+    [for np in local.additional_karpenter_nodepools : split(",", lookup(np, "arch", "amd64"))],
+  ]) : trimspace(a)]))
+  build_archs = var.karpenter_enabled == "true" && length(local.karpenter_arch_all) > 1 ? join(",", sort(local.karpenter_arch_all)) : ""
+
   public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
   private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
   eks_log_types        = var.eks_log_types == "" ? [] : split(",", var.eks_log_types)
@@ -150,7 +157,7 @@ module "cluster" {
   karpenter_instance_families         = var.karpenter_instance_families
   karpenter_instance_sizes            = var.karpenter_instance_sizes
   karpenter_capacity_types            = var.karpenter_capacity_types
-  karpenter_arch                      = var.karpenter_arch != "" ? var.karpenter_arch : (local.arm_type ? "arm64" : "amd64")
+  karpenter_arch                      = local.karpenter_arch_effective
   karpenter_cpu_limit                 = var.karpenter_cpu_limit
   karpenter_memory_limit_gb           = var.karpenter_memory_limit_gb
   karpenter_consolidation_enabled     = var.karpenter_consolidation_enabled
@@ -271,6 +278,7 @@ module "rack" {
   seccomp_default_enabled                   = var.seccomp_default_enabled
   karpenter_enabled                         = var.karpenter_enabled == "true"
   system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
+  build_archs                               = local.build_archs
   build_node_enabled                        = var.build_node_enabled
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   cluster                                   = module.cluster.id

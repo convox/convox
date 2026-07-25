@@ -7,6 +7,11 @@ variable "buildkit_enabled" {
   default = false
 }
 
+variable "build_archs" {
+  type    = string
+  default = ""
+}
+
 variable "build_disable_convox_resolver" {
   default = false
 }
