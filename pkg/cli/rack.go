@@ -1384,6 +1384,97 @@ func suggestParam(key string, known map[string]bool) string {
 	return best
 }
 
+var instanceFamilyRe = regexp.MustCompile(`^([a-z]+)([0-9]+)([a-z]*)$`)
+
+// familyArch classifies an EC2 instance family as amd64, arm64, or "" when
+// the naming convention cannot determine it (Graviton families carry a "g"
+// after the generation digit, e.g. c6g, t4g, im4gn, g5g).
+func familyArch(family string) string {
+	family = strings.ToLower(strings.TrimSpace(family))
+	if family == "a1" {
+		return "arm64"
+	}
+	m := instanceFamilyRe.FindStringSubmatch(family)
+	if m == nil {
+		return ""
+	}
+	if strings.Contains(m[3], "g") {
+		return "arm64"
+	}
+	return "amd64"
+}
+
+func instanceArch(instanceType string) string {
+	if instanceType == "" {
+		return ""
+	}
+	first := strings.Split(instanceType, ",")[0]
+	return familyArch(strings.Split(first, ".")[0])
+}
+
+func checkArchFamilies(param, families string, archs []string, archSource string) error {
+	if families == "" || len(archs) == 0 {
+		return nil
+	}
+	for _, f := range strings.Split(families, ",") {
+		cls := familyArch(f)
+		if cls == "" {
+			return nil
+		}
+		for _, a := range archs {
+			if a == cls {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("%s (%s) has no family matching the %s architecture (%s); Karpenter could not provision any matching node", param, families, archSource, strings.Join(archs, ","))
+}
+
+// validateKarpenterArchFamilies rejects arch/instance-family combinations that
+// make a Karpenter node pool unsatisfiable. Values not in the call fall back
+// to currentParams so stale combinations are caught when karpenter is enabled.
+func validateKarpenterArchFamilies(params, currentParams map[string]string) error {
+	effective := func(key string) string {
+		if v, ok := params[key]; ok {
+			return v
+		}
+		return currentParams[key]
+	}
+
+	relevant := false
+	for _, k := range []string{"karpenter_enabled", "karpenter_arch", "karpenter_instance_families", "karpenter_build_instance_families", "node_type", "build_node_type"} {
+		if _, ok := params[k]; ok {
+			relevant = true
+			break
+		}
+	}
+	if !relevant || effective("karpenter_enabled") != "true" {
+		return nil
+	}
+
+	workloadArchs := []string{}
+	if v := effective("karpenter_arch"); v != "" {
+		for _, a := range strings.Split(v, ",") {
+			workloadArchs = append(workloadArchs, strings.TrimSpace(a))
+		}
+	} else if a := instanceArch(effective("node_type")); a != "" {
+		workloadArchs = append(workloadArchs, a)
+	}
+	if err := checkArchFamilies("karpenter_instance_families", effective("karpenter_instance_families"), workloadArchs, "karpenter_arch"); err != nil {
+		return err
+	}
+
+	buildType := effective("build_node_type")
+	if buildType == "" {
+		buildType = effective("node_type")
+	}
+	buildArchs := []string{}
+	if a := instanceArch(buildType); a != "" {
+		buildArchs = append(buildArchs, a)
+	}
+	return checkArchFamilies("karpenter_build_instance_families", effective("karpenter_build_instance_families"), buildArchs, "build_node_type")
+}
+
 func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string, force bool) error {
 	// Install-only params — these define infrastructure that cannot be changed
 	// after rack creation without catastrophic consequences (network recreation,
@@ -1782,6 +1873,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
 			}
 		}
+	}
+
+	if err := validateKarpenterArchFamilies(params, currentParams); err != nil {
+		return err
 	}
 
 	for k, v := range params {

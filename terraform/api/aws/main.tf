@@ -57,6 +57,7 @@ module "k8s" {
     CERT_MANAGER                              = "true"
     CERT_MANAGER_ROLE_ARN                     = aws_iam_role.cert-manager.arn
     EFS_FILE_SYSTEM_ID                        = var.efs_file_system_id
+    BUILD_ARCHS                               = var.build_archs
     BUILD_DISABLE_CONVOX_RESOLVER             = var.build_disable_convox_resolver
     PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE      = var.pdb_default_min_available_percentage
     PROVIDER                                  = "aws"
