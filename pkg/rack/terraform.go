@@ -170,7 +170,12 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 		return err
 	}
 
-	if err := t.reconcileVarsWithModule(version); err != nil {
+	vars, err := t.vars()
+	if err != nil {
+		return err
+	}
+
+	if err := t.reconcileBeforeApply(version, vars); err != nil {
 		return err
 	}
 
@@ -396,11 +401,7 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
-	if err := t.reconcileVarsWithModule(release); err != nil {
-		return err
-	}
-
-	if err := t.reconcileAdditionalNodeGroupDesired(vars); err != nil {
+	if err := t.reconcileBeforeApply(release, vars); err != nil {
 		return err
 	}
 
@@ -446,11 +447,7 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 		return err
 	}
 
-	if err := t.reconcileVarsWithModule(version); err != nil {
-		return err
-	}
-
-	if err := t.reconcileAdditionalNodeGroupDesired(vars); err != nil {
+	if err := t.reconcileBeforeApply(version, vars); err != nil {
 		return err
 	}
 
@@ -535,6 +532,17 @@ func (t Terraform) moduleVarNames() (map[string]bool, error) {
 	return varNames, nil
 }
 
+// reconcileBeforeApply runs the pre-apply reconcilers. Every path that reaches
+// apply() must go through here: install, param update, and version update all
+// mutate a live rack, and a path that skips this silently loses the reconcilers.
+func (t Terraform) reconcileBeforeApply(release string, vars map[string]string) error {
+	if err := t.reconcileVarsWithModule(release); err != nil {
+		return err
+	}
+
+	return t.reconcileAdditionalNodeGroupDesired(vars)
+}
+
 // reconcileVarsWithModule filters rack parameters to only those accepted by
 // the target module version. When a rack changes versions, previously-set
 // parameters may not exist in the new version's module. Without filtering,
@@ -611,7 +619,7 @@ func (t Terraform) reconcileAdditionalNodeGroupDesired(vars map[string]string) e
 
 	s, err := session.NewSession(aws.NewConfig().WithRegion(region))
 	if err != nil {
-		nodeGroupDebugf("build aws session: %v", err)
+		fmt.Fprintf(os.Stderr, "NOTICE: skipping node group desired size reconcile, could not build aws session: %v\n", err)
 		return nil
 	}
 
@@ -621,7 +629,7 @@ func (t Terraform) reconcileAdditionalNodeGroupDesired(vars map[string]string) e
 func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nodeGroupDesired) error {
 	listed, err := api.ListNodegroups(&eks.ListNodegroupsInput{ClusterName: aws.String(cluster)})
 	if err != nil {
-		nodeGroupDebugf("list node groups for %s: %v", cluster, err)
+		fmt.Fprintf(os.Stderr, "NOTICE: skipping node group desired size reconcile, could not list node groups for %s: %v\n", cluster, err)
 		return nil
 	}
 
@@ -690,7 +698,7 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nod
 				ScalingConfig: scaling,
 			})
 			if err != nil {
-				nodeGroupDebugf("raise desired on %s: %v", name, err)
+				fmt.Fprintf(os.Stderr, "NOTICE: could not raise desired size on node group %s: %v\n", name, err)
 				continue
 			}
 
