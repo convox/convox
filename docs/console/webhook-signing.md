@@ -51,7 +51,7 @@ During the rotation window, receivers can verify against any of the listed `v1=`
 
 Rack versions before 3.24.6 do not support webhook signing. If you downgrade to a pre-3.24.6 release, the Rack stops sending the `Convox-Signature` header. Update receivers to accept unsigned deliveries before downgrading. On re-upgrade, set a fresh `webhook_signing_key` value.
 
-## Signing <a id="signing"></a>
+## Signing
 
 The Rack signs each webhook payload with HMAC-SHA256 using the
 `webhook_signing_key` Rack parameter as the key. Both the timestamp and

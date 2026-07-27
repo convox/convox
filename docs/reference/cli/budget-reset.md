@@ -55,11 +55,11 @@ resolved):
   toward the cap. Reset clears the breaker, it does not zero out spend.
 
 For the full reset lifecycle see
-[Reset and force-clear cooldown](/management/budget-caps#force-clear-cooldown).
+[Reset and force-clear cooldown](/management/budget-caps#reset-and-force-clear-cooldown).
 
 ## See Also
 
 - [budget](/reference/cli/budget): full budget command group
 - [budget cap raise](/reference/cli/budget-cap-raise): raise the cap instead
   of resetting
-- [Reset and force-clear cooldown](/management/budget-caps#force-clear-cooldown): operational guide
+- [Reset and force-clear cooldown](/management/budget-caps#reset-and-force-clear-cooldown): operational guide

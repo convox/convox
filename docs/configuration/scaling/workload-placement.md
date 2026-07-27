@@ -65,29 +65,29 @@ Each node group configuration supports the following fields:
 
 | Field | Required | Description | Default |
 |-------|----------|-------------|---------|
-| `id` | No | Unique integer identifier for the node group | Auto-generated |
+| `id` | No | Unique integer identifier for the node group | The entry's position in the array |
 | `type` | Yes | The instance type to use (AWS EC2 type, Azure VM size, or GCP machine type) | |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
-| `capacity_type` | No | Whether to use on-demand or spot instances | `ON_DEMAND` |
+| `capacity_type` | No | Whether to use on-demand or spot instances. AWS accepts `ON_DEMAND` or `SPOT`; Azure and GCP additionally accept `Regular` and `Spot`. Values are matched exactly. | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
 | `max_size` | No | Maximum number of nodes | 100 |
-| `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | None |
+| `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | On AWS, `custom` for node groups and `custom-build` for build groups. On Azure, `custom-build` for build groups; an Azure node group with no `label` gets no `convox.io/label`. On GCP, no `convox.io/label` unless `dedicated` is `true`, which applies `custom` |
 | `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
 | `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
 | `ami_id` | No | Custom AMI ID to use (AWS only) | EKS-optimized AMI |
-| `zones` | No | Comma-separated list of availability zones (Azure and GCP) | None |
+| `zones` | No | Comma-separated list of availability zones (Azure and GCP). Requires a convox CLI at 3.25.3 or newer; earlier CLIs drop the field before it reaches Terraform. | None |
 
-GCP node groups support additional fields (`gpu_type`, `gpu_count`, `disk_type`), and `min_size`/`max_size` apply per zone (GCP racks use regional clusters) rather than as totals. See [Rack Parameters: additional_node_groups_config (GCP)](/configuration/rack-parameters/gcp/additional_node_groups_config).
+GCP node groups support additional fields (`gpu_type`, `gpu_count`, `tpu_topology`, `disk_type`), and `min_size`/`max_size` apply per zone (GCP racks use regional clusters) rather than as totals. See [Rack Parameters: additional_node_groups_config (GCP)](/configuration/rack-parameters/gcp/additional_node_groups_config).
 
 #### About the `id` field
 
 The `id` field provides important benefits:
-- Preserves node group identity during configuration updates
-- Prevents unnecessary recreation of node groups
+- Fixes each node group's identity across configuration edits, so adding or reordering entries does not renumber the groups you already have
 - Allows for stable references when targeting specific node groups
-- Reduces downtime during configuration changes
 
-Without the `id` field, Convox generates a random identifier that changes when the configuration is updated, potentially causing unnecessary node group recreation.
+Without the `id` field, each node group is keyed by its position in the array, so reordering or removing an entry shifts the keys and recreates groups you did not intend to change.
+
+The `id` field does not prevent a node group from being replaced when you change the group's own shape, such as its instance type, disk size, or capacity type. What happens during that replacement depends on the provider: on AWS, as of 3.25.3, the replacement node group is created and reaches ready before the old one is removed; on Azure the pool rotates through a temporary pool; on GCP the pool is destroyed before it is recreated. See the provider's `additional_node_groups_config` page for the per-field detail: [AWS](/configuration/rack-parameters/aws/additional_node_groups_config), [Azure](/configuration/rack-parameters/azure/additional_node_groups_config), [GCP](/configuration/rack-parameters/gcp/additional_node_groups_config).
 
 ### Setting Rack Parameters with JSON Files
 
@@ -219,7 +219,7 @@ This approach is useful for automation scripts or when making quick changes, tho
 
 At the application level, you can control where specific workloads run:
 
-- `BuildArch`: Directs build pods to build nodes matching a specific CPU architecture (`amd64` or `arm64`)
+- `BuildArch`: Pins the App's built image to a CPU architecture (`amd64` or `arm64`), and directs the build Pod to a matching build node when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled). Takes effect on Racks running 3.25.3 or later.
 - `BuildLabels`: Directs build pods to specific node groups
 - `BuildCpu` and `BuildMem`: Sets resource requests for build pods
 - `nodeSelectorLabels` in `convox.yml`: Directs service pods to specific node groups
@@ -296,7 +296,7 @@ For copy-ready, end-to-end walkthroughs, see [Workload Placement Examples](/conf
    - A rack's primary nodes define the default architecture. Additional node groups can use a different architecture to create a mixed ARM/x86 rack.
    - On AWS, Graviton instances (e.g. `t4g`, `c7g`, `m7g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. You can mix architectures by adding additional node groups and build groups with different instance families. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
    - On Azure, only x86-based VM SKUs are currently supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
-   - **Mixed architecture requires `BuildArch`**: When running mixed-architecture node groups, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter to direct each app's builds to build nodes matching its target architecture. Without `BuildArch`, builds run on any available build node and may produce binaries for the wrong architecture.
+   - **Mixed architecture with managed node groups requires `BuildArch`**: When running mixed-architecture managed node groups, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter (Racks running 3.25.3 or later) to pin each App's image to its target architecture. Without it, builds may produce images for the wrong architecture. On a Karpenter Rack with `karpenter_arch=amd64,arm64` this is not needed: builds produce a multi-architecture image index. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
    - **Convox system images are multi-arch**: System components (including Fluentd) are published as multi-arch Docker manifests and run natively on both x86 and ARM nodes with no configuration.
 
 2. **Match Node Resources to Workload Requirements**:
@@ -350,7 +350,7 @@ If nodes aren't scaling as expected:
 
 ### Node Group Preservation Issues
 If node groups are being recreated unexpectedly:
-- Ensure each node group has a unique `id` field
+- Ensure each node group has a unique `id` field. An `id` stops existing groups from being renumbered when you reorder or remove entries, but it does not stop a group from being replaced when you change that group's instance type, disk size, capacity type, or AMI. The convox CLI rejects a configuration that reuses an `id`.
 - Verify that you're not changing immutable fields (like capacity type)
 - On AWS, check for API rate limits during updates
 

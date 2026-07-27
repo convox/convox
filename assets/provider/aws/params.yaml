@@ -488,7 +488,7 @@ Groups:
       - name: cloudwatch_disable
         default: "false"
         type: boolean
-        description: "Stops Convox from creating, writing, or reading its own CloudWatch log groups (/convox/<rack>/<app>). &l Turn this on together with fluentd_disable if you route logs elsewhere; on its own it only hides the rack-side CloudWatch view. &l Note: convox logs and convox rack logs return empty while this is on. &l"
+        description: "Stops Convox from creating, writing, or reading the rack's own CloudWatch log groups, one for each app plus one for the rack itself. &l Turn this on together with &i fluentd_disable &i if you route logs elsewhere; on its own it only hides the rack-side CloudWatch view. &l &l Note: convox logs and convox rack logs return empty while this is on. &l"
       - name: fluentd_memory
         default: 200Mi
         type: string
@@ -708,13 +708,13 @@ Groups:
         default: "null"
         sideNote: Use defaults unless you need advanced configuration
         type: string
-        description: "Advanced setting for fine-tuning the worker machines Convox runs for your apps. Supply your own JSON to override the other karpenter_* settings. &l Accepts raw JSON, base64-encoded JSON, or a path to a .json file. A few values are managed by Convox and can't be changed. &l &l Most users can leave this blank. See (documentation)[https://docs.convox.com/configuration/karpenter/] for the full list of options and examples. &l"
+        description: "Advanced setting for fine-tuning the worker machines Convox runs for your apps. Supply your own JSON to override the other karpenter_* settings. &l Accepts raw JSON, base64-encoded JSON, or a path to a .json file. A few values are managed by Convox and can't be changed. &l &l Most users can leave this blank. See (documentation)[https://docs.convox.com/configuration/scaling/karpenter/] for the full list of options and examples. &l"
       - name: additional_karpenter_nodepools_config
         optional: true
         default: "null"
         sideNote: "No extra node groups by default."
         type: string
-        description: "&b Advanced Configuration &b &l Add extra groups of nodes (the servers your apps run on) for special workloads like GPU or high-memory jobs, each with its own instance types and limits. &l &l Provide the settings as JSON, a base64 version of it, or a path to a .json file; see (documentation)[https://docs.convox.com/configuration/karpenter/] for the format and an example. &l &l These groups only take effect when Karpenter (automatic node scaling) is turned on. &l"
+        description: "&b Advanced Configuration &b &l Add extra groups of nodes (the servers your apps run on) for special workloads like GPU or high-memory jobs, each with its own instance types and limits. &l &l Provide the settings as JSON, a base64 version of it, or a path to a .json file; see (documentation)[https://docs.convox.com/configuration/scaling/karpenter/] for the format and an example. &l &l These groups only take effect when Karpenter (automatic node scaling) is turned on. &l"
   - name: Cost & Budget
     order: 7
     params:

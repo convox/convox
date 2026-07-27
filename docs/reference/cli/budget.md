@@ -59,7 +59,7 @@ $ convox budget set myapp --monthly-cap 500 --at-cap-action auto-shutdown
 ```
 
 Updates that touch only `--pricing-adjustment` are not gated. See
-[Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
+[Cost tracking prerequisite](/management/budget-caps#prerequisite-cost-tracking-must-be-enabled)
 for the full rationale and supported-provider scope. Recovery operations
 (`budget clear`, `budget reset`) remain available regardless of cost-tracking
 state.
@@ -95,7 +95,7 @@ additionally clears the 24-hour cooldown so the next cap fire is not suppressed.
     Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 ```
 
-See [Force-clear cooldown](/management/budget-caps#force-clear-cooldown) for
+See [Force-clear cooldown](/management/budget-caps#reset-and-force-clear-cooldown) for
 when to use the flag.
 
 ## budget cap raise
@@ -115,7 +115,7 @@ current spend. Alias for `budget set --monthly-cap`.
 
 After an auto-shutdown, cap-raise clears the breaker but does NOT restart
 already-shutdown services. Run `convox budget reset myapp` to restart them.
-See [Cap raise](/management/budget-caps#cap-raise).
+See [Cap raise](/management/budget-caps#raising-or-recovering-a-cap).
 
 ## budget simulate-shutdown
 

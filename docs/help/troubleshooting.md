@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Diagnose common Convox problems including install errors, failed deploys, SSL and health check failures, stuck uninstalls, and disappearing environment variables."
+description: "Diagnose common Convox problems including install errors, failed deploys, SSL and health check failures, stuck uninstalls, failing Rack updates, and disappearing environment variables."
 slug: troubleshooting
 url: /help/troubleshooting
 ---
@@ -108,6 +108,57 @@ $ convox rack uninstall <rack_name>
     Return to the CloudFormation console, select the failed stack, and click "Delete". In the deletion dialog, check the box next to the resource you manually deleted and proceed.
 
 Once the CloudFormation stack is gone, the rack will be removed from your Convox console.
+
+## A Rack update keeps failing with a Helm "another operation in progress" error
+
+Every attempt at the same `convox rack update` or `convox rack params set` fails on the same resource, naming a `helm_release` and the module file it is declared in:
+
+```text
+Error: another operation (install/upgrade/rollback) is in progress
+```
+
+This happens when an earlier apply was killed while Helm was in the middle of an operation, for example an update that was cancelled or interrupted while it was running. The release is left in a pending state (`pending-install`, `pending-upgrade`, or `pending-rollback`) and Helm refuses to operate on it again, so retrying the identical command produces the identical error indefinitely.
+
+**Resolution:** with `convox` `3.25.3` or newer performing the apply, re-run the same command. Convox clears the stranded revision first and prints a `NOTICE` naming the release, its status, and its revision:
+
+```text
+NOTICE: clearing stuck Helm release karpenter (pending-upgrade, revision 4) before apply
+```
+
+Only the pending revision is removed. The revision Helm still considers deployed stays current, and the apply that follows retries the operation.
+
+The scope of this recovery is deliberately narrow:
+
+- AWS Racks only. It does not run on GCP, Azure, Digital Ocean, Equinix Metal, or Local Racks.
+- Racks whose Kubernetes API is reached through a private endpoint host are not covered.
+- Convox-owned releases only, matched on both release name and namespace: `aws-lbc`, `karpenter`, `karpenter-crd`, `keda`, `vpa`, `dcgm-exporter`, `nvidia-device-plugin`, `contour`, and `contour-internal`. Helm releases you installed yourself are never touched, and neither is a release that shares one of those names in a namespace Convox does not own.
+- Only releases that have been stranded for more than fifteen minutes, so an apply that is still working is never interrupted.
+- Only when the `convox` binary running the apply is `3.25.3` or newer. For a self-managed Rack that is the CLI on your machine. For a Console-managed Rack it is the CLI bundled in the Console deploy, which means a Rack version update on its own does not deliver it. See [CLI Rack Management](/management/cli-rack-management) for the full version rule.
+
+If a re-run fails the same way, open a [support ticket](/help/support) with the Rack logs.
+
+## Raising min_size on an additional node group fails EKS validation
+
+Increasing `min_size` on an entry in [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) fails the apply with an EKS validation error:
+
+```text
+Error: updating EKS Node Group (my-rack:my-rack-additional-0-a1b2c3d4e5f60718) config: operation error EKS: UpdateNodegroupConfig, https response error StatusCode: 400, InvalidParameterException: Minimum capacity 3 can't be greater than desired size 1
+```
+
+Convox does not manage the running size of an additional node group, so the autoscaler is free to move it. When the pool has already scaled below the new floor, the update carries the new `min_size` on its own, and EKS rejects a minimum that is above the pool's current desired size.
+
+**Resolution:** with `convox` `3.25.3` or newer performing the apply, re-run the same command. Convox raises the pool's desired size to the new `min_size` first, waits for that scale-up to finish, and then applies, so the command succeeds. It prints a `NOTICE` for each pool it raises:
+
+```text
+NOTICE: raising node group my-rack-additional-0-a1b2c3d4e5f60718 desired size to 3 before apply
+```
+
+Two things follow from this:
+
+- The update takes longer than usual when `min_size` jumps by a large amount, because the nodes are added before Terraform runs.
+- The same version condition applies as above. The behavior lives in the `convox` binary performing the apply, which for a Console-managed Rack means a Console deploy carrying that CLI version, not a Rack version update.
+
+This handling applies to `additional_node_groups_config` on AWS Racks.
 
 ## My environment variables disappear after deploying
 

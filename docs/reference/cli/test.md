@@ -22,7 +22,7 @@ Run tests
 | Flag | Short | Type | Description |
 |------|-------|------|-------------|
 | `--description` | `-d` | string | Description for the build |
-| `--force` | | bool | Proceed even when the environment drop guard detects a pending drop. Requires CLI version 3.25.1+ |
+| `--force` | | bool | Reduce the environment drop guard message to a one-line notice, and bypass the guard when `CONVOX_ENV_DROP_GUARD=strict`. Requires CLI version 3.25.1+ |
 | `--release` | | string | Use an existing release to run tests instead of building |
 | `--timeout` | `-t` | number | Timeout for the test run |
 
@@ -37,7 +37,7 @@ Run tests
 
 Tests are defined using the `test` attribute on each service in `convox.yml`. See the [Service](/reference/primitives/app/service) reference for configuration details.
 
-Because `convox test` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build`, and `--force` bypasses it the same way. When `--release` is passed, no build is created and the guard does not run.
+Because `convox test` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build`: a warning is printed to stderr and the test run continues, unless `CONVOX_ENV_DROP_GUARD=strict` is set, in which case the run is blocked. `--force` reduces the message to a one-line notice and bypasses the guard in strict mode. When `--release` is passed, no build is created and the guard does not run.
 
 ## See Also
 

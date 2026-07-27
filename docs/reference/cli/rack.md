@@ -298,12 +298,14 @@ Display rack parameters
 ### Examples
 ```bash
     $ convox rack params
-    build_node_enabled     false
+    build_node_enabled     true
     high_availability      true
-    node_disk              20
-    node_type              t3.small
-    private                true
+    node_disk              100
+    node_type              c5.large
+    private                false
 ```
+
+The listing contains only parameters that have a value stored for the Rack. A parameter left at its default is not returned, so an absent name means it has never been set.
 
 ### Masking Sensitive Values
 
@@ -329,11 +331,14 @@ Pass `-g` / `--group` to narrow the output to one of a curated set of logical gr
 | Group | Covers |
 |-------|--------|
 | `build` | build node config, buildkit, additional build groups |
+| `cost` | cost tracking and allocation tags |
 | `domain` | rack domain and TLS toggle |
-| `ingress` | NGINX, idle timeout, TLS cert duration |
+| `gpu` | GPU/NVIDIA device plugin, DCGM exporter, observability, Prometheus metrics |
+| `ingress` | router type (NGINX/Contour), idle timeout, TLS cert duration, Envoy resources |
 | `karpenter` | Karpenter autoscaling configuration |
-| `logging` | syslog, telemetry, fluentd |
+| `logging` | syslog, telemetry, fluentd, EKS audit logs, Grafana, Prometheus |
 | `network` | VPC, subnets, CIDR, routing, NLB, DNS resolver |
+| `nlb` | NLB config: listeners, cross-zone, allow-CIDR, preserve-client-IP, deletion protection (v2 racks) |
 | `nodes` | default node-group config, user-data, GPU, kubelet tuning |
 | `registry` | Docker Hub, ECR, image caching, storage buckets |
 | `retention` | release retention policy |

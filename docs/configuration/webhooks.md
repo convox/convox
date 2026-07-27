@@ -111,7 +111,7 @@ JWT-derived actor.
 | `app:budget:auto-shutdown:simulated` | `convox budget simulate-shutdown --app <app>` was run (HTTP-handler; JWT actor). |
 | `app:budget:auto-shutdown:dismissed` | Emitted when the recovery banner is dismissed via `convox budget dismiss-recovery` or the Console UI (HTTP-handler; JWT actor, falling back to `"system"` if the request was unauthenticated). |
 
-### Signing <a id="signing"></a>
+### Signing
 
 See [Webhook Signing](/console/webhook-signing) for the full HMAC-SHA256
 signing protocol, the single `Convox-Signature` header (format

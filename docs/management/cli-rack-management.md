@@ -51,19 +51,25 @@ A few guardrails apply:
 
 - **Minor-version downgrades are not supported.** Rolling a v3 rack back across a minor version (for example `3.24.x` to `3.23.x`) is blocked, because each minor version can change Kubernetes components or cluster configuration in ways that cannot be cleanly reversed. The CLI rejects it with `Downgrade from minor version is not supported for v3 rack`. If you need to recover from a bad minor update, contact Convox support: the team can often work out a manual recovery, but it is a hands-on operation, not a self-service rollback. Where possible, prefer rolling **forward** to a newer patch over downgrading.
 - **Switch off Contour before downgrading.** If `router_type=contour` is set, a downgrade is blocked with `cannot downgrade while router_type=contour is set`. Set `router_type=nginx` and let the rack finish updating before you downgrade.
-- **Parameters are reconciled automatically.** Any rack parameter the older version does not recognize is removed before the apply runs (see [Automatic Parameter Reconciliation](#automatic-parameter-reconciliation) below). Re-apply those parameters after you update forward again.
+- **Parameters are reconciled automatically.** Any rack parameter the older version does not recognize is removed before the apply runs (see [Pre-Apply Reconciliation](#pre-apply-reconciliation) below). Re-apply those parameters after you update forward again.
 
-### Automatic Parameter Reconciliation
+### Pre-Apply Reconciliation
 
-Starting with version `3.24.2`, Convox automatically reconciles Rack parameters during version transitions. After downloading the target version's Terraform module, Convox scans it for declared variables and compares them against the Rack's stored parameters. Any parameters not accepted by the target version are automatically removed before `terraform apply`, preventing failures from unrecognized arguments.
+Convox runs a set of checks immediately before every `terraform apply`, whether the apply comes from an install, a parameter change, or a version update. Each check resolves a condition that is known to fail the apply, and each prints a `NOTICE` to stderr so you can match it against the Rack logs.
 
-This handles common failure scenarios:
+| Check | What it does | Example NOTICE |
+|-------|--------------|----------------|
+| Parameter reconciliation | Removes stored parameters the target version does not declare | `NOTICE: removing parameters not supported by version 3.24.1: fluentd_memory` |
+| Stranded Helm release clearing (AWS) | Deletes a Convox-owned Helm revision left pending by an interrupted apply | `NOTICE: clearing stuck Helm release karpenter (pending-upgrade, revision 4) before apply` |
+| Additional node group desired size (AWS) | Raises a node group's running size to meet a newly raised `min_size` | `NOTICE: raising node group my-rack-additional-0-a1b2c3d4e5f60718 desired size to 3 before apply` |
 
-- **Downgrades:** Rolling back to a version that predates a parameter
-- **Version pinning:** Switching to a specific release that doesn't include a recently added parameter
-- **Hotfix branches:** Applying a patch built from an older code base
+**Parameter reconciliation.** Starting with `3.24.2`, Convox reconciles Rack parameters during version transitions. After downloading the target version's Terraform module, Convox scans it for declared variables and compares them against the Rack's stored parameters. Any parameters not accepted by the target version are removed before `terraform apply`, preventing failures from unrecognized arguments. This handles rolling back to a version that predates a parameter, pinning to a release that does not include a recently added parameter, and applying a patch built from an older code base. If no unrecognized parameters are found, the check is a no-op.
 
-When parameters are removed, a `NOTICE` is printed listing the dropped parameters so operators have visibility into what changed. If no unrecognized parameters are found, the reconciliation is a no-op.
+**Stranded Helm release clearing.** Starting with `3.25.3`, an apply that was killed while Helm was mid-operation no longer blocks every later apply. Convox deletes the pending revision of the affected Convox-owned release so the next apply can proceed. This runs on AWS Racks only, covers Convox-owned releases only (`aws-lbc`, `karpenter`, `karpenter-crd`, `keda`, `vpa`, `dcgm-exporter`, `nvidia-device-plugin`, `contour`, `contour-internal`, each matched in the namespace Convox installs it into), and acts only on releases stranded for more than fifteen minutes. Helm releases you installed yourself are never touched, and Racks whose Kubernetes API is reached through a private endpoint host are not covered.
+
+**Additional node group desired size.** Starting with `3.25.3`, raising `min_size` on an entry in `additional_node_groups_config` no longer fails when the pool has autoscaled below the new floor. Convox raises the pool's desired size to the new `min_size` and waits for the scale-up before the apply runs, which makes the update take longer when the increase is large. This runs on AWS Racks only.
+
+**Which version matters.** These checks run in the `convox` CLI, not in the Rack's Terraform modules, so the version that counts is the CLI performing the update: your locally installed `convox` for a self-managed Rack, or the CLI bundled in the Convox Console for a Console-managed Rack. Updating the Rack to a newer version does not deliver them on its own.
 
 If an update fails or the rack remains in `updating` status for an extended period, check the rack logs for errors:
 
@@ -71,7 +77,7 @@ If an update fails or the rack remains in `updating` status for an extended peri
     $ convox rack logs -r <rack_name>
 ```
 
-If you encounter a stuck update, contact Convox support with the rack logs. Do not attempt to force another update on top of a failed one.
+Re-running the same command is safe and is the first thing to try, because the most common stuck-update case, a Helm release stranded by an interrupted apply, is cleared before the next apply runs. Do not stack a second, different update on top of one that is still running. If a re-run fails the same way, contact Convox support with the rack logs. See [Troubleshooting](/help/troubleshooting) for the error text these failures produce.
 
 ### Best Practices for Rack Updates
 
@@ -96,9 +102,12 @@ Rack parameters control infrastructure-level settings like node sizes, disk allo
 ### Viewing current parameters
 ```bash
     $ convox rack params
-    node_disk  20
-    node_type  t3.small
+    node_disk  100
+    node_type  c5.large
 ```
+
+`convox rack params` lists the parameters that have a value stored for the Rack, not the full set of available parameters. A parameter left at its default does not appear in the output.
+
 ### Setting parameters
 ```bash
     $ convox rack params set node_disk=30 node_type=c5.large
@@ -115,7 +124,7 @@ Some parameters (marked with \* in the tables below) can only be set at rack cre
 
 ## Available Parameters
 
-The parameters available for your Rack depend on the underlying cloud provider.
+The parameters available for your Rack depend on the underlying cloud provider. The Default column is the value Convox applies when the parameter has never been set. **telemetry** defaults to **false**, but it can be enabled at install time, so run `convox rack params` to see the value stored on a Rack you did not install yourself. It can be changed at any time with `convox rack params set`.
 
 ### Amazon Web Services
 
@@ -158,7 +167,7 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 | **ssl_protocols**                         |                        |
 | **syslog**                                |                        |
 | **tags**                                  |                        |
-| **telemetry**                             | **true**               |
+| **telemetry**                             | **false**              |
 | **vpc_id** (3)                            |                        |
 
 (1) Parameter cannot be changed after rack creation
@@ -181,7 +190,7 @@ For detailed descriptions and instructions, visit the [Digital Ocean Rack Parame
 | **registry_disk**       | **50Gi**          |
 | **syslog**              |                   |
 | **high_availability** * | **true**          |
-| **telemetry**           | **true**          |
+| **telemetry**           | **false**         |
 
 \* Parameter cannot be changed after rack creation
 
@@ -192,11 +201,11 @@ For detailed descriptions and instructions, visit the [Google Cloud Platform Rac
 | Name                    | Default           |
 |-------------------------|-------------------|
 | **cert_duration**       | **2160h**         |
-| **node_type**           | **n1-standard-1** |
+| **node_type**           | **n1-standard-2** |
 | **preemptible**         | **true**          |
 | **region**              | **us-east1**      |
 | **syslog**              |                   |
-| **telemetry**           | **true**          |
+| **telemetry**           | **false**         |
 
 ### Microsoft Azure
 
@@ -208,7 +217,7 @@ For detailed descriptions and instructions, visit the [Microsoft Azure Rack Para
 | **node_type**           | **Standard_D2_v3**|
 | **region**              | **eastus**        |
 | **syslog**              |                   |
-| **telemetry**           | **true**          |
+| **telemetry**           | **false**         |
 
 ## See Also
 

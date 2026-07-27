@@ -33,7 +33,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 | `min_size` | No | Minimum number of nodes per zone. `0` is allowed for scale-to-zero pools | 1 |
 | `max_size` | No | Maximum number of nodes per zone | 100 |
 | `label` | No | Custom label value for the node pool. Applied as `convox.io/label: <label-value>` | None |
-| `id` | No | A unique integer identifier for the node pool that persists across updates | Auto-generated |
+| `id` | No | A unique integer identifier that fixes the node pool's Terraform identity across updates | The entry's position in the array |
 | `tags` | No | Custom GCP resource labels specified as comma-separated key-value pairs (e.g., `environment=production,team=backend`) | None |
 | `dedicated` | No | When `true`, only services with matching node pool labels will be scheduled on these nodes (adds a `dedicated-node` NoSchedule taint) | `false` |
 | `zones` | No | Comma-separated list of GCP zones (e.g., `us-east1-b,us-east1-c`) | None (region default) |
@@ -42,6 +42,22 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 | `tpu_topology` | No | TPU slice topology for a Cloud TPU node pool, matched to the machine type (e.g., `2x4` for `ct5lp-hightpu-8t`). When set, the pool gets a `COMPACT` placement policy with this topology. Requires a TPU machine type as `type`. Single-host slices only | None |
 
 > **Counts are per zone, not totals.** GCP racks use regional GKE clusters, so `min_size` and `max_size` apply to each zone in the region. In a 3-zone region, `min_size: 1` runs 3 nodes and `max_size: 100` allows up to 300. This differs from AWS and Azure, where the same values are totals. For expensive pools (such as GPU pools), set `min_size: 0` or pin a single zone with `zones`.
+
+### Field Validation
+
+The CLI validates these fields before submitting the parameter change:
+
+| Field | Rules |
+|-------|-------|
+| `gpu_count` | Must be at least `1`. Requires `gpu_type` in the same entry. |
+| `tpu_topology` | Must match `NxM` or `NxMxP` with no leading zeros (for example `2x4` or `2x2x2`). Cannot be combined with `gpu_type`. Requires a `type` that starts with `ct` or `tpu`. |
+| `tags` | Cannot use the reserved keys `name` or `rack`. |
+| `dedicated` | Requires `label` in the same entry. Setting `dedicated: true` without a `label` is rejected. |
+
+These checks run in the `convox` CLI, on the `convox rack params set` path only. Two consequences:
+
+- `additional_node_groups_config` is new to GCP Racks in 3.25.3. A `convox` CLI older than 3.25.3 rejects it with `unknown parameter 'additional_node_groups_config' for gcp provider` before the request leaves your machine, unless you pass `--force`. Upgrade the CLI rather than forcing it, so the field validation above still runs.
+- A parameter change driven from the Console does not run these checks. An invalid value is passed through to Terraform, where malformed JSON fails the plan and a value GKE rejects surfaces as a GKE API error during the apply.
 
 ## Setting Parameters
 To set the `additional_node_groups_config` parameter, there are several methods:
@@ -106,13 +122,15 @@ services:
         count: 1
 ```
 
+> **A dedicated pool also needs `convox.io/label`.** If the pool sets `dedicated: true`, add `convox.io/label: gpu-workers` to the service's `nodeSelectorLabels`. A `convox.io/label` (or `convox.io/nodepool`) entry in `nodeSelectorLabels` is the only thing that generates the matching `dedicated-node` toleration. A GPU resource request on its own does not tolerate the taint, so the Process stays Pending.
+
 > **Zone availability**: A given accelerator type is only available in specific zones. If the pool's zones (the rack region's default zones, or the `zones` you specify) do not offer the requested `gpu_type`, GKE will fail to create the pool. Consult the [GCP GPU regions and zones documentation](https://cloud.google.com/compute/docs/gpus/gpu-regions-zones) and set `zones` accordingly.
 
 ## TPU Node Pools
 
 To run Cloud TPU workloads, use a TPU machine type as `type` and set `tpu_topology`. The machine type implies the TPU generation (for example `ct5lp-hightpu-8t` for TPU v5e), so no `gpu_type` is needed. GKE installs the TPU device plugin automatically; no DaemonSet is required. GKE taints TPU node pools with `google.com/tpu:NoSchedule`; Convox automatically adds the matching toleration to services with `scale.gpu.vendor: google`, so no manual toleration is needed either way.
 
-Only single-host TPU slices are supported. Multi-host slices (which require JobSet or Kueue orchestration) are not supported.
+Only single-host TPU slices are supported. Multi-host slices (which require JobSet or Kueue orchestration) are not supported. This is a support statement, not a validation: a multi-host topology string such as `4x4` passes CLI validation and is forwarded to GKE, and Convox does not provide the orchestration a multi-host slice needs.
 
 TPUs are only available in specific zones for each generation. Pin the pool to a zone that offers your TPU type with the `zones` field, or the pool will fail to create.
 
@@ -149,17 +167,26 @@ services:
 
 Convox maps `vendor: google` to the `google.com/tpu` resource request and limit, and `count` is the number of TPU chips requested per pod (8 for a `ct5lp-hightpu-8t` node). The accelerator label value depends on the TPU generation (`tpu-v5-lite-podslice` for v5e); consult the [GKE TPU documentation](https://cloud.google.com/kubernetes-engine/docs/how-to/tpus) for the value that matches your machine type.
 
+> **A dedicated pool also needs `convox.io/label`.** If the pool sets `dedicated: true`, add `convox.io/label: tpu-workers` to `nodeSelectorLabels` alongside the two `cloud.google.com/gke-tpu-*` selectors. The `dedicated-node` toleration is generated from the `convox.io/label` selector only, so the GKE TPU selectors on their own will not schedule the Process onto a dedicated pool.
+
 ## Node Pool Identification
 
 ### Using the `id` Field
 
-The `id` field ensures that node pools preserve their identity during configuration updates:
+The `id` field keeps a node pool's identity stable across configuration updates:
 
 - Each node pool should have a unique integer identifier
-- Using the `id` field prevents unnecessary recreation of node pools when making changes to their configuration
-- Consistent `id` values help maintain stable infrastructure during updates
+- The `id` is the Terraform `for_each` key and fixes the pool name to `<rack>-np<id>`, so a pool keeps its identity when you edit its other fields or reorder the array
+- It does not prevent replacement. A change to a field GKE treats as immutable still replaces the pool, and changing the `id` itself renames the pool, which destroys the old pool and creates a new one
+- Without an explicit `id`, the pool is keyed by its position in the array. Reordering or removing an entry shifts those keys and renames the affected pools, and because GCP node pools have no create-before-destroy behavior each renamed pool is destroyed and recreated
 
-> **Changing `type`, `disk`, or `disk_type` on an existing pool recreates it** (destroy then create), which causes a temporary capacity gap for workloads on that pool. To avoid downtime, add a new pool with a new `id`, migrate workloads, then remove the old entry.
+> **Changing the pool's machine shape recreates it.** Editing `type`, `disk`, or `disk_type` on an existing pool destroys it and then creates the replacement, which causes a temporary capacity gap for workloads on that pool. GCP node pools have no create-before-destroy behavior. To avoid the gap, add a new pool with a new `id`, migrate workloads onto it, then remove the old entry.
+
+## Downgrading Below 3.25.3
+
+Additional node pools are new to GCP Racks in 3.25.3. Downgrading a GCP Rack below 3.25.3 destroys **every** additional node pool, not only accelerator pools, because the older cluster module does not declare the resource at all.
+
+Services pinned to those pools go Pending rather than crashing. Convox strips `additional_node_groups_config` from the Rack's stored parameters before the downgrade apply runs, because the older module does not declare it (see [Pre-Apply Reconciliation](/management/cli-rack-management#pre-apply-reconciliation)). On a Console-managed Rack the Console re-supplies its own stored value on the next apply, so the pools come back when you upgrade the Rack to `3.25.3` or newer. On a self-managed Rack the value is gone for good, so set `additional_node_groups_config` again after you upgrade forward.
 
 ## Spot VM Considerations
 

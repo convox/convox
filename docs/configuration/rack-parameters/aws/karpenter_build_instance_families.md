@@ -24,7 +24,7 @@ Updating parameters... OK
 
 ## Additional Information
 
-- **Validation:** Comma-separated lowercase alphanumeric values.
+- **Validation:** Comma-separated lowercase alphanumeric values. On a Rack with `karpenter_enabled=true`, `convox rack params set` at `3.25.3` or newer also rejects a list in which no family matches the build architecture, which comes from [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) and falls back to [`node_type`](/configuration/rack-parameters/aws/node_type). Setting `karpenter_build_instance_families=c7g` while `build_node_type` is an x86 type fails with `karpenter_build_instance_families (c7g) has no family matching the build_node_type architecture (amd64); Karpenter could not provision any matching node`.
 - The build NodePool is only created when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled).
 
 ## See Also

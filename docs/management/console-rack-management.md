@@ -130,8 +130,6 @@ When you edit the `aws-auth` ConfigMap, proceed with caution, if you misconfigur
 
 You can visualize resource consumption for your rack nodes and workloads from the Console.
 
-![Dashboard](/images/documentation/management/console-rack-management/metrics_dashboard.png)
-
 ## See Also
 
 - [CLI Rack Management](/management/cli-rack-management) for managing racks from the command line

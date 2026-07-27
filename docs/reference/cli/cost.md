@@ -108,7 +108,7 @@ Pre-3.24.6 racks omit `variant-breakdown` entirely (the field is
 consumers should fail-open on a missing `variant-breakdown` and prefer
 that array when present.
 
-See [Per-service cost breakdown](/management/budget-caps#per-service-breakdown)
+See [Per-service cost breakdown](/management/budget-caps#per-service-cost-breakdown)
 for bucket semantics, the 1000-entry truncation cap, and the
 service-rename / deleted-service / downgrade behavior.
 
@@ -131,7 +131,7 @@ $ convox rack params set cost_tracking_enable=true
 
 The 422 rejection applies only to the WRITE paths: `convox budget set` and
 `convox deploy` against a manifest with a `budget:` block. See
-[Cost tracking prerequisite](/management/budget-caps#cost-tracking-prerequisite)
+[Cost tracking prerequisite](/management/budget-caps#prerequisite-cost-tracking-must-be-enabled)
 for the full enable instructions. Cost tracking is available on AWS racks
 (3.24.6+) and Azure racks (3.25.1+).
 

@@ -15,7 +15,7 @@ To view the current app parameters, use the following command:
 ```bash
 $ convox apps params -a appName
 ```
-This command displays the current values of all app parameters for the specified application.
+This command lists the app parameters that have a value stored for the App. Parameters that have never been set are not returned, so an App with no app parameters set produces no rows.
 
 ### Setting Parameters
 To set an app parameter, use the following command:
@@ -29,4 +29,4 @@ This command sets the specified parameter to the given value.
 
 - [Amazon Web Services (AWS)](/configuration/app-parameters/aws)
 
-Select your cloud provider to view the available parameters and their configurations.
+App parameters are implemented in provider-agnostic Rack code, so the same set applies on Racks for every provider, not only AWS. Use the AWS page above as the reference for all of them. Some of the Rack parameters they interact with, such as [`build_node_enabled`](/configuration/rack-parameters/aws/build_node_enabled), are AWS-specific.

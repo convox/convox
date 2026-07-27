@@ -22,7 +22,7 @@ List of workflows for the organization.
     c828b45a-070b-46ed-9c43-ddaa905ecd68  review      review-web-app
 ```
 
-## workflows run <id>
+## workflows run `<id>`
 
 Trigger workflow run for the specified branch or commit. Specified branch or commit must reside on the workflow repository.
 

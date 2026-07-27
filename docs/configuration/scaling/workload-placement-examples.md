@@ -179,9 +179,11 @@ With `dedicated:true`, only services that explicitly select the node group will 
 
 This example sets up an x86 primary rack with ARM worker nodes and ARM build nodes, allowing cost-optimized Graviton instances for selected apps while keeping x86 available for compatibility-sensitive workloads.
 
-> Mixed architecture support is available on AWS racks running version 3.24.1 or later.
+> The `BuildArch` app parameter takes effect on AWS Racks running 3.25.3 or later. On earlier Racks the CLI accepted the value and the Rack discarded it, so step 2 below had no effect and `convox apps params` never listed it.
 
-1. **Add ARM worker nodes** (dedicated so only targeted apps land on them):
+1. **Add ARM worker nodes, ARM build nodes, and dedicated build nodes in one call.**
+
+   ARM worker nodes, dedicated so only targeted apps land on them, in `arm-nodes.json`:
 
    ```json
    [
@@ -198,11 +200,7 @@ This example sets up an x86 primary rack with ARM worker nodes and ARM build nod
    ]
    ```
 
-   ```bash
-   $ convox rack params set additional_node_groups_config=/path/to/arm-nodes.json -r production
-   ```
-
-2. **Add ARM build nodes** so ARM apps build natively without emulation:
+   ARM build nodes, so ARM apps build natively without emulation, in `arm-build-nodes.json`:
 
    ```json
    [
@@ -217,16 +215,20 @@ This example sets up an x86 primary rack with ARM worker nodes and ARM build nod
    ```
 
    ```bash
-   $ convox rack params set additional_build_groups_config=/path/to/arm-build-nodes.json -r production
+   $ convox rack params set additional_node_groups_config=/path/to/arm-nodes.json additional_build_groups_config=/path/to/arm-build-nodes.json build_node_enabled=true -r production
    ```
 
-3. **Configure each ARM app** to build on the correct architecture:
+   Batch the parameters into one command. A Rack update holds a Terraform state lock, so a second `convox rack params set` issued before the first finishes is rejected. Wait for `convox rack params` to return the parameter list before moving on.
+
+   The `kubernetes.io/arch` node affinity that `BuildArch` applies is only added when [`build_node_enabled`](/configuration/rack-parameters/aws/build_node_enabled) is `true`. The default is `false`, which leaves the build Pod free to schedule on any node.
+
+2. **Configure each ARM app** to build on the correct architecture:
 
    ```bash
    $ convox apps params set BuildArch=arm64 -a myapp
    ```
 
-4. **Target the app to ARM workers** in `convox.yml`:
+3. **Target the app to ARM workers** in `convox.yml`:
 
    ```yaml
    services:
@@ -237,17 +239,18 @@ This example sets up an x86 primary rack with ARM worker nodes and ARM build nod
          convox.io/label: arm-workers
    ```
 
-5. **Deploy**:
+4. **Deploy**:
 
    ```bash
    $ convox deploy -a myapp
    ```
 
-The build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM binary. The resulting pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`). Apps without `BuildArch` continue building and running on x86 nodes as before.
+With `build_node_enabled=true`, the build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM image. Without dedicated build nodes the build Pod is unconstrained, but `BuildArch` still pins the produced image to arm64, so the build is emulated rather than native. The resulting Pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`). Apps without `BuildArch` continue building and running on x86 nodes as before.
 
 **Reverse direction** works the same way: if your primary rack uses ARM (e.g., `node_type=t4g.medium`), add x86 additional groups and set `BuildArch=amd64` on apps that need Intel/AMD compatibility.
 
 **Key considerations:**
+- This walkthrough covers managed node groups. On a Karpenter Rack with `karpenter_arch=amd64,arm64`, builds produce a multi-architecture image index and no per-App pinning is needed. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
 - `BuildArch` is per-app, not per-service. Apps with services targeting different architectures should be split into separate apps.
 - Convox system images (including Fluentd) are multi-arch manifests and run natively on both architectures with no configuration.
 - The `kubernetes.io/arch` label is set automatically by the kubelet, so this works on AWS, Azure, and GCP without provider-specific setup.

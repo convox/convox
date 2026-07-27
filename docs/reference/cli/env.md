@@ -153,6 +153,8 @@ Unset env var(s)
     Release: RABCDEFGHI
 ```
 
+Unsetting without `--promote` leaves the running Release holding variables that the next Build will not inherit, and the CLI reports this on the next `convox build`, `convox deploy`, or `convox test`. See [Environment Drop Guard](/reference/cli/build#environment-drop-guard).
+
 ## env mask
 
 List currently masked env keys for the app.

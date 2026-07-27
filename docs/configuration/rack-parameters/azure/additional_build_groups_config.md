@@ -25,13 +25,15 @@ The `additional_build_groups_config` parameter takes a JSON array of build node 
 |-------|----------|-------------|---------|
 | `type` | Yes | The Azure VM size to use for the build node pool |  |
 | `disk` | No | The OS disk size in GB for the nodes | Same as main node disk (default: 30) |
-| `capacity_type` | No | Whether to use regular or spot VMs. Use `ON_DEMAND` or `SPOT` (case-insensitive). The aliases `Regular` and `Spot` are also accepted. | `ON_DEMAND` (Regular) |
+| `capacity_type` | No | Whether to use regular or spot VMs. Accepts `ON_DEMAND`, `SPOT`, `Regular`, or `Spot`, matched exactly. Lowercase forms such as `spot` are rejected | `ON_DEMAND` (Regular) |
 | `min_size` | No | Minimum number of nodes | 0 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value. Applied as `convox.io/label: <label-value>` | `custom-build` |
-| `id` | No | A unique integer identifier for the node pool | Auto-generated |
+| `id` | No | A unique integer identifier for the node pool | The entry's position in the array |
 | `tags` | No | Custom Azure tags as comma-separated key-value pairs | None |
-| `zones` | No | Comma-separated list of Azure availability zones | None |
+| `zones` | No | Comma-separated list of Azure availability zones. Requires a `convox` CLI at 3.25.3 or newer | None |
+
+> **`zones` requires a `convox` CLI at 3.25.3 or newer.** Earlier CLIs dropped the `zones` key from the configuration before it reached Terraform, so a value set with an older CLI had no effect and no error.
 
 Build node pools automatically get the following labels and taints:
 - Label: `convox-build: true`

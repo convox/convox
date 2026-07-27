@@ -25,11 +25,13 @@ $ convox rack params set gpu_observability_chart_version=4.8.2 -r rackName
 Updating parameters... OK
 ```
 
-To revert to the rack default:
+To revert to the rack default, clear the parameter by setting it to an empty value:
 ```bash
-$ convox rack params set gpu_observability_chart_version=4.8.1 -r rackName
+$ convox rack params set gpu_observability_chart_version= -r rackName
 Updating parameters... OK
 ```
+
+Clearing is preferred over re-pinning the current default. A cleared parameter follows the chart version that ships with each future rack release; an explicitly pinned value stays where you put it until you change it again.
 
 You must enable [`gpu_observability_enable`](/configuration/rack-parameters/gcp/gpu_observability_enable) for the chart to be installed. Pinning the version while observability is disabled is a no-op until you enable it.
 

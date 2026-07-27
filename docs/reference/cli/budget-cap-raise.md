@@ -43,10 +43,10 @@ still blocked.
 After an auto-shutdown, cap-raise clears the breaker but does NOT restart
 already-shutdown services. Run `convox budget reset myapp` to restart them.
 
-For the full cap-raise lifecycle see [Cap raise](/management/budget-caps#cap-raise).
+For the full cap-raise lifecycle see [Cap raise](/management/budget-caps#raising-or-recovering-a-cap).
 
 ## See Also
 
 - [budget cap](/reference/cli/budget-cap): parent command group
 - [budget reset](/reference/cli/budget-reset): acknowledge cap breach without raising
-- [Cap raise](/management/budget-caps#cap-raise): operational guide
+- [Cap raise](/management/budget-caps#raising-or-recovering-a-cap): operational guide

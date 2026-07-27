@@ -51,6 +51,12 @@ Groups:
         description: Use (preemptible)[https://cloud.google.com/compute/docs/instances/preemptible]
           instances for cost savings. Preemptible instances can be terminated by
           Google Cloud with short notice.
+      - name: additional_node_groups_config
+        default: "null"
+        sideNote: Not configured by default
+        optional: true
+        type: string
+        description: "&b Advanced Configuration &b &l Most users leave this off. It adds extra node pools tuned for specific workloads, such as larger machine types, more disk, GPU pools, or single-host Cloud TPU pools. &l &l Accepts a JSON array, base64-encoded JSON, or a path to a .json file. See the full (documentation)[https://docs.convox.com/configuration/rack-parameters/gcp/additional_node_groups_config/] for the format. &l &l GCP racks use regional clusters, so the min_size and max_size counts apply per zone rather than as cluster totals. &l"
   - name: Logging & Monitoring
     order: 5
     params:
@@ -67,3 +73,18 @@ Groups:
         regex: ^\d+(Mi|Gi)$
         description: Memory request and limit for the Fluentd DaemonSet. Increase
           if Fluentd pods are experiencing OOMKills.
+      - name: gpu_observability_enable
+        default: "false"
+        type: boolean
+        description: "Installs the NVIDIA DCGM exporter, which collects GPU telemetry from the NVIDIA GPU nodes in your rack. &l Metrics are served on port 9400 through a dcgm-exporter service in the kube-system namespace and are also advertised with prometheus.io pod annotations. &l &l Convox does not install a Prometheus on GCP, so point a Prometheus you run yourself at the exporter to collect the metrics. &l"
+        sideNote: "Only has an effect when your rack includes NVIDIA GPU machines."
+      - name: gpu_observability_chart_version
+        default: "4.8.1"
+        type: string
+        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. The default, &i 4.8.1 &i, fits most setups; change it only to match a specific GPU driver."
+        sideNote: "Only takes effect when GPU metrics collection is enabled."
+      - name: dcgm_scrape_interval
+        default: 15s
+        type: string
+        description: "How often you want the DCGM exporter scraped. The value is published as a scrape interval annotation on the exporter pods for your own Prometheus configuration to read; it does not change anything on its own. &l Accepts a duration from &i 15s &i to &i 300s &i. &l"
+        sideNote: "Only takes effect when GPU metrics collection is enabled."

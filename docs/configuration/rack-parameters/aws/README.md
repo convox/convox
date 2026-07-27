@@ -54,6 +54,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_build_capacity_types](/configuration/rack-parameters/aws/karpenter_build_capacity_types) | Purchasing model for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_consolidate_after](/configuration/rack-parameters/aws/karpenter_build_consolidate_after) | Delay before empty Karpenter build nodes are consolidated. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_cpu_limit](/configuration/rack-parameters/aws/karpenter_build_cpu_limit) | Maximum total vCPUs for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) | Maximum empty Karpenter build nodes reclaimed simultaneously. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_imds_hop_limit](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | IMDS response hop limit for Karpenter build nodes, independent of the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | IMDS session token requirement (IMDSv2) for Karpenter build nodes, overriding the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_instance_families](/configuration/rack-parameters/aws/karpenter_build_instance_families) | Instance families for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
@@ -74,6 +75,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_node_expiry](/configuration/rack-parameters/aws/karpenter_node_expiry)   | Maximum Karpenter node lifetime before replacement. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_labels](/configuration/rack-parameters/aws/karpenter_node_labels)   | Custom labels for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_os](/configuration/rack-parameters/aws/karpenter_node_os)           | Node OS (al2023 or bottlerocket) for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_overlays_config](/configuration/rack-parameters/aws/karpenter_node_overlays_config) | Creates Karpenter NodeOverlays that advertise extended resources or adjust pricing for selected instance types. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_taints](/configuration/rack-parameters/aws/karpenter_node_taints)   | Custom taints for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_volume_type](/configuration/rack-parameters/aws/karpenter_node_volume_type) | EBS volume type for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
 
@@ -120,6 +122,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) | Specifies the retention period for Nginx access logs stored in CloudWatch Logs. |
+| [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable)         | Stops the Rack from creating, writing, and reading its own CloudWatch log groups. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
 | [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |

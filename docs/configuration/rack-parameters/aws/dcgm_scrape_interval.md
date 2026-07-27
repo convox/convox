@@ -47,7 +47,7 @@ Updating parameters... OK
 
 ## Operational Notes
 - The Prometheus scrape interval and the DCGM exporter's internal collection interval are independent. DCGM internally collects continuously; this parameter controls only the Prometheus pull cadence.
-- Changing this value does not require a DCGM exporter restart. The next Console reconciliation cycle propagates the new interval to the Prometheus scrape config.
+- Changing this value rewrites the DCGM exporter's `prometheus.io/scrape-interval` pod annotation, which rolls the DCGM exporter pods on the next apply. The Console reconciliation cycle separately propagates the new interval to the Prometheus scrape config.
 - Operators running their own self-installed Prometheus that consumes the `prometheus.io/scrape-interval` annotation see the change after the helm release reconciles.
 
 ## Related Parameters
