@@ -111,7 +111,7 @@ To simplify the deployment of identical configurations across environments, Conv
 After starting an installation, you will be automatically redirected to the **Installation Job** where you can monitor the deployment process in real time. This job logs all actions being executed, including database provisioning, application setup, and service initialization.
 
 #### Monitoring Installation Progress
-- You can track the installation job directly from the **Console Jobs** tab under the job labeled **Create Drupal App / <Convox App Name>**.
+- You can track the installation job directly from the **Console Jobs** tab under the job labeled **Create Drupal App / `<Convox App Name>`**.
 - At any time, you can navigate back to the installation job by selecting the **wrench icon** next to the active installation in the **Active Apps** tab of the Quick Apps Console Page.
 - Alternatively, you can browse to the **Jobs** tab in the Convox Console and locate the installation job manually.
 

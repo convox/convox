@@ -8,7 +8,14 @@ url: /configuration/rack-parameters/gcp/dcgm_scrape_interval
 # dcgm_scrape_interval
 
 ## Description
-The `dcgm_scrape_interval` parameter sets the scrape interval hint published as the DCGM exporter's `prometheus.io/scrape-interval` pod annotation. A Prometheus you run yourself, or Google Managed Prometheus, that discovers targets via `prometheus.io/*` annotations picks up this interval for the DCGM exporter job. Lower values produce more responsive charts at the cost of more Prometheus storage and CPU; higher values reduce overhead at the cost of coarser resolution.
+The `dcgm_scrape_interval` parameter sets the value published as the DCGM exporter's `prometheus.io/scrape-interval` pod annotation. The annotation is a hint. Setting it does not change how often anything scrapes the exporter until your collector is configured to act on it.
+
+| Collector | What the annotation does | What you must do |
+|:----------|:-------------------------|:-----------------|
+| A Prometheus you run yourself | Reaches the target as a pod annotation meta label | Relabel it into `__scrape_interval__`, or set the interval on the scrape job directly |
+| Google Managed Prometheus | Nothing. GMP does not read `prometheus.io/*` annotations | Create a `PodMonitoring` resource targeting the exporter and set the interval on it. Convox does not create one |
+
+Lower values produce more responsive charts at the cost of more Prometheus storage and CPU; higher values reduce overhead at the cost of coarser resolution.
 
 Accepts a duration string, for example `15s`, `30s`, or `2m`.
 
@@ -36,7 +43,9 @@ Updating parameters... OK
 ```
 
 ## Operational Notes
-- The Prometheus scrape interval and the DCGM exporter's internal collection interval are independent. DCGM collects continuously; this parameter controls only the annotation hint your Prometheus reads.
+- If you raise the value to `60s` and your Prometheus keeps scraping at its job default, the collector is not consuming the annotation. Apply the relabel or `PodMonitoring` change from the table above.
+- The Prometheus scrape interval and the DCGM exporter's internal collection interval are independent. DCGM collects continuously; this parameter controls only the annotation value.
+- Changing this parameter rewrites a pod annotation, which rolls the DCGM exporter pods.
 - `dcgm_scrape_interval` is a no-op when `gpu_observability_enable=false`.
 
 ## Related Parameters

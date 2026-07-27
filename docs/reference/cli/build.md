@@ -23,7 +23,7 @@ Create a build
 | `--description` | `-d` | string | Description for the build |
 | `--development` | | bool | Build in development mode |
 | `--external` | | bool | Use external build |
-| `--force` | | bool | Proceed even when the environment drop guard detects a pending drop. Requires CLI version 3.25.1+ |
+| `--force` | | bool | Reduce the environment drop guard message to a one-line notice, and bypass the guard when `CONVOX_ENV_DROP_GUARD=strict`. Requires CLI version 3.25.1+ |
 | `--id` | | bool | Output only the build ID |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
 | `--no-cache` | | bool | Build without using the Docker cache |
@@ -48,7 +48,37 @@ Create a build
 
 ### Environment Drop Guard
 
-Starting with CLI version 3.25.1, `convox build`, `convox deploy`, and `convox test` run a preflight check before creating a build. New builds inherit their environment from the app's newest release, which can differ from the currently running release when environment changes are staged with `convox env set` or `convox env unset` without `--promote`. If the release the build is about to inherit from is missing environment variables that are set in the running release, the CLI stops before building:
+Starting with CLI version 3.25.1, `convox build`, `convox deploy`, and `convox test` run a preflight check before creating a build. New builds inherit their environment from the app's newest release, which can differ from the currently running release when environment changes are staged with `convox env set` or `convox env unset` without `--promote`. If the release the build is about to inherit from is missing environment variables that are set in the running release, the CLI prints a warning to stderr and the build continues. Set `CONVOX_ENV_DROP_GUARD=strict` to make the check blocking instead.
+
+> The check was blocking by default in CLI version 3.25.1. CLI version 3.25.2 changed the default to a warning and added `CONVOX_ENV_DROP_GUARD=strict` to restore the blocking behavior.
+
+#### Behavior
+
+| Condition | `CONVOX_ENV_DROP_GUARD` | `--force` | Result |
+|-----------|-------------------------|-----------|--------|
+| Drop pending | Unset, or any value other than `strict` | No | Warning on stderr, exit 0, the build proceeds |
+| Drop pending | `strict` | No | Error on stderr, exit 1, no build is created |
+| Drop pending | Any value | Yes | One-line notice on stderr, exit 0, the build proceeds |
+| No drop, or the release lookup fails | Any value | Any | No output, the build proceeds |
+
+`CONVOX_ENV_DROP_GUARD` is compared exactly and case-sensitively against the literal string `strict`. Any other value, including `STRICT` and the empty string, selects the warning behavior.
+
+#### Default Output
+
+```
+    WARNING: this build will drop env var(s) that are set in your running release RABC123: SECRET_KEY
+
+    These vars are present in the running release (RABC123) but missing from the latest release (RDEF456), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.
+
+    To keep them, set them again with --promote before deploying, for example:
+        convox env set SECRET_KEY=... --promote
+
+    If this drop is intentional, pass --force to reduce this to a one-line notice. To make this check blocking, set CONVOX_ENV_DROP_GUARD=strict.
+```
+
+#### Strict Mode
+
+With `CONVOX_ENV_DROP_GUARD=strict` and no `--force`, the same information is reported as an error, the command exits 1, and no build is created. This output is unchanged from CLI version 3.25.1:
 
 ```
     ERROR: this build will drop env var(s) that are set in your running release RABC123: SECRET_KEY
@@ -61,9 +91,15 @@ Starting with CLI version 3.25.1, `convox build`, `convox deploy`, and `convox t
     If you meant to drop these vars, or you believe this is a false alarm, re-run with --force
 ```
 
-The check only triggers when one or more variables set in the running release are absent from the newest release. Adding new variables or changing values never triggers it. If the drop is intentional, `--force` bypasses the guard and prints a warning naming the dropped variables.
+Set `CONVOX_ENV_DROP_GUARD=strict` for interactive use and for production deploy gates. The default is the warning so that CI pipelines which intentionally drop variables are not broken by a CLI upgrade.
 
-The check runs entirely in the CLI using read-only API calls, so it works with apps on any rack version. It does not cover `convox builds import` or `convox builds import-image`.
+#### Additional Information
+
+- The check only triggers when one or more variables set in the running release are absent from the newest release. Adding new variables or changing values never triggers it.
+- If the drop is intentional, `--force` replaces the multi-paragraph message with a one-line notice naming the dropped variables, and bypasses the check entirely when `CONVOX_ENV_DROP_GUARD=strict`.
+- All guard output goes to stderr, so `convox build --id` stdout parsing is unaffected.
+- The check runs entirely in the CLI using read-only API calls, so it works with apps on any rack version. It does not cover `convox builds import` or `convox builds import-image`.
+- Because the check lives only in the CLI, Builds started from the Console do not run it.
 
 ### External Builds
 

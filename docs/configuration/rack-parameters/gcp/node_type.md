@@ -1,6 +1,6 @@
 ---
 title: "node_type"
-description: "The node_type GCP rack parameter sets the Compute Engine machine type used for rack nodes, defaulting to n1-standard-1."
+description: "The node_type GCP rack parameter sets the Compute Engine machine type used for rack nodes, defaulting to n1-standard-2."
 slug: node_type
 url: /configuration/rack-parameters/gcp/node_type
 ---
@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/gcp/node_type
 The `node_type` parameter specifies the type of instance to use for nodes in your Convox rack. This allows you to choose the appropriate instance type based on your application's requirements.
 
 ## Default Value
-The default value for `node_type` is `n1-standard-1`.
+The default value for `node_type` is `n1-standard-2`.
 
 ## Use Cases
 - **Performance Optimization**: Select an instance type that provides the necessary CPU, memory, and network performance for your application.
@@ -20,7 +20,7 @@ The default value for `node_type` is `n1-standard-1`.
 ## Setting Parameters
 To set the `node_type` parameter, use the following command:
 ```bash
-$ convox rack params set node_type=n1-standard-1 -r rackName
+$ convox rack params set node_type=n1-standard-4 -r rackName
 Updating parameters... OK
 ```
 This command sets the `node_type` parameter to the specified value.

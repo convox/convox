@@ -31,4 +31,5 @@ Important Notes:
 - The `cwRetention` parameter accepts values from the predefined list of CloudWatch retention policy options. If an invalid value is specified, it will automatically be adjusted to the nearest valid higher value.
 - Retention periods exceeding 10 years are not supported.
 - To completely disable retention and retain logs indefinitely, set the `disableRetention` parameter to `true`.
+- The `awsLogs` settings have no effect on a Rack with [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) set to `true`. The retention policy is not applied, and existing log groups keep whatever retention was last set.
 

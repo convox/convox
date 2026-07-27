@@ -20,7 +20,7 @@ This page is the operational guide for managing caps in production. For schema
 details see the [convox.yml budget block](/configuration/convox-yml#budget); for
 how spend is computed see [Cost Tracking](/management/cost-tracking).
 
-## Prerequisite: cost tracking must be enabled <a id="cost-tracking-prerequisite"></a>
+## Prerequisite: cost tracking must be enabled
 
 Budget enforcement (`monthlyCapUsd`, `alertThresholdPercent`, `atCapAction`)
 requires the rack-level cost accumulator. Without it, no spend is computed, so
@@ -37,7 +37,7 @@ wait for the apply to complete (~3 min), then redeploy or retry.
 
 `cost_tracking_enable` is supported on AWS (rack 3.24.6+) and Azure (rack 3.25.1+); GCP, DigitalOcean, Equinix Metal, and Local racks cannot enforce budgets in the current release. Recovery operations (`convox budget clear`, `convox budget reset`) remain available regardless of cost tracking state so you can always clean up.
 
-## Set a monthly cap <a id="set-a-cap"></a>
+## Set a monthly cap
 
 Set a cap for an app with `convox budget set`:
 
@@ -62,7 +62,7 @@ $ convox budget set myapp --monthly-cap 1000 --alert-at 75 --at-cap-action block
 You can also set these in the [convox.yml budget block](/configuration/convox-yml#budget),
 but runtime cap values come from `convox budget set`, not from the manifest.
 
-## Cap actions <a id="cap-actions"></a>
+## Cap actions
 
 `atCapAction` selects what happens when an app crosses its `monthlyCapUsd`:
 
@@ -93,7 +93,7 @@ scaled to zero, and in what order, without actually shutting anything down.
   staying up. Pair it with a configured webhook so your team is paged on the
   `:armed` event before services scale down.
 
-## Raising or recovering a cap <a id="cap-raise"></a>
+## Raising or recovering a cap
 
 Raising the cap mid-month re-enables blocked deploys (when current spend is
 below the new cap) and dismisses any active recovery banner:
@@ -114,7 +114,7 @@ After auto-shutdown has fired, a cap-raise alone re-enables deploys but does
 **not** restart already-shutdown services. To clear the breach and restore
 services, use `convox budget reset` (see below).
 
-## Reset and force-clear cooldown <a id="force-clear-cooldown"></a>
+## Reset and force-clear cooldown
 
 `convox budget reset` acknowledges a cap breach and re-enables deploys. After
 auto-shutdown has fired, the plain reset also restarts services that were
@@ -139,7 +139,7 @@ $ convox budget reset myapp --force-clear-cooldown
 Resetting budget for myapp (force-clearing flap-suppress cooldown)... OK
 ```
 
-## Block-new-deploys recovery <a id="block-new-deploys"></a>
+## Block-new-deploys recovery
 
 When `atCapAction: block-new-deploys` is in effect and the cap is reached,
 deploys are rejected with an over-cap error similar to:
@@ -157,7 +157,7 @@ To recover:
    rest of the month without raising the cap. The breaker clears but the cap
    remains; subsequent cost growth will block deploys again.
 
-## What you see when a cap is hit <a id="sub-state-vocabulary"></a>
+## What you see when a cap is hit
 
 The `convox ps` `STATUS` column and the `convox services` `BUDGET` column both
 show a per-service sub-state token when an app's budget cap is breached or
@@ -173,7 +173,7 @@ arming. The vocabulary is the same on both surfaces:
 When you recover (raise the cap or reset), these tokens clear and any recovery
 banner in the Console is dismissed.
 
-## Authorization <a id="authorization"></a>
+## Authorization
 
 Budget operations split across two authorization tiers. Cap mutation, clearing
 budget config, and force-clearing the cooldown require the Admin role.
@@ -208,7 +208,7 @@ messages are:
 403 AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.
 ```
 
-## Per-service cost breakdown <a id="per-service-breakdown"></a>
+## Per-service cost breakdown
 
 `convox cost --app myapp` returns a `breakdown` array with the cumulative
 spend, instance type, and bucket name for every service that has been observed
@@ -248,7 +248,7 @@ The breakdown surfaces in `convox cost`, the Console budget panel, and the
 auto-shutdown `shutdownOrder: largest-cost` ranking. With per-service spends
 populated, `largest-cost` shuts down the most expensive service first.
 
-## Audit actor <a id="audit-actor"></a>
+## Audit actor
 
 Every budget mutation emits an audit event with an `actor` field identifying
 who triggered the action. From 3.24.6 onward, when the request supplies an
@@ -261,7 +261,7 @@ clients), preserving pre-3.24.6 behavior.
 Operator scripts and webhook receivers ingesting these events should follow the
 actor-shape guidance in [ack_by Derivation](/migration/ack-by-derivation).
 
-## Troubleshooting <a id="troubleshooting"></a>
+## Troubleshooting
 
 ### Breaker re-trips immediately after reset
 

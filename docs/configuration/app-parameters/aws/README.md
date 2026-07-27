@@ -12,7 +12,7 @@ The following parameters are available for configuring your Convox applications 
 
 | Parameter | Description |
 |:---------|:------------|
-| [BuildArch](/configuration/app-parameters/aws/BuildArch) | Directs builds to nodes matching a specific CPU architecture (amd64 or arm64) |
+| [BuildArch](/configuration/app-parameters/aws/BuildArch) | Pins the App's built image to a CPU architecture (amd64 or arm64), and directs the build pod to a matching build node when dedicated build nodes are enabled. Requires a Rack running 3.25.3 or later |
 | [BuildLabels](/configuration/app-parameters/aws/BuildLabels) | Specifies Kubernetes node selector labels for build pods |
 | [BuildCpu](/configuration/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
 | [BuildMem](/configuration/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |

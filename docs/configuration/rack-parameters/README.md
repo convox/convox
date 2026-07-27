@@ -75,7 +75,7 @@ To view the current rack parameters, use the following command:
 ```bash
 $ convox rack params -r rackName
 ```
-This command displays the current values of all rack parameters for the specified rack.
+This command lists the parameters that have a value stored for the Rack. A parameter left at its default is not returned, so a name absent from the output has never been set. A name that appears with an empty value has been set to an empty value, not left at its default. For the default of a parameter that is absent from the output, see the individual parameter pages for your cloud provider below.
 
 ### Setting Parameters
 To set a rack parameter, use the following command:

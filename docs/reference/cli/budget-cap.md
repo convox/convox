@@ -46,4 +46,4 @@ already-shutdown services. Run `convox budget reset myapp` to restart them.
 
 - [budget](/reference/cli/budget): full budget command group
 - [budget reset](/reference/cli/budget-reset): acknowledge cap breach without raising
-- [Cap raise](/management/budget-caps#cap-raise): operational guide
+- [Cap raise](/management/budget-caps#raising-or-recovering-a-cap): operational guide

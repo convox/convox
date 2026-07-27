@@ -104,7 +104,7 @@ your changes you will need to promote this release.
 > Environment variables can be set using the CLI or through the Console and their values will be available to the
 > [Service](/reference/primitives/app/service).
 
-> Starting with CLI version 3.25.1, if environment changes staged with `convox env set` or `convox env unset` (without `--promote`) would cause the next build to drop variables that are set in the running release, `convox build`, `convox deploy`, and `convox test` stop and report the pending drop before building. See [Environment Drop Guard](/reference/cli/build#environment-drop-guard).
+> Starting with CLI version 3.25.1, if environment changes staged with `convox env set` or `convox env unset` (without `--promote`) would cause the next build to drop variables that are set in the running release, `convox build`, `convox deploy`, and `convox test` report the pending drop before building. Since CLI version 3.25.2 this is a warning and the build continues; set `CONVOX_ENV_DROP_GUARD=strict` to make it blocking. See [Environment Drop Guard](/reference/cli/build#environment-drop-guard).
 
 ### Release-Based Environment Management
 

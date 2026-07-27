@@ -27,13 +27,13 @@ This command sets the build node type to `c5.large`.
 
 ## Architecture Compatibility
 
-The `build_node_type` must use the same CPU architecture as the [node_type](/configuration/rack-parameters/aws/node_type) parameter. If your rack uses x86 instances (e.g. `t3`, `c5`, `m5`), the build node must also be x86. If your rack uses ARM/Graviton instances (e.g. `t4g`, `c6g`, `m6g`), the build node must also be ARM.
+On a single-architecture Rack, the `build_node_type` must use the same CPU architecture as the [node_type](/configuration/rack-parameters/aws/node_type) parameter. If your Rack uses x86 instances (e.g. `t3`, `c5`, `m5`), the build node must also be x86. If your Rack uses ARM/Graviton instances (e.g. `t4g`, `c6g`, `m6g`), the build node must also be ARM.
 
-Mixing architectures (for example, `node_type=t3.small` with `build_node_type=t4g.large`) will cause build failures because the built container images will target the wrong CPU architecture for the nodes that run them.
+Mixing architectures (for example, `node_type=t3.small` with `build_node_type=t4g.large`) does not fail the Build. The Build succeeds and produces an image for the wrong CPU architecture, and the resulting Processes crash with an exec format error.
 
 When `build_node_type` is not set, it defaults to the value of `node_type`, which avoids this issue.
 
-On racks with [Karpenter](/configuration/scaling/karpenter) enabled, workload nodes follow [`karpenter_arch`](/configuration/rack-parameters/aws/karpenter_arch) rather than `node_type`, so match `build_node_type` to the workload architecture set by `karpenter_arch`. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
+On Racks with [Karpenter](/configuration/scaling/karpenter) enabled, workload nodes follow [`karpenter_arch`](/configuration/rack-parameters/aws/karpenter_arch) rather than `node_type`. When `karpenter_arch` is a single value, match `build_node_type` to it: `karpenter_arch=arm64` with an amd64 build node produces images the workload pool cannot run. When `karpenter_arch=amd64,arm64`, Builds produce a multi-architecture image index, so `build_node_type` can be either architecture and no pairing is required. With the default `build_node_enabled=false` there is no build pool, Builds run on workload nodes, and `build_node_type` has no effect. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
 
 ## Additional Information
 Selecting the appropriate `build_node_type` can significantly impact the performance and cost of your build processes. Consider the resource requirements of your builds when choosing an instance type.

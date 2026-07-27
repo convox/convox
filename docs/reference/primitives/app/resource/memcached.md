@@ -36,7 +36,7 @@ resources:
 | ----------- | ------ | -------- | -------------------------------- |
 | **version** | string | `1.4.34` | The Memcached Docker image tag   |
 
-> Specify a recent Memcached version for production use. The default `1.4.34` is the template fallback; most deployments should set an explicit version such as `1.6`.
+> Specify a recent Memcached version for production use. The default `1.4.34` is the template fallback; most deployments should set an explicit version such as `1.6`. The `1.4.34` image has no arm64 variant, so on a Rack whose workload nodes can be arm64 the Resource crash-loops with an exec format error. Set an explicit `version` or `image` on those Racks.
 
 ## AWS ElastiCache Managed Memcached Resources
 

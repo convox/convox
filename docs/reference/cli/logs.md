@@ -56,6 +56,10 @@ Pass `--max-log-requests N` to raise the concurrency cap. The flag is also wired
 
 Set the value to at least the pod count of the target service. Log streams are persistent HTTP connections, so very large values put sustained load on the API server. Prefer filtering by `--service` and a modest concurrency over tailing the full app stream without the flag.
 
+### Log Sources on AWS Racks
+
+On an AWS Rack the whole-App view and the per-Service view come from different sources. `convox logs` without `--service` is served from the App's CloudWatch log group, while `convox logs --service <name>` reads Pod logs directly. CloudWatch applies the `--filter` pattern, so `--filter` narrows the whole-App view and is ignored when `--service` is set. On a Rack with [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) set to `true`, the whole-App view returns empty output while `--service` continues to work.
+
 ## See Also
 
 - [Logging](/configuration/logging) for log configuration and forwarding

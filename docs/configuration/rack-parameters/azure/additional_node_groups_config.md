@@ -28,14 +28,16 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 |-------|----------|-------------|---------|
 | `type` | Yes | The Azure VM size to use for the node pool (e.g., `Standard_D4s_v3`) |  |
 | `disk` | No | The OS disk size in GB for the nodes | Same as main node disk (default: 30) |
-| `capacity_type` | No | Whether to use regular or spot VMs. Accepts `ON_DEMAND`, `SPOT`, `Regular`, or `Spot` | `ON_DEMAND` (Regular) |
+| `capacity_type` | No | Whether to use regular or spot VMs. Accepts `ON_DEMAND`, `SPOT`, `Regular`, or `Spot`, matched exactly. Lowercase forms such as `spot` are rejected | `ON_DEMAND` (Regular) |
 | `min_size` | No | Minimum number of nodes | 1 |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value for the node pool. Applied as `convox.io/label: <label-value>` | None |
-| `id` | No | A unique integer identifier for the node pool that persists across updates | Auto-generated |
+| `id` | No | A unique integer identifier for the node pool that persists across updates | The entry's position in the array |
 | `tags` | No | Custom Azure tags specified as comma-separated key-value pairs (e.g., `environment=production,team=backend`) | None |
 | `dedicated` | No | When `true`, only services with matching node pool labels will be scheduled on these nodes (adds a NoSchedule taint) | `false` |
-| `zones` | No | Comma-separated list of Azure availability zones (e.g., `1,2,3`) | None (platform default) |
+| `zones` | No | Comma-separated list of Azure availability zones (e.g., `1,2,3`). Requires a `convox` CLI at 3.25.3 or newer | None (platform default) |
+
+> **`zones` requires a `convox` CLI at 3.25.3 or newer.** Earlier CLIs dropped the `zones` key from the configuration before it reached Terraform, so a value set with an older CLI had no effect and no error. The Azure Terraform module itself is unchanged in this release and has consumed `zones` since 3.23.4; the fix is entirely in the CLI.
 
 ## Setting Parameters
 To set the `additional_node_groups_config` parameter, there are several methods:
@@ -82,11 +84,12 @@ Updating parameters... OK
 
 ### Using the `id` Field
 
-The `id` field ensures that node pools preserve their identity during configuration updates:
+The `id` field keeps a node pool's identity stable across configuration updates:
 
-- Each node pool should have a unique integer identifier
-- Using the `id` field prevents unnecessary recreation of node pools when making changes to their configuration
-- Consistent `id` values help maintain stable infrastructure during updates
+- Each `id` must be unique. The CLI rejects a configuration with duplicate `id` values, and rejects one where some entries carry an `id` and others do not
+- The `id` fixes the pool's identity, so editing other fields or reordering the array does not churn unrelated pools
+- It does not prevent recreation. When you change a field AKS treats as immutable, such as `type`, `disk`, or `zones`, the pool rotates create-first through a temporary pool: capacity is preserved, but the nodes are replaced
+- Without an `id`, the pool is keyed by its position in the array, so reordering or removing an entry shifts the keys and can apply one pool's configuration to another. Each affected pool rotates through a temporary pool rather than leaving a capacity gap, but its nodes are replaced
 
 Example configuration using the `id` field:
 ```json
@@ -122,6 +125,12 @@ Example configuration using the `tags` field:
   }
 ]
 ```
+
+## Changing Zones on an Existing Pool
+
+Azure rotates a node pool when you change its `zones`. It stands up a temporary pool, migrates the workloads onto it, rebuilds the original pool with the new zones, then migrates the workloads back and removes the temporary pool. The pool's capacity is never entirely absent, but workloads on it drain and reschedule twice, so plan the change like any other rolling replacement.
+
+Upgrading an existing Azure Rack to 3.25.3 causes no node pool churn. The Azure Terraform module is unchanged in this release, and a stored `additional_node_groups_config` written by an older CLI contains no `zones` key, so Terraform plans no change to the pools. Zones are applied the first time you set them with a 3.25.3 or newer CLI.
 
 ## Spot VM Considerations
 

@@ -11,7 +11,7 @@ in-cluster usage telemetry. Spend is the input to budget caps (see [Budget
 Caps](/management/budget-caps)) and surfaces in the Console and the `convox cost`
 CLI.
 
-## Enabling cost tracking <a id="enable"></a>
+## Enabling cost tracking
 
 Cost tracking is gated by the rack parameter `cost_tracking_enable`, default
 `false`. Without it, the cost accumulator does not run, so no spend is
@@ -56,7 +56,7 @@ recorded spend than the raw price would; `0.95` produces 5% less. Use this to
 align Convox's internal pricing with the contract pricing your finance team
 sees, or to add a buffer for cap headroom.
 
-## Per-variant cost breakdown <a id="per-variant-breakdown"></a>
+## Per-variant cost breakdown
 
 Spend is attributed to each `(instance-type, capacity-type)` variant a service
 runs on across the month. A service that started the month on `g4dn.xlarge`
@@ -82,7 +82,7 @@ of the canonical pricing, so Convox-reported spend tracks your contract
 pricing rather than the raw on-demand rate. A value of `1.10` adds 10% buffer
 for cap headroom.
 
-## Unpriced instance types <a id="unpriced-instance-types"></a>
+## Unpriced instance types
 
 The built-in price table covers the common instance families on each provider.
 When a pod runs on an instance the table does not know about (a brand-new AWS

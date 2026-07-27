@@ -30,7 +30,7 @@ Each Convox minor version targets a specific Kubernetes version. Upgrading your 
 
 ## Release History
 
-- [3.25 Releases](/reference/releases/3-25) - K8s 1.35, Azure cost tracking, Karpenter NodeOverlays, convox run flags, cert renewal propagation
+- [3.25 Releases](/reference/releases/3-25) - K8s 1.35, Azure cost tracking, Karpenter NodeOverlays, convox run flags, GCP node pools with GPU and Cloud TPU, GCP GPU observability, multi-arch builds
 - [3.24 Releases](/reference/releases/3-24) - K8s 1.34, deploy-debug, mixed ARM/x86, Karpenter, KEDA autoscaling, Contour router
 - [3.23 Releases](/reference/releases/3-23) - VPA, KEDA, K8s 1.33, Azure node groups
 - [3.22 Releases](/reference/releases/3-22) - Build args, K8s 1.32, release cleanup

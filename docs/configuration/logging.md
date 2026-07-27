@@ -83,6 +83,8 @@ $ convox rack params set syslog=tcp+tls://logs.example.com:1234
 
 This will forward all application and system logs to the specified syslog destination. See the [syslog rack parameter](/configuration/rack-parameters/aws/syslog) documentation for full configuration details.
 
+Fluentd performs the forwarding, so `syslog` has no effect on a Rack with [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) set to `true`. On an AWS Rack, Fluentd also writes container output to CloudWatch whenever it is running, and [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) does not change that. Taking a Rack fully off CloudWatch therefore requires both `fluentd_disable=true` and `cloudwatch_disable=true`. In that configuration Convox does not forward logs anywhere: `convox logs --service <service>` still reads Pod logs directly, and any external collection has to come from an agent you run yourself.
+
 ## Fluentd Memory Tuning
 
 Convox uses Fluentd as the log collector DaemonSet running on every node. The default memory allocation of `200Mi` is sufficient for most workloads, but racks with high log throughput may experience Fluentd OOM restarts and temporary log loss. You can tune the memory allocation with the `fluentd_memory` rack parameter:
@@ -98,6 +100,14 @@ See the provider-specific parameter pages for details:
 - [fluentd_memory (DO)](/configuration/rack-parameters/do/fluentd_memory)
 
 To disable Fluentd entirely (e.g., when using a custom logging solution), see [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable).
+
+## CloudWatch on AWS Racks
+
+On AWS, two writers put data into the same CloudWatch log group for an App, `/convox/<rack>/<app>`. Fluentd ships container output from every Pod, and the Rack controller writes Kubernetes events, deploy state transitions, and AWS resource provisioning messages. The Rack writes its own events to a separate group, `/convox/<rack>/system`, which is what `convox rack logs` reads.
+
+This is why the whole-App view and the per-Service view show different content. `convox logs -a my-app` reads the CloudWatch group, so it returns container output and Rack-side event lines together. `convox logs -a my-app --service web` reads Pod logs directly through Kubernetes, so it returns container output only. CloudWatch applies the `--filter` pattern, which is why `--filter` narrows the whole-App view and is ignored when `--service` is set.
+
+[cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) stops the Rack from creating, writing to, and reading its own CloudWatch log groups. While it is on, `convox logs -a my-app` and `convox rack logs` return empty output, and `convox logs -a my-app --service web` keeps working because it does not read CloudWatch. Fluentd is gated separately by [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable): with Fluentd still running, it continues to create the log groups and write container output into them.
 
 ## Log Retention
 

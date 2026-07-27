@@ -37,6 +37,8 @@ services:
 - `postgres`
 - `redis`
 
+> Containerized Resource images are pulled as-is from upstream and carry no architecture selection. Three of the current default images have no arm64 variant: `memcached:1.4.34`, `mysql:5.7.23`, and `postgis/postgis:10-3.2`. If your Rack has workload nodes that can be arm64, set an explicit `version` or `image` on those Resources so the container has an image it can run.
+
 ### AWS Managed (RDS/ElastiCache)
 
 - `rds-mariadb`

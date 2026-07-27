@@ -24,7 +24,7 @@ Updating parameters... OK
 
 ## Additional Information
 
-- **Validation:** Comma-separated lowercase alphanumeric values (e.g., `c5,m6i,r5`).
+- **Validation:** Comma-separated lowercase alphanumeric values (e.g., `c5,m6i,r5`). On a Rack with `karpenter_enabled=true`, `convox rack params set` at `3.25.3` or newer also rejects a list in which no family matches the workload architecture, which comes from [`karpenter_arch`](/configuration/rack-parameters/aws/karpenter_arch) or, when that is unset, from the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type). Setting `karpenter_instance_families=c5,m5` on an arm64 Rack fails with `karpenter_instance_families (c5,m5) has no family matching the karpenter_arch architecture (arm64); Karpenter could not provision any matching node`.
 - Combine with [`karpenter_instance_sizes`](/configuration/rack-parameters/aws/karpenter_instance_sizes) to further constrain instance selection.
 - Build nodes use [`karpenter_build_instance_families`](/configuration/rack-parameters/aws/karpenter_build_instance_families), which falls back to this value if unset.
 

@@ -23,7 +23,7 @@ Create and promote a build
 | `--description` | `-d` | string | Description for the build |
 | `--development` | | bool | Build in development mode |
 | `--external` | | bool | Use external build |
-| `--force` | | bool | Promote without waiting for the app to be ready, and bypass the environment drop guard |
+| `--force` | | bool | Promote without waiting for the app to be ready; also reduces the environment drop guard message to a one-line notice and bypasses the guard when `CONVOX_ENV_DROP_GUARD=strict` |
 | `--id` | | bool | Output only the build/release ID |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
 | `--no-cache` | | bool | Build without using the Docker cache |
@@ -80,7 +80,7 @@ You can pass env vars that will only exist at build time.
 
 ### Environment Drop Guard
 
-Because `convox deploy` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build` (requires CLI version 3.25.1+). If variables set in the running release would be dropped by the new build, the deploy stops with an explanation and an example `convox env set KEY=... --promote` command to keep them. Passing `--force` bypasses the guard in addition to its existing meaning of forcing the promote without waiting for readiness.
+Because `convox deploy` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build` (requires CLI version 3.25.1+). If variables set in the running release would be dropped by the new build, the CLI prints a warning to stderr with an explanation and an example `convox env set KEY=... --promote` command to keep them, and the deploy continues. Set `CONVOX_ENV_DROP_GUARD=strict` to make the guard blocking instead. Passing `--force` reduces the warning to a one-line notice and bypasses the guard in strict mode, in addition to its existing meaning of promoting without waiting for readiness.
 
 ### External Builds
 

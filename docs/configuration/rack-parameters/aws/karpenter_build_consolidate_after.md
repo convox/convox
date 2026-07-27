@@ -26,9 +26,11 @@ Updating parameters... OK
 
 - **Validation:** Must be a duration like `60s`, `5m`, or `1h` (regex: `^\d+[smh]$`).
 - After the last build completes, build nodes are removed after this delay. Lower values reclaim build node costs faster; higher values keep warm capacity for back-to-back builds.
+- This parameter controls **when** empty build nodes are reclaimed. [`karpenter_build_disruption_budget_nodes`](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) controls **how many** go at once.
 - The build NodePool is only created when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled).
 
 ## See Also
 
 - [Karpenter](/configuration/scaling/karpenter) for the full Karpenter configuration reference
+- [karpenter_build_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) for how many empty build nodes are reclaimed at once
 - [karpenter_consolidate_after](/configuration/rack-parameters/aws/karpenter_consolidate_after) for workload node consolidation

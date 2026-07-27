@@ -108,12 +108,35 @@ These parameters control how Karpenter provisions nodes for your application Ser
 
 `karpenter_arch` accepts `amd64`, `arm64`, or `amd64,arm64` (write the value with no spaces). With `amd64,arm64`, Karpenter may provision either architecture and picks the cheapest instance that satisfies each pod's requirements, which often favors arm64 Graviton instances. Once set, `karpenter_arch` cannot be cleared back to auto-detect; set it explicitly to the desired value instead.
 
-Scheduling on a mixed-architecture pool follows standard Kubernetes behavior: service pods carry no architecture constraint by default, so a pod can land on a node of either architecture. Whether that works depends on the image:
+#### Architecture Is Inherited, Not Configured Twice
 
-- **Images built by Convox are single-architecture.** A build produces an image for the architecture of the node the build pod runs on. With dedicated build nodes enabled ([`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled)), that architecture follows [`build_node_type`](/configuration/rack-parameters/aws/build_node_type). Without dedicated build nodes, build pods schedule with no architecture constraint, so on a rack running more than one architecture the image's architecture is not deterministic. A single-architecture image scheduled onto a node of the other architecture fails with an exec format error.
-- **Multi-architecture images run anywhere.** Convox system images are multi-arch, and services that reference an external multi-arch image with `image:` can schedule onto either architecture freely.
+The Karpenter architecture settings derive from the node type parameters a Rack already has, so enabling Karpenter on an existing Rack keeps the architecture that Rack was already running:
 
-For apps built by Convox, keep the Rack's architecture uniform: set `karpenter_arch` to a single value matching the architecture of `node_type`, and if dedicated build nodes are enabled, use a `build_node_type` of the same architecture (for example `t4g.medium` for arm64). Reserve `karpenter_arch=amd64,arm64` for racks whose workloads are multi-arch images.
+| Setting | Derived from |
+|:--------|:-------------|
+| Workload NodePool architecture | `karpenter_arch` when set, otherwise the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type) |
+| Build NodePool architecture | The architecture of [`build_node_type`](/configuration/rack-parameters/aws/build_node_type), which itself falls back to `node_type` |
+
+Leaving `karpenter_arch` unset on an x86 Rack keeps everything amd64, and on a Graviton Rack keeps everything arm64, so a Rack moving to Karpenter does not need to set it. Convox Console Karpenter install templates pre-set the parameters a Karpenter Rack needs, so a Rack installed from a template arrives with a coherent set of values.
+
+#### Build Output
+
+On a Rack with `karpenter_enabled=true`, `karpenter_arch` also determines what a Convox Build produces:
+
+| `karpenter_arch` | Build output |
+|------------------|--------------|
+| _(unset)_ | One image, native to the build node. |
+| A single value (`amd64` or `arm64`) | One image, native to the node the build pod runs on. With [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled) that is a build node, whose architecture follows [`build_node_type`](/configuration/rack-parameters/aws/build_node_type), falling back to [`node_type`](/configuration/rack-parameters/aws/node_type), and does not follow `karpenter_arch`. With the default `build_node_enabled=false` there is no build NodePool, so the build pod runs on a workload node and the image follows `karpenter_arch`. |
+| `amd64,arm64` | A multi-architecture image index that runs on either architecture. |
+
+Two things to watch for:
+
+- On a Rack with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled), setting `karpenter_arch=arm64` by hand on a Rack whose `node_type` is x86 moves the workload pool to arm64 but leaves the build pool on amd64, because the two derive from different parameters. Set [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) to a Graviton type in the same change, or every new Build produces an image the workload pool cannot run and Processes fail with an exec format error. This only arises when you override one side of the derivation; a Rack that inherits both from `node_type` is always consistent. With the default `build_node_enabled=false` there is no build pool, build pods run on workload nodes, and `build_node_type` has no effect.
+- An entry in [`additional_karpenter_nodepools_config`](#additional_karpenter_nodepools_config-custom-nodepools) whose `arch` differs from the workload architecture also switches the whole Rack into multi-architecture Builds. On an arm64 Rack, a pool that omits `arch` defaults to `amd64` and does this silently.
+
+Multi-architecture Builds require `karpenter_enabled=true`. Builds run with `--development`, and Builds run with `--external` (which build on your own machine), never receive a platform pin and always produce a single image. Containerized [Resources](/reference/primitives/app/resource) are not architecture-aware and several of the default images have no arm64 variant, so an arm64-capable Rack is not a good fit for them yet.
+
+Scheduling on a mixed-architecture pool follows standard Kubernetes behavior: service pods carry no architecture constraint by default, so a pod can land on a node of either architecture. A multi-architecture image runs on either. A single-architecture image scheduled onto a node of the other architecture fails with an exec format error. Convox system images are multi-arch, and services that reference an external multi-arch image with `image:` can schedule onto either architecture freely.
 
 To pin an individual service to one architecture on a mixed pool, set `nodeSelectorLabels` on the service against the standard architecture label:
 
@@ -140,7 +163,7 @@ This renders as a required node affinity on the service's deployment, timers, an
 | `karpenter_consolidation_enabled` | bool | `true` | | When `true`: `WhenEmptyOrUnderutilized` (consolidates underutilized and empty nodes). When `false`: `WhenEmpty` (only removes fully empty nodes). |
 | `karpenter_consolidate_after` | string | `30s` | `^\d+[smh]$` | Delay before consolidation triggers (e.g., `30s`, `5m`, `1h`). |
 | `karpenter_node_expiry` | string | `720h` | `^\d+h$` or `Never` | Maximum node lifetime before automatic replacement. Default is 30 days. `Never` disables automatic replacement. |
-| `karpenter_disruption_budget_nodes` | string | `10%` | `^\d+%?$` | Maximum nodes disrupted simultaneously (e.g., `10%`, `3`). |
+| `karpenter_disruption_budget_nodes` | string | `10%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `10%`, `3`). Percentages above `100%` are rejected. |
 
 ### Storage
 
@@ -169,6 +192,7 @@ These parameters control the dedicated build NodePool. The build NodePool is onl
 | `karpenter_build_cpu_limit` | number | `32` | > 0 | Maximum total vCPUs for the build NodePool. |
 | `karpenter_build_memory_limit_gb` | number | `256` | > 0 | Maximum total memory (GiB) for the build NodePool. |
 | `karpenter_build_consolidate_after` | string | `60s` | `^\d+[smh]$` | Delay before empty build nodes are consolidated. |
+| [`karpenter_build_disruption_budget_nodes`](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) | string | `100%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum empty build nodes reclaimed simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `100%`, `1`). Drift on the build pool stays capped at a fixed `10%`. |
 | [`karpenter_build_imds_tokens`](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | string | _(none)_ | `optional`, `required` | IMDSv2 token requirement for build nodes. Unset inherits the Rack's [`imds_http_tokens`](/configuration/rack-parameters/aws/imds_http_tokens) value. |
 | [`karpenter_build_imds_hop_limit`](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | number | `0` | >= 0 | IMDS response hop limit for build nodes. `0` inherits the Rack's [`imds_http_hop_limit`](/configuration/rack-parameters/aws/imds_http_hop_limit) value. |
 | `karpenter_build_node_labels` | string | _(none)_ | Comma-separated `key=value`; no double quotes; `convox-build` and `convox.io/nodepool` reserved | Extra labels added alongside default `convox-build=true` and `convox.io/nodepool=build` labels. |
@@ -180,12 +204,12 @@ When Karpenter is enabled and `build_node_enabled=true`:
 - The existing EKS managed build node group is scaled to zero
 - Karpenter's build NodePool provisions nodes on-demand when build pods are scheduled
 - Build nodes have a `dedicated=build:NoSchedule` taint, so only build pods run on them
-- Build nodes scale back to zero after the last build completes (configurable via `karpenter_build_consolidate_after`, default 60s)
+- Build nodes scale back to zero after the last build completes. Two parameters govern the turndown: `karpenter_build_consolidate_after` (default `60s`) sets **when** empty build nodes are reclaimed, and [`karpenter_build_disruption_budget_nodes`](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) (default `100%`) sets **how many** go at once
 - Architecture is auto-detected from `build_node_type`
 - Build nodes can run under a dedicated least-privilege IAM role by setting [`build_node_minimal_role_enabled`](/configuration/rack-parameters/aws/build_node_minimal_role_enabled), and their IMDS options can be set independently of workload nodes with `karpenter_build_imds_tokens` and `karpenter_build_imds_hop_limit`
 - The existing `build_node_min_count` parameter does not apply when Karpenter manages builds
 
-Keep `karpenter_build_instance_families` consistent with the build architecture: restricting build nodes to families of the other architecture (for example `c7g` while `build_node_type` is amd64) leaves no instance type satisfying both constraints, and builds cannot schedule. Clear the restriction with `convox rack params set karpenter_build_instance_families=`.
+Keep `karpenter_build_instance_families` consistent with the build architecture: restricting build nodes to families of the other architecture (for example `c7g` while `build_node_type` is amd64) leaves no instance type satisfying both constraints, and builds cannot schedule. As of `3.25.3`, `convox rack params set` rejects that combination instead of letting it through, with `karpenter_build_instance_families (c7g) has no family matching the build_node_type architecture (amd64); Karpenter could not provision any matching node`. The same check applies to `karpenter_instance_families` against `karpenter_arch`, and it only runs when `karpenter_enabled=true`. Clear the restriction with `convox rack params set karpenter_build_instance_families=`.
 
 ## Advanced Configuration
 
@@ -291,7 +315,7 @@ Use this for dedicated GPU pools, tenant isolation, specialized instance require
 | `consolidation_policy` | string | `WhenEmptyOrUnderutilized` | no | `WhenEmpty` or `WhenEmptyOrUnderutilized`. |
 | `consolidate_after` | string | `30s` | no | Delay before consolidation (e.g., `30s`, `5m`). |
 | `node_expiry` | string | `720h` | no | Max node lifetime. `Never` to disable. |
-| `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously. |
+| `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%`. Percentages above `100%` are rejected. |
 | `disk` | integer | _(workload value)_ | no | EBS volume size in GiB. `0` inherits workload pool disk. |
 | `volume_type` | string | `gp3` | no | `gp2`, `gp3`, `io1`, `io2`. |
 | `weight` | integer | _(unset)_ | no | Scheduling weight (0-100). Higher = preferred. |

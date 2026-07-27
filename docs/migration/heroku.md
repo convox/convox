@@ -231,5 +231,3 @@ Deploy to Convox first and verify it before moving any traffic. DNS is the last 
 - [Deploying Changes](/deployment/deploying-changes)
 - [Custom Domains](/deployment/custom-domains)
 - [Autoscaling](/configuration/scaling/autoscaling)
-</content>
-</invoke>

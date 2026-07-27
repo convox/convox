@@ -1,6 +1,6 @@
 ---
 title: "GPU Observability"
-description: "GPU observability gives per-pod, per-service, and per-app GPU telemetry such as utilization, memory, and power draw via DCGM, on AWS racks for v1."
+description: "GPU observability gives per-pod, per-service, and per-app GPU telemetry such as utilization, memory, and power draw via DCGM. Full Console dashboards are AWS-only; GCP racks can install the DCGM exporter for a Prometheus you run yourself."
 slug: gpu-metrics
 url: /observability/gpu-metrics
 ---
@@ -50,7 +50,7 @@ definitions:
 
 ## Setup
 
-GPU observability is opt-in via two rack params:
+On AWS, GPU observability is opt-in via two rack params:
 
 ```bash
 $ convox rack params set gpu_observability_enable=true \
@@ -58,24 +58,21 @@ $ convox rack params set gpu_observability_enable=true \
 Updating parameters... OK
 ```
 
-The `nvidia_device_plugin_enable=true` prerequisite is required: the
-DCGM exporter relies on the device plugin's pod-resources socket for
-pod-to-GPU attribution. Setting `gpu_observability_enable=true` without
-the device plugin is rejected at the CLI.
+The `nvidia_device_plugin_enable=true` prerequisite is AWS-side: the DCGM exporter relies on the device plugin's pod-resources socket for pod-to-GPU attribution. Setting `gpu_observability_enable=true` without the device plugin is rejected at the CLI. GKE manages the device plugin itself, so there is no such parameter and no such prerequisite on GCP.
 
 After enabling the Rack parameters, toggle the GPU Telemetry Scraper on in the Console under Rack > Settings. See [Rack Settings](/console/rack-settings) for details.
 
-Once enabled, the rack installs:
+Once enabled on AWS, the rack installs:
 
-- The DCGM exporter as a DaemonSet on GPU nodes (NVIDIA-only;
-  AWS-only for v1 across the P3, P4, G4, and G5 EC2 instance
-  families).
+- The DCGM exporter as a DaemonSet on GPU nodes (NVIDIA-only, across the P3, P4, G4, and G5 EC2 instance families).
 - A Prometheus scrape target. If Convox metered metrics is enabled,
   the metered Prometheus scrapes DCGM. Otherwise, a free in-cluster
   Prometheus chart auto-installs in the `kube-system` namespace and
   scrapes DCGM.
 - Configuration plumbing on the api Deployment so the Convox Console
   can render dashboards from the configured Prometheus endpoint.
+
+On GCP Racks running version `3.25.3` or later, `gpu_observability_enable=true` is the whole switch. The Rack installs the DCGM exporter and a set of Grafana dashboard ConfigMaps in `kube-system` and nothing else: no Prometheus is deployed, and `prometheus_url` is not a GCP rack parameter. Point a Prometheus and a Grafana you run yourself at the exporter. See [gpu_observability_enable (GCP)](/configuration/rack-parameters/gcp/gpu_observability_enable) for the Service, the annotations, and the Google Managed Prometheus caveat.
 
 ### Configuring scrape interval
 
@@ -90,6 +87,8 @@ Updating parameters... OK
 Allowed values are Go-format duration strings between `15s` and `5m` (300s).
 See [`dcgm_scrape_interval`](/configuration/rack-parameters/aws/dcgm_scrape_interval)
 for details and the trade-off considerations.
+
+On GCP the same parameter exists but publishes the value as a pod annotation hint only. Your collector has to be configured to honor it. See [`dcgm_scrape_interval` (GCP)](/configuration/rack-parameters/gcp/dcgm_scrape_interval).
 
 ### Redeploying services that use GPU autoscale
 
@@ -288,14 +287,19 @@ configurable var names.
 
 ## Provider scope
 
-GPU observability ships AWS-only for v1. On GCP / Azure / DigitalOcean
-/ Equinix Metal / Local racks, the GPU dashboard renders the
-empty-state guidance and the new `gpu-util` / `gpu-mem-used` /
-`gpu-mem-total` fields on `Process` and `Service` populate with zero
-values. Per-provider backend chains are tracked for subsequent
-releases.
+The DCGM exporter is available on AWS Racks and, from rack version `3.25.3`, on GCP Racks. The Convox-managed Prometheus, the `prometheus_url` wiring, `convox ps` GPU enrichment, and the Console GPU dashboards remain AWS-only.
+
+| Provider | DCGM exporter | Convox-managed Prometheus, `convox ps` GPU fields, Console dashboards |
+|:---------|:--------------|:----------------------------------------------------------------------|
+| AWS | Installed by `gpu_observability_enable` | Available |
+| GCP | Installed by `gpu_observability_enable`, rack `3.25.3` or later | Not available. Point your own Prometheus and Grafana at the exporter |
+| Azure, DigitalOcean, Equinix Metal, Local | Not installed | Not available |
+
+On GCP, Azure, DigitalOcean, Equinix Metal, and Local racks the Console GPU dashboard renders the empty-state guidance, and the `gpu-util` / `gpu-mem-used` / `gpu-mem-total` fields on `Process` and `Service` populate with zero values. Per-provider backend chains are tracked for subsequent releases.
 
 ## Related parameters
+
+The parameters below are AWS unless noted. For the GCP set, see [gpu_observability_enable (GCP)](/configuration/rack-parameters/gcp/gpu_observability_enable), [gpu_observability_chart_version (GCP)](/configuration/rack-parameters/gcp/gpu_observability_chart_version), and [dcgm_scrape_interval (GCP)](/configuration/rack-parameters/gcp/dcgm_scrape_interval).
 
 - [`gpu_observability_enable`](/configuration/rack-parameters/aws/gpu_observability_enable):
   Enable the DCGM exporter Helm release.
@@ -325,9 +329,7 @@ releases.
 
 ## Version requirements
 
-GPU observability requires Convox rack version `3.24.6` or later. The
-backend chain (DCGM exporter installed via Helm, Prometheus scrape
-wired into rack-side metrics handlers) is AWS-only for v1.
+GPU observability requires Convox rack version `3.24.6` or later. The backend chain is split by provider: the DCGM exporter is installed via Helm on AWS and, from rack version `3.25.3`, on GCP, while the Prometheus scrape wired into rack-side metrics handlers is AWS-only.
 
 ## See Also
 
