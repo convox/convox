@@ -98,6 +98,19 @@ spec:
         fsGroup: {{ . }}
         fsGroupChangePolicy: OnRootMismatch
       {{ end }}
+      {{ if .Service.SpreadAcrossZones }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
+      {{ end }}
       {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
       affinity:
         nodeAffinity:

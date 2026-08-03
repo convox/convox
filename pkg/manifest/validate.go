@@ -150,6 +150,10 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path", s.Name))
 		}
 
+		if s.Agent.Enabled && s.SpreadAcrossZones {
+			errs = append(errs, fmt.Errorf("service %s can not set spreadAcrossZones when agent is enabled", s.Name))
+		}
+
 		for _, r := range s.ResourcesName() {
 			if _, err := m.Resource(r); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {
