@@ -404,3 +404,14 @@ func TestAnnotationsMapReadsAnnotations(t *testing.T) {
 	require.NotContains(t, got, "ingress-key",
 		"AnnotationsMap must not return ingress annotations")
 }
+
+func TestManifestValidateSpreadAcrossZonesRejectsAgent(t *testing.T) {
+	m, err := manifest.Load([]byte(`services:
+  worker:
+    agent: true
+    image: example/worker
+    spreadAcrossZones: true
+`), nil)
+	require.NoError(t, err)
+	require.EqualError(t, m.Validate(), "validation errors:\nservice worker can not set spreadAcrossZones when agent is enabled")
+}
