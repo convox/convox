@@ -1160,3 +1160,53 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		assertNotContains("no livenessProbe", out, "livenessProbe:")
 	})
 }
+
+func TestRenderTemplateServiceSpreadAcrossZones(t *testing.T) {
+	m, err := manifest.Load([]byte(`services:
+  web:
+    image: example/web
+    spreadAcrossZones: true
+`), nil)
+	require.NoError(t, err)
+
+	svc, err := m.Service("web")
+	require.NoError(t, err)
+	require.True(t, svc.SpreadAcrossZones)
+
+	p := Provider{Engine: &mock.TestEngine{}}
+	p.templater = templater.New(template.TemplatesFS)
+	params := map[string]interface{}{
+		"Annotations":    svc.AnnotationsMap(),
+		"App":            &structs.App{Name: "test-app"},
+		"Environment":    map[string]string{},
+		"MaxSurge":       100,
+		"MaxUnavailable": 100,
+		"Namespace":      "ns",
+		"Password":       "pass",
+		"Rack":           "rack",
+		"Release":        &structs.Release{Id: "r1"},
+		"Replicas":       3,
+		"Resources":      svc.ResourceMap(),
+		"Service":        *svc,
+	}
+
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+	rendered := string(data)
+	require.Contains(t, rendered, "topologySpreadConstraints:")
+	require.Contains(t, rendered, "maxSkew: 1")
+	require.Contains(t, rendered, "topologyKey: topology.kubernetes.io/zone")
+	require.Contains(t, rendered, "whenUnsatisfiable: ScheduleAnyway")
+	require.Contains(t, rendered, `matchLabels:
+            app: test-app
+            rack: rack
+            service: web
+            system: convox
+            type: service`)
+
+	svc.SpreadAcrossZones = false
+	params["Service"] = *svc
+	data, err = p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "topologySpreadConstraints:")
+}

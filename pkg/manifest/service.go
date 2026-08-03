@@ -55,6 +55,7 @@ type Service struct {
 	Labels             Labels                   `yaml:"labels,omitempty"`
 	NodeAffinityLabels Affinities               `yaml:"nodeAffinityLabels,omitempty"`
 	NodeSelectorLabels Labels                   `yaml:"nodeSelectorLabels,omitempty"`
+	SpreadAcrossZones  bool                     `yaml:"spreadAcrossZones,omitempty"`
 	Lifecycle          ServiceLifecycle         `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme        `yaml:"port,omitempty"`
 	Ports              []ServicePortProtocol    `yaml:"ports,omitempty"`
