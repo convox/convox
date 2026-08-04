@@ -6,6 +6,7 @@ import (
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -17,15 +18,23 @@ const (
 
 func (p *Provider) ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error {
 	ackBy = sanitizeAckBy(ackBy)
-
-	d, err := p.GetDeploymentFromInformer(service, p.AppNamespace(app))
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	ns := p.AppNamespace(app)
 
 	prevActive := false
-	if d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
-		prevActive = true
+	stateful := false
+	s, err := p.Cluster.AppsV1().StatefulSets(ns).Get(context.TODO(), service, am.GetOptions{})
+	switch {
+	case err == nil:
+		stateful = true
+		prevActive = s.Annotations != nil && s.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn
+	case !kerr.IsNotFound(err):
+		return errors.WithStack(err)
+	default:
+		d, err := p.GetDeploymentFromInformer(service, ns)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		prevActive = d.Annotations != nil && d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn
 	}
 
 	if prevActive == active {
@@ -49,14 +58,14 @@ func (p *Provider) ServiceScaleOverrideSet(app, service string, active bool, ack
 		patch = []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, ServiceScaleOverrideAnnotation))
 	}
 
-	if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Patch(
-		context.TODO(),
-		service,
-		types.MergePatchType,
-		patch,
-		am.PatchOptions{},
-	); err != nil {
-		return errors.WithStack(err)
+	if stateful {
+		if _, err := p.Cluster.AppsV1().StatefulSets(ns).Patch(context.TODO(), service, types.MergePatchType, patch, am.PatchOptions{}); err != nil {
+			return errors.WithStack(err)
+		}
+	} else {
+		if _, err := p.Cluster.AppsV1().Deployments(ns).Patch(context.TODO(), service, types.MergePatchType, patch, am.PatchOptions{}); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	state := "off"

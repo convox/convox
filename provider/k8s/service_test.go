@@ -92,13 +92,16 @@ func TestServiceList(t *testing.T) {
 		for _, test := range tests {
 			fn := func(t *testing.T) {
 				aa := p.Atom.(*atom.MockInterface)
+				var kk *fake.Clientset
+				actionsBefore := 0
 
 				if test.CreateApp {
-					kk := p.Cluster.(*fake.Clientset)
+					kk = p.Cluster.(*fake.Clientset)
 					aa.On("Status", test.Namespace, test.AppName).Return("Running", test.Release, nil).Once()
 
 					require.NoError(t, appCreate(kk, test.RackName, test.AppName))
 					require.NoError(t, releaseCreate(p.Convox, test.Namespace, test.Release, "basic"))
+					actionsBefore = len(kk.Actions())
 				}
 
 				_, err := p.ServiceList(test.AppName)
@@ -106,6 +109,9 @@ func TestServiceList(t *testing.T) {
 					assert.Equal(t, test.Err.Error(), err.Error())
 				} else {
 					require.NoError(t, err)
+					for _, action := range kk.Actions()[actionsBefore:] {
+						require.NotEqual(t, "statefulsets", action.GetResource().Resource)
+					}
 				}
 			}
 

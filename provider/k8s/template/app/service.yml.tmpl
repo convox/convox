@@ -32,12 +32,14 @@ metadata:
     {{ end }}
 ---
 apiVersion: apps/v1
-kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else }} Deployment {{ end }}
+kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else if .Service.Stateful }} StatefulSet {{ else }} Deployment {{ end }}
 metadata:
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   annotations:
-    {{ if not .Service.Agent.Enabled }}
+    {{ if .Service.Stateful }}
+    atom.conditions: Ready=True
+    {{ else if not .Service.Agent.Enabled }}
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
     {{ end }}
   labels:
@@ -54,7 +56,13 @@ spec:
       rack: {{.Rack}}
       app: {{.App.Name}}
       service: {{.Service.Name}}
-  {{ if not .Service.Agent.Enabled }}
+  {{ if .Service.Stateful }}
+  serviceName: {{.Service.Name}}-headless
+  podManagementPolicy: {{ coalesce .Service.PodManagementPolicy "OrderedReady" }}
+  replicas: {{.Replicas}}
+  updateStrategy:
+    type: RollingUpdate
+  {{ else if not .Service.Agent.Enabled }}
   replicas: {{.Replicas}}
   strategy:
     type: RollingUpdate
@@ -424,6 +432,13 @@ spec:
         - name: azurefiles-{{ .Id }}
           mountPath: {{ .MountPath }}
         {{ end }}
+        {{ with .PersistentVolumeClaim }}
+        - name: pvc-{{ .Id }}
+          mountPath: {{ json .MountPath }}
+          {{ if eq .AccessMode "ReadOnlyMany" }}
+          readOnly: true
+          {{ end }}
+        {{ end }}
         {{ end }}
       volumes:
       - name: ca
@@ -473,8 +488,27 @@ spec:
             - key: app.json
               path: {{ .Filename }}
       {{ end }}
+  {{ if .Service.Stateful }}
+  volumeClaimTemplates:
+  {{ range .Service.VolumeOptions }}
+  {{ with .PersistentVolumeClaim }}
+  - metadata:
+      name: pvc-{{ .Id }}
+    spec:
+      accessModes:
+      - {{ coalesce .AccessMode "ReadWriteOnce" }}
+      {{ with .StorageClass }}
+      storageClassName: {{ json . }}
+      {{ end }}
+      volumeMode: Filesystem
+      resources:
+        requests:
+          storage: {{ .Size }}
+  {{ end }}
+  {{ end }}
+  {{ end }}
  
-{{ if and (and (and (and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled)) (not $.AutoscaleIsEnabled)) (not .Service.Agent.Enabled)) (not $.TriggersOverrideActive) }}
+{{ if and (and (and (and (and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled)) (not $.AutoscaleIsEnabled)) (not .Service.Agent.Enabled)) (not .Service.Stateful)) (not $.TriggersOverrideActive) }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -529,6 +563,25 @@ spec:
         value: {{ .Value }}
         {{ end }}
   {{ end }}
+{{ end }}
+{{ if .Service.Stateful }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.Service.Name}}-headless
+  labels:
+    app: {{.App.Name}}
+    service: {{.Service.Name}}
+    rack: {{.Rack}}
+    system: convox
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    service: {{.Service.Name}}
+    type: service
 {{ end }}
 {{ if or .Service.Port.Port .Service.Ports }}
 ---

@@ -308,6 +308,17 @@ func (c *Client) check(ns, version string) (bool, error) {
 			return false, errors.WithStack(err)
 		}
 
+		if strings.EqualFold(c.Kind, "StatefulSet") {
+			ready, err := statefulSetReady(data)
+			if err != nil {
+				return false, errors.WithStack(err)
+			}
+			if !ready {
+				return false, nil
+			}
+			continue
+		}
+
 		var o struct {
 			Status struct {
 				Conditions []struct {
@@ -341,6 +352,47 @@ func (c *Client) check(ns, version string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func statefulSetReady(data []byte) (bool, error) {
+	var o struct {
+		Metadata struct {
+			Generation int64 `json:"generation"`
+		} `json:"metadata"`
+		Spec struct {
+			Replicas *int32 `json:"replicas"`
+		} `json:"spec"`
+		Status struct {
+			AvailableReplicas  int32  `json:"availableReplicas"`
+			CurrentRevision    string `json:"currentRevision"`
+			ObservedGeneration int64  `json:"observedGeneration"`
+			ReadyReplicas      int32  `json:"readyReplicas"`
+			Replicas           int32  `json:"replicas"`
+			UpdatedReplicas    int32  `json:"updatedReplicas"`
+			UpdateRevision     string `json:"updateRevision"`
+		} `json:"status"`
+	}
+
+	if err := json.Unmarshal(data, &o); err != nil {
+		return false, err
+	}
+
+	desired := int32(1)
+	if o.Spec.Replicas != nil {
+		desired = *o.Spec.Replicas
+	}
+	if o.Status.ObservedGeneration < o.Metadata.Generation ||
+		o.Status.Replicas != desired ||
+		o.Status.ReadyReplicas != desired ||
+		o.Status.AvailableReplicas != desired ||
+		o.Status.UpdatedReplicas != desired {
+		return false, nil
+	}
+	if desired == 0 {
+		return true, nil
+	}
+
+	return o.Status.CurrentRevision != "" && o.Status.CurrentRevision == o.Status.UpdateRevision, nil
 }
 
 func (c *Client) createNamespace(ns string) error {

@@ -69,6 +69,43 @@ func seedDeployment(t *testing.T, kk *kfake.Clientset, ns, name string, replicas
 	require.NoError(t, err)
 }
 
+func seedStatefulset(t *testing.T, kk *kfake.Clientset, ns, name string, replicas int32) {
+	t.Helper()
+	r := replicas
+	_, err := kk.AppsV1().StatefulSets(ns).Create(context.TODO(), &appsv1.StatefulSet{
+		ObjectMeta: am.ObjectMeta{Name: name, Namespace: ns, Labels: map[string]string{"app": "app1", "type": "service", "service": name}},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: &r,
+			Template: ac.PodTemplateSpec{Spec: ac.PodSpec{Containers: []ac.Container{{
+				Name: "app1", Resources: ac.ResourceRequirements{Requests: ac.ResourceList{}, Limits: ac.ResourceList{}},
+			}}}},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestServiceUpdateStatefulset(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedStatefulset(t, kk, "rack1-app1", "database", 1)
+
+		err := p.ServiceUpdate("app1", "database", structs.ServiceUpdateOptions{
+			Count: options.Int(3), Cpu: options.Int(1500), Memory: options.Int(12288),
+		})
+		require.NoError(t, err)
+
+		s, err := kk.AppsV1().StatefulSets("rack1-app1").Get(context.TODO(), "database", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(3), *s.Spec.Replicas)
+		require.Equal(t, int64(1500), s.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().MilliValue())
+		require.Equal(t, int64(12*1024*1024*1024), s.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value())
+
+		err = p.ServiceUpdate("app1", "database", structs.ServiceUpdateOptions{Min: options.Int(1), Max: options.Int(3)})
+		require.ErrorContains(t, err, "stateful services require a fixed scale count")
+	})
+}
+
 func TestServiceUpdateKedaSync(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*kfake.Clientset)

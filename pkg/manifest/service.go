@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
@@ -61,6 +63,7 @@ type Service struct {
 	SecurityContext    ServiceSecurityContext   `yaml:"securityContext,omitempty"`
 	Scale              ServiceScale             `yaml:"scale,omitempty"`
 	Singleton          bool                     `yaml:"singleton,omitempty"`
+	Stateful           bool                     `yaml:"stateful,omitempty"`
 	Sticky             bool                     `yaml:"sticky,omitempty"`
 	Termination        ServiceTermination       `yaml:"termination,omitempty"`
 	Test               string                   `yaml:"test,omitempty"`
@@ -70,6 +73,8 @@ type Service struct {
 	VolumeOptions      []VolumeOption           `yaml:"volumeOptions,omitempty"`
 	Whitelist          string                   `yaml:"whitelist,omitempty"`
 	AccessControl      AccessControlOptions     `yaml:"accessControl,omitempty"`
+
+	PodManagementPolicy string `yaml:"podManagementPolicy,omitempty"`
 }
 
 // ServiceImagePullSecret declares a private-registry credential for pulling a
@@ -128,20 +133,74 @@ type InitContainer struct {
 }
 
 type VolumeOption struct {
-	EmptyDir   *VolumeEmptyDir   `yaml:"emptyDir,omitempty"`
-	AwsEfs     *VolumeAwsEfs     `yaml:"awsEfs,omitempty"`
-	AzureFiles *VolumeAzureFiles `yaml:"azureFiles,omitempty"`
+	EmptyDir              *VolumeEmptyDir              `yaml:"emptyDir,omitempty"`
+	AwsEfs                *VolumeAwsEfs                `yaml:"awsEfs,omitempty"`
+	AzureFiles            *VolumeAzureFiles            `yaml:"azureFiles,omitempty"`
+	PersistentVolumeClaim *VolumePersistentVolumeClaim `yaml:"persistentVolumeClaim,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
 	if v.EmptyDir != nil {
-		return v.EmptyDir.Validate()
+		if err := v.EmptyDir.Validate(); err != nil {
+			return err
+		}
 	}
 	if v.AwsEfs != nil {
-		return v.AwsEfs.Validate()
+		if err := v.AwsEfs.Validate(); err != nil {
+			return err
+		}
 	}
 	if v.AzureFiles != nil {
-		return v.AzureFiles.Validate()
+		if err := v.AzureFiles.Validate(); err != nil {
+			return err
+		}
+	}
+	if v.PersistentVolumeClaim != nil {
+		if err := v.PersistentVolumeClaim.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type VolumePersistentVolumeClaim struct {
+	Id           string `yaml:"id"`
+	AccessMode   string `yaml:"accessMode,omitempty"`
+	MountPath    string `yaml:"mountPath"`
+	Size         string `yaml:"size"`
+	StorageClass string `yaml:"storageClass,omitempty"`
+}
+
+func (v VolumePersistentVolumeClaim) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("persistentVolumeClaim.id is required")
+	}
+	if !NameValidator.MatchString(v.Id) {
+		return fmt.Errorf("persistentVolumeClaim.id must match %s", NameValidator.String())
+	}
+	if len(v.Id) > 59 {
+		return fmt.Errorf("persistentVolumeClaim.id must be 59 characters or fewer")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("persistentVolumeClaim.mountPath is required")
+	}
+	if !path.IsAbs(v.MountPath) || path.Clean(v.MountPath) != v.MountPath {
+		return fmt.Errorf("persistentVolumeClaim.mountPath must be an absolute, clean path")
+	}
+	if v.StorageClass != "" {
+		if errs := validation.IsDNS1123Subdomain(v.StorageClass); len(errs) > 0 {
+			return fmt.Errorf("persistentVolumeClaim.storageClass is invalid: %s", strings.Join(errs, ", "))
+		}
+	}
+	qty, err := resource.ParseQuantity(v.Size)
+	if err != nil || qty.Sign() <= 0 {
+		return fmt.Errorf("persistentVolumeClaim.size is invalid: %s", v.Size)
+	}
+	if v.AccessMode != "" {
+		allowedModes := []string{PVCAccessModeReadOnlyMany, PVCAccessModeReadWriteMany, PVCAccessModeReadWriteOnce}
+		if !containsInStringSlice(allowedModes, v.AccessMode) {
+			return fmt.Errorf("persistentVolumeClaim.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+		}
 	}
 	return nil
 }
