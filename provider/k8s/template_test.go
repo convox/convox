@@ -327,6 +327,58 @@ func TestRenderServiceGpuVendorUnset(t *testing.T) {
 	require.Contains(t, string(data), `nvidia.com/gpu: "1"`)
 }
 
+func TestRenderStatefulServicePersistentVolumeClaim(t *testing.T) {
+	src := `services:
+  database:
+    build: .
+    port: 6333
+    stateful: true
+    podManagementPolicy: Parallel
+    scale:
+      count: 3
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /qdrant/storage
+          size: 200Gi
+          storageClass: gp3
+`
+	p, params := gpuTemplateFixture(t, src)
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+
+	rendered := string(data)
+	require.Contains(t, rendered, "kind: StatefulSet")
+	require.Contains(t, rendered, "atom.conditions: Ready=True")
+	require.Contains(t, rendered, "serviceName: database-headless")
+	require.Contains(t, rendered, "podManagementPolicy: Parallel")
+	require.Contains(t, rendered, "name: pvc-data")
+	require.Contains(t, rendered, "mountPath: /qdrant/storage")
+	require.Contains(t, rendered, "storageClassName: gp3")
+	require.Contains(t, rendered, "storage: 200Gi")
+	require.Contains(t, rendered, "name: database-headless")
+	require.Contains(t, rendered, "clusterIP: None")
+	require.NotContains(t, rendered, "kind: Deployment")
+}
+
+func TestRenderStatefulReadOnlyPersistentVolumeClaim(t *testing.T) {
+	src := `services:
+  database:
+    build: .
+    stateful: true
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          accessMode: ReadOnlyMany
+          mountPath: /data
+          size: 1Gi
+`
+	p, params := gpuTemplateFixture(t, src)
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+	require.Contains(t, string(data), "readOnly: true")
+}
+
 func TestRenderServiceTolerationMerger(t *testing.T) {
 	cases := []struct {
 		name            string

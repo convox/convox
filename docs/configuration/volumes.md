@@ -9,6 +9,34 @@ url: /configuration/volumes
 
 Convox supports multiple types of volumes to manage both persistent and temporary data for your applications. These volumes provide flexibility for different use cases, from high-speed temporary data storage to persistent, scalable file storage across multiple services.
 
+## Per-replica persistent volumes
+
+Use a stateful service when each replica needs its own persistent disk. Convox creates a Kubernetes StatefulSet and one PersistentVolumeClaim for each replica. Kubernetes reattaches the same claim when it replaces or reschedules that replica.
+
+```yaml
+services:
+  database:
+    image: qdrant/qdrant:v1.18.2
+    stateful: true
+    podManagementPolicy: Parallel
+    scale:
+      count: 3
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /qdrant/storage
+          size: 200Gi
+          storageClass: gp3
+```
+
+The rack must provide the named Container Storage Interface storage class. For example, use an Amazon EBS, Azure Disk or Google Persistent Disk storage class. The access mode defaults to `ReadWriteOnce`.
+
+`podManagementPolicy` defaults to `OrderedReady`. Set it to `Parallel` when every replica must start independently, as Qdrant requires.
+
+Stateful services must use a fixed replica count. They do not support agents, autoscaling, VPA, budget auto-shutdown or `convox run --use-service-volume`.
+
+Changing `stateful` on an existing service does not provide an in-place migration. Create a new service and move the data. Kubernetes also treats `podManagementPolicy` and claim template fields such as `storageClass` as immutable.
+
 ## Azure Files Volumes
 
 > Azure only. Requires the [azure_files_enable](/configuration/rack-parameters/azure/azure_files_enable) rack parameter.

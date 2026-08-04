@@ -99,6 +99,34 @@ func TestReleasePromote(t *testing.T) {
 	})
 }
 
+func TestReleasePromoteRejectsStatefulMigration(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa := p.Atom.(*atom.MockInterface)
+		kc := p.Convox.(*cvfake.Clientset)
+		kk := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, releaseCreateInline(kc, "rack1-app1", "release1", `services:
+  database:
+    image: qdrant/qdrant:v1.18.2
+`))
+		require.NoError(t, releaseCreateInline(kc, "rack1-app1", "release2", `services:
+  database:
+    image: qdrant/qdrant:v1.18.2
+    stateful: true
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /qdrant/storage
+          size: 200Gi
+`))
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "release1", nil)
+		err := p.ReleasePromote("app1", "release2", structs.ReleasePromoteOptions{})
+		require.ErrorContains(t, err, "changing stateful on an existing service is not supported")
+	})
+}
+
 func releaseApply(aa *atom.MockInterface, ns, id, atm, fixture string) error {
 	data, err := os.ReadFile(fmt.Sprintf("testdata/release-%s.yml", fixture))
 	if err != nil {

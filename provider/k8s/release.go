@@ -150,6 +150,18 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		if a.Release != "" && a.Release != id {
+			current, _, err := common.ReleaseManifest(p, app, a.Release)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			for _, service := range m.Services {
+				previous, err := current.Service(service.Name)
+				if err == nil && previous.Stateful != service.Stateful {
+					return structs.ErrBadRequest("service %s: changing stateful on an existing service is not supported; create a new service and move the data", service.Name)
+				}
+			}
+		}
 
 		// Reject manifest-tier budget enforcement when the rack-level
 		// cost accumulator is disabled. Mirrors the AppBudgetSet gate

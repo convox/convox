@@ -771,6 +771,12 @@ func (p *Provider) computeShutdownPlanForApp(ctx context.Context, app string, m 
 			})
 			continue
 		}
+		if svc.Stateful {
+			eligibility = append(eligibility, structs.AppBudgetSimulationEligibility{
+				Service: svc.Name, Eligible: false, Reason: "stateful service (StatefulSet)",
+			})
+			continue
+		}
 		if exempt[svc.Name] {
 			eligibility = append(eligibility, structs.AppBudgetSimulationEligibility{
 				Service: svc.Name, Eligible: false, Reason: "in neverAutoShutdown",

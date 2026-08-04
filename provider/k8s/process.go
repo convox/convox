@@ -404,6 +404,20 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		}
 	}
 
+	if opts.UseServiceVolume != nil && *opts.UseServiceVolume {
+		m, _, err := common.AppManifest(p, app)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		s, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if s.Stateful {
+			return nil, structs.ErrBadRequest("--use-service-volume is not supported for stateful services because each replica has its own volume")
+		}
+	}
+
 	// Build pods run in a dedicated namespace while PSA enforcement applies so
 	// the app namespace's enforce label does not reject them. Ensure it before
 	// podSpecFromRunOptions, which writes the pull secret into this namespace.
