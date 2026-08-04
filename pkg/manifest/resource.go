@@ -8,6 +8,9 @@ import (
 
 const (
 	DEFAULT_RESOURCE_ENV_NAME = "URL"
+
+	ResourceProviderAws       = "aws"
+	ResourceProviderContainer = "container"
 )
 
 var (
@@ -24,10 +27,11 @@ var (
 )
 
 type Resource struct {
-	Name    string            `yaml:"-"`
-	Type    string            `yaml:"type"`
-	Image   string            `yaml:"image,omitempty"`
-	Options map[string]string `yaml:"options"`
+	Name     string            `yaml:"-"`
+	Type     string            `yaml:"type"`
+	Provider string            `yaml:"provider,omitempty"`
+	Image    string            `yaml:"image,omitempty"`
+	Options  map[string]string `yaml:"options"`
 }
 
 type Resources []Resource
@@ -53,10 +57,18 @@ func (r Resource) mountEnv(envVar string) string {
 }
 
 func (r Resource) IsCustomManagedResource() bool {
-	return r.IsRds() || r.IsElastiCache()
+	return r.IsRds() || r.IsElastiCache() || r.IsAwsProvider()
+}
+
+func (r Resource) IsAwsProvider() bool {
+	return r.Provider == ResourceProviderAws
 }
 
 func (r Resource) IsRds() bool {
+	switch r.Type {
+	case "postgres", "mysql", "mariadb":
+		return r.IsAwsProvider()
+	}
 	return strings.HasPrefix(r.Type, "rds-")
 }
 
@@ -71,6 +83,10 @@ func (r Resource) RdsNameValidate() error {
 }
 
 func (r Resource) IsElastiCache() bool {
+	switch r.Type {
+	case "redis", "memcached":
+		return r.IsAwsProvider()
+	}
 	return strings.HasPrefix(r.Type, "elasticache-")
 }
 
@@ -87,7 +103,7 @@ func (r Resource) ElastiCacheNameValidate() error {
 func (r Resource) IsContainerizedResource() bool {
 	switch r.Type {
 	case "postgres", "mysql", "mariadb", "redis", "memcached", "postgis":
-		return true
+		return r.Provider == "" || r.Provider == ResourceProviderContainer
 	default:
 		return false
 	}

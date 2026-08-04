@@ -354,10 +354,16 @@ func (p *Provider) AppNamespace(app string) string {
 		return p.Namespace
 	default:
 		if p.ContextTID() != "" {
-			return fmt.Sprintf("%s-%s-%s", p.Name, p.ContextTID(), app)
+			return p.tidNamespace(p.ContextTID(), app)
 		}
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
+}
+
+// tidNamespace is AppNamespace for callers that carry the tenant explicitly
+// because they run outside a tenant request context.
+func (p *Provider) tidNamespace(tid, app string) string {
+	return fmt.Sprintf("%s-%s-%s", p.Name, tid, app)
 }
 
 // buildNamespace returns a deterministic, length-safe namespace dedicated to an
