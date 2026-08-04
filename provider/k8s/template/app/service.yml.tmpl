@@ -304,10 +304,13 @@ spec:
           timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 3
-        {{ else if $.Service.GrpcHealthEnabled }}
+        {{ else if and $.Service.GrpcHealthEnabled (not $.Service.Health.Disable) }}
         readinessProbe:
           grpc:
             port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Health.GrpcService "") }}
+            service: "{{$.Service.Health.GrpcService}}"
+            {{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}

@@ -169,6 +169,8 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
 		}
 
+		m.Services[i].Health.GrpcService = strings.TrimSpace(s.Health.GrpcService)
+
 		s.Liveness.Path = strings.TrimSpace(s.Liveness.Path)
 		if s.Liveness.Path != "" {
 			if s.Liveness.Grace == 0 {

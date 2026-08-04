@@ -42,7 +42,7 @@ services:
 | **path**     | /       | The HTTP endpoint that will be requested                                         |
 | **port**     | Main service port | The port the readiness probe connects to. Set when the health endpoint listens on a different port than the main service port. Accepts a scalar (`port: 8080`) or a map with `port` and `scheme` |
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
-| **disable**  | false   | Set to `true` to disable the health check entirely                               |
+| **disable**  | false   | Set to `true` to disable the readiness probe. A liveness probe configured with `liveness.path` is unaffected |
 
 ### Separate Health Port
 
@@ -63,9 +63,9 @@ With this configuration, traffic flows to the service on HTTPS port 8080, while 
 
 If `scheme` is omitted, the readiness probe inherits the scheme of the main service port. The scalar form `port: 9090` is equivalent to the map form `port: { port: 9090 }` and inherits the service scheme. Provide `scheme` explicitly only when you need to override the inherited value.
 
-> **Scope.** `health.port` only affects the readiness probe. Startup probes continue to target the main service port regardless of `health.port`, and liveness probes use their own `liveness.port` override (see below). If your service speaks gRPC (`port: grpc:...` with `grpcHealthEnabled: true`), a `health.port` override redirects the gRPC health check to the new port; `scheme` is ignored in that case.
+> **Scope.** `health.port` only affects the readiness probe. Startup probes continue to target the main service port regardless of `health.port`, and liveness probes use their own `liveness.port` override (see below). If your service speaks gRPC (`port: grpc:...` with `grpcHealthEnabled: true`), a `health.port` override redirects the gRPC readiness probe to the new port; `scheme` is ignored in that case, and the gRPC liveness probe still follows `liveness.port`.
 
-> **Valid scheme values.** Only `http` and `https` are valid under `health.port.scheme` and `liveness.port.scheme`. Setting `scheme: grpc` on a service whose main port is **not** gRPC will silently skip the probe. Use `grpcHealthEnabled: true` with a gRPC main port instead. See [gRPC Health Checks](#grpc-health-checks) below.
+> **Valid scheme values.** Only `http` and `https` are valid under `health.port.scheme` and `liveness.port.scheme`. Setting `scheme: grpc` on a service whose main port is **not** gRPC will silently skip the probe. With `grpcHealthEnabled: true`, `health.port.scheme: grpc` instead activates the gRPC probes, putting readiness on `health.port` and liveness on `liveness.port`; `liveness.port.scheme: grpc` only drops the liveness probe. Use `grpcHealthEnabled: true` with a gRPC main port instead. See [gRPC Health Checks](#grpc-health-checks) below.
 
 ## Liveness Checks
 
@@ -284,7 +284,7 @@ services:
 
 ### Advanced Configuration
 
-You can customize the gRPC health check behavior using the same `health` attributes as HTTP health checks:
+A subset of the `health` attributes applies to gRPC health checks. See the table below.
 
 ```yaml
 services:
@@ -295,17 +295,23 @@ services:
     health:
       grace: 20
       interval: 5
-      path: /
+      grpcService: myapp.v1.Greeter
       timeout: 2
 ```
 
 | Attribute  | Default | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
 | **grace**    | `interval` | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks. Defaults to the value of `interval` |
+| **grpcService** | empty | The gRPC health service name placed in the `HealthCheckRequest`. Empty means overall server health. Affects the readiness probe only. Requires rack version 3.25.4 or later |
 | **interval** | 5       | The number of seconds between health checks                                      |
-| **path**     | /       | The service name to check within your gRPC health implementation                 |
+| **path**     | /       | Has no effect on a gRPC service. Use `grpcService`                               |
+| **port**     | Main service port | Moves the gRPC readiness probe to another port. `scheme` is ignored. The liveness probe follows `liveness.port` |
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
-| **disable**  | false   | Set to `true` to disable the health check entirely                               |
+| **disable**  | false   | Set to `true` to disable the gRPC readiness and liveness probes. Requires rack version 3.25.4 or later |
+
+`grpcService` takes a gRPC service name such as `myapp.v1.Greeter`. It is not a URL path: a value beginning with `/` is rejected when your app is built, so moving an old `path: /` value into this key fails fast rather than at rollout. Beyond that the value is passed through as written, and the name must be registered on your server. `Check` returns `NOT_FOUND` for a name your server does not know, so readiness never passes and the deploy does not converge.
+
+`grpcService` changes the readiness probe only. The automatic liveness probe keeps sending the empty service name, so your server must report `SERVING` for both the empty name and the name you set. Go's `health.NewServer()` registers the empty name for you. A hand-written `Check` method, or a health registry you populate yourself, must handle an empty `req.Service` as well, or the liveness probe fails and the container restarts. If `liveness.port` points at a separate health listener, only that listener needs the empty name; it does not need the name you set in `grpcService`.
 
 ### Implementation Requirements
 
@@ -322,7 +328,15 @@ When `grpcHealthEnabled` is set to `true`, Convox configures both:
 
 The readinessProbe ensures that gRPC services won't receive traffic until they are fully ready, while the livenessProbe monitors the ongoing health of the service and initiates restarts if necessary.
 
-Both probes use the health settings defined in your `convox.yml`, ensuring consistent behavior throughout the service lifecycle.
+Both probes use `health.grace`, `health.interval` and `health.timeout`. They do not share a port: the readiness port comes from `health.port` and the liveness port from `liveness.port`, each defaulting to the main service port.
+
+`grpcHealthEnabled: true` is required. A `port: grpc:NNNN` service without it gets no readiness probe and no liveness probe at all.
+
+`grpcHealthEnabled: true` is inert on a service whose main port is not gRPC, unless you also set `health.port.scheme: grpc`. That activates the gRPC probes, giving you a gRPC readiness probe on `health.port` and a gRPC liveness probe on `liveness.port`, which defaults to the main port. If `liveness.path` is also set, that HTTP liveness probe is replaced by the gRPC one. Set `liveness.port` to match, or leave `health.port.scheme` unset.
+
+For the gRPC probes, only `liveness.port` has any effect; the `liveness.*` timing fields and `liveness.path` do not. Those timings are still used as the fallback timings for a [startup probe](#startup-probes), including the automatic startup probe added to GPU services.
+
+`startupProbe.path` renders a plain HTTP GET against the gRPC port and fails unless your server also answers HTTP/1.1 there. Use `startupProbe.tcpSocketPort` on a gRPC service.
 
 > gRPC probes use a hardcoded `failureThreshold` of **5** and `successThreshold` of **1** for both readiness and liveness. This differs from HTTP probes, where readiness uses a `failureThreshold` of **3** and liveness uses the configurable `liveness.failureThreshold` (default **3**). The gRPC thresholds are not configurable.
 
@@ -349,8 +363,12 @@ func main() {
 	healthServer := health.NewServer()
 	healthpb.RegisterHealthServer(server, healthServer)
 	
-	// Set your service as serving
+	// The liveness probe always checks the empty service name
 	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	
+	// Only needed when you set health.grpcService, which the readiness probe checks.
+	// Flip this to NOT_SERVING to drain traffic without restarting the container.
+	healthServer.SetServingStatus("myapp.v1.Greeter", healthpb.HealthCheckResponse_SERVING)
 	
 	// Continue with server initialization...
 }
