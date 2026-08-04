@@ -394,9 +394,10 @@ type tempStateLogStorage struct {
 	threshold int
 }
 
-func (t *tempStateLogStorage) Add(key, value string) {
+func (t *tempStateLogStorage) Add(tid, app, value string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+	key := stateLogKey(tid, app)
 	if _, has := t.s[key]; !has {
 		t.s[key] = []string{}
 	}
@@ -408,16 +409,20 @@ func (t *tempStateLogStorage) Add(key, value string) {
 	}
 }
 
-func (t *tempStateLogStorage) Get(key string) []string {
+func (t *tempStateLogStorage) Get(tid, app string) []string {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	return t.s[key]
+	return t.s[stateLogKey(tid, app)]
 }
 
-func (t *tempStateLogStorage) Reset(key string) {
+func (t *tempStateLogStorage) Reset(tid, app string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	t.s[key] = []string{}
+	t.s[stateLogKey(tid, app)] = []string{}
+}
+
+func stateLogKey(tid, app string) string {
+	return fmt.Sprintf("%s/%s", tid, app)
 }
 
 // gpuResourceKey maps a convox.yml gpu.vendor value to the Kubernetes
@@ -449,23 +454,51 @@ var gpuKeyToVendor = map[string]string{
 	"google.com/tpu": "google",
 }
 
-func resourceSubstitutionId(app, rType, rName string) string {
-	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|##", app, rType, rName)
+type resourceSubstitution struct {
+	App     string
+	RType   string
+	RName   string
+	StateId string
+	Tid     string
 }
 
-func parseResourceSubstitutionId(id string) (string, string, string) {
-	var app, rtype, rname string
-	parts := strings.Split(id, "|")
-	for _, p := range parts {
-		if strings.HasPrefix(p, "app:") {
-			app = strings.TrimPrefix(p, "app:")
-		} else if strings.HasPrefix(p, "type:") {
-			rtype = strings.TrimPrefix(p, "type:")
-		} else if strings.HasPrefix(p, "resource:") {
-			rname = strings.TrimPrefix(p, "resource:")
+func resourceSubstitutionId(r *resourceSubstitution) string {
+	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|stateId:%s|tid:%s|##", r.App, r.RType, r.RName, r.StateId, r.Tid)
+}
+
+func parseResourceSubstitutionId(id string) *resourceSubstitution {
+	rs := &resourceSubstitution{}
+
+	for _, part := range strings.Split(id, "|") {
+		k, v, has := strings.Cut(part, ":")
+		if !has {
+			continue
+		}
+
+		switch k {
+		case "app":
+			rs.App = v
+		case "type":
+			rs.RType = v
+		case "resource":
+			rs.RName = v
+		case "stateId":
+			rs.StateId = v
+		case "tid":
+			rs.Tid = v
 		}
 	}
-	return app, rtype, rname
+
+	return rs
+}
+
+// resourceSubstitutionStateId recomputes the id for dependencies recorded before
+// the state id travelled in the substitution payload.
+func (p *Provider) resourceSubstitutionStateId(rs *resourceSubstitution) string {
+	if rs.StateId != "" {
+		return rs.StateId
+	}
+	return generateResourceStateId(p.Name, rs.Tid, rs.App, rs.RName)
 }
 
 func patchBytes(patch map[string]interface{}) ([]byte, error) {

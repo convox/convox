@@ -95,12 +95,12 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 	}
 
 	if mr.IsRds() {
-		r.Status, err = p.RdsProvisioner.GetDbStatus(p.CreateAwsResourceStateId(app, name))
+		r.Status, err = p.RdsProvisioner.GetDbStatus(generateResourceStateId(p.Name, p.ContextTID(), app, name))
 		return r, err
 	}
 
 	if mr.IsElastiCache() {
-		isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(p.CreateAwsResourceStateId(app, name))
+		isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(generateResourceStateId(p.Name, p.ContextTID(), app, name))
 		if isAvailable {
 			r.Status = "running"
 		} else {
