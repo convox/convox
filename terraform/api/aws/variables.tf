@@ -262,6 +262,10 @@ variable "pod_imds_block_enabled" {
   default = false
 }
 
+variable "network_policy_enable" {
+  default = false
+}
+
 variable "contour_internal_tls" {
   default = true
 }

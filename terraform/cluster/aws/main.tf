@@ -671,7 +671,7 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  configuration_values = var.pod_imds_block_enabled ? jsonencode({
+  configuration_values = var.pod_imds_block_enabled || var.network_policy_enable ? jsonencode({
     enableNetworkPolicy = "true"
   }) : null
 }

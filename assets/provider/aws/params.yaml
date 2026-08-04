@@ -84,6 +84,17 @@ Groups:
         type: boolean
         description: Blocks application pods from reaching the EC2 Instance Metadata
           Service (IMDS), preventing workloads from assuming node IAM credentials.
+      - name: network_policy_enable
+        default: "false"
+        sideNote: "Blocks traffic between apps. Review before enabling on a rack running more than one app."
+        type: boolean
+        description: "Restricts which pods can open network connections to your app's
+          pods. &l With this on, an app receives traffic only from pods in its own
+          namespace, from the Convox system components that route and monitor it, and
+          from other namespaces sharing the same tenant label. Traffic from every other
+          app on the rack is dropped. &l &l Apps that define a &i balancers &i block are
+          left out of the restriction, because a load balancer's traffic arrives from
+          the node rather than from a pod. &l"
       - name: seccomp_default_enabled
         default: "false"
         type: boolean

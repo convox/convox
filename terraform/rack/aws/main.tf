@@ -81,6 +81,7 @@ module "api" {
   cert_duration                             = var.cert_duration
   proxy_protocol                            = var.proxy_protocol
   pod_imds_block_enabled                    = var.pod_imds_block_enabled
+  network_policy_enable                     = var.network_policy_enable
   contour_internal_tls                      = var.contour_internal_tls
 }
 
