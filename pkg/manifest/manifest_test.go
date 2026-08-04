@@ -791,6 +791,7 @@ func TestManifestValidate(t *testing.T) {
 		"service internal-router-invalid can not have both internal and internalRouter set as true",
 		"service name serviceF invalid, must contain only lowercase alphanumeric and dashes",
 		"service serviceF references a resource that does not exist: foo",
+		"service grpc-path-invalid health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
 	}
@@ -993,6 +994,30 @@ func TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet(t *testing.
 	require.Equal(t, 0, noPort.StartupProbe.FailureThreshold, "GPU service with no port must not receive the 180 default")
 	require.Equal(t, 0, noPort.StartupProbe.Interval)
 	require.Equal(t, 0, noPort.StartupProbe.Timeout)
+}
+
+func TestManifestGrpcHealthService(t *testing.T) {
+	m, err := testdataManifest("grpc-health", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4, len(m.Services))
+
+	named, err := m.Service("named")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", named.Health.GrpcService)
+
+	padded, err := m.Service("padded")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", padded.Health.GrpcService)
+
+	plain, err := m.Service("plain")
+	require.NoError(t, err)
+	require.Equal(t, "", plain.Health.GrpcService, "grpcService must stay empty when unset")
+	require.Equal(t, "/", plain.Health.Path)
+
+	shorthand, err := m.Service("shorthand")
+	require.NoError(t, err)
+	require.Equal(t, "/ready", shorthand.Health.Path)
+	require.Equal(t, "", shorthand.Health.GrpcService)
 }
 
 func TestManifestKeda(t *testing.T) {

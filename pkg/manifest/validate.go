@@ -136,6 +136,10 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s can not have both internal and internalRouter set as true", s.Name))
 		}
 
+		if strings.HasPrefix(s.Health.GrpcService, "/") {
+			errs = append(errs, fmt.Errorf("service %s health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path", s.Name))
+		}
+
 		for _, r := range s.ResourcesName() {
 			if _, err := m.Resource(r); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {

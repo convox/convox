@@ -867,4 +867,143 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		assertNotContains("startupProbe does not use health port", startupBlock, "port: 9090")
 		assertNotContains("startupProbe does not use liveness port", startupBlock, "port: 9091")
 	})
+
+	// Labels elsewhere render as "service:" but never this deep inside a grpc block.
+	const grpcProbeService = "\n            service:"
+
+	grpcService := func(name string) manifest.Service {
+		return manifest.Service{
+			Name:              name,
+			Port:              manifest.ServicePortScheme{Port: 50051, Scheme: "GRPC"},
+			GrpcHealthEnabled: true,
+			Health: manifest.ServiceHealth{
+				Path: "/", Grace: 5, Interval: 5, Timeout: 4,
+			},
+		}
+	}
+
+	t.Run("grpc probes omit the service name when health.grpcService is unset", func(t *testing.T) {
+		out := render(grpcService("legacygrpc"))
+		assertNotContains("no grpc service name", out, grpcProbeService)
+		// Pins the bytes: port is the only key inside grpc, so the next key is the probe's.
+		assertContains("grpc block unchanged", out, "grpc:\n            port: 50051\n          initialDelaySeconds: 5")
+	})
+
+	t.Run("health.grpcService renders in the grpc readinessProbe only", func(t *testing.T) {
+		svc := grpcService("namedgrpc")
+		svc.Health.GrpcService = "myapp.v1.Greeter"
+		out := render(svc)
+		assertContains("readiness service name", out, "grpc:\n            port: 50051\n            service: myapp.v1.Greeter")
+		if n := countKey(out, "service: myapp.v1.Greeter"); n != 1 {
+			t.Errorf("expected the service name exactly once (readiness only); got %d:\n%s", n, out)
+		}
+	})
+
+	t.Run("health.grpcService coexists with health.port and liveness.port", func(t *testing.T) {
+		svc := grpcService("portedgrpc")
+		svc.Health.GrpcService = "myapp.v1.Greeter"
+		svc.Health.Port = manifest.ServicePortScheme{Port: 50052}
+		svc.Liveness = manifest.ServiceLiveness{
+			Port:             manifest.ServicePortScheme{Port: 50053},
+			SuccessThreshold: 1,
+			FailureThreshold: 5,
+		}
+		out := render(svc)
+		livenessIdx := strings.Index(out, "livenessProbe:")
+		readinessIdx := strings.Index(out, "readinessProbe:")
+		if livenessIdx < 0 || readinessIdx < 0 || livenessIdx > readinessIdx {
+			t.Fatalf("unexpected probe layout: %s", out)
+		}
+		livenessBlock := out[livenessIdx:readinessIdx]
+		readinessBlock := out[readinessIdx:]
+		assertContains("readiness keeps health.port and the service name", readinessBlock, "grpc:\n            port: 50052\n            service: myapp.v1.Greeter")
+		assertContains("liveness keeps liveness.port", livenessBlock, "port: 50053")
+		assertNotContains("liveness has no service name", livenessBlock, grpcProbeService)
+	})
+
+	t.Run("health.path never becomes the grpc service name", func(t *testing.T) {
+		svc := grpcService("pathgrpc")
+		svc.Health.Path = "/ready"
+		out := render(svc)
+		assertNotContains("no grpc service name", out, grpcProbeService)
+		assertNotContains("health.path is not reused", out, "service: /ready")
+		assertContains("grpc probes still render", out, "grpc:\n            port: 50051")
+	})
+
+	t.Run("http service ignores health.grpcService", func(t *testing.T) {
+		svc := manifest.Service{
+			Name: "httpsvc",
+			Port: manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+			Health: manifest.ServiceHealth{
+				Path: "/health", GrpcService: "myapp.v1.Greeter", Grace: 5, Interval: 5, Timeout: 4,
+			},
+		}
+		out := render(svc)
+		assertNotContains("no grpc block", out, "grpc:")
+		assertNotContains("no grpc service name", out, "service: myapp.v1.Greeter")
+		assertContains("httpGet still uses health.path", out, "path: /health")
+	})
+
+	t.Run("health.disable removes both grpc probes", func(t *testing.T) {
+		svc := grpcService("disabledgrpc")
+		svc.Health.Disable = true
+		out := render(svc)
+		assertNotContains("no readinessProbe", out, "readinessProbe:")
+		assertNotContains("no livenessProbe", out, "livenessProbe:")
+	})
+
+	t.Run("health.disable on an http service does not emit grpc probes", func(t *testing.T) {
+		svc := manifest.Service{
+			Name:              "httpdisabled",
+			Port:              manifest.ServicePortScheme{Port: 3000, Scheme: "http"},
+			GrpcHealthEnabled: true,
+			Health: manifest.ServiceHealth{
+				Path: "/", Disable: true, Grace: 5, Interval: 5, Timeout: 4,
+			},
+		}
+		out := render(svc)
+		assertNotContains("no readinessProbe", out, "readinessProbe:")
+		assertNotContains("no livenessProbe", out, "livenessProbe:")
+		assertNotContains("no grpc block against the http port", out, "grpc:")
+	})
+
+	t.Run("health.disable on an http service preserves the configured liveness probe", func(t *testing.T) {
+		svc := manifest.Service{
+			Name:              "httpdisabledlive",
+			Port:              manifest.ServicePortScheme{Port: 3000, Scheme: "http"},
+			GrpcHealthEnabled: true,
+			Health: manifest.ServiceHealth{
+				Path: "/", Disable: true, Grace: 5, Interval: 5, Timeout: 4,
+			},
+			Liveness: manifest.ServiceLiveness{
+				Path:             "/live",
+				Grace:            10,
+				Interval:         5,
+				Timeout:          5,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
+		}
+		out := render(svc)
+		assertContains("liveness keeps the configured path", out, "path: /live")
+		assertContains("liveness keeps the configured threshold", out, "failureThreshold: 3")
+		assertNotContains("no grpc block against the http port", out, "grpc:")
+		assertNotContains("no readinessProbe", out, "readinessProbe:")
+	})
+
+	t.Run("grpc port without grpcHealthEnabled renders no probes", func(t *testing.T) {
+		svc := grpcService("optedout")
+		svc.GrpcHealthEnabled = false
+		svc.Liveness = manifest.ServiceLiveness{
+			Path:             "/live",
+			Grace:            10,
+			Interval:         5,
+			Timeout:          5,
+			SuccessThreshold: 1,
+			FailureThreshold: 3,
+		}
+		out := render(svc)
+		assertNotContains("no readinessProbe", out, "readinessProbe:")
+		assertNotContains("no livenessProbe", out, "livenessProbe:")
+	})
 }

@@ -418,11 +418,12 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | Attribute  | Type   | Default | Description                                                                                      |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
 | **grace**    | number | `interval` | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting health checks. Defaults to the value of `interval` |
+| **grpcService** | string |      | The gRPC health service name placed in the `HealthCheckRequest`, for services using `grpcHealthEnabled`. Empty means overall server health. Affects the readiness probe only. Requires rack version 3.25.4 or later. See [gRPC Health Checks](/configuration/health-checks#grpc-health-checks) |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
-| **path**     | string | /       | The path to request for health checks                                                            |
+| **path**     | string | /       | The path to request for health checks. Has no effect on a gRPC service; use `grpcService`         |
 | **port**     | number or map | Main service port | The port the readiness probe connects to. Accepts a scalar (`port: 8080`) or a map (`port: { port: 8080, scheme: https }`). Scheme inherits from the main service port when omitted. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
 | **timeout**  | number | `interval - 1` | The number of seconds to wait for a successful response. Defaults to `interval` minus one |
-| **disable**  | bool | false       | Set to `true` to disable the health check entirely |
+| **disable**  | bool | false       | Set to `true` to disable the readiness probe. A liveness probe configured with `liveness.path` is unaffected. On a gRPC service this disables both the readiness and the liveness probe, and requires rack version 3.25.4 or later |
 
 > Specifying **health** as a string will set the **path** and leave the other values as defaults.
 

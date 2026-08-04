@@ -24,6 +24,12 @@ services:
     build: .
     resources:
       - foo
+  grpc-path-invalid:
+    build: .
+    port: grpc:50051
+    grpcHealthEnabled: true
+    health:
+      grpcService: /ready
 timers:
   timer_1:
     service: someservice

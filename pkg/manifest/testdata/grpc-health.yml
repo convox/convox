@@ -1,0 +1,22 @@
+services:
+  named:
+    build: .
+    port: grpc:50051
+    grpcHealthEnabled: true
+    health:
+      grpcService: myapp.v1.Greeter
+  padded:
+    build: .
+    port: grpc:50052
+    grpcHealthEnabled: true
+    health:
+      grpcService: "  myapp.v1.Greeter  "
+  plain:
+    build: .
+    port: grpc:50053
+    grpcHealthEnabled: true
+  shorthand:
+    build: .
+    port: grpc:50054
+    grpcHealthEnabled: true
+    health: /ready
