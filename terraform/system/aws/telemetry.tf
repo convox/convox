@@ -107,6 +107,7 @@ locals {
     max_on_demand_count                       = var.max_on_demand_count
     min_on_demand_count                       = var.min_on_demand_count
     name                                      = var.name
+    network_policy_enable                     = var.network_policy_enable
     nginx_additional_config                   = var.nginx_additional_config
     nginx_image                               = var.nginx_image
     nlb_security_group                        = var.nlb_security_group
@@ -262,6 +263,7 @@ locals {
     max_on_demand_count                       = "100"
     min_on_demand_count                       = "1"
     name                                      = ""
+    network_policy_enable                     = "false"
     nginx_additional_config                   = ""
     nginx_image                               = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
     nlb_security_group                        = ""
