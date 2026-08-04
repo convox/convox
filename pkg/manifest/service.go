@@ -285,12 +285,13 @@ type ServiceDnsConfig struct {
 }
 
 type ServiceHealth struct {
-	Disable  bool
-	Grace    int
-	Interval int
-	Path     string
-	Port     ServicePortScheme `yaml:"port,omitempty"`
-	Timeout  int
+	Disable     bool
+	Grace       int
+	GrpcService string `yaml:"grpcService,omitempty"`
+	Interval    int
+	Path        string
+	Port        ServicePortScheme `yaml:"port,omitempty"`
+	Timeout     int
 }
 
 type ServiceLiveness struct {

@@ -317,6 +317,9 @@ func (v *ServiceHealth) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if w, ok := t["disable"].(bool); ok {
 			v.Disable = w
 		}
+		if w, ok := t["grpcService"].(string); ok {
+			v.GrpcService = w
+		}
 		if p, ok := t["port"]; ok && p != nil {
 			if err := remarshal(p, &v.Port); err != nil {
 				return err
