@@ -69,8 +69,8 @@ var awsKnownParams = map[string]bool{
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
 	"pod_security_standard": true, "pod_security_mode": true,
 	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
-	"pod_imds_block_enabled": true,
-	"internet_gateway_id":    true, "k8s_version": true,
+	"pod_imds_block_enabled": true, "network_policy_enable": true,
+	"internet_gateway_id": true, "k8s_version": true,
 	"karpenter_arch": true, "karpenter_auth_mode": true,
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
@@ -209,6 +209,7 @@ var boolParams = map[string]bool{
 	"gpu_tag_enable":                  true,
 	"imds_tags_enable":                true,
 	"pod_imds_block_enabled":          true,
+	"network_policy_enable":           true,
 	"internal_router":                 true,
 	"contour_internal_tls":            true,
 	"karpenter_consolidation_enabled": true,
@@ -363,6 +364,7 @@ var paramGroups = map[string]map[string]bool{
 		"imds_http_tokens":                    true,
 		"imds_tags_enable":                    true,
 		"pod_imds_block_enabled":              true,
+		"network_policy_enable":               true,
 		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
 		"karpenter_build_imds_tokens":         true, // dual-listed in build
 		"pod_security_standard":               true,

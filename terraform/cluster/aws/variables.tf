@@ -114,6 +114,11 @@ variable "pod_imds_block_enabled" {
   default = false
 }
 
+variable "network_policy_enable" {
+  type    = bool
+  default = false
+}
+
 variable "internet_gateway_id" {
   default = ""
 }

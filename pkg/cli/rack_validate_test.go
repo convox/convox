@@ -404,6 +404,21 @@ func TestValidateAndMutateParams_PrometheusUrl_NonAwsRejected(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_NetworkPolicyEnable_NonAwsRejected(t *testing.T) {
+	for _, provider := range []string{"gcp", "azure", "do", "metal", "local"} {
+		t.Run(provider, func(t *testing.T) {
+			params := map[string]string{"network_policy_enable": "true"}
+			err := validateAndMutateParams(params, provider, map[string]string{}, false)
+			if err == nil {
+				t.Fatalf("network_policy_enable should be rejected on %s (only declared in AWS Terraform)", provider)
+			}
+			if !strings.Contains(err.Error(), "unknown parameter") {
+				t.Errorf("error %q should mention 'unknown parameter'", err.Error())
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_UnknownParamSpellcheckIntact(t *testing.T) {
 	// Regression guard: adding entries to KnownParams maps must not weaken
 	// the spellcheck path that rejects unknown keys.
@@ -469,7 +484,8 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 		"disable_image_manifest_cache", "ebs_volume_encryption_enabled",
 		"ecr_immutable_tags_enabled", "ecr_scan_on_push_enable", "efs_csi_driver_enable", "fluentd_disable",
 		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
-		"karpenter_consolidation_enabled", "keda_enable", "pod_identity_agent_enable",
+		"karpenter_consolidation_enabled", "keda_enable", "network_policy_enable",
+		"pod_identity_agent_enable",
 		"pod_imds_block_enabled", "seccomp_default_enabled", "system_readonly_rootfs_enabled",
 		"telemetry", "vpa_enable",
 	} {
