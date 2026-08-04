@@ -98,6 +98,12 @@ func (m *Manifest) validateResources() []error {
 		if strings.TrimSpace(r.Type) == "" {
 			errs = append(errs, fmt.Errorf("resource %q has blank type", r.Name))
 		}
+
+		switch r.Provider {
+		case "", ResourceProviderAws, ResourceProviderContainer:
+		default:
+			errs = append(errs, fmt.Errorf("resource %q has unknown provider %q", r.Name, r.Provider))
+		}
 	}
 
 	return errs
