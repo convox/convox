@@ -142,11 +142,13 @@ services:
 | **nodeSelectorLabels** | map |  | Node selector labels for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer). Supports TCP (default) and UDP protocols |
+| **podManagementPolicy** | string | `OrderedReady` | StatefulSet pod start and scale policy. Use `OrderedReady` or `Parallel`; requires `stateful: true` |
 | **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
 | **resources**   | list       |                     | A list of [Resources](/reference/primitives/app/resource) to make available to this Service (e.g. databases) |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
+| **stateful**    | boolean    | false               | Set to **true** to give each replica stable identity and its own PersistentVolumeClaim. See [Volumes](/configuration/volumes#per-replica-persistent-volumes) |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
 | **termination** | map        |                     | Termination related configuration                                                                                                          |
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
@@ -599,6 +601,7 @@ services:
 | ---------- | ------- | ------- | ------------------------------------------------------------------------------------ |
 | **emptyDir** | map |     | Configuration for [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) volume |
 | **awsEfs** | map |     | Configuration for AWS Efs volume. To use this you have to enable efs csi driver in the rack |
+| **persistentVolumeClaim** | map | | Per-replica persistent storage for a stateful service |
 
 
 
@@ -650,6 +653,18 @@ services:
           accessMode: ReadWriteMany
           mountPath: "/my/data/"
 ```
+
+### []volumeOptions.persistentVolumeClaim
+
+| Attribute | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| **id** | string | | Required. ID used for the claim and volume mount |
+| **mountPath** | string | | Required. Path in the service file system to mount the volume |
+| **size** | string | | Required. Kubernetes resource quantity, such as `200Gi` |
+| **storageClass** | string | cluster default | Container Storage Interface storage class supplied by the rack |
+| **accessMode** | string | `ReadWriteOnce` | `ReadWriteOnce`, `ReadOnlyMany` or `ReadWriteMany` |
+
+This option requires `stateful: true`. See [per-replica persistent volumes](/configuration/volumes#per-replica-persistent-volumes) for an example and limits.
 
 
 

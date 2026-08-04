@@ -116,6 +116,10 @@ func (m *Manifest) validateServices() []error {
 	for i := range m.Configs {
 		configMap[m.Configs[i].Id] = struct{}{}
 	}
+	serviceNames := map[string]struct{}{}
+	for i := range m.Services {
+		serviceNames[m.Services[i].Name] = struct{}{}
+	}
 
 	for _, s := range m.Services {
 		if !NameValidator.MatchString(s.Name) {
@@ -157,6 +161,58 @@ func (m *Manifest) validateServices() []error {
 		for i := range s.VolumeOptions {
 			if err := s.VolumeOptions[i].Validate(); err != nil {
 				errs = append(errs, err)
+			}
+			if s.VolumeOptions[i].PersistentVolumeClaim != nil && !s.Stateful {
+				errs = append(errs, fmt.Errorf("service %s: persistentVolumeClaim requires stateful: true", s.Name))
+			}
+		}
+
+		if s.Stateful {
+			headlessName := s.Name + "-headless"
+			if len(headlessName) > 63 {
+				errs = append(errs, fmt.Errorf("service %s: stateful service name must be 54 characters or fewer", s.Name))
+			}
+			if _, exists := serviceNames[headlessName]; exists {
+				errs = append(errs, fmt.Errorf("service %s: generated headless service name %s conflicts with another service", s.Name, headlessName))
+			}
+			hasClaim := false
+			claimIds := map[string]bool{}
+			for i := range s.VolumeOptions {
+				claim := s.VolumeOptions[i].PersistentVolumeClaim
+				if claim == nil {
+					continue
+				}
+				hasClaim = true
+				if claimIds[claim.Id] {
+					errs = append(errs, fmt.Errorf("service %s: duplicate persistentVolumeClaim id %s", s.Name, claim.Id))
+				}
+				claimIds[claim.Id] = true
+			}
+			if !hasClaim {
+				errs = append(errs, fmt.Errorf("service %s: stateful services require a persistentVolumeClaim", s.Name))
+			}
+			if s.Agent.Enabled {
+				errs = append(errs, fmt.Errorf("service %s: stateful services can not run as agents", s.Name))
+			}
+			if s.Scale.Count.Min != s.Scale.Count.Max || s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled() {
+				errs = append(errs, fmt.Errorf("service %s: stateful services require a fixed scale count", s.Name))
+			}
+			if s.Scale.VPA != nil {
+				errs = append(errs, fmt.Errorf("service %s: stateful services do not support vpa", s.Name))
+			}
+			switch s.PodManagementPolicy {
+			case "", "OrderedReady", "Parallel":
+			default:
+				errs = append(errs, fmt.Errorf("service %s: podManagementPolicy must be OrderedReady or Parallel", s.Name))
+			}
+		} else if s.PodManagementPolicy != "" {
+			errs = append(errs, fmt.Errorf("service %s: podManagementPolicy requires stateful: true", s.Name))
+		}
+		if s.InitContainer != nil {
+			for i := range s.InitContainer.VolumeOptions {
+				if s.InitContainer.VolumeOptions[i].PersistentVolumeClaim != nil {
+					errs = append(errs, fmt.Errorf("service %s: initContainer does not support persistentVolumeClaim", s.Name))
+				}
 			}
 		}
 

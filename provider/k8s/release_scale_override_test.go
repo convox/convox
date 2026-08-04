@@ -56,6 +56,24 @@ func scaleSeedDeployment(t *testing.T, c *fake.Clientset, ns, name string, repli
 	require.NoError(t, err)
 }
 
+func scaleSeedStatefulSet(t *testing.T, c *fake.Clientset, ns, name string, replicas int32) {
+	t.Helper()
+	r := replicas
+	_, err := c.AppsV1().StatefulSets(ns).Create(context.TODO(), &appsv1.StatefulSet{
+		ObjectMeta: am.ObjectMeta{
+			Name:        name,
+			Namespace:   ns,
+			Labels:      map[string]string{"app": "app1", "type": "service", "service": name},
+			Annotations: map[string]string{k8s.ServiceScaleOverrideAnnotation: k8s.ServiceScaleOverrideValueOn},
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: &r,
+			Template: ac.PodTemplateSpec{Spec: ac.PodSpec{Containers: []ac.Container{{Name: "app1"}}}},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
 // scaleManifestYaml builds a minimal manifest YAML string with
 // scale.count.{min,max} per service. Used by both the in-test
 // manifest.Services (for the helper input) and the seeded
@@ -76,6 +94,10 @@ func scaleManifestYaml(services map[string]int) string {
 		b.WriteString("\n")
 	}
 	return b.String()
+}
+
+func scaleStatefulManifestYaml(services map[string]int) string {
+	return strings.ReplaceAll(scaleManifestYaml(services), "    image:", "    stateful: true\n    image:")
 }
 
 // scaleManifestServices builds a minimal manifest.Services slice. The
@@ -328,6 +350,31 @@ func TestReleasePromote_ServiceScaleOverrideHonor_RuntimeCountZeroYamlMinNonzero
 	require.Len(t, honored, 1)
 	data, _ := honored[0]["data"].(map[string]any)
 	assert.Equal(t, "0", data["preserved_count"], "preserved_count must equal sc[s.Name]=0 — explicit zero, NOT yaml fallback")
+	assert.Equal(t, "2", data["yaml_count_min"])
+}
+
+func TestReleasePromote_StatefulServiceScaleOverrideHonor_RuntimeCountZero(t *testing.T) {
+	_, events, err := runReleaseTemplateServicesEvents(t, func(p *k8s.Provider) (*structs.App, *structs.Release, manifest.Services) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		scaleSeedStatefulSet(t, kk, "rack1-app1", "database", 0)
+
+		yaml := scaleStatefulManifestYaml(map[string]int{"database": 2})
+		m, err := manifest.Load([]byte(yaml), structs.Environment{})
+		require.NoError(t, err)
+		aa, _ := p.Atom.(*atom.MockInterface)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		aa.On("Status", "rack1-app1", "app").Return("Running", "release1", nil)
+		require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1", yaml))
+
+		return &structs.App{Name: "app1", Release: "release1"}, &structs.Release{Id: "release1", App: "app1"}, m.Services
+	})
+	require.NoError(t, err)
+	honored := findAllByAction(events, "app:scale-override:honored")
+	require.Len(t, honored, 1)
+	data, _ := honored[0]["data"].(map[string]any)
+	assert.Equal(t, "database", data["service"])
+	assert.Equal(t, "0", data["preserved_count"])
 	assert.Equal(t, "2", data["yaml_count_min"])
 }
 

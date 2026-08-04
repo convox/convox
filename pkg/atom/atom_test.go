@@ -2,6 +2,7 @@ package atom
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -180,6 +181,54 @@ func TestIsRecoverableApplyError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStatefulSetReady(t *testing.T) {
+	tests := []struct {
+		name       string
+		desired    int
+		generation int
+		observed   int
+		replicas   int
+		ready      int
+		available  int
+		updated    int
+		current    string
+		update     string
+		want       bool
+	}{
+		{name: "ready", desired: 3, generation: 2, observed: 2, replicas: 3, ready: 3, available: 3, updated: 3, current: "rev2", update: "rev2", want: true},
+		{name: "pvc or pod pending", desired: 3, generation: 2, observed: 2, replicas: 2, ready: 1, available: 1, updated: 2, current: "rev1", update: "rev2"},
+		{name: "controller has not observed update", desired: 3, generation: 3, observed: 2, replicas: 3, ready: 3, available: 3, updated: 3, current: "rev3", update: "rev3"},
+		{name: "rolling update incomplete", desired: 3, generation: 3, observed: 3, replicas: 3, ready: 3, available: 3, updated: 2, current: "rev2", update: "rev3"},
+		{name: "scaled to zero", desired: 0, generation: 4, observed: 4, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := []byte(fmt.Sprintf(`{"metadata":{"generation":%d},"spec":{"replicas":%d},"status":{"observedGeneration":%d,"replicas":%d,"readyReplicas":%d,"availableReplicas":%d,"updatedReplicas":%d,"currentRevision":%q,"updateRevision":%q}}`,
+				tt.generation, tt.desired, tt.observed, tt.replicas, tt.ready, tt.available, tt.updated, tt.current, tt.update))
+			got, err := statefulSetReady(data)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractStatefulSetConditions(t *testing.T) {
+	data := []byte(`apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: app
+  name: database
+  annotations:
+    atom.conditions: Ready=True
+`)
+	conditions, err := extractConditions(data)
+	require.NoError(t, err)
+	require.Len(t, conditions, 1)
+	require.Equal(t, "StatefulSet", conditions[0].Kind)
+	require.Equal(t, "database", conditions[0].Name)
 }
 
 func atomCreate(ac av.Interface, namespace, name, status, version string, spec aa.AtomSpec) error {

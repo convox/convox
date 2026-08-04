@@ -386,6 +386,66 @@ func TestServiceList_PopulatesAgentField(t *testing.T) {
 	})
 }
 
+func TestServiceListIncludesStatefulsets(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		replicas := int32(3)
+		_, err := kk.AppsV1().StatefulSets("rack1-app1").Create(context.TODO(), &appsv1.StatefulSet{
+			ObjectMeta: am.ObjectMeta{
+				Name: "database", Namespace: "rack1-app1",
+				Labels:      map[string]string{"app": "app1", "type": "service", "service": "database"},
+				Annotations: map[string]string{k8s.ServiceScaleOverrideAnnotation: k8s.ServiceScaleOverrideValueOn},
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Replicas: &replicas,
+				Template: ac.PodTemplateSpec{Spec: ac.PodSpec{Containers: []ac.Container{{Name: "app1"}}}},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		manifestYaml := "services:\n" +
+			"  database:\n" +
+			"    image: qdrant/qdrant\n" +
+			"    stateful: true\n" +
+			"    scale:\n" +
+			"      count: 3\n" +
+			"    volumeOptions:\n" +
+			"      - persistentVolumeClaim:\n" +
+			"          id: data\n" +
+			"          mountPath: /data\n" +
+			"          size: 1Gi\n"
+
+		aa, _ := p.Atom.(*atom.MockInterface)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		aa.On("Status", "rack1-app1", "app").Return("Running", "release1", nil)
+		require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1", manifestYaml))
+
+		services, err := p.ServiceList("app1")
+		require.NoError(t, err)
+		require.Len(t, services, 1)
+		require.Equal(t, "database", services[0].Name)
+		require.Equal(t, 3, services[0].Count)
+		require.True(t, *services[0].ScaleOverrideActive)
+
+		require.NoError(t, p.ServiceScaleOverrideSet("app1", "database", false, "test"))
+		statefulset, err := kk.AppsV1().StatefulSets("rack1-app1").Get(context.TODO(), "database", am.GetOptions{})
+		require.NoError(t, err)
+		_, hasOverride := statefulset.Annotations[k8s.ServiceScaleOverrideAnnotation]
+		require.False(t, hasOverride)
+
+		require.NoError(t, p.ServiceRestart("app1", "database"))
+		statefulset, err = kk.AppsV1().StatefulSets("rack1-app1").Get(context.TODO(), "database", am.GetOptions{})
+		require.NoError(t, err)
+		require.NotEmpty(t, statefulset.Spec.Template.Annotations["convox.com/restart"])
+
+		useServiceVolume := true
+		_, err = p.ProcessRun("app1", "database", structs.ProcessRunOptions{UseServiceVolume: &useServiceVolume})
+		require.ErrorContains(t, err, "not supported for stateful services")
+	})
+}
+
 // TestServiceScaleOverrideSet_AdminRBAC_AdminPermitted verifies the
 // provider-method is RBAC-agnostic (the gate is at the API controller
 // layer). The negative case is asserted in pkg/api/service_test.go.

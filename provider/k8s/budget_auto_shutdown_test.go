@@ -430,6 +430,40 @@ func TestReconcileAutoShutdown_NoopReason_RuntimeDrift(t *testing.T) {
 	})
 }
 
+func TestReconcileAutoShutdown_StatefulServiceIsNotEligible(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		installFakeDynamicClient(p)
+
+		cap := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{cap.server.URL})
+		now := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80,
+			AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+		})
+		baseState := &structs.AppBudgetState{
+			MonthStart: startOfApril(), CurrentMonthSpendUsd: 105, CurrentMonthSpendAsOf: now, AlertFiredAtCap: now,
+		}
+		writeState(t, kk, "rack1-app1", baseState)
+
+		cfg, _, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		cfg.AtCapAction = structs.BudgetAtCapActionAutoShutdown
+		m := buildAutoShutdownManifest(30)
+		m.Services[0].Stateful = true
+
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, baseState, m, now)
+		cap.drain()
+
+		noopEvts := cap.findActions(":noop")
+		require.Len(t, noopEvts, 1)
+		assert.Equal(t, "no-eligible-services", noopEvts[0].Data["reason"])
+	})
+}
+
 // TestReconcileAutoShutdown_NoopReason_ExternalEditDetected verifies
 // the external-edit scenario: shutdownState is nil but every eligible
 // service is already at 0 replicas (operator hand-recovery / CD

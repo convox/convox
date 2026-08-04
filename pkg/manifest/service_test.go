@@ -404,3 +404,178 @@ func TestAnnotationsMapReadsAnnotations(t *testing.T) {
 	require.NotContains(t, got, "ingress-key",
 		"AnnotationsMap must not return ingress annotations")
 }
+
+func TestVolumePersistentVolumeClaimValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		volume  manifest.VolumePersistentVolumeClaim
+		wantErr string
+	}{
+		{
+			name: "valid",
+			volume: manifest.VolumePersistentVolumeClaim{
+				Id: "data", MountPath: "/data", Size: "200Gi", StorageClass: "gp3",
+			},
+		},
+		{name: "missing id", volume: manifest.VolumePersistentVolumeClaim{MountPath: "/data", Size: "1Gi"}, wantErr: "id is required"},
+		{name: "invalid id", volume: manifest.VolumePersistentVolumeClaim{Id: "Data", MountPath: "/data", Size: "1Gi"}, wantErr: "id must match"},
+		{name: "missing mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", Size: "1Gi"}, wantErr: "mountPath is required"},
+		{name: "relative mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "data", Size: "1Gi"}, wantErr: "mountPath must be an absolute, clean path"},
+		{name: "unclean mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data/../backup", Size: "1Gi"}, wantErr: "mountPath must be an absolute, clean path"},
+		{name: "missing size", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data"}, wantErr: "size is invalid"},
+		{name: "zero size", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data", Size: "0"}, wantErr: "size is invalid"},
+		{name: "id too long", volume: manifest.VolumePersistentVolumeClaim{Id: strings.Repeat("a", 60), MountPath: "/data", Size: "1Gi"}, wantErr: "59 characters or fewer"},
+		{name: "invalid access mode", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data", Size: "1Gi", AccessMode: "WriteOnly"}, wantErr: "accessMode must be one of"},
+		{name: "invalid storage class", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data", Size: "1Gi", StorageClass: "gp3\nvolumeName: injected"}, wantErr: "storageClass is invalid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.volume.Validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestVolumeOptionValidatesEveryConfiguredSource(t *testing.T) {
+	err := (manifest.VolumeOption{
+		EmptyDir:              &manifest.VolumeEmptyDir{Id: "cache", MountPath: "/cache"},
+		PersistentVolumeClaim: &manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data", Size: "0"},
+	}).Validate()
+	require.ErrorContains(t, err, "persistentVolumeClaim.size is invalid")
+}
+
+func TestStatefulServiceValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		service string
+		wantErr string
+	}{
+		{
+			name: "valid",
+			service: `stateful: true
+    podManagementPolicy: Parallel
+    scale:
+      count: 3
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 200Gi
+          storageClass: gp3`,
+		},
+		{
+			name: "claim needs stateful service",
+			service: `volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+			wantErr: "persistentVolumeClaim requires stateful: true",
+		},
+		{name: "stateful service needs claim", service: `stateful: true`, wantErr: "require a persistentVolumeClaim"},
+		{
+			name: "stateful service needs fixed count",
+			service: `stateful: true
+    scale:
+      count: 1-3
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+			wantErr: "require a fixed scale count",
+		},
+		{
+			name: "claim ids must be unique",
+			service: `stateful: true
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /backup
+          size: 1Gi`,
+			wantErr: "duplicate persistentVolumeClaim id data",
+		},
+		{
+			name:    "pod policy needs stateful service",
+			service: `podManagementPolicy: Parallel`,
+			wantErr: "podManagementPolicy requires stateful: true",
+		},
+		{
+			name: "pod policy must be supported",
+			service: `stateful: true
+    podManagementPolicy: Serial
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+			wantErr: "podManagementPolicy must be OrderedReady or Parallel",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := []byte("services:\n  database:\n    " + tt.service + "\n")
+			m, err := manifest.Load(yaml, map[string]string{})
+			require.NoError(t, err)
+			err = m.Validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+func TestStatefulServiceGeneratedNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "headless service collision",
+			yaml: `services:
+  database:
+    stateful: true
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi
+  database-headless:
+    image: example/web`,
+			wantErr: "generated headless service name database-headless conflicts",
+		},
+		{
+			name: "headless service name too long",
+			yaml: `services:
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:
+    stateful: true
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+			wantErr: "stateful service name must be 54 characters or fewer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, err := manifest.Load([]byte(tt.yaml), map[string]string{})
+			require.NoError(t, err)
+			require.ErrorContains(t, m.Validate(), tt.wantErr)
+		})
+	}
+}

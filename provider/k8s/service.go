@@ -150,11 +150,21 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 		ss = append(ss, s)
 	}
 
+	hasStateful := false
 	hasAgent := false
 	for _, s := range m.Services {
+		if s.Stateful {
+			hasStateful = true
+		}
 		if s.Agent.Enabled {
 			hasAgent = true
-			break
+		}
+	}
+
+	if hasStateful {
+		ss, err = p.serviceListAppendStatefulsets(app, ss, &lopts, m)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -166,6 +176,56 @@ func (p *Provider) ServiceList(app string) (structs.Services, error) {
 	}
 
 	p.enrichGpuTelemetry(context.Background(), app, ss)
+
+	return ss, nil
+}
+
+func (p *Provider) serviceListAppendStatefulsets(app string, ss structs.Services, lopts *am.ListOptions, m *manifest.Manifest) (structs.Services, error) {
+	statefulsets, err := p.Cluster.AppsV1().StatefulSets(p.AppNamespace(app)).List(context.TODO(), *lopts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, statefulset := range statefulsets.Items {
+		c, err := primaryContainer(statefulset.Spec.Template.Spec.Containers, app)
+		if err != nil {
+			return nil, err
+		}
+
+		ms, err := m.Service(statefulset.Name)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		s := structs.Service{
+			Count:  int(common.DefaultInt32(statefulset.Spec.Replicas, 0)),
+			Domain: p.ServiceHost(app, *ms),
+			Name:   statefulset.Name,
+			Ports:  serviceContainerPorts(*c, ms.Internal),
+			Min:    &ms.Scale.Count.Min,
+			Max:    &ms.Scale.Count.Max,
+		}
+		if v := c.Resources.Requests.Cpu(); v != nil {
+			s.Cpu = int(v.MilliValue())
+		}
+		if v := c.Resources.Requests.Memory(); v != nil {
+			s.Memory = int(v.Value() / (1024 * 1024))
+		}
+		for key, vendor := range gpuKeyToVendor {
+			if q, ok := c.Resources.Requests[v1.ResourceName(key)]; ok {
+				s.Gpu = int(q.Value())
+				s.GpuVendor = vendor
+				break
+			}
+		}
+		if statefulset.Annotations != nil && statefulset.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn {
+			s.ScaleOverrideActive = options.Bool(true)
+		} else {
+			s.ScaleOverrideActive = options.Bool(false)
+		}
+		s.TriggersOverrideActive = options.Bool(false)
+		ss = append(ss, s)
+	}
 
 	return ss, nil
 }
@@ -402,8 +462,28 @@ func (p *Provider) ServiceRestart(app, name string) error {
 	if s.Agent.Enabled {
 		return p.serviceRestartDaemonset(app, name)
 	}
+	if s.Stateful {
+		return p.serviceRestartStatefulset(app, name)
+	}
 
 	return p.serviceRestartDeployment(app, name)
+}
+
+func (p *Provider) serviceRestartStatefulset(app, name string) error {
+	statefulsets := p.Cluster.AppsV1().StatefulSets(p.AppNamespace(app))
+
+	s, err := statefulsets.Get(context.TODO(), name, am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if s.Spec.Template.Annotations == nil {
+		s.Spec.Template.Annotations = map[string]string{}
+	}
+	s.Spec.Template.Annotations["convox.com/restart"] = strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
+
+	_, err = statefulsets.Update(context.TODO(), s, am.UpdateOptions{})
+	return errors.WithStack(err)
 }
 
 func (p *Provider) serviceRestartDaemonset(app, name string) error {
@@ -450,6 +530,14 @@ func (p *Provider) serviceRestartDeployment(app, name string) error {
 
 func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
 	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
+	statefulset, err := p.Cluster.AppsV1().StatefulSets(p.AppNamespace(app)).Get(context.TODO(), name, am.GetOptions{})
+	if err == nil {
+		return p.serviceUpdateStatefulset(statefulset, opts)
+	}
+	if !kerr.IsNotFound(err) {
 		return errors.WithStack(err)
 	}
 
@@ -555,6 +643,60 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	}
 
 	return nil
+}
+
+func (p *Provider) serviceUpdateStatefulset(s *appsv1.StatefulSet, opts structs.ServiceUpdateOptions) error {
+	if opts.Min != nil || opts.Max != nil {
+		return structs.ErrBadRequest("stateful services require a fixed scale count; use --count")
+	}
+
+	container := &s.Spec.Template.Spec.Containers[0]
+	if container.Resources.Requests == nil {
+		container.Resources.Requests = v1.ResourceList{}
+	}
+	if container.Resources.Limits == nil {
+		container.Resources.Limits = v1.ResourceList{}
+	}
+
+	if opts.Count != nil {
+		count := int32(*opts.Count) //nolint:gosec // replica counts are user-validated and bounded
+		s.Spec.Replicas = &count
+	}
+	if opts.Cpu != nil {
+		container.Resources.Requests[v1.ResourceCPU] = resource.MustParse(fmt.Sprintf("%dm", *opts.Cpu))
+	}
+	if opts.Memory != nil {
+		memory := resource.MustParse(fmt.Sprintf("%dMi", *opts.Memory))
+		container.Resources.Limits[v1.ResourceMemory] = memory
+		container.Resources.Requests[v1.ResourceMemory] = memory
+	}
+	if opts.Gpu != nil {
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		key := v1.ResourceName(gpuResourceKey(vendor))
+		quantity := resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+		container.Resources.Requests[key] = quantity
+		container.Resources.Limits[key] = quantity
+		if *opts.Gpu > 0 {
+			hasToleration := false
+			for _, toleration := range s.Spec.Template.Spec.Tolerations {
+				if toleration.Key == string(key) && toleration.Effect == v1.TaintEffectNoSchedule && toleration.Operator == v1.TolerationOpExists {
+					hasToleration = true
+					break
+				}
+			}
+			if !hasToleration {
+				s.Spec.Template.Spec.Tolerations = append(s.Spec.Template.Spec.Tolerations, v1.Toleration{
+					Key: string(key), Operator: v1.TolerationOpExists, Effect: v1.TaintEffectNoSchedule,
+				})
+			}
+		}
+	}
+
+	_, err := p.Cluster.AppsV1().StatefulSets(s.Namespace).Update(context.TODO(), s, am.UpdateOptions{})
+	return errors.WithStack(err)
 }
 
 func (p *Provider) serviceDaemonset(app, name string) (*appsv1.DaemonSet, error) {

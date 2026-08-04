@@ -416,6 +416,11 @@ func (p *Provider) Start() error {
 		return errors.WithStack(log.Error(err))
 	}
 
+	stsc, err := NewStatefulSetController(p)
+	if err != nil {
+		return errors.WithStack(log.Error(err))
+	}
+
 	sc, err := NewSecretController(p)
 	if err != nil {
 		return errors.WithStack(err)
@@ -431,6 +436,7 @@ func (p *Provider) Start() error {
 	go wc.Run()
 	go nc.Run()
 	go dc.Run()
+	go stsc.Run()
 	go sc.Run()
 	go atomCtrl.Run()
 
