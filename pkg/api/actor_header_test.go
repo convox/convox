@@ -36,12 +36,10 @@ func TestAuthenticate_BasicAuthWithConvoxActorHeader_SetsActor(t *testing.T) {
 		"ConvoxJwtUserParam must be set to the Convox-Actor header value")
 }
 
-// TestAuthenticate_BasicAuthWithLegacyXConvoxActorHeader_SetsActor —
-// dual-read pattern (matches the X-Convox-TID precedent at
-// pkg/api/helpers.go:32-35). Pre-3.24.6 callers may continue sending
-// X-Convox-Actor; the rack honors the legacy form when no canonical
-// Convox-Actor header is present.
-func TestAuthenticate_BasicAuthWithLegacyXConvoxActorHeader_SetsActor(t *testing.T) {
+// TestAuthenticate_BasicAuthWithXConvoxActorHeader_SetsActor — dual-read
+// pattern matching the tid header in pkg/api/helpers.go. X-Convox-Actor is
+// the form Console stamps and is read first.
+func TestAuthenticate_BasicAuthWithXConvoxActorHeader_SetsActor(t *testing.T) {
 	s := &Server{JwtMngr: nil, Password: "rack-pass"}
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/auth", nil)
@@ -51,25 +49,24 @@ func TestAuthenticate_BasicAuthWithLegacyXConvoxActorHeader_SetsActor(t *testing
 	got, code := captureMiddlewareValue(t, s, req, structs.ConvoxJwtUserParam)
 	assert.Equal(t, http.StatusOK, code, "basic-auth with X-Convox-Actor must return 200")
 	assert.Equal(t, "bob@example.com", got,
-		"ConvoxJwtUserParam must be set to the legacy X-Convox-Actor header value")
+		"ConvoxJwtUserParam must be set to the X-Convox-Actor header value")
 }
 
-// TestAuthenticate_BasicAuthWithBothHeaders_CanonicalWins — when both
-// canonical and legacy forms are present (e.g. a Console3 upgrade in
-// flight where one proxy sends both for safety), canonical wins. Matches
-// the X-Convox-TID precedent at pkg/api/helpers.go.
-func TestAuthenticate_BasicAuthWithBothHeaders_CanonicalWins(t *testing.T) {
+// TestAuthenticate_BasicAuthWithBothHeaders_XPrefixedWins — when both forms
+// are present, the stamped X-Convox-Actor wins. Console sets only that form,
+// so a Convox-Actor the original client supplied must not displace it.
+func TestAuthenticate_BasicAuthWithBothHeaders_XPrefixedWins(t *testing.T) {
 	s := &Server{JwtMngr: nil, Password: "rack-pass"}
 
 	req := httptest.NewRequest(http.MethodGet, "http://example.com/auth", nil)
 	req.Header.Set("Authorization", basicAuthHeader("convox", "rack-pass"))
-	req.Header.Set("X-Convox-Actor", "legacy@example.com")
-	req.Header.Set("Convox-Actor", "canonical@example.com")
+	req.Header.Set("X-Convox-Actor", "stamped@example.com")
+	req.Header.Set("Convox-Actor", "supplied@example.com")
 
 	got, code := captureMiddlewareValue(t, s, req, structs.ConvoxJwtUserParam)
 	assert.Equal(t, http.StatusOK, code)
-	assert.Equal(t, "canonical@example.com", got,
-		"when both forms present, canonical Convox-Actor must win over legacy X-Convox-Actor")
+	assert.Equal(t, "stamped@example.com", got,
+		"when both forms present, the stamped X-Convox-Actor must win over a client-supplied Convox-Actor")
 }
 
 // TestAuthenticate_BasicAuthEmptyActorHeader_FallsBackToRackPassword —

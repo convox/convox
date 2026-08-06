@@ -264,6 +264,10 @@ func (opts Options2) buildCreateExternal(ctx context.Context, pw *prefix.Writer,
 		return nil, err
 	}
 
+	if b.Repository == "" {
+		return nil, fmt.Errorf("external builds are not available on this rack")
+	}
+
 	u, err := url.Parse(b.Repository)
 	if err != nil {
 		return nil, err

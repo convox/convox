@@ -384,6 +384,10 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 		return nil, err
 	}
 
+	if b.Repository == "" {
+		return nil, fmt.Errorf("external builds are not available on this rack")
+	}
+
 	u, err := url.Parse(b.Repository)
 	if err != nil {
 		return nil, err

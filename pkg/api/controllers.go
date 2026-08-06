@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
@@ -1472,6 +1473,10 @@ func (s *Server) Proxy(c *stdapi.Context) error {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy host")
 	}
 
+	if !s.proxyTargetPermitted(c, host) {
+		return stdapi.Errorf(http.StatusForbidden, "invalid proxy host")
+	}
+
 	port, cerr := strconv.Atoi(c.Var("port"))
 	if cerr != nil || port < 1 || port > 65535 {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy port")
@@ -1551,6 +1556,58 @@ func isAllowedProxyHost(host string) bool {
 	return validProxyHost.MatchString(h)
 }
 
+type tenantScopedProvider interface {
+	TenantNamespacePrefix(tid string) string
+}
+
+var proxyDNSLabel = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+func internalProxySuffixes() []string {
+	suffixes := []string{"svc.cluster.local"}
+	if s := strings.Trim(strings.ToLower(options.GetFeatureGateValue(options.FeatureGateResourceInternalDomainSuffix)), "."); s != "" && s != suffixes[0] {
+		suffixes = append(suffixes, s)
+	}
+	return suffixes
+}
+
+func proxyTargetAllowedForTenant(host, prefix string, suffixes []string) bool {
+	h := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	for _, suffix := range suffixes {
+		rest, found := strings.CutSuffix(h, "."+suffix)
+		if !found {
+			continue
+		}
+		labels := strings.Split(rest, ".")
+		if len(labels) != 2 || !proxyDNSLabel.MatchString(labels[0]) || !proxyDNSLabel.MatchString(labels[1]) {
+			continue
+		}
+		if strings.HasPrefix(labels[1], prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) proxyTargetPermitted(c *stdapi.Context, host string) bool {
+	tid := requestTID(c)
+	if tid == "" {
+		// On a tid-gated rack a missing tid means a suppressed header, not a normal rack.
+		return !options.GetFeatureGates()[options.FeatureGateTid]
+	}
+
+	p, ok := s.provider(c).(tenantScopedProvider)
+	if !ok {
+		return false
+	}
+
+	prefix := p.TenantNamespacePrefix(tid)
+	if prefix == "" {
+		return false
+	}
+
+	return proxyTargetAllowedForTenant(host, prefix, internalProxySuffixes())
+}
+
 func (s *Server) ProxyHttpService(c *stdapi.Context) error {
 	if !CanWrite(c) {
 		return stdapi.Errorf(http.StatusForbidden, "proxy requires write access")
@@ -1559,6 +1616,10 @@ func (s *Server) ProxyHttpService(c *stdapi.Context) error {
 	host := strings.TrimSpace(c.Header("X-Host"))
 	if !isAllowedProxyHost(host) {
 		return stdapi.Errorf(http.StatusBadRequest, "invalid proxy host")
+	}
+
+	if !s.proxyTargetPermitted(c, host) {
+		return stdapi.Errorf(http.StatusForbidden, "invalid proxy host")
 	}
 
 	port, cerr := strconv.Atoi(c.Header("X-Port"))
@@ -2138,6 +2199,11 @@ func (s *Server) SystemJwtSignKeyRotate(c *stdapi.Context) error {
 }
 
 func (s *Server) SystemJwtToken(c *stdapi.Context) error {
+	// These tokens are rack-wide and carry no tenant scope.
+	if options.GetFeatureGates()[options.FeatureGateTid] {
+		return stdapi.Errorf(http.StatusForbidden, "token minting is not available on this rack")
+	}
+
 	role := c.Value("role")
 	durationInHour, err := strconv.Atoi(c.Value("durationInHour"))
 	if err != nil {

@@ -92,9 +92,9 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 				}
 				return sanitized
 			}
-			actor := pickActor(c.Request().Header.Get("Convox-Actor"))
+			actor := pickActor(c.Request().Header.Get("X-Convox-Actor"))
 			if actor == "" {
-				actor = pickActor(c.Request().Header.Get("X-Convox-Actor"))
+				actor = pickActor(c.Request().Header.Get("Convox-Actor"))
 			}
 			if actor == "" {
 				actor = "rack-password"
