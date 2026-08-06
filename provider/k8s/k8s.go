@@ -298,6 +298,14 @@ func (p *Provider) ContextTID() string {
 	return ""
 }
 
+// TenantNamespacePrefix returns the namespace prefix tid owns on this rack.
+func (p *Provider) TenantNamespacePrefix(tid string) string {
+	if p == nil || tid == "" || p.Name == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s-%s-", p.Name, tid)
+}
+
 // ContextActor returns the JWT user from ctx, or "unknown". Nil-safe.
 func (p *Provider) ContextActor() string {
 	if p == nil || p.ctx == nil {

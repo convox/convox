@@ -156,15 +156,15 @@ func TestContextFrom_AcceptsConvoxTIDCanonical(t *testing.T) {
 		"Convox-TID (canonical, RFC 6648 compliant) must populate the same ctx key as X-Convox-TID")
 }
 
-func TestContextFrom_CanonicalWinsOverLegacy(t *testing.T) {
+func TestContextFrom_XPrefixedWinsOverCanonical(t *testing.T) {
 	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
-	c.Request().Header.Set("X-Convox-TID", "tid-legacy")
-	c.Request().Header.Set("Convox-TID", "tid-canonical")
+	c.Request().Header.Set("X-Convox-TID", "tid-stamped")
+	c.Request().Header.Set("Convox-TID", "tid-supplied")
 
 	ctx := contextFrom(c)
 	tid, _ := ctx.Value(structs.ConvoxTIDCtxKey).(string)
-	assert.Equal(t, "tid-canonical", tid,
-		"when both forms present, canonical Convox-TID must win over legacy X-Convox-TID")
+	assert.Equal(t, "tid-stamped", tid,
+		"X-Convox-TID is the form every producer stamps, so it must win over a Convox-TID the original client supplied")
 }
 
 func TestContextFrom_NoTIDHeader(t *testing.T) {
@@ -193,4 +193,16 @@ func TestContextFrom_ConcurrentReads(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestContextFrom_IgnoresCanonicalTIDOnGatedRack(t *testing.T) {
+	t.Setenv("FEATURE_GATES", "tid=true")
+
+	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.com", nil))
+	c.Request().Header.Set("Convox-TID", "tid-supplied")
+
+	ctx := contextFrom(c)
+	tid, _ := ctx.Value(structs.ConvoxTIDCtxKey).(string)
+	assert.Equal(t, "", tid,
+		"on a tenant rack the unprefixed spelling has no producer, so it can only be caller input")
 }

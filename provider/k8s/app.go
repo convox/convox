@@ -379,10 +379,14 @@ func (p *Provider) buildNamespace(app string) string {
 	return strings.TrimRight(prefix, "-") + "-" + hex.EncodeToString(sum[:])[:8]
 }
 
-// processBuildNamespace returns where the build pod runs. Params enforce or an
-// app namespace still carrying an enforce label (it persists until the next
-// promote after leaving enforce) routes to the dedicated unlabeled namespace.
+// processBuildNamespace returns where the build pod runs. A tid-gated rack keeps it
+// out of the tenant's own namespace; params enforce, or an app namespace still
+// carrying an enforce label, routes it to the same dedicated namespace.
 func (p *Provider) processBuildNamespace(app string) string {
+	if p.FeatureGates[options.FeatureGateTid] {
+		return p.buildNamespace(app)
+	}
+
 	if p.PodSecurityStandard != "" && p.PodSecurityMode == "enforce" {
 		return p.buildNamespace(app)
 	}
