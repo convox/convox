@@ -2,6 +2,8 @@ package api
 
 import (
 	"testing"
+
+	"github.com/convox/convox/provider/k8s"
 )
 
 func TestIsSafeProxyTarget(t *testing.T) {
@@ -177,3 +179,86 @@ func TestSanitizeObjectKey(t *testing.T) {
 		})
 	}
 }
+
+func TestProxyTargetAllowedForTenant(t *testing.T) {
+	suffixes := []string{"svc.cluster.local", "machine.convox.internal"}
+
+	tests := []struct {
+		host  string
+		allow bool
+	}{
+		{"web.rk-ab12-app.svc.cluster.local", true},
+		{"resource-db.rk-ab12-app.machine.convox.internal", true},
+		{"WEB.RK-AB12-APP.SVC.CLUSTER.LOCAL", true},
+		{"web.rk-ab12-app.svc.cluster.local.", true},
+		{"  web.rk-ab12-app.svc.cluster.local  ", true},
+		{"web.rk-ab12-app-two.svc.cluster.local", true},
+
+		// Another tenant.
+		{"web.rk-cd34-app.svc.cluster.local", false},
+		{"resource-db.rk-cd34-app.machine.convox.internal", false},
+
+		// Prefix must include the trailing hyphen.
+		{"web.rk-ab12x-app.svc.cluster.local", false},
+		{"web.rk-ab12.svc.cluster.local", false},
+
+		// Rack system namespace.
+		{"api.rk-system.svc.cluster.local", false},
+
+		// Bare .local carries no namespace.
+		{"web.app.rk.local", false},
+		{"web.rk-ab12-app.local", false},
+
+		// Wrong label count.
+		{"rk-ab12-app.svc.cluster.local", false},
+		{"a.web.rk-ab12-app.svc.cluster.local", false},
+		{"web.rk-cd34-app.rk-ab12-app.svc.cluster.local", false},
+
+		// Empty and malformed labels.
+		{"web..svc.cluster.local", false},
+		{".rk-ab12-app.svc.cluster.local", false},
+		{"web.-rk-ab12-app.svc.cluster.local", false},
+		{"*.rk-ab12-app.svc.cluster.local", false},
+		{"web.*.svc.cluster.local", false},
+		{"u@web.rk-ab12-app.svc.cluster.local", false},
+		{"web.rk-ab12-app.svc.cluster.local%eth0", false},
+		{"[web.rk-ab12-app.svc.cluster.local]", false},
+		{"web.rk-ab12-app.svc.cluster.local\x00.rk-ab12-app.svc.cluster.local", false},
+
+		// Addresses and unrelated hosts.
+		{"10.1.2.3", false},
+		{"db.abc123.us-east-1.rds.amazonaws.com", false},
+		{"", false},
+		{"svc.cluster.local", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.host, func(t *testing.T) {
+			if got := proxyTargetAllowedForTenant(tt.host, "rk-ab12-", suffixes); got != tt.allow {
+				t.Errorf("proxyTargetAllowedForTenant(%q) = %v, want %v", tt.host, got, tt.allow)
+			}
+		})
+	}
+}
+
+func TestInternalProxySuffixes(t *testing.T) {
+	t.Setenv("FEATURE_GATES", "")
+	if got := internalProxySuffixes(); len(got) != 1 || got[0] != "svc.cluster.local" {
+		t.Errorf("ungated suffixes = %v, want [svc.cluster.local]", got)
+	}
+
+	t.Setenv("FEATURE_GATES", "resource-internal-domain-suffix=Machine.Convox.Internal.")
+	got := internalProxySuffixes()
+	if len(got) != 2 || got[1] != "machine.convox.internal" {
+		t.Errorf("gated suffixes = %v, want the normalized gate value appended", got)
+	}
+
+	t.Setenv("FEATURE_GATES", "resource-internal-domain-suffix=svc.cluster.local")
+	if got := internalProxySuffixes(); len(got) != 1 {
+		t.Errorf("suffixes = %v, want no duplicate of the default", got)
+	}
+}
+
+// The proxy guard reaches the rack name through a type assertion, so the
+// promotion from the embedded provider has to stay compiler-checked.
+var _ tenantScopedProvider = (*k8s.Provider)(nil)

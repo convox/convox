@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
 )
@@ -14,13 +15,21 @@ func renderStatusCode(w io.Writer, code int) error {
 	return err
 }
 
-func contextFrom(c *stdapi.Context) context.Context {
-	// Read both header names for backward compat (RFC 6648 migration).
-	tid := c.Header("Convox-TID")
-	if tid == "" {
-		tid = c.Header("X-Convox-TID")
+// requestTID reads the tenant ID stamped on the request. X-Convox-TID is the
+// form every producer sets; the unprefixed spelling has none, so on a rack
+// serving tenants it can only be caller input and is ignored there.
+func requestTID(c *stdapi.Context) string {
+	if tid := c.Header("X-Convox-TID"); tid != "" {
+		return tid
 	}
-	ctx := context.WithValue(c.Context(), structs.ConvoxTIDCtxKey, tid)
+	if options.GetFeatureGates()[options.FeatureGateTid] {
+		return ""
+	}
+	return c.Header("Convox-TID")
+}
+
+func contextFrom(c *stdapi.Context) context.Context {
+	ctx := context.WithValue(c.Context(), structs.ConvoxTIDCtxKey, requestTID(c))
 	if v, ok := c.Get(structs.ConvoxJwtUserParam).(string); ok && v != "" {
 		ctx = context.WithValue(ctx, structs.ConvoxJwtUserCtxKey, v)
 	}

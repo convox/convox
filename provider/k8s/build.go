@@ -64,7 +64,11 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 			return nil, err
 		}
 
-		b.Repository = fmt.Sprintf("https://convox:%s@api.%s/%s%s", p.Password, p.Domain, p.Engine.RepositoryPrefix(), app)
+		// This URL embeds the rack password, which is not tenant-scoped. Image
+		// import never reads it, so withhold it rather than refusing the build.
+		if !p.FeatureGates[options.FeatureGateTid] {
+			b.Repository = fmt.Sprintf("https://convox:%s@api.%s/%s%s", p.Password, p.Domain, p.Engine.RepositoryPrefix(), app)
+		}
 
 		return b, nil
 	}
