@@ -173,6 +173,14 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		// AppUpdate re-promotes the current release to apply app params and lock
+		// changes, and must keep working when the manifest names a removed pool.
+		if id != a.Release && !common.DefaultBool(opts.Force, false) {
+			if err := p.validateManifestNodePools(m); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
 		e, err := structs.NewEnvironment([]byte(r.Env))
 		if err != nil {
 			return errors.WithStack(err)
