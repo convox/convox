@@ -4,18 +4,98 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
 	KarpenterNodePoolLabel = "karpenter.sh/nodepool"
+
+	// NodePoolLabel is the node label a workload sets to pin itself to a Karpenter pool.
+	NodePoolLabel = "convox.io/nodepool"
 )
+
+var nodePoolGVR = schema.GroupVersionResource{Group: "karpenter.sh", Version: "v1", Resource: "nodepools"}
+
+// karpenterNodePools returns the pool labels this rack provides, or false when the set is unknowable.
+func (p *Provider) karpenterNodePools() ([]string, bool) {
+	if !p.IsKarpenterEnabled || p.DynamicClient == nil {
+		return nil, false
+	}
+
+	list, err := p.DynamicClient.Resource(nodePoolGVR).List(p.Context(), am.ListOptions{})
+	if err != nil || list == nil {
+		return nil, false
+	}
+
+	pools := []string{}
+
+	for i := range list.Items {
+		// The label, never metadata.name: a pool relabelled through the template's
+		// user-label splat has nodes carrying only the override.
+		v, ok, err := unstructured.NestedString(list.Items[i].Object, "spec", "template", "metadata", "labels", NodePoolLabel)
+		if err == nil && ok && v != "" {
+			pools = append(pools, v)
+		}
+	}
+
+	if len(pools) == 0 {
+		return nil, false
+	}
+
+	sort.Strings(pools)
+
+	return pools, true
+}
+
+func (p *Provider) validateManifestNodePools(m *manifest.Manifest) error {
+	pools, ok := p.karpenterNodePools()
+	if !ok {
+		return nil
+	}
+
+	for i := range m.Services {
+		s := &m.Services[i]
+
+		if err := validateNodePool(s.NodeSelectorLabels[NodePoolLabel], pools, fmt.Sprintf("convox.yml: service %q", s.Name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateNodePool(target string, pools []string, subject string) error {
+	if target == "" {
+		return nil
+	}
+
+	for _, pool := range pools {
+		if pool == target {
+			return nil
+		}
+	}
+
+	return structs.ErrBadRequest(
+		"%s targets Karpenter node pool %q, which does not exist on this rack.\n"+
+			"  Existing pools: %s\n"+
+			"  If you just added this pool, wait for the rack update to finish and retry.\n"+
+			"  Otherwise correct the node pool name, or add the pool:\n"+
+			"    convox rack params set additional_karpenter_nodepools_config=...",
+		subject, target, strings.Join(pools, ", "),
+	)
+}
 
 func (p *Provider) KarpenterCleanup() error {
 	ctx := p.Context()
@@ -154,5 +234,3 @@ func (p *Provider) drainKarpenterNode(ctx context.Context, nodeName string) erro
 
 	return nil
 }
-
-

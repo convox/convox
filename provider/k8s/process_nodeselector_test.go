@@ -15,6 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	metricfake "k8s.io/metrics/pkg/client/clientset/versioned/fake"
 )
@@ -300,4 +303,68 @@ func TestProcessRun_BuildIgnoresNodeSelectorLabels(t *testing.T) {
 	// (the isBuild check in podSpecFromService skips the manifest lookup)
 	require.Nil(t, spec.Affinity)
 	require.Empty(t, spec.Tolerations)
+}
+
+func nodePoolProvider(t *testing.T, labels ...string) *Provider {
+	t.Helper()
+	p, kk, kc := minimalProvider(t)
+	createAppNamespace(t, kk, "rack1", "app1")
+	createBuild(t, kc, "rack1-app1", "build1")
+	createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
+
+	objs := make([]runtime.Object, len(labels))
+	for i, l := range labels {
+		objs[i] = nodePoolObject(l, l)
+	}
+
+	p.IsKarpenterEnabled = true
+	p.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		nodePoolGVR: "NodePoolList",
+	}, objs...)
+
+	return p
+}
+
+func TestProcessRun_NodeLabelsRejectsUnknownNodePool(t *testing.T) {
+	p := nodePoolProvider(t, "workload", "gpu")
+
+	_, err := p.ProcessRun("app1", "web", structs.ProcessRunOptions{
+		Release:    options.String("rel1"),
+		Command:    options.String("ls"),
+		NodeLabels: options.String("convox.io/nodepool=gpu-lg"),
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), `--node-labels targets Karpenter node pool "gpu-lg"`)
+	require.Contains(t, err.Error(), "Existing pools: gpu, workload")
+}
+
+func TestProcessRun_NodeLabelsBuildNamesTheAppParameter(t *testing.T) {
+	p := nodePoolProvider(t, "workload")
+
+	_, err := p.ProcessRun("app1", "build", structs.ProcessRunOptions{
+		Release:    options.String("rel1"),
+		Command:    options.String("build"),
+		IsBuild:    true,
+		NodeLabels: options.String("convox.io/nodepool=typo"),
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "the BuildLabels app parameter targets Karpenter node pool")
+}
+
+func TestProcessRun_NodeLabelsAcceptsKnownAndUnrelatedLabels(t *testing.T) {
+	for _, labels := range []string{"convox.io/nodepool=gpu", "convox.io/label=analytics", "team=ml"} {
+		t.Run(labels, func(t *testing.T) {
+			p := nodePoolProvider(t, "workload", "gpu")
+
+			_, err := p.ProcessRun("app1", "web", structs.ProcessRunOptions{
+				Release:    options.String("rel1"),
+				Command:    options.String("ls"),
+				NodeLabels: options.String(labels),
+			})
+
+			require.NoError(t, err)
+		})
+	}
 }
