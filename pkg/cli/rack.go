@@ -1477,6 +1477,123 @@ func validateKarpenterArchFamilies(params, currentParams map[string]string) erro
 	return checkArchFamilies("karpenter_build_instance_families", effective("karpenter_build_instance_families"), buildArchs, "build_node_type")
 }
 
+func decodeConfigParam(raw string, out interface{}) bool {
+	if strings.TrimSpace(raw) == "" {
+		return false
+	}
+
+	data := []byte(raw)
+	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+		data = decoded
+	}
+
+	return json.Unmarshal(data, out) == nil
+}
+
+func nodePoolNames(raw string) ([]string, bool) {
+	cfgs := KarpenterNodePools{}
+	if !decodeConfigParam(raw, &cfgs) {
+		return nil, false
+	}
+
+	names := []string{}
+	for i := range cfgs {
+		if cfgs[i].Name != "" {
+			names = append(names, cfgs[i].Name)
+		}
+	}
+
+	return names, true
+}
+
+// nodeGroupLabels skips unlabelled groups: their Terraform fallback is shared across groups and varies by provider.
+func nodeGroupLabels(raw string) ([]string, bool) {
+	cfgs := AdditionalNodeGroups{}
+	if !decodeConfigParam(raw, &cfgs) {
+		return nil, false
+	}
+
+	labels := []string{}
+	for i := range cfgs {
+		if cfgs[i].Label != nil && *cfgs[i].Label != "" {
+			labels = append(labels, *cfgs[i].Label)
+		}
+	}
+
+	return labels, true
+}
+
+func droppedFrom(old, next []string) []string {
+	kept := map[string]bool{}
+	for _, n := range next {
+		kept[n] = true
+	}
+
+	dropped := []string{}
+
+	for _, o := range old {
+		if kept[o] {
+			continue
+		}
+
+		kept[o] = true
+		dropped = append(dropped, o)
+	}
+
+	sort.Strings(dropped)
+
+	return dropped
+}
+
+func validateNodePoolRemoval(params, currentParams map[string]string, force bool) error {
+	if force {
+		return nil
+	}
+
+	for _, c := range []struct {
+		key      string
+		label    string
+		noun     string
+		affected string
+		extract  func(string) ([]string, bool)
+	}{
+		{"additional_karpenter_nodepools_config", "convox.io/nodepool", "node pools", "Services pinned to", nodePoolNames},
+		{"additional_node_groups_config", "convox.io/label", "node groups", "Services pinned to", nodeGroupLabels},
+		{"additional_build_groups_config", "convox.io/label", "build groups", "Builds pinned by BuildLabels to", nodeGroupLabels},
+	} {
+		if _, ok := params[c.key]; !ok {
+			continue
+		}
+
+		old, ok := c.extract(currentParams[c.key])
+		if !ok {
+			continue
+		}
+
+		next, ok := c.extract(params[c.key])
+		if !ok {
+			continue
+		}
+
+		dropped := droppedFrom(old, next)
+		if len(dropped) == 0 {
+			continue
+		}
+
+		pinned := make([]string, len(dropped))
+		for i, d := range dropped {
+			pinned[i] = fmt.Sprintf("%s=%s", c.label, d)
+		}
+
+		return fmt.Errorf("this change removes %s that exist on this rack: %s\n"+
+			"  %s %s can no longer be scheduled, and the nodes are drained with no replacement.\n"+
+			"  Re-run with --force to proceed",
+			c.noun, strings.Join(dropped, ", "), c.affected, strings.Join(pinned, " or "))
+	}
+
+	return nil
+}
+
 func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string, force bool) error {
 	// Install-only params — these define infrastructure that cannot be changed
 	// after rack creation without catastrophic consequences (network recreation,
@@ -2198,6 +2315,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return fmt.Errorf("failed to process param '%s': %s", k, err)
 		}
 		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	if err := validateNodePoolRemoval(params, currentParams, force); err != nil {
+		return err
 	}
 
 	// karpenter_node_overlays_config: validate NodeOverlay entries and re-encode

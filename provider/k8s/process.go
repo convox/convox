@@ -1015,6 +1015,19 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 			}
 		}
 
+		if target := s.NodeSelector[NodePoolLabel]; target != "" {
+			subject := "--node-labels"
+			if opts.IsBuild {
+				subject = "the BuildLabels app parameter"
+			}
+
+			if pools, ok := p.karpenterNodePools(); ok {
+				if err := validateNodePool(target, pools, subject); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		if s.Tolerations == nil {
 			s.Tolerations = []ac.Toleration{}
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -873,5 +874,183 @@ func TestValidateAndMutateParams_CloudwatchDisableBoolValidation(t *testing.T) {
 	})
 	if err := validateAndMutateParams(map[string]string{"cloudwatch_disable": "maybe"}, "aws", map[string]string{}, false); err == nil {
 		t.Error("cloudwatch_disable=maybe: expected error, got nil")
+	}
+}
+
+func b64json(t *testing.T, s string) string {
+	t.Helper()
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func TestValidateAndMutateParams_NodePoolRemoval(t *testing.T) {
+	pools := func(names ...string) string {
+		entries := make([]string, len(names))
+		for i, n := range names {
+			entries[i] = `{"name":"` + n + `"}`
+		}
+		return "[" + strings.Join(entries, ",") + "]"
+	}
+
+	for _, tc := range []struct {
+		name    string
+		params  map[string]string
+		current map[string]string
+		force   bool
+		err     string
+	}{
+		{
+			name:    "removal blocked",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("batch", "gpu")},
+			err:     "convox.io/nodepool=batch",
+		},
+		{
+			name:    "rename blocked",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("gpu-large")},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			err:     "convox.io/nodepool=gpu",
+		},
+		{
+			name:    "clear blocked",
+			params:  map[string]string{"additional_karpenter_nodepools_config": ""},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			err:     "node pools that exist on this rack: gpu",
+		},
+		{
+			name:    "removal allowed with force",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("batch", "gpu")},
+			force:   true,
+		},
+		{
+			name:    "addition only",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("batch", "gpu")},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+		},
+		{
+			name:    "current value base64 encoded",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			current: map[string]string{"additional_karpenter_nodepools_config": b64json(t, pools("batch", "gpu"))},
+			err:     "convox.io/nodepool=batch",
+		},
+		{
+			name:    "no current value",
+			params:  map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+			current: map[string]string{},
+		},
+		{
+			name:    "unrelated param on a rack with pools",
+			params:  map[string]string{"node_disk": "50"},
+			current: map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
+		},
+		{
+			name:    "node group label removed",
+			params:  map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"}]`},
+			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large","label":"analytics"}]`},
+			err:     "node groups that exist on this rack: analytics",
+		},
+		{
+			name:    "label moved to build groups is a removal",
+			params:  map[string]string{"additional_node_groups_config": `[]`, "additional_build_groups_config": `[{"type":"t3.large","label":"analytics"}]`},
+			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.large","label":"analytics"}]`},
+			err:     "convox.io/label=analytics",
+		},
+		{
+			name:    "duplicate label with one entry removed",
+			params:  map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"}]`},
+			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large","label":"web"}]`},
+		},
+		{
+			name:    "unlabelled group removed",
+			params:  map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"}]`},
+			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large"}]`},
+		},
+		{
+			name:    "duplicate label fully removed is listed once",
+			params:  map[string]string{"additional_node_groups_config": `[]`},
+			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large","label":"web"}]`},
+			err:     "node groups that exist on this rack: web\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateAndMutateParams(tc.params, "aws", tc.current, tc.force)
+
+			if tc.err == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Fatalf("expected error containing %q", tc.err)
+			}
+			if !strings.Contains(err.Error(), tc.err) {
+				t.Errorf("error %q should contain %q", err.Error(), tc.err)
+			}
+			if !strings.Contains(err.Error(), "--force") {
+				t.Errorf("error %q should mention --force", err.Error())
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParams_NodePoolRemovalFromFile(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "pools.json")
+	if err := os.WriteFile(f, []byte(`[{"name":"gpu"}]`), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	err := validateAndMutateParams(
+		map[string]string{"additional_karpenter_nodepools_config": f},
+		"aws",
+		map[string]string{"additional_karpenter_nodepools_config": `[{"name":"batch"},{"name":"gpu"}]`},
+		false,
+	)
+	if err == nil {
+		t.Fatal("expected error for pool removed via a .json file value")
+	}
+	if !strings.Contains(err.Error(), "convox.io/nodepool=batch") {
+		t.Errorf("error %q should name the removed pool", err.Error())
+	}
+}
+
+func TestValidateAndMutateParams_NodeGroupRemovalFromFile(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "groups.json")
+	if err := os.WriteFile(f, []byte(`[{"id":0,"type":"t3.medium","label":"web"}]`), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	err := validateAndMutateParams(
+		map[string]string{"additional_node_groups_config": f},
+		"aws",
+		map[string]string{"additional_node_groups_config": `[{"id":0,"type":"t3.medium","label":"web"},{"id":1,"type":"t3.large","label":"analytics"}]`},
+		false,
+	)
+	if err == nil {
+		t.Fatal("expected error for group removed via a .json file value")
+	}
+	if !strings.Contains(err.Error(), "convox.io/label=analytics") {
+		t.Errorf("error %q should name the removed group", err.Error())
+	}
+}
+
+func TestValidateAndMutateParams_BuildGroupRemovalNamesBuilds(t *testing.T) {
+	err := validateAndMutateParams(
+		map[string]string{"additional_build_groups_config": `[]`},
+		"aws",
+		map[string]string{"additional_build_groups_config": `[{"id":0,"type":"t3.large","label":"bigbuild"}]`},
+		false,
+	)
+	if err == nil {
+		t.Fatal("expected error for removed build group")
+	}
+	if !strings.Contains(err.Error(), "build groups that exist on this rack: bigbuild") {
+		t.Errorf("error %q should name build groups, not node groups", err.Error())
+	}
+	if !strings.Contains(err.Error(), "Builds pinned by BuildLabels to convox.io/label=bigbuild") {
+		t.Errorf("error %q should attribute the breakage to builds, not services", err.Error())
 	}
 }
