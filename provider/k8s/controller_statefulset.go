@@ -88,7 +88,10 @@ func (c *StatefulSetController) sync(obj interface{}, remove bool) error {
 	if !dc.isConvoxManaged(d) {
 		return nil
 	}
-	return dc.SyncPDB(d, remove)
+	if err := dc.SyncPDB(d, remove); err != nil {
+		_ = c.logger.Errorf("failed to sync pdb for statefulset %s/%s: %s", s.Namespace, s.Name, err)
+	}
+	return nil
 }
 
 func assertStatefulSet(obj interface{}) (*apps.StatefulSet, error) {

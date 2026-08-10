@@ -12,6 +12,7 @@ import (
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	appsv1 "k8s.io/client-go/applyconfigurations/apps/v1"
@@ -253,7 +254,7 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 				d := pdbList.Items[0]
 				if d.Status.DisruptionsAllowed == 0 {
 					c.logger.Logf("Found a deployment blocking draing node %s/%s", d.Namespace, d.Name)
-					// pdb will always have the same name as deployment
+					// pdb has the same name as its workload, which is not always a deployment
 					if err := c.triggerDeploymentReschedule(d.Name, d.Namespace, node); err != nil {
 						c.logger.Errorf("failed to trigger deployment reschedule: %s", err)
 					}
@@ -269,6 +270,13 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 }
 
 func (c *NodeController) triggerDeploymentReschedule(name, ns, node string) error {
+	if _, err := c.provider.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{}); err != nil {
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
 	c.logger.Logf("Trigger reschedule for deployment %s/%s", ns, name)
 	sObj := &appsv1.DeploymentApplyConfiguration{
 		TypeMetaApplyConfiguration: amv1.TypeMetaApplyConfiguration{

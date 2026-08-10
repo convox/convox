@@ -35,7 +35,52 @@ The rack must provide the named Container Storage Interface storage class. For e
 
 Stateful services must use a fixed replica count. They do not support agents, autoscaling, VPA, budget auto-shutdown or `convox run --use-service-volume`.
 
-Changing `stateful` on an existing service does not provide an in-place migration. Create a new service and move the data. Kubernetes also treats `podManagementPolicy` and claim template fields such as `storageClass` as immutable.
+Changing `stateful` on an existing service does not provide an in-place migration. Create a new service and move the data. Kubernetes also treats `podManagementPolicy` and claim template fields such as `size` and `storageClass` as immutable, so changing one of those on a running stateful service is rejected. Use a new service name instead, which gives the replicas new claims.
+
+### Addressing an individual replica
+
+Each replica gets a stable name and its own DNS record through a headless Service that Convox creates alongside the StatefulSet:
+
+```
+<service>-<ordinal>.<service>-headless
+```
+
+The example above is reachable inside the app as `database-0.database-headless`, `database-1.database-headless` and `database-2.database-headless`. Use these names to point clustered services such as Qdrant at their peers. The regular `<service>` name still load balances across every ready replica.
+
+### Volume ownership for non-root images
+
+A newly provisioned block volume is owned by root, so a service whose image runs as a non-root user cannot write to its mount. Set `securityContext.fsGroup` to the group that owns the data directory and Kubernetes hands the volume to that group:
+
+```yaml
+services:
+  search:
+    image: elasticsearch:8.15.0
+    stateful: true
+    securityContext:
+      fsGroup: 1000
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /usr/share/elasticsearch/data
+          size: 50Gi
+          storageClass: gp3
+```
+
+An init container can also mount the same claim to prepare the directory before the service starts. Reference the claim by `id` and give it the path the init container should see:
+
+```yaml
+    initContainer:
+      image: busybox
+      command: chown -R 1000:1000 /data
+      volumeOptions:
+        - persistentVolumeClaim:
+            id: data
+            mountPath: /data
+```
+
+### Volume lifecycle
+
+Claims outlive the replicas that use them. Scaling a stateful service down keeps the claims for the removed replicas, so scaling back up reattaches the same data. Removing the service from `convox.yml` also leaves its claims in place. In both cases the underlying cloud disks keep billing until you delete them, and `convox apps delete` removes the whole namespace along with every claim and disk it holds.
 
 ## Azure Files Volumes
 

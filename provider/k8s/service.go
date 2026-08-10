@@ -186,7 +186,8 @@ func (p *Provider) serviceListAppendStatefulsets(app string, ss structs.Services
 		return nil, errors.WithStack(err)
 	}
 
-	for _, statefulset := range statefulsets.Items {
+	for i := range statefulsets.Items {
+		statefulset := &statefulsets.Items[i]
 		c, err := primaryContainer(statefulset.Spec.Template.Spec.Containers, app)
 		if err != nil {
 			return nil, err

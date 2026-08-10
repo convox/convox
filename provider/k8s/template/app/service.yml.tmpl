@@ -93,6 +93,11 @@ spec:
         {{.Key}}: "{{.Value}}"
         {{ end }}
     spec:
+      {{ with .Service.SecurityContext.FsGroup }}
+      securityContext:
+        fsGroup: {{ . }}
+        fsGroupChangePolicy: OnRootMismatch
+      {{ end }}
       {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
       affinity:
         nodeAffinity:
@@ -217,6 +222,10 @@ spec:
         {{ with .AzureFiles }}
         - name: azurefiles-{{ .Id }}
           mountPath: {{ .MountPath }}
+        {{ end }}
+        {{ with .PersistentVolumeClaim }}
+        - name: pvc-{{ .Id }}
+          mountPath: {{ json .MountPath }}
         {{ end }}
         {{ end }}
         {{ range .Service.InitContainer.ConfigMounts }}
@@ -579,6 +588,9 @@ metadata:
     service: {{.Service.Name}}
     rack: {{.Rack}}
     system: convox
+    {{ range keyValue .Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
 spec:
   clusterIP: None
   publishNotReadyAddresses: true

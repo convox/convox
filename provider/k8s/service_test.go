@@ -96,7 +96,7 @@ func TestServiceList(t *testing.T) {
 				actionsBefore := 0
 
 				if test.CreateApp {
-					kk = p.Cluster.(*fake.Clientset)
+					kk, _ = p.Cluster.(*fake.Clientset)
 					aa.On("Status", test.Namespace, test.AppName).Return("Running", test.Release, nil).Once()
 
 					require.NoError(t, appCreate(kk, test.RackName, test.AppName))
