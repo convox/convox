@@ -420,8 +420,9 @@ func TestVolumePersistentVolumeClaimValidate(t *testing.T) {
 		{name: "missing id", volume: manifest.VolumePersistentVolumeClaim{MountPath: "/data", Size: "1Gi"}, wantErr: "id is required"},
 		{name: "invalid id", volume: manifest.VolumePersistentVolumeClaim{Id: "Data", MountPath: "/data", Size: "1Gi"}, wantErr: "id must match"},
 		{name: "missing mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", Size: "1Gi"}, wantErr: "mountPath is required"},
-		{name: "relative mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "data", Size: "1Gi"}, wantErr: "mountPath must be an absolute, clean path"},
-		{name: "unclean mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data/../backup", Size: "1Gi"}, wantErr: "mountPath must be an absolute, clean path"},
+		{name: "trailing slash mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/my/data/", Size: "1Gi"}},
+		{name: "relative mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "data", Size: "1Gi"}, wantErr: "mountPath must be an absolute path"},
+		{name: "unclean mount path", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data/../backup", Size: "1Gi"}, wantErr: "mountPath must be an absolute path"},
 		{name: "missing size", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data"}, wantErr: "size is invalid"},
 		{name: "zero size", volume: manifest.VolumePersistentVolumeClaim{Id: "data", MountPath: "/data", Size: "0"}, wantErr: "size is invalid"},
 		{name: "id too long", volume: manifest.VolumePersistentVolumeClaim{Id: strings.Repeat("a", 60), MountPath: "/data", Size: "1Gi"}, wantErr: "59 characters or fewer"},
@@ -508,6 +509,48 @@ func TestStatefulServiceValidation(t *testing.T) {
 			name:    "pod policy needs stateful service",
 			service: `podManagementPolicy: Parallel`,
 			wantErr: "podManagementPolicy requires stateful: true",
+		},
+		{
+			name: "init container may mount a declared claim",
+			service: `stateful: true
+    initContainer:
+      image: busybox
+      command: chown -R 1000:1000 /data
+      volumeOptions:
+        - persistentVolumeClaim:
+            id: data
+            mountPath: /data
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+		},
+		{
+			name: "init container claim must be declared",
+			service: `stateful: true
+    initContainer:
+      image: busybox
+      volumeOptions:
+        - persistentVolumeClaim:
+            id: other
+            mountPath: /data
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi`,
+			wantErr: "initContainer persistentVolumeClaim id other is not declared in volumeOptions",
+		},
+		{
+			name: "init container claim needs stateful service",
+			service: `initContainer:
+      image: busybox
+      volumeOptions:
+        - persistentVolumeClaim:
+            id: data
+            mountPath: /data`,
+			wantErr: "initContainer persistentVolumeClaim requires stateful: true",
 		},
 		{
 			name: "pod policy must be supported",

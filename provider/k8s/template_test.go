@@ -13,6 +13,7 @@ import (
 	"github.com/convox/convox/pkg/templater"
 	"github.com/convox/convox/provider/k8s/template"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func TestRenderTemplate(t *testing.T) {
@@ -377,6 +378,106 @@ func TestRenderStatefulReadOnlyPersistentVolumeClaim(t *testing.T) {
 	data, err := p.RenderTemplate("app/service", params)
 	require.NoError(t, err)
 	require.Contains(t, string(data), "readOnly: true")
+}
+
+func TestRenderStatefulServiceInitContainerClaimAndLabels(t *testing.T) {
+	src := `services:
+  database:
+    build: .
+    stateful: true
+    labels:
+      team: data
+    initContainer:
+      image: busybox
+      command: chown -R 1000:1000 /data
+      volumeOptions:
+        - persistentVolumeClaim:
+            id: data
+            mountPath: /data
+    securityContext:
+      runAsUser: 1000
+      fsGroup: 1000
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: /data
+          size: 1Gi
+`
+	p, params := gpuTemplateFixture(t, src)
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+
+	docs := splitYamlDocuments(t, string(data))
+
+	sts := findRenderedDocument(t, docs, "StatefulSet", "database")
+	podSpec := nestedMap(t, sts, "spec", "template", "spec")
+	sc := nestedMap(t, podSpec, "securityContext")
+	require.Equal(t, 1000, sc["fsGroup"])
+	require.Equal(t, "OnRootMismatch", sc["fsGroupChangePolicy"])
+
+	initContainers, _ := podSpec["initContainers"].([]interface{})
+	require.Len(t, initContainers, 1)
+	init, _ := initContainers[0].(map[string]interface{})
+	require.Contains(t, fmt.Sprintf("%v", init["volumeMounts"]), "pvc-data")
+
+	headless := findRenderedDocument(t, docs, "Service", "database-headless")
+	labels := nestedMap(t, headless, "metadata", "labels")
+	require.Equal(t, "data", labels["team"])
+}
+
+func TestRenderServiceOmitsPodSecurityContextWithoutFsGroup(t *testing.T) {
+	src := `services:
+  web:
+    build: .
+    securityContext:
+      runAsUser: 1000
+`
+	p, params := gpuTemplateFixture(t, src)
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+
+	require.NotContains(t, string(data), "fsGroup")
+
+	deployment := findRenderedDocument(t, splitYamlDocuments(t, string(data)), "Deployment", "web")
+	podSpec := nestedMap(t, deployment, "spec", "template", "spec")
+	require.NotContains(t, podSpec, "securityContext")
+}
+
+func splitYamlDocuments(t *testing.T, data string) []map[string]interface{} {
+	t.Helper()
+	docs := []map[string]interface{}{}
+	for _, part := range strings.Split(data, "---\n") {
+		var v map[string]interface{}
+		require.NoError(t, yaml.Unmarshal([]byte(part), &v))
+		if v != nil {
+			docs = append(docs, v)
+		}
+	}
+	return docs
+}
+
+func findRenderedDocument(t *testing.T, docs []map[string]interface{}, kind, name string) map[string]interface{} {
+	t.Helper()
+	for _, d := range docs {
+		if d["kind"] != kind {
+			continue
+		}
+		if nestedMap(t, d, "metadata")["name"] == name {
+			return d
+		}
+	}
+	t.Fatalf("no rendered %s named %s", kind, name)
+	return nil
+}
+
+func nestedMap(t *testing.T, v map[string]interface{}, keys ...string) map[string]interface{} {
+	t.Helper()
+	for _, k := range keys {
+		next, ok := v[k].(map[string]interface{})
+		require.True(t, ok, "expected map at %s", k)
+		v = next
+	}
+	return v
 }
 
 func TestRenderServiceTolerationMerger(t *testing.T) {

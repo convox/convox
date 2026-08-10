@@ -521,6 +521,7 @@ Container-level security settings. These settings control Linux security feature
 | **runAsNonRoot**             | boolean |         | Require the container to run as a non-root user                                                             |
 | **runAsUser**                | number  |         | The UID to run the container as                                                                             |
 | **runAsGroup**               | number  |         | The GID to run the container as                                                                             |
+| **fsGroup**                  | number  |         | The GID that owns mounted volumes. Applies to the whole pod, not just the container. See [Volumes](/configuration/volumes#volume-ownership-for-non-root-images) |
 | **readOnlyRootFilesystem**   | boolean |         | Mount the root filesystem as read-only                                                                      |
 | **allowPrivilegeEscalation** | boolean |         | Whether a process can gain more privileges than its parent process. Set to **false** for security hardening |
 | **capabilities**             | map     |         | Linux capabilities to add or drop (see below)                                                               |
@@ -663,7 +664,7 @@ services:
 | **storageClass** | string | cluster default | Container Storage Interface storage class supplied by the rack |
 | **accessMode** | string | `ReadWriteOnce` | `ReadWriteOnce`, `ReadOnlyMany` or `ReadWriteMany` |
 
-This option requires `stateful: true`. See [per-replica persistent volumes](/configuration/volumes#per-replica-persistent-volumes) for an example and limits.
+This option requires `stateful: true`. An `initContainer` may mount a claim the service already declares by giving the same `id` and the path the init container should see. See [per-replica persistent volumes](/configuration/volumes#per-replica-persistent-volumes) for an example and limits.
 
 
 

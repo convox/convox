@@ -171,7 +171,7 @@ type VolumePersistentVolumeClaim struct {
 	StorageClass string `yaml:"storageClass,omitempty"`
 }
 
-func (v VolumePersistentVolumeClaim) Validate() error {
+func (v *VolumePersistentVolumeClaim) Validate() error {
 	if v.Id == "" {
 		return fmt.Errorf("persistentVolumeClaim.id is required")
 	}
@@ -184,8 +184,8 @@ func (v VolumePersistentVolumeClaim) Validate() error {
 	if v.MountPath == "" {
 		return fmt.Errorf("persistentVolumeClaim.mountPath is required")
 	}
-	if !path.IsAbs(v.MountPath) || path.Clean(v.MountPath) != v.MountPath {
-		return fmt.Errorf("persistentVolumeClaim.mountPath must be an absolute, clean path")
+	if !path.IsAbs(v.MountPath) || path.Clean(v.MountPath) != strings.TrimSuffix(v.MountPath, "/") {
+		return fmt.Errorf("persistentVolumeClaim.mountPath must be an absolute path with no . or .. segments")
 	}
 	if v.StorageClass != "" {
 		if errs := validation.IsDNS1123Subdomain(v.StorageClass); len(errs) > 0 {
@@ -873,6 +873,7 @@ type ServiceSecurityContext struct {
 	RunAsNonRoot             *bool                               `yaml:"runAsNonRoot,omitempty"`
 	RunAsUser                *int64                              `yaml:"runAsUser,omitempty"`
 	RunAsGroup               *int64                              `yaml:"runAsGroup,omitempty"`
+	FsGroup                  *int64                              `yaml:"fsGroup,omitempty"`
 	ReadOnlyRootFilesystem   *bool                               `yaml:"readOnlyRootFilesystem,omitempty"`
 	AllowPrivilegeEscalation *bool                               `yaml:"allowPrivilegeEscalation,omitempty"`
 	Capabilities             *ServiceSecurityContextCapabilities `yaml:"capabilities,omitempty"`

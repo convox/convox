@@ -101,9 +101,9 @@ func TestReleasePromote(t *testing.T) {
 
 func TestReleasePromoteRejectsStatefulMigration(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
-		aa := p.Atom.(*atom.MockInterface)
-		kc := p.Convox.(*cvfake.Clientset)
-		kk := p.Cluster.(*fake.Clientset)
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kc, _ := p.Convox.(*cvfake.Clientset)
+		kk, _ := p.Cluster.(*fake.Clientset)
 
 		require.NoError(t, appCreate(kk, "rack1", "app1"))
 		require.NoError(t, releaseCreateInline(kc, "rack1-app1", "release1", `services:
