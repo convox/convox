@@ -9,6 +9,7 @@ import (
 	"github.com/convox/logger"
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -168,4 +169,13 @@ func TestReconcileGpuLabelsEmptyCluster(t *testing.T) {
 
 	// Should not panic or error on empty node list
 	nc.ReconcileGpuLabels()
+}
+
+func TestTriggerDeploymentRescheduleSkipsMissingDeployment(t *testing.T) {
+	c := newGpuTestController(fake.NewSimpleClientset(), &gpuTestEngine{})
+
+	require.NoError(t, c.triggerDeploymentReschedule("database", "rack1-app1", "node1"))
+
+	_, err := c.provider.Cluster.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "database", am.GetOptions{})
+	require.True(t, kerr.IsNotFound(err))
 }

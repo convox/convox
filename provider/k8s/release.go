@@ -155,10 +155,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			for _, service := range m.Services {
-				previous, err := current.Service(service.Name)
-				if err == nil && previous.Stateful != service.Stateful {
-					return structs.ErrBadRequest("service %s: changing stateful on an existing service is not supported; create a new service and move the data", service.Name)
+			for i := range m.Services {
+				previous, err := current.Service(m.Services[i].Name)
+				if err == nil && previous.Stateful != m.Services[i].Stateful {
+					return structs.ErrBadRequest("service %s: changing stateful on an existing service is not supported; create a new service and move the data", m.Services[i].Name)
 				}
 			}
 		}

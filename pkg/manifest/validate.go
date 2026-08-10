@@ -158,13 +158,23 @@ func (m *Manifest) validateServices() []error {
 			}
 		}
 
+		claimIds := map[string]bool{}
+
 		for i := range s.VolumeOptions {
 			if err := s.VolumeOptions[i].Validate(); err != nil {
 				errs = append(errs, err)
 			}
-			if s.VolumeOptions[i].PersistentVolumeClaim != nil && !s.Stateful {
+			claim := s.VolumeOptions[i].PersistentVolumeClaim
+			if claim == nil {
+				continue
+			}
+			if !s.Stateful {
 				errs = append(errs, fmt.Errorf("service %s: persistentVolumeClaim requires stateful: true", s.Name))
 			}
+			if claimIds[claim.Id] {
+				errs = append(errs, fmt.Errorf("service %s: duplicate persistentVolumeClaim id %s", s.Name, claim.Id))
+			}
+			claimIds[claim.Id] = true
 		}
 
 		if s.Stateful {
@@ -175,20 +185,7 @@ func (m *Manifest) validateServices() []error {
 			if _, exists := serviceNames[headlessName]; exists {
 				errs = append(errs, fmt.Errorf("service %s: generated headless service name %s conflicts with another service", s.Name, headlessName))
 			}
-			hasClaim := false
-			claimIds := map[string]bool{}
-			for i := range s.VolumeOptions {
-				claim := s.VolumeOptions[i].PersistentVolumeClaim
-				if claim == nil {
-					continue
-				}
-				hasClaim = true
-				if claimIds[claim.Id] {
-					errs = append(errs, fmt.Errorf("service %s: duplicate persistentVolumeClaim id %s", s.Name, claim.Id))
-				}
-				claimIds[claim.Id] = true
-			}
-			if !hasClaim {
+			if len(claimIds) == 0 {
 				errs = append(errs, fmt.Errorf("service %s: stateful services require a persistentVolumeClaim", s.Name))
 			}
 			if s.Agent.Enabled {
@@ -210,8 +207,19 @@ func (m *Manifest) validateServices() []error {
 		}
 		if s.InitContainer != nil {
 			for i := range s.InitContainer.VolumeOptions {
-				if s.InitContainer.VolumeOptions[i].PersistentVolumeClaim != nil {
-					errs = append(errs, fmt.Errorf("service %s: initContainer does not support persistentVolumeClaim", s.Name))
+				claim := s.InitContainer.VolumeOptions[i].PersistentVolumeClaim
+				if claim == nil {
+					continue
+				}
+				if !s.Stateful {
+					errs = append(errs, fmt.Errorf("service %s: initContainer persistentVolumeClaim requires stateful: true", s.Name))
+					continue
+				}
+				if !claimIds[claim.Id] {
+					errs = append(errs, fmt.Errorf("service %s: initContainer persistentVolumeClaim id %s is not declared in volumeOptions", s.Name, claim.Id))
+				}
+				if claim.MountPath == "" {
+					errs = append(errs, fmt.Errorf("service %s: initContainer persistentVolumeClaim.mountPath is required", s.Name))
 				}
 			}
 		}
