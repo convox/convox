@@ -28,9 +28,9 @@ func (s *Server) AppCancel(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
-	err := s.provider(c).WithContext(contextFrom(c)).AppCancel(name)
+	err := s.provider(c).WithContext(contextFrom(c)).AppCancel(app)
 	if err != nil {
 		return err
 	}
@@ -108,9 +108,9 @@ func (s *Server) AppDelete(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
-	err := s.provider(c).WithContext(contextFrom(c)).AppDelete(name)
+	err := s.provider(c).WithContext(contextFrom(c)).AppDelete(app)
 	if err != nil {
 		return err
 	}
@@ -139,9 +139,9 @@ func (s *Server) AppGet(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).AppGet(name)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppGet(app)
 	if err != nil {
 		return err
 	}
@@ -175,14 +175,14 @@ func (s *Server) AppLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
 	var opts structs.LogsOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).AppLogs(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppLogs(app, opts)
 	if err != nil {
 		return err
 	}
@@ -223,14 +223,14 @@ func (s *Server) AppMetrics(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
 	var opts structs.MetricsOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).AppMetrics(name, opts)
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppMetrics(app, opts)
 	if err != nil {
 		return err
 	}
@@ -471,14 +471,14 @@ func (s *Server) AppUpdate(c *stdapi.Context) error {
 		return err
 	}
 
-	name := c.Var("name")
+	app := c.Var("app")
 
 	var opts structs.AppUpdateOptions
 	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
 		return err
 	}
 
-	err := s.provider(c).WithContext(contextFrom(c)).AppUpdate(name, opts)
+	err := s.provider(c).WithContext(contextFrom(c)).AppUpdate(app, opts)
 	if err != nil {
 		return err
 	}
@@ -1039,6 +1039,10 @@ func (s *Server) FilesDelete(c *stdapi.Context) error {
 func (s *Server) FilesDownload(c *stdapi.Context) error {
 	if err := s.hook("FilesDownloadValidate", c); err != nil {
 		return err
+	}
+
+	if !CanWrite(c) {
+		return stdapi.Errorf(http.StatusForbidden, "file download requires write access")
 	}
 
 	app := c.Var("app")

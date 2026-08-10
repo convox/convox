@@ -3,10 +3,14 @@ package api_test
 import (
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/convox/convox/pkg/api"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -68,6 +72,41 @@ func TestFilesDownloadError(t *testing.T) {
 		require.EqualError(t, err, "err1")
 		require.Nil(t, res)
 	})
+}
+
+func TestFilesDownloadRequiresWrite(t *testing.T) {
+	s := &api.Server{}
+
+	c := stdapi.NewContext(nil, httptest.NewRequest(http.MethodGet, "http://example.org", nil))
+	api.SetReadRole(c)
+
+	err := s.FilesDownload(c)
+	require.EqualError(t, err, "file download requires write access")
+
+	aerr, ok := err.(stdapi.Error)
+	require.True(t, ok)
+	require.Equal(t, http.StatusForbidden, aerr.Code())
+}
+
+func TestFilesDownloadAllowsWriteAndAdmin(t *testing.T) {
+	for _, setRole := range []func(*stdapi.Context){api.SetReadWriteRole, api.SetAdminRole} {
+		p := &structs.MockProvider{}
+		p.On("WithContext", mock.Anything).Return(p)
+		p.On("FilesDownload", "app1", "pid1", "file1").Return(strings.NewReader("data"), nil)
+
+		s := &api.Server{Provider: p}
+
+		w := httptest.NewRecorder()
+		c := stdapi.NewContext(w, httptest.NewRequest(http.MethodGet, "http://example.org/?file=file1", nil))
+		c.SetVar("app", "app1")
+		c.SetVar("pid", "pid1")
+		setRole(c)
+
+		require.NoError(t, s.FilesDownload(c))
+		require.Equal(t, "data", w.Body.String())
+
+		p.AssertExpectations(t)
+	}
 }
 
 func TestFilesUpload(t *testing.T) {

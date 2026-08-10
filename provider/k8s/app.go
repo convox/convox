@@ -612,8 +612,7 @@ func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
 }
 
 func (p *Provider) appNameValidate(name string) error {
-	switch name {
-	case "rack", "system":
+	if structs.ReservedAppName(name) {
 		return errors.WithStack(structs.ErrBadRequest("app name is reserved"))
 	}
 
