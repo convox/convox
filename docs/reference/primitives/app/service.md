@@ -140,7 +140,6 @@ services:
 | **configMounts** | list |     | Mount configuration files into the container filesystem. See [Config Mounts](/configuration/config-mounts) |
 | **nodeAffinityLabels** | map |  | Node affinity rules for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
 | **nodeSelectorLabels** | map |  | Node selector labels for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
-| `spreadAcrossZones` | boolean | false | Ask Kubernetes to spread this Service's pods across availability zones |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer). Supports TCP (default) and UDP protocols |
 | **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
@@ -148,6 +147,7 @@ services:
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
+| **spreadAcrossZones** | boolean | false            | Set to **true** to spread this Service's pods across availability zones (see [spreadAcrossZones](#spreadacrosszones) below) |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
 | **termination** | map        |                     | Termination related configuration                                                                                                          |
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
@@ -160,25 +160,6 @@ services:
 > Environment variables declared on `convox.yml` will be populated for a Service.
 
 > The `drain` attribute is deprecated. Use `termination.grace` instead.
-
-### spreadAcrossZones
-
-Set `spreadAcrossZones: true` to ask Kubernetes to keep this Service's pods evenly spread across availability zones:
-
-```yaml
-services:
-  web:
-    image: example/web
-    spreadAcrossZones: true
-    scale:
-      count: 3
-```
-
-Convox uses the standard `topology.kubernetes.io/zone` node label and allows a maximum difference of one pod between eligible zones. The scheduler favours an even spread but still schedules a pod when it cannot meet that spread.
-
-The Rack must have eligible nodes in at least 2 zones, and the Service must run at least 2 replicas. This setting does not create zones or nodes. Node selectors, node affinity and zonal storage can reduce the eligible zones.
-
-Agent services do not support `spreadAcrossZones` because they run one pod on each eligible node as a DaemonSet.
 
 ### annotations
 You can use annotations to attach arbitrary non-identifying metadata to objects. Clients such as tools and libraries can retrieve this metadata. On Convox, annotations will reflect in pods and service accounts.
@@ -591,6 +572,27 @@ services:
         add:
           - NET_BIND_SERVICE
 ```
+
+&nbsp;
+
+### spreadAcrossZones
+
+Set `spreadAcrossZones: true` to ask Kubernetes to keep this Service's pods evenly spread across availability zones:
+
+```yaml
+services:
+  web:
+    image: example/web
+    spreadAcrossZones: true
+    scale:
+      count: 3
+```
+
+Convox uses the standard `topology.kubernetes.io/zone` node label and allows a maximum difference of one pod between eligible zones. It also asks the scheduler to keep the pods spread across nodes, with the same tolerance Kubernetes applies by default. The scheduler favors an even spread but still schedules a pod when it cannot meet that spread.
+
+The zone spread only has an effect when the Rack has eligible nodes in at least 2 zones and the Service runs at least 2 replicas. The setting does not create zones. Node selectors, node affinity and zonal storage can reduce the eligible zones. On Racks running [Karpenter](/configuration/scaling/karpenter), Karpenter may launch extra nodes to satisfy the spread and may keep them running instead of consolidating them away.
+
+Agent services do not support `spreadAcrossZones` because they run one pod on each eligible node as a DaemonSet.
 
 &nbsp;
 

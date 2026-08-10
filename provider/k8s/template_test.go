@@ -902,9 +902,12 @@ func TestRenderTemplateServiceSpreadAcrossZones(t *testing.T) {
 	require.NoError(t, err)
 	rendered := string(data)
 	require.Contains(t, rendered, "topologySpreadConstraints:")
-	require.Contains(t, rendered, "maxSkew: 1")
-	require.Contains(t, rendered, "topologyKey: topology.kubernetes.io/zone")
-	require.Contains(t, rendered, "whenUnsatisfiable: ScheduleAnyway")
+	require.Contains(t, rendered, `maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway`)
+	require.Contains(t, rendered, `maxSkew: 3
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway`)
 	require.Contains(t, rendered, `matchLabels:
             app: test-app
             rack: rack

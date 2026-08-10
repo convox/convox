@@ -97,6 +97,16 @@ spec:
             app: {{.App.Name}}
             service: {{.Service.Name}}
             type: service
+      - maxSkew: 3
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
       {{ end }}
       {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
       affinity:
