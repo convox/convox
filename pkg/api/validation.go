@@ -9,7 +9,7 @@ import (
 
 func (s *Server) AppCancelValidate(c *stdapi.Context) error {
 	p := s.provider(c).WithContext(contextFrom(c))
-	a, err := p.AppGet(c.Var("name"))
+	a, err := p.AppGet(c.Var("app"))
 	if err != nil {
 		return err
 	}
