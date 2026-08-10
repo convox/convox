@@ -914,7 +914,7 @@ func TestValidateAndMutateParams_NodePoolRemoval(t *testing.T) {
 			name:    "clear blocked",
 			params:  map[string]string{"additional_karpenter_nodepools_config": ""},
 			current: map[string]string{"additional_karpenter_nodepools_config": pools("gpu")},
-			err:     "node pools that exist on this rack: gpu",
+			err:     "node pools from the rack: gpu",
 		},
 		{
 			name:    "removal allowed with force",
@@ -947,7 +947,7 @@ func TestValidateAndMutateParams_NodePoolRemoval(t *testing.T) {
 			name:    "node group label removed",
 			params:  map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"}]`},
 			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large","label":"analytics"}]`},
-			err:     "node groups that exist on this rack: analytics",
+			err:     "node groups from the rack: analytics",
 		},
 		{
 			name:    "label moved to build groups is a removal",
@@ -969,7 +969,7 @@ func TestValidateAndMutateParams_NodePoolRemoval(t *testing.T) {
 			name:    "duplicate label fully removed is listed once",
 			params:  map[string]string{"additional_node_groups_config": `[]`},
 			current: map[string]string{"additional_node_groups_config": `[{"type":"t3.medium","label":"web"},{"type":"t3.large","label":"web"}]`},
-			err:     "node groups that exist on this rack: web\n",
+			err:     "node groups from the rack: web\n",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -990,6 +990,9 @@ func TestValidateAndMutateParams_NodePoolRemoval(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), "--force") {
 				t.Errorf("error %q should mention --force", err.Error())
+			}
+			if !strings.HasPrefix(err.Error(), "destructive change,") {
+				t.Errorf("error %q should lead with the destructive warning", err.Error())
 			}
 		})
 	}
@@ -1047,7 +1050,7 @@ func TestValidateAndMutateParams_BuildGroupRemovalNamesBuilds(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for removed build group")
 	}
-	if !strings.Contains(err.Error(), "build groups that exist on this rack: bigbuild") {
+	if !strings.Contains(err.Error(), "build groups from the rack: bigbuild") {
 		t.Errorf("error %q should name build groups, not node groups", err.Error())
 	}
 	if !strings.Contains(err.Error(), "Builds pinned by BuildLabels to convox.io/label=bigbuild") {

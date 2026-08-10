@@ -1585,8 +1585,8 @@ func validateNodePoolRemoval(params, currentParams map[string]string, force bool
 			pinned[i] = fmt.Sprintf("%s=%s", c.label, d)
 		}
 
-		return fmt.Errorf("this change removes %s that exist on this rack: %s\n"+
-			"  %s %s can no longer be scheduled, and the nodes are drained with no replacement.\n"+
+		return fmt.Errorf("destructive change, removes %s from the rack: %s\n"+
+			"  Their nodes are drained and deleted. %s %s become unschedulable.\n"+
 			"  Re-run with --force to proceed",
 			c.noun, strings.Join(dropped, ", "), c.affected, strings.Join(pinned, " or "))
 	}
