@@ -7,6 +7,13 @@ const (
 	AppParamBuildArch   = "BuildArch"
 )
 
+var reservedAppNames = map[string]bool{"rack": true, "system": true}
+
+// ReservedAppName reports whether name is reserved for rack infrastructure and may not name an app.
+func ReservedAppName(name string) bool {
+	return reservedAppNames[name]
+}
+
 type App struct {
 	Generation string `json:"generation,omitempty"`
 	Locked     bool   `json:"locked"`

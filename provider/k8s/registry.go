@@ -230,6 +230,10 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 func (p *Provider) registryApp(path string) (string, error) {
 	app := strings.Split(strings.TrimPrefix(path, p.Engine.RepositoryPrefix()), "/")[0]
 
+	if structs.ReservedAppName(app) {
+		return "", errors.WithStack(structs.ErrBadRequest("app name is reserved"))
+	}
+
 	if _, err := p.AppGet(app); err != nil {
 		return "", err
 	}

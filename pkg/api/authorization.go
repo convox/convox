@@ -24,6 +24,15 @@ func (s *Server) Authorize(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 	}
 }
 
+func (s *Server) RejectReservedApp(next stdapi.HandlerFunc) stdapi.HandlerFunc {
+	return func(c *stdapi.Context) error {
+		if structs.ReservedAppName(c.Var("app")) {
+			return stdapi.Errorf(http.StatusBadRequest, "app name is reserved")
+		}
+		return next(c)
+	}
+}
+
 func CanRead(c *stdapi.Context) bool {
 	if d := c.Get(structs.ConvoxRoleParam); d != nil {
 		v, _ := d.(string)
