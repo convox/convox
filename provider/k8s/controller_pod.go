@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/kctl"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ic "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -131,11 +132,23 @@ func (c *PodController) Update(prev, cur interface{}) error {
 func (c *PodController) cleanupPod(p *ac.Pod) error {
 	time.Sleep(5 * time.Second)
 
-	if err := c.Client().CoreV1().Pods(p.ObjectMeta.Namespace).Delete(context.TODO(), p.ObjectMeta.Name, am.DeleteOptions{}); err != nil {
+	// the pod observed here may already have been replaced by one reusing its
+	// name, which statefulsets do, so delete only this exact object
+	uid := p.UID
+
+	err := c.Client().CoreV1().Pods(p.Namespace).Delete(context.TODO(), p.Name, am.DeleteOptions{
+		Preconditions: &am.Preconditions{UID: &uid},
+	})
+	switch {
+	case err == nil, kerr.IsNotFound(err):
+		return nil
+	case kerr.IsConflict(err):
+		fmt.Printf("pod cleanup skipped: %s/%s: %s\n", p.Namespace, p.Name, err)
+		return nil
+	default:
+		fmt.Printf("pod cleanup failed: %s/%s: %s\n", p.Namespace, p.Name, err)
 		return errors.WithStack(err)
 	}
-
-	return nil
 }
 
 func assertPod(v interface{}) (*ac.Pod, error) {
