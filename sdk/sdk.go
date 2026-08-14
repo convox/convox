@@ -468,6 +468,12 @@ func (b *execBody) close() {
 	close(b.done)
 }
 
+// proxied reports whether this client reaches its target through the Console,
+// which is where an end-of-input frame is read as the end of the whole session.
+func (c *Client) proxied() bool {
+	return c.Rack != "" || c.MachineID != ""
+}
+
 func (c *Client) WithContext(ctx context.Context) structs.Provider {
 	cc := *c
 	cc.Client = cc.Client.WithContext(ctx)
