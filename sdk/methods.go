@@ -756,7 +756,7 @@ func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts st
 		return 0, err
 	}
 
-	body := newExecBody(rw, c.Rack != "")
+	body := newExecBody(rw, c.proxied())
 	defer body.close()
 
 	ro.Headers["command"] = command

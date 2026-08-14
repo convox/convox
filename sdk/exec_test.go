@@ -310,6 +310,14 @@ func TestExecBodyForwardsEOFWithoutProxy(t *testing.T) {
 	}
 }
 
+func TestProxied(t *testing.T) {
+	// A cloud machine reaches its target through the same Console relay but carries
+	// no rack name, so keying only on Rack would leave it uncovered.
+	require.False(t, (&Client{}).proxied())
+	require.True(t, (&Client{Rack: "rack1"}).proxied())
+	require.True(t, (&Client{MachineID: "m1"}).proxied())
+}
+
 func TestExecBodyReturnsDataWithEOF(t *testing.T) {
 	// A reader is allowed to return its last bytes together with io.EOF; those
 	// bytes must not wait on the exec.
@@ -335,6 +343,6 @@ func TestProcessExecWiredToExecStream(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(src), "return execStream(ws, rw)",
 		"sdk/methods.go ProcessExec must relay via execStream; if methods.go was regenerated, reapply the ECS Exec wrapper")
-	require.Contains(t, string(src), "newExecBody(rw, c.Rack",
+	require.Contains(t, string(src), "newExecBody(rw, c.proxied())",
 		"sdk/methods.go ProcessExec must wrap the request body with newExecBody; if methods.go was regenerated, reapply it")
 }
