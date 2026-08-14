@@ -30,6 +30,19 @@ func (f *framesReader) Read(p []byte) (int, error) {
 	return n, nil
 }
 
+type dataWithEOFReader struct {
+	data string
+	done bool
+}
+
+func (r *dataWithEOFReader) Read(p []byte) (int, error) {
+	if r.done {
+		return 0, io.EOF
+	}
+	r.done = true
+	return copy(p, r.data), io.EOF
+}
+
 func stubPlugin(t *testing.T) (*int, *ecsExecSession) {
 	t.Helper()
 	orig := runSessionManagerPlugin
@@ -234,12 +247,8 @@ func TestWebsocketExitStreamNoMarker(t *testing.T) {
 func TestExecBodyHoldsEOFUntilClose(t *testing.T) {
 	// stdsdk sends an empty binary frame when the request body ends, and a
 	// Console-proxied rack reads that as a closed stream and kills the command.
-	b := newExecBody(strings.NewReader("in"))
+	b := newExecBody(strings.NewReader(""), true)
 	p := make([]byte, 8)
-
-	n, err := b.Read(p)
-	require.NoError(t, err)
-	require.Equal(t, "in", string(p[:n]))
 
 	blocked := make(chan error, 1)
 	go func() {
@@ -257,6 +266,65 @@ func TestExecBodyHoldsEOFUntilClose(t *testing.T) {
 	require.Equal(t, io.EOF, <-blocked)
 }
 
+func TestExecBodyForwardsEOFAfterInput(t *testing.T) {
+	// A v2 rack half-closes the command's own stdin on that frame, so a caller
+	// that piped something in still needs it.
+	b := newExecBody(strings.NewReader("in"), true)
+	p := make([]byte, 8)
+
+	n, err := b.Read(p)
+	require.NoError(t, err)
+	require.Equal(t, "in", string(p[:n]))
+
+	done := make(chan error, 1)
+	go func() {
+		_, rerr := b.Read(p)
+		done <- rerr
+	}()
+
+	select {
+	case rerr := <-done:
+		require.Equal(t, io.EOF, rerr)
+	case <-time.After(time.Second):
+		require.Fail(t, "input was sent, so the body must report EOF without waiting")
+	}
+}
+
+func TestExecBodyForwardsEOFWithoutProxy(t *testing.T) {
+	// A rack reached directly is not torn down by the frame, and a v2 rack needs
+	// it to half-close the command's own stdin.
+	b := newExecBody(strings.NewReader(""), false)
+	p := make([]byte, 8)
+
+	done := make(chan error, 1)
+	go func() {
+		_, rerr := b.Read(p)
+		done <- rerr
+	}()
+
+	select {
+	case rerr := <-done:
+		require.Equal(t, io.EOF, rerr)
+	case <-time.After(time.Second):
+		require.Fail(t, "an unproxied client must report EOF without waiting")
+	}
+}
+
+func TestExecBodyReturnsDataWithEOF(t *testing.T) {
+	// A reader is allowed to return its last bytes together with io.EOF; those
+	// bytes must not wait on the exec.
+	b := newExecBody(&dataWithEOFReader{data: "in"}, true)
+	p := make([]byte, 8)
+
+	n, err := b.Read(p)
+	require.NoError(t, err)
+	require.Equal(t, "in", string(p[:n]))
+
+	n, err = b.Read(p)
+	require.Equal(t, io.EOF, err)
+	require.Equal(t, 0, n)
+}
+
 // methods.go is generated; ProcessExec is hand-maintained to relay the ECS Exec
 // protocol via execStream and to hold the request body open via newExecBody. A
 // regen would revert it to a plain WebsocketExit call and silently break ECS Exec
@@ -267,6 +335,6 @@ func TestProcessExecWiredToExecStream(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(src), "return execStream(ws, rw)",
 		"sdk/methods.go ProcessExec must relay via execStream; if methods.go was regenerated, reapply the ECS Exec wrapper")
-	require.Contains(t, string(src), "newExecBody(rw)",
+	require.Contains(t, string(src), "newExecBody(rw, c.Rack",
 		"sdk/methods.go ProcessExec must wrap the request body with newExecBody; if methods.go was regenerated, reapply it")
 }
