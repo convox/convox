@@ -1334,7 +1334,11 @@ func (s *Server) ProcessExec(c *stdapi.Context) error {
 
 	v, err := s.provider(c).WithContext(contextFrom(c)).ProcessExec(app, pid, command, stdsdk.NewAdapterWs(c.Websocket()), opts)
 	if err != nil {
-		renderStatusCode(c, v)
+		// a zero here means the command never ran, so sending it as the exit
+		// status would report success for a failure
+		if v != 0 {
+			_ = renderStatusCode(c, v)
+		}
 		return err
 	}
 

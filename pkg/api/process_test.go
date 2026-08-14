@@ -90,7 +90,36 @@ func TestProcessExecError(t *testing.T) {
 		require.NoError(t, err)
 		d, err := io.ReadAll(r)
 		require.NoError(t, err)
-		require.Equal(t, []byte("F1E49A85-0AD7-4AEF-A618-C249C6E6568D:0\nERROR: err1\n"), d)
+		require.Equal(t, []byte("ERROR: err1\n"), d, "a command that never ran must not be given an exit status of 0")
+	})
+}
+
+func TestProcessExecErrorWithStatus(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		opts := structs.ProcessExecOptions{
+			Entrypoint: options.Bool(true),
+			Height:     options.Int(1),
+			Tty:        options.Bool(false),
+			Width:      options.Int(2),
+		}
+		ro := stdsdk.RequestOptions{
+			Body: strings.NewReader("in"),
+			Headers: stdsdk.Headers{
+				"Command":    "command",
+				"Entrypoint": "true",
+				"Height":     "1",
+				"Tty":        "false",
+				"Width":      "2",
+			},
+		}
+		p.On("ProcessExec", "app1", "pid1", "command", mock.Anything, opts).Return(1, fmt.Errorf("err1"))
+		r, err := c.Websocket("/apps/app1/processes/pid1/exec", ro)
+		require.NoError(t, err)
+		d, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.Equal(t, []byte("F1E49A85-0AD7-4AEF-A618-C249C6E6568D:1\nERROR: err1\n"), d, "a real status must still reach clients that only read the marker")
 	})
 }
 

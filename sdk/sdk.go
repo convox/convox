@@ -1,9 +1,11 @@
 package sdk
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -22,11 +24,15 @@ import (
 const (
 	sortableTime       = "20060102.150405.000000000"
 	statusCodePrefix   = "F1E49A85-0AD7-4AEF-A618-C249C6E6568D:"
+	statusCodeMaxLen   = len(statusCodePrefix) + 16
 	ecsExecSessionByte = '\x00'
 )
 
 var (
 	Version = "dev"
+
+	// ErrExecIncomplete reports a stream that ended without the exit-code marker.
+	ErrExecIncomplete = errors.New("the rack did not report an exit status for this command")
 )
 
 type Client struct {
@@ -192,6 +198,12 @@ func (c *Client) WebsocketExit(path string, ro stdsdk.RequestOptions, rw io.Read
 		return 0, err
 	}
 
+	return websocketExitStream(ws, rw)
+}
+
+// websocketExitStream still reports a markerless end as exit 0, unlike
+// execStream: the endpoints behind it are interactive shells, not deploy gates.
+func websocketExitStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 	buf := make([]byte, 10*1024)
 	code := 0
 
@@ -274,18 +286,28 @@ var runSessionManagerPlugin = func(session ecsExecSession) (int, error) {
 // execStream relays an exec websocket. A v2 rack with ECSExec enabled signals an
 // ECS Exec session by prefixing the FIRST payload with ecsExecSessionByte and a
 // JSON session blob (handed to session-manager-plugin); any other rack streams
-// the process output and the exit-code marker, which we forward unchanged.
+// the process output and the exit-code marker, which we strip. The marker can
+// straddle a read, so the scan window carries the tail of what was already
+// written and the code accumulates until its newline.
 func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 	buf := make([]byte, 10*1024)
 	code := 0
+	sawExit := false
 	first := true
 	var ecsSessionData []byte
+	var tail, marker []byte
 
 	for {
 		n, err := ws.Read(buf)
 		if err == io.EOF {
 			if ecsSessionData != nil {
 				return -1, fmt.Errorf("ECS Exec session ended before it was established; please retry")
+			}
+			if c, ok := statusCodeFromMarker(marker); ok {
+				return c, nil
+			}
+			if !sawExit {
+				return code, ErrExecIncomplete
 			}
 			return code, nil
 		}
@@ -314,25 +336,128 @@ func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 			}
 		}
 
-		if i := strings.Index(string(buf[0:n]), statusCodePrefix); i > -1 {
-			if _, err := rw.Write(buf[0:i]); err != nil {
-				return 0, err
+		chunk := buf[0:n]
+
+		for len(chunk) > 0 {
+			if marker != nil {
+				seek := chunk
+				if room := statusCodeMaxLen - len(marker); len(seek) > room {
+					seek = seek[0:room]
+				}
+
+				if j := bytes.IndexByte(seek, '\n'); j > -1 {
+					marker = append(marker, chunk[0:j]...)
+					chunk = chunk[j+1:]
+
+					if c, ok := statusCodeFromMarker(marker); ok {
+						code = c
+						sawExit = true
+					} else if _, err := rw.Write(append(marker, '\n')); err != nil {
+						return 0, err
+					}
+
+					marker = nil
+					tail = nil
+
+					continue
+				}
+
+				marker = append(marker, seek...)
+				chunk = chunk[len(seek):]
+
+				if len(marker) >= statusCodeMaxLen {
+					if _, err := rw.Write(marker); err != nil {
+						return 0, err
+					}
+					tail = appendTail(tail, marker)
+					marker = nil
+				}
+
+				continue
 			}
 
-			m := i + len(statusCodePrefix)
+			win := append(append([]byte(nil), tail...), chunk...)
 
-			code, err = strconv.Atoi(strings.TrimSpace(string(buf[m:n])))
-			if err != nil {
-				return 0, fmt.Errorf("unable to read exit code")
+			i := bytes.Index(win, []byte(statusCodePrefix))
+			if i < 0 {
+				if _, err := rw.Write(chunk); err != nil {
+					return 0, err
+				}
+				tail = appendTail(tail, chunk)
+
+				break
 			}
 
-			continue
-		}
+			if i > len(tail) {
+				if _, err := rw.Write(chunk[0 : i-len(tail)]); err != nil {
+					return 0, err
+				}
+			}
 
-		if _, err := rw.Write(buf[0:n]); err != nil {
-			return 0, err
+			marker = append([]byte(nil), statusCodePrefix...)
+			chunk = chunk[i+len(statusCodePrefix)-len(tail):]
+			tail = nil
 		}
 	}
+}
+
+func appendTail(tail, b []byte) []byte {
+	keep := len(statusCodePrefix) - 1
+
+	if len(b) >= keep {
+		return append(tail[:0], b[len(b)-keep:]...)
+	}
+
+	tail = append(tail, b...)
+
+	if len(tail) > keep {
+		tail = append(tail[:0], tail[len(tail)-keep:]...)
+	}
+
+	return tail
+}
+
+func statusCodeFromMarker(marker []byte) (int, bool) {
+	if len(marker) <= len(statusCodePrefix) {
+		return 0, false
+	}
+
+	code, err := strconv.Atoi(strings.TrimSpace(string(marker[len(statusCodePrefix):])))
+	if err != nil {
+		return 0, false
+	}
+
+	return code, true
+}
+
+type execBody struct {
+	r    io.Reader
+	done chan struct{}
+}
+
+// newExecBody holds the stdin EOF until the exec is over. The empty binary frame
+// stdsdk sends on that EOF reads as a closed stream at a Console-proxied rack,
+// which then kills the running command.
+func newExecBody(r io.Reader) *execBody {
+	return &execBody{r: r, done: make(chan struct{})}
+}
+
+func (b *execBody) Read(p []byte) (int, error) {
+	n, err := b.r.Read(p)
+
+	if err == io.EOF {
+		if n > 0 {
+			return n, nil
+		}
+
+		<-b.done
+	}
+
+	return n, err
+}
+
+func (b *execBody) close() {
+	close(b.done)
 }
 
 func (c *Client) WithContext(ctx context.Context) structs.Provider {

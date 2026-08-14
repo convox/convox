@@ -10,6 +10,7 @@ import (
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/sdk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,24 @@ func TestRunDetached(t *testing.T) {
 		res, err := testExecute(e, "run web bash -a app1 -d", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
+		res.RequireStderr(t, []string{"  convox logs -a app1", "  convox ps stop pid1 -a app1"})
 		res.RequireStdout(t, []string{"Running detached process... OK, pid1"})
+	})
+}
+
+func TestRunStreamIncomplete(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("ProcessRun", "app1", "web", structs.ProcessRunOptions{Command: options.String("sleep 7200")}).Return(fxProcess(), nil)
+		i.On("ProcessGet", "app1", "pid1").Return(fxProcess(), nil)
+		opts := structs.ProcessExecOptions{Entrypoint: options.Bool(true), Tty: options.Bool(false)}
+		i.On("ProcessExec", "app1", "pid1", "bash", mock.Anything, opts).Return(0, sdk.ErrExecIncomplete)
+		i.On("ProcessStop", "app1", "pid1").Return(nil)
+
+		res, err := testExecute(e, "run web bash -a app1 -t 7200", strings.NewReader("in"))
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "the rack did not report an exit status for this command")
+		require.Contains(t, res.Stderr, "This run's process has been stopped.")
+		require.Contains(t, res.Stderr, "write its own success marker")
 	})
 }

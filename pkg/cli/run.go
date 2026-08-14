@@ -53,9 +53,6 @@ func Run(rack sdk.Interface, c *stdcli.Context) error {
 		opts.Width = options.Int(w)
 	}
 
-	restore := c.TerminalRaw()
-	defer restore()
-
 	if c.Bool("detach") {
 		c.Startf("Running detached process")
 
@@ -64,8 +61,17 @@ func Run(rack sdk.Interface, c *stdcli.Context) error {
 			return err
 		}
 
-		return c.OK(ps.Id)
+		if err := c.OK(ps.Id); err != nil {
+			return err
+		}
+
+		fmt.Fprintf(c.Writer().Stderr, "  convox logs -a %s\n  convox ps stop %s -a %s\n", app(c), ps.Id, app(c))
+
+		return nil
 	}
+
+	restore := c.TerminalRaw()
+	defer restore()
 
 	opts.Command = options.String(fmt.Sprintf("sleep %d", timeout))
 
@@ -92,7 +98,7 @@ func Run(rack sdk.Interface, c *stdcli.Context) error {
 
 	code, err := rack.ProcessExec(app(c), ps.Id, command, c, eopts)
 	if err != nil {
-		return err
+		return execExitError(err, "This run's process has been stopped.")
 	}
 
 	return stdcli.Exit(code)
