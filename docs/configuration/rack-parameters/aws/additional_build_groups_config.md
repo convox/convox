@@ -87,6 +87,23 @@ Changing the build node IAM role replaces every build group at once. Build group
 
 The pre-apply scale-up that lets you raise `min_size` above a running node group's current node count applies to `additional_node_groups_config` and not to build groups. Build groups do not need it: Terraform sends a new desired size along with the new minimum for a build group, so EKS accepts the change.
 
+## Removing a Build Group
+
+The parameter holds the full list, so you remove a build group by submitting the list without it. Because that drains and deletes the group's nodes, the CLI refuses the change unless you pass `--force`:
+
+```bash
+$ convox rack params set additional_build_groups_config=/path/to/remaining-groups.json -r rackName
+ERROR: destructive change, removes build groups from the rack: app-build
+  Their nodes are drained and deleted. Builds pinned by BuildLabels to convox.io/label=app-build become unschedulable.
+  Re-run with --force to proceed
+```
+
+Re-run with `--force`, or its short form `-f`, to proceed.
+
+The guard compares the incoming list against what the Rack has stored, by each entry's `label` value, and triggers on any change that drops one. Renaming a `label` and clearing the parameter both count as removals. Adding a group, and editing one in place, are accepted with no flag. An entry with no `label` has no identifier of its own, so it is not tracked, which includes a group relying on the `custom-build` default.
+
+This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraform apply, so it arrives with an updated CLI rather than with a Rack update, and it does not cover a parameter change made through Console. An App whose `BuildLabels` still names a removed group cannot schedule its Builds.
+
 ## Directing Build Pods to Specific Node Groups
 To direct build pods to specific node groups, use the `BuildLabels` app parameter:
 

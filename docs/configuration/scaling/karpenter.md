@@ -165,6 +165,8 @@ This renders as a required node affinity on the service's deployment, timers, an
 | `karpenter_node_expiry` | string | `720h` | `^\d+h$` or `Never` | Maximum node lifetime before automatic replacement. Default is 30 days. `Never` disables automatic replacement. |
 | `karpenter_disruption_budget_nodes` | string | `10%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `10%`, `3`). Percentages above `100%` are rejected. |
 
+A Rack update that carries a new Karpenter chart version can change the NodePool drift hash, which makes Karpenter replace the existing nodes once, gradually. That replacement is graceful and bounded by `karpenter_disruption_budget_nodes`, so lower it before the update if you want a slower roll.
+
 ### Storage
 
 | Parameter | Type | Default | Validation | Description |
@@ -361,6 +363,40 @@ With `dedicated: true`, only services targeting this pool (via `nodeSelectorLabe
 $ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200},{"name":"high-mem","instance_families":"r5,r6i","instance_sizes":"xlarge,2xlarge,4xlarge","capacity_types":"on-demand,spot","cpu_limit":200,"memory_limit_gb":1600,"labels":"pool=high-mem"}]' -r rackName
 Updating parameters... OK
 ```
+
+### Node Pool Validation
+
+A Service pinned to a pool the Rack does not have cannot schedule. As of `3.25.4` Convox checks the reference before the work that depends on it starts, instead of letting the pods sit Pending.
+
+Three surfaces are checked against the `convox.io/nodepool` labels on the Rack's live `NodePool` objects:
+
+| Surface | Checked on |
+|---------|------------|
+| A Service's `nodeSelectorLabels` entry keyed `convox.io/nodepool` | Release promotion, which includes `convox deploy` |
+| The `convox.io/nodepool` entry in `convox run --node-labels` | Each run |
+| The [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) App parameter | Each build |
+
+A mismatch fails immediately, naming the pool you asked for and the pools that exist:
+
+```
+convox.yml: service "web" targets Karpenter node pool "gpu-lg", which does not exist on this rack.
+  Existing pools: build, workload
+  If you just added this pool, wait for the rack update to finish and retry.
+  Otherwise correct the node pool name, or add the pool:
+    convox rack params set additional_karpenter_nodepools_config=...
+```
+
+The opening clause names the surface that supplied the value: `convox.yml: service "web"`, `--node-labels`, or `the BuildLabels app parameter`. A [Timer](/reference/primitives/app/timer) is covered by the manifest check, because it renders the node selector labels of the Service it references.
+
+Three behaviors to know:
+
+- **A Service at `scale.count: 0` still blocks the App.** The manifest check reads every Service regardless of replica count, so a single zero-scaled Service pinned to a missing pool holds up the healthy Services beside it. `convox deploy --force` deploys it, as do `convox releases promote --force` and `convox releases rollback --force`. The error text does not mention `--force`.
+- **`convox env set --promote` has no `--force`.** Neither do `convox env unset --promote` nor `convox env edit --promote`. On an App pinned to a missing pool the Build still runs and the Release is still created; only the promote is refused, which leaves the App on its previous Release with the change recorded and unapplied. Apply it in two commands instead: run without `--promote`, then `convox releases promote <release> --force`.
+- **Commands that re-promote the current Release are not checked.** `convox apps params set`, `convox apps lock`, and `convox apps unlock` keep working on an App pinned to a pool that was deliberately removed.
+
+These three checks run on the Rack, so they apply to every client against a `3.25.4` Rack, and they fail open: when Karpenter is not enabled, when the `NodePool` list cannot be read, or when no pool carries a `convox.io/nodepool` label, the check is skipped rather than treated as a mismatch. That also covers every non-AWS provider.
+
+Dropping a pool from the Rack is guarded separately, in the CLI. See [Removing a Pool](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config#removing-a-pool).
 
 ### Node Overlays (Fractional GPUs)
 

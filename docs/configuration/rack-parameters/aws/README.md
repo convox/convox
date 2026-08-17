@@ -159,6 +159,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)             | Determines whether the Instance Metadata Service requires session tokens (IMDSv2). |
 | [imds_tags_enable](/configuration/rack-parameters/aws/imds_tags_enable)             | Exposes EC2 instance tags through the Instance Metadata Service (IMDS) on Rack nodes. |
 | [key_pair_name](/configuration/rack-parameters/aws/key_pair_name)                   | Specifies an EC2 Key Pair for SSH access to cluster nodes.               |
+| [network_policy_enable](/configuration/rack-parameters/aws/network_policy_enable)   | Restricts which pods can open inbound connections to an App's pods, closing the direct pod-to-pod path between App namespaces. |
 | [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
 | [pod_imds_block_enabled](/configuration/rack-parameters/aws/pod_imds_block_enabled) | Blocks App pod egress to the EC2 instance metadata service (IMDS) with a CNI-enforced NetworkPolicy in each App namespace. |
 | [pod_security_mode](/configuration/rack-parameters/aws/pod_security_mode)           | Selects how the Pod Security Standard set by `pod_security_standard` is applied to App namespaces: `warn`, `audit`, or `enforce`. |

@@ -176,6 +176,23 @@ This handling has limits:
 - It covers `additional_node_groups_config` only. [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) does not have the underlying problem and does not need it, and the primary node groups are outside its scope, so it does not apply to [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) or [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count).
 - It runs in the convox binary rather than in the Rack's Terraform modules, so it arrives with a newer convox CLI, or with a Console rebuilt against one, and not with a Rack version upgrade.
 
+### Removing a Node Group
+
+The parameter holds the full list, so you remove a node group by submitting the list without it. Because that drains and deletes the group's nodes, the CLI refuses the change unless you pass `--force`:
+
+```bash
+$ convox rack params set additional_node_groups_config=/path/to/remaining-groups.json -r rackName
+ERROR: destructive change, removes node groups from the rack: batch-workers
+  Their nodes are drained and deleted. Services pinned to convox.io/label=batch-workers become unschedulable.
+  Re-run with --force to proceed
+```
+
+Re-run with `--force`, or its short form `-f`, to proceed.
+
+The guard compares the incoming list against what the Rack has stored, by each entry's `label` value, and triggers on any change that drops one. Renaming a `label` and clearing the parameter both count as removals. Adding a group, and editing one in place, are accepted with no flag. An entry with no `label` has no identifier of its own, so it is not tracked.
+
+This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraform apply, so it arrives with an updated CLI rather than with a Rack update, and it does not cover a parameter change made through Console.
+
 ## Using Node Groups with Services
 To target specific services to run on particular node groups, use the `nodeSelectorLabels` field in your `convox.yml` file:
 

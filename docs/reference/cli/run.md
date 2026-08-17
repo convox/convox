@@ -25,6 +25,7 @@ Execute a command in a new process
 | `--detach` | bool | Run in detached mode |
 | `--entrypoint` | string | Override the entrypoint |
 | `--gpu` | number | Number of GPUs to allocate (requires rack >= 3.21.3) |
+| `--gpu-vendor` | string | GPU vendor for the allocation: `nvidia` (default), `amd`, or `google` for Cloud TPUs on GKE |
 | `--labels` | string | Pod labels as comma-separated `key=value` pairs (requires rack >= 3.25.1) |
 | `--memory` | number | Memory request in MB |
 | `--memory-limit` | number | Memory limit in MB |
@@ -103,6 +104,8 @@ To send a run pod to a different node pool (for example, to debug a GPU service 
 ```
 
 This clears the inherited placement and applies the specified labels instead.
+
+On a Rack running Karpenter at `3.25.4` or later, a `convox.io/nodepool` value the Rack does not have is rejected before the pod is created, and the error lists the pools that do exist. See [Node Pool Validation](/configuration/scaling/karpenter#node-pool-validation).
 
 ### Clear inherited node placement
 
@@ -239,6 +242,7 @@ Running with `--use-service-volume` ensures the `/data` directory is available i
 - Volume support (`--use-service-volume`): Requires CLI and rack version >= 3.22.3
 - Automatic node placement (inherits `nodeSelectorLabels`): Requires CLI and rack version >= 3.24.3
 - Pod customization flags (`--termination-grace`, `--annotations`, `--labels`, `--use-service-lifecycle`, `--node-affinity`, `--tolerations`): Requires CLI and rack version >= 3.25.1. Against older racks the flags are ignored
+- Node pool validation on `--node-labels`: Requires rack version >= 3.25.4. The check runs on the rack, so it applies to any CLI version
 
 ## See Also
 

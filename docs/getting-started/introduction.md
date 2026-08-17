@@ -176,7 +176,7 @@ $ convox deploy
 Packaging source... OK
 Uploading source... OK
 Starting build... OK
-Authenticating 782231114432.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
+Authenticating 123456789012.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
 Building: .
 Sending build context to Docker daemon  48.95MB
 Step 1/5 : FROM node:20-alpine

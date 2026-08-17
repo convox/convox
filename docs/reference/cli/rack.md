@@ -262,7 +262,7 @@ List of attachable runtime integrations
 ```bash
     $ convox rack runtimes
     ID                                    TITLE
-    20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
+    20e58437-fab7-4124-aa5a-2e5978f1149e  123456789012
 ```
 
 ## rack runtime attach
@@ -393,7 +393,7 @@ Set rack parameters
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--force` | `-f` | Override unknown-key and managed-parameter guards |
+| `--force` | `-f` | Override the unknown-key, managed-parameter, and destructive-removal guards |
 
 ### Examples
 ```bash
@@ -415,8 +415,14 @@ The CLI validates parameters before sending them to the Rack. This catches commo
 - **Managed parameters** (`image`, `release`, `k8s_version`, addon versions) are set automatically by `convox rack update` and cannot be modified directly.
 - **Empty values** are rejected for parameters that require explicit values. Parameters that support clearing (labels, taints, schedules, credentials) accept empty strings.
 - **Type validation** is enforced for specific parameters (e.g., `karpenter_auth_mode` must be `true` or `false`, `node_capacity_type` must be `on_demand`, `spot`, or `mixed`).
+- **Destructive removals** are rejected as of 3.25.4. A change that drops a node pool, node group, or build group identifier from `additional_karpenter_nodepools_config`, `additional_node_groups_config`, or `additional_build_groups_config` reports what it removes and what pins to it:
+  ```
+  ERROR: destructive change, removes node pools from the rack: batch, gpu
+         Their nodes are drained and deleted. Services pinned to convox.io/nodepool=batch or convox.io/nodepool=gpu become unschedulable.
+         Re-run with --force to proceed
+  ```
 
-Use `--force` to bypass the unknown-key and managed-parameter guards. Install-only, empty-value, and type validators cannot be overridden.
+Use `--force` to bypass the unknown-key, managed-parameter, and destructive-removal guards. Install-only, empty-value, and type validators cannot be overridden.
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
 
