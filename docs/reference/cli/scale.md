@@ -55,7 +55,7 @@ If the supplied service does not exist in the app, `convox scale <name>` exits n
 | `--cpu` | CPU allocation in millicores (e.g., 250 = 0.25 vCPU) |
 | `--memory` | Memory allocation in MB |
 | `--gpu` | Number of GPU devices to reserve per pod |
-| `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd` |
+| `--gpu-vendor` | GPU vendor. Supported: `nvidia` (default), `amd`, and `google` for Cloud TPUs on GKE. An unrecognized value falls back to `nvidia`. See [Important Notes About GPU Scaling](/configuration/scaling/autoscaling#important-notes-about-gpu-scaling) before changing the vendor of a deployed service |
 | `--min` | Minimum replica count. With autoscale configured, sets the autoscale floor. Without autoscale (3.24.6+), patches the deployment replica count directly, useful for short-lived overrides without editing convox.yml. |
 | `--max` | Maximum replica count when autoscale is configured. Combined with `--min`, requires the service to declare `scale.autoscale` (or `scale.keda`) in convox.yml. Without an autoscale block the rack returns an error directing you to add one or use `--count` for a fixed replica count. Services with a Console-driven [triggers override](/console/autoscale-triggers) accept `--min`/`--max` via the HPA bounds (3.24.6+) without requiring a manifest autoscale block. |
 

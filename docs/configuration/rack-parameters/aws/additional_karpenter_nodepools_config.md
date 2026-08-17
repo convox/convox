@@ -47,6 +47,28 @@ $ convox rack params set additional_karpenter_nodepools_config=/path/to/nodepool
 Updating parameters... OK
 ```
 
+## Removing a Pool
+
+The parameter holds the full list, so you remove a pool by submitting the list without it. Because that drains and deletes the pool's nodes, the CLI refuses the change unless you pass `--force`:
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"batch","instance_families":"c5"}]' -r rackName
+ERROR: destructive change, removes node pools from the rack: analytics
+  Their nodes are drained and deleted. Services pinned to convox.io/nodepool=analytics become unschedulable.
+  Re-run with --force to proceed
+```
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"batch","instance_families":"c5"}]' --force -r rackName
+Updating parameters... OK
+```
+
+`--force` also accepts the short form `-f`.
+
+The guard triggers on any change that drops a pool name, which includes renaming a pool and clearing the parameter. Adding a pool, and editing one in place such as raising its `cpu_limit`, are accepted with no flag.
+
+This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraform apply, so it arrives with an updated CLI rather than with a Rack update, and it does not cover a parameter change made through Console. Services left pinned to a pool that no longer exists cannot schedule, and a deploy that targets a missing pool is rejected up front. See [Node Pool Validation](/configuration/scaling/karpenter#node-pool-validation).
+
 ## Additional Information
 
 - **Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.

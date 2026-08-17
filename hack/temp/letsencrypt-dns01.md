@@ -4,7 +4,7 @@
 
 ```
 $ convox letsencrypt dns route53 role
-arn:aws:iam::047979207916:role/convox/v2-rack162-cert-manager
+arn:aws:iam::123456789012:role/convox/my-rack-cert-manager
 ```
 
 - create route53 dns zone access role with the following permissions(use the appropiate value for zone id):
@@ -45,7 +45,7 @@ arn:aws:iam::047979207916:role/convox/v2-rack162-cert-manager
             "Effect": "Allow",
             "Principal": {
                 "AWS": [
-                    "arn:aws:iam::047979207916:role/convox/v2-rack162-cert-manager"
+                    "arn:aws:iam::123456789012:role/convox/my-rack-cert-manager"
                 ]
             },
             "Action": "sts:AssumeRole"
@@ -55,7 +55,7 @@ arn:aws:iam::047979207916:role/convox/v2-rack162-cert-manager
 
 ```
 
-- Now add following dns access role assume permission policy to cert-manager role(for example: `arn:aws:iam::047979207916:role/convox/v2-rack162-cert-manager`):
+- Now add following dns access role assume permission policy to cert-manager role(for example: `arn:aws:iam::123456789012:role/convox/my-rack-cert-manager`):
 
 ```
 {

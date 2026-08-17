@@ -342,6 +342,16 @@ If services won't deploy, check:
 - The referenced node groups have available capacity
 - Resource requests in the service definition can be satisfied by the node group
 
+### Deploy Rejected for a Missing Node Pool
+On a Rack running Karpenter at `3.25.4` or later, a deploy fails immediately when a Service's `nodeSelectorLabels` names a `convox.io/nodepool` value the Rack does not have:
+
+```
+convox.yml: service "web" targets Karpenter node pool "gpu-lg", which does not exist on this rack.
+  Existing pools: build, workload
+```
+
+Compare the name in `convox.yml` against the `Existing pools` list in the message. If you just added the pool, wait for the Rack update to finish and retry. Every Service in the manifest is checked regardless of replica count, so a stale pin on a Service scaled to zero blocks the App's healthy Services too. The same check applies to `convox run --node-labels` and to the `BuildLabels` App parameter. See [Node Pool Validation](/configuration/scaling/karpenter#node-pool-validation).
+
 ### Node Group Scaling
 If nodes aren't scaling as expected:
 - Verify min/max settings are appropriate

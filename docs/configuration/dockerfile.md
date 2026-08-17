@@ -42,6 +42,22 @@ The following example selectively copies only the files needed to run `npm` befo
 ```
 The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed.
 
+## .dockerignore
+
+A `.dockerignore` file at the root of your source directory keeps files out of the build context. Convox applies the same pattern rules as `docker build`, including negation with `!` to re-include a path underneath an excluded directory:
+
+```text
+    node_modules
+    tmp/**
+    !tmp/keep-this
+    *.log
+```
+
+Two details of that matching changed in rack version 3.25.3, in the `convox` CLI rather than on the Rack, so they apply once you update the CLI:
+
+- A wildcard directory exclude combined with a re-include underneath it now excludes everything else under that directory. Earlier CLI versions leaked the other files under it into the build context.
+- Patterns containing the regex characters `+`, `(`, `)`, and `|` are now treated literally, matching `docker build`.
+
 ## Build Variables
 
 Convox respects the `ARG` directive, allowing you to specify variables at build time.

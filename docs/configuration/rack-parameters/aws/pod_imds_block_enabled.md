@@ -47,3 +47,4 @@ Setting the parameter back to `false` removes the policy from all App namespaces
 
 - [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)
 - [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable)
+- [network_policy_enable](/configuration/rack-parameters/aws/network_policy_enable) for restricting inbound connections to App pods, which shares this parameter's VPC CNI addon configuration

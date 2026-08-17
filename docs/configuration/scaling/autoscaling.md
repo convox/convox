@@ -46,6 +46,8 @@ Convox offers several ways to set the size of a service. Start here to pick the 
 - **Manual replica counts:** Set a fixed `count` and adjust it by hand with `convox scale`. Use this when traffic is steady or predictable and you do not want automatic adjustment.
 - **Horizontal Autoscaling (HPA), legacy:** The `scale.targets` block uses native Kubernetes HPA and does not require KEDA. Prefer `scale.autoscale` for new services; use `scale.targets` if you cannot enable KEDA on the rack.
 
+> A [stateful service](/configuration/volumes#per-replica-persistent-volumes) requires a fixed `scale.count` and supports none of these, including VPA. Set its replica count explicitly.
+
 ## Event-Driven Autoscaling (scale.autoscale)
 
 The `scale.autoscale` block provides preconfigured KEDA-based autoscaling triggers with minimal configuration. Instead of writing raw KEDA trigger definitions, you specify a trigger type and a threshold value. Convox handles the KEDA ScaledObject configuration, Prometheus queries, and activation thresholds automatically.
@@ -283,6 +285,8 @@ See the [Service scale.gpu](/reference/primitives/app/service#scalegpu) referenc
 - Each process will receive the specified number of GPUs
 - If you specify a GPU count without specifying CPU or memory resources, the defaults for those resources will be removed to allow for pure GPU-based scheduling
 - When using GPUs, you may need to use a base image that includes the NVIDIA CUDA toolkit
+- Changing the GPU vendor of a deployed service requires editing `scale.gpu.vendor` in `convox.yml` and redeploying. Swapping it at runtime with `convox scale --gpu-vendor` or `convox services update --gpu-vendor` is not supported: the new vendor's resource key is added while the previous vendor's key stays in the pod spec, so scheduling stalls
+- AWS Neuron (`aws.amazon.com/neuron`) is not mapped. Do not set `scale.gpu.vendor: neuron`; an unrecognized vendor falls back to `nvidia.com/gpu`, so the service requests NVIDIA GPUs instead
 
 ### Combining GPU with Autoscaling
 

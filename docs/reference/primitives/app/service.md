@@ -142,14 +142,14 @@ services:
 | **nodeSelectorLabels** | map |  | Node selector labels for workload placement. See [Workload Placement](/configuration/scaling/workload-placement) |
 | **port**        | string     |                     | The port that the default Rack balancer will use to [route incoming traffic](/configuration/load-balancers). For grpc service specify the scheme: `grpc:5051`|
 | **ports**       | list       |                     | A list of ports available for internal [service discovery](/configuration/service-discovery) or custom [Balancers](/reference/primitives/app/balancer). Supports TCP (default) and UDP protocols |
-| **podManagementPolicy** | string | `OrderedReady` | StatefulSet pod start and scale policy. Use `OrderedReady` or `Parallel`; requires `stateful: true` |
+| **podManagementPolicy** | string | `OrderedReady` | StatefulSet pod start and scale policy. Use `OrderedReady` or `Parallel`; requires `stateful: true`. Requires rack version 3.25.4 or later |
 | **privileged**  | boolean    | false               | Set to **true** to allow [Processes](/reference/primitives/app/process) of this Service to run as root inside their container. Use with caution as this grants elevated permissions |
 | **resources**   | list       |                     | A list of [Resources](/reference/primitives/app/resource) to make available to this Service (e.g. databases) |
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
-| **spreadAcrossZones** | boolean | false            | Set to **true** to spread this Service's pods across availability zones (see [spreadAcrossZones](#spreadacrosszones) below) |
-| **stateful**    | boolean    | false               | Set to **true** to give each replica stable identity and its own PersistentVolumeClaim. See [Volumes](/configuration/volumes#per-replica-persistent-volumes) |
+| **spreadAcrossZones** | boolean | false            | Set to **true** to spread this Service's pods across availability zones (see [spreadAcrossZones](#spreadacrosszones) below). Requires rack version 3.25.4 or later |
+| **stateful**    | boolean    | false               | Set to **true** to give each replica stable identity and its own PersistentVolumeClaim. Requires rack version 3.25.4 or later. See [Volumes](/configuration/volumes#per-replica-persistent-volumes) |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
 | **termination** | map        |                     | Termination related configuration                                                                                                          |
 | **test**        | string     |                     | A command to run to test this Service when running **convox test**                                                                           |
@@ -597,6 +597,8 @@ Convox uses the standard `topology.kubernetes.io/zone` node label and allows a m
 The zone spread only has an effect when the Rack has eligible nodes in at least 2 zones and the Service runs at least 2 replicas. The setting does not create zones. Node selectors, node affinity and zonal storage can reduce the eligible zones. On Racks running [Karpenter](/configuration/scaling/karpenter), Karpenter may launch extra nodes to satisfy the spread and may keep them running instead of consolidating them away.
 
 Agent services do not support `spreadAcrossZones` because they run one pod on each eligible node as a DaemonSet.
+
+Turning the attribute off, including by rolling back to a Release that never set it, patches the Deployment in place. The pods stay where they are and are not recreated, so removing the spread is not an availability event.
 
 &nbsp;
 

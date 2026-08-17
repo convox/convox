@@ -11,6 +11,8 @@ Convox supports multiple types of volumes to manage both persistent and temporar
 
 ## Per-replica persistent volumes
 
+> Requires rack version 3.25.4 or later.
+
 Use a stateful service when each replica needs its own persistent disk. Convox creates a Kubernetes StatefulSet and one PersistentVolumeClaim for each replica. Kubernetes reattaches the same claim when it replaces or reschedules that replica.
 
 ```yaml
@@ -31,9 +33,17 @@ services:
 
 The rack must provide the named Container Storage Interface storage class. For example, use an Amazon EBS, Azure Disk or Google Persistent Disk storage class. The access mode defaults to `ReadWriteOnce`.
 
-`podManagementPolicy` defaults to `OrderedReady`. Set it to `Parallel` when every replica must start independently, as Qdrant requires.
+An AWS rack at default parameters offers the EBS classes `gp2` and `gp3`. The EFS classes, `efs-sc` and its variants, exist only once the rack sets [efs_csi_driver_enable=true](/configuration/rack-parameters/aws/efs_csi_driver_enable), so naming one on a rack without the driver produces a claim that never binds and replicas that stay Pending. A `storageClass` that is not a valid DNS subdomain is rejected when the app is built.
+
+`podManagementPolicy` defaults to `OrderedReady`. Set it to `Parallel` when every replica must start independently, as Qdrant requires. It governs startup and scaling only: a rolling update always replaces one replica at a time, so `Parallel` does not make a redeploy faster.
 
 Stateful services must use a fixed replica count. They do not support agents, autoscaling, VPA, budget auto-shutdown or `convox run --use-service-volume`.
+
+### Redeploying a stateful service
+
+Replicas are replaced one at a time in reverse ordinal order, and each one detaches its volume and reattaches it to the replacement pod before the next replica starts, so redeploy time scales with the replica count. A three-replica service can take several minutes beyond its build.
+
+If the CLI stops waiting before the rollout finishes, the rack carries on. The app reports `updating`, and `convox ps` shows a mix of old and new ordinals until it converges. A client-side timeout is not a failed deploy.
 
 Changing `stateful` on an existing service does not provide an in-place migration. Create a new service and move the data. Kubernetes also treats `podManagementPolicy` and claim template fields such as `size` and `storageClass` as immutable, so changing one of those on a running stateful service is rejected. Use a new service name instead, which gives the replicas new claims.
 
@@ -46,6 +56,10 @@ Each replica gets a stable name and its own DNS record through a headless Servic
 ```
 
 The example above is reachable inside the app as `database-0.database-headless`, `database-1.database-headless` and `database-2.database-headless`. Use these names to point clustered services such as Qdrant at their peers. The regular `<service>` name still load balances across every ready replica.
+
+Each replica's record resolves as soon as its pod has an IP, before that replica passes its readiness check. This is what lets a clustered image form its cluster during startup rather than deadlocking on a readiness check that cannot pass until the cluster exists.
+
+Because Convox generates the headless Service as `<service>-headless`, no other service in the app may carry that name. A build fails with `generated headless service name <name>-headless conflicts with another service` if one does.
 
 ### Volume ownership for non-root images
 
@@ -80,7 +94,11 @@ An init container can also mount the same claim to prepare the directory before 
 
 ### Volume lifecycle
 
-Claims outlive the replicas that use them. Scaling a stateful service down keeps the claims for the removed replicas, so scaling back up reattaches the same data. Removing the service from `convox.yml` also leaves its claims in place. In both cases the underlying cloud disks keep billing until you delete them, and `convox apps delete` removes the whole namespace along with every claim and disk it holds.
+Each claim is named `pvc-<claim id>-<service>-<ordinal>`, so the example above produces `pvc-data-database-0` through `pvc-data-database-2`.
+
+Claims outlive the replicas that use them. Scaling a stateful service down keeps the claims for the removed replicas, so scaling back up reattaches the same data, including across a rack version update. Removing the service from `convox.yml` also leaves its claims in place. In both cases the underlying cloud disks keep billing until you delete them, and `convox apps delete` removes the whole namespace along with every claim and disk it holds.
+
+Downgrading a rack below 3.25.4 leaves the StatefulSet and every claim untouched, and the service keeps running, but `convox services` stops listing it, because an older rack only lists services backed by a Deployment. The listing returns when the rack is updated forward again, with nothing to restore by hand.
 
 ## Azure Files Volumes
 
