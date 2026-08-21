@@ -264,6 +264,18 @@ func gpuTemplateFixture(t *testing.T, src string) (*Provider, map[string]interfa
 	return p, params
 }
 
+// splitProbes returns the livenessProbe and readinessProbe blocks of a rendered
+// service. FormatYAML sorts keys, so livenessProbe always precedes readinessProbe.
+func splitProbes(t *testing.T, rendered string) (string, string) {
+	t.Helper()
+	livenessIdx := strings.Index(rendered, "livenessProbe:")
+	readinessIdx := strings.Index(rendered, "readinessProbe:")
+	if livenessIdx < 0 || readinessIdx < 0 || livenessIdx > readinessIdx {
+		t.Fatalf("unexpected probe layout: %s", rendered)
+	}
+	return rendered[livenessIdx:readinessIdx], rendered[readinessIdx:]
+}
+
 // countKey returns the number of lines in rendered that contain key when
 // leading/trailing whitespace is stripped (guards against duplicate YAML keys).
 func countKey(rendered, key string) int {
@@ -1040,6 +1052,7 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		assertNotContains("no grpc service name", out, grpcProbeService)
 		// Pins the bytes: port is the only key inside grpc, so the next key is the probe's.
 		assertContains("grpc block unchanged", out, "grpc:\n            port: 50051\n          initialDelaySeconds: 5")
+		assertContains("liveness block unchanged", out, "livenessProbe:\n          failureThreshold: 5\n          grpc:\n            port: 50051\n          initialDelaySeconds: 5")
 	})
 
 	t.Run("health.grpcService renders in the grpc readinessProbe only", func(t *testing.T) {
@@ -1057,6 +1070,7 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		svc.Health.GrpcService = "myapp.v1.Greeter"
 		svc.Health.Port = manifest.ServicePortScheme{Port: 50052}
 		svc.Liveness = manifest.ServiceLiveness{
+			GrpcService:      "myapp.v1.Liveness",
 			Port:             manifest.ServicePortScheme{Port: 50053},
 			SuccessThreshold: 1,
 			FailureThreshold: 5,
@@ -1070,8 +1084,8 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		livenessBlock := out[livenessIdx:readinessIdx]
 		readinessBlock := out[readinessIdx:]
 		assertContains("readiness keeps health.port and the service name", readinessBlock, "grpc:\n            port: 50052\n            service: myapp.v1.Greeter")
-		assertContains("liveness keeps liveness.port", livenessBlock, "port: 50053")
-		assertNotContains("liveness has no service name", livenessBlock, grpcProbeService)
+		assertContains("liveness keeps liveness.port and its own service name", livenessBlock, "grpc:\n            port: 50053\n            service: myapp.v1.Liveness")
+		assertNotContains("liveness does not take the readiness name", livenessBlock, "service: myapp.v1.Greeter")
 	})
 
 	t.Run("health.path never becomes the grpc service name", func(t *testing.T) {
@@ -1100,6 +1114,7 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 	t.Run("health.disable removes both grpc probes", func(t *testing.T) {
 		svc := grpcService("disabledgrpc")
 		svc.Health.Disable = true
+		svc.Liveness.GrpcService = "myapp.v1.Liveness"
 		out := render(svc)
 		assertNotContains("no readinessProbe", out, "readinessProbe:")
 		assertNotContains("no livenessProbe", out, "livenessProbe:")
@@ -1144,10 +1159,68 @@ func TestRenderTemplateServiceHealthPort(t *testing.T) {
 		assertNotContains("no readinessProbe", out, "readinessProbe:")
 	})
 
+	t.Run("liveness.grpcService renders in the grpc livenessProbe only", func(t *testing.T) {
+		svc := grpcService("namedliveness")
+		svc.Liveness.GrpcService = "myapp.v1.Liveness"
+		out := render(svc)
+		livenessBlock, readinessBlock := splitProbes(t, out)
+		assertContains("liveness service name", livenessBlock, "grpc:\n            port: 50051\n            service: myapp.v1.Liveness")
+		assertNotContains("readiness has no service name", readinessBlock, grpcProbeService)
+		if n := countKey(out, "service: myapp.v1.Liveness"); n != 1 {
+			t.Errorf("expected the service name exactly once (liveness only); got %d:\n%s", n, out)
+		}
+	})
+
+	t.Run("health and liveness grpcService render independently", func(t *testing.T) {
+		svc := grpcService("bothnames")
+		svc.Health.GrpcService = "myapp.v1.Greeter"
+		svc.Liveness.GrpcService = "myapp.v1.Liveness"
+		out := render(svc)
+		livenessBlock, readinessBlock := splitProbes(t, out)
+		assertContains("readiness keeps its own name", readinessBlock, "service: myapp.v1.Greeter")
+		assertNotContains("readiness does not take the liveness name", readinessBlock, "service: myapp.v1.Liveness")
+		assertContains("liveness keeps its own name", livenessBlock, "service: myapp.v1.Liveness")
+		assertNotContains("liveness does not take the readiness name", livenessBlock, "service: myapp.v1.Greeter")
+	})
+
+	t.Run("the same name on both probes renders on both", func(t *testing.T) {
+		svc := grpcService("samename")
+		svc.Health.GrpcService = "myapp.v1.Greeter"
+		svc.Liveness.GrpcService = "myapp.v1.Greeter"
+		out := render(svc)
+		if n := countKey(out, "service: myapp.v1.Greeter"); n != 2 {
+			t.Errorf("expected the service name on both probes; got %d:\n%s", n, out)
+		}
+	})
+
+	t.Run("http service ignores liveness.grpcService", func(t *testing.T) {
+		svc := manifest.Service{
+			Name: "httpliveness",
+			Port: manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+			Health: manifest.ServiceHealth{
+				Path: "/health", Grace: 5, Interval: 5, Timeout: 4,
+			},
+			Liveness: manifest.ServiceLiveness{
+				GrpcService:      "myapp.v1.Liveness",
+				Path:             "/live",
+				Grace:            10,
+				Interval:         5,
+				Timeout:          5,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
+		}
+		out := render(svc)
+		assertContains("httpGet keeps the liveness path", out, "path: /live")
+		assertNotContains("no grpc block", out, "grpc:")
+		assertNotContains("no grpc service name", out, "service: myapp.v1.Liveness")
+	})
+
 	t.Run("grpc port without grpcHealthEnabled renders no probes", func(t *testing.T) {
 		svc := grpcService("optedout")
 		svc.GrpcHealthEnabled = false
 		svc.Liveness = manifest.ServiceLiveness{
+			GrpcService:      "myapp.v1.Liveness",
 			Path:             "/live",
 			Grace:            10,
 			Interval:         5,
