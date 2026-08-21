@@ -334,8 +334,10 @@ type ServiceBuild struct {
 }
 
 type ServiceDeployment struct {
-	Maximum int `yaml:"maximum,omitempty"`
-	Minimum int `yaml:"minimum,omitempty"`
+	Maximum           int `yaml:"maximum,omitempty"`
+	Minimum           int `yaml:"minimum,omitempty"`
+	ProgressDeadline  int `yaml:"progressDeadline,omitempty"`
+	CrashRestartLimit int `yaml:"crashRestartLimit,omitempty"`
 }
 
 type ServiceDomains []string

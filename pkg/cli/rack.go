@@ -44,7 +44,8 @@ var awsKnownParams = map[string]bool{
 	"cert_duration": true, "cidr": true, "cloudwatch_disable": true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
 	"coredns_version": true, "cost_tracking_enable": true, "custom_provided_bucket": true,
-	"deploy_extra_nlb": true, "disable_convox_resolver": true,
+	"deploy_crash_restart_limit": true, "deploy_extra_nlb": true,
+	"deploy_progress_deadline": true, "disable_convox_resolver": true,
 	"disable_image_manifest_cache": true, "disable_public_access": true,
 	"dcgm_scrape_interval": true,
 	"docker_hub_password":  true, "docker_hub_username": true,
@@ -408,6 +409,8 @@ var paramGroups = map[string]map[string]bool{
 	"scaling": {
 		// v3 native (snake_case)
 		"build_node_min_count":                    true,
+		"deploy_crash_restart_limit":              true,
+		"deploy_progress_deadline":                true,
 		"high_availability":                       true,
 		"karpenter_build_disruption_budget_nodes": true, // dual-listed in build
 		"karpenter_disruption_budget_nodes":       true,
@@ -2527,6 +2530,28 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 		if n > 500 {
 			return fmt.Errorf("gpu_metrics_max_pods: must be at most 500 (got %d)", n)
+		}
+	}
+
+	// deploy_progress_deadline: 0 to leave unset, otherwise 30-21600 seconds.
+	if v, has := params["deploy_progress_deadline"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("deploy_progress_deadline: must be an integer (got %q)", v)
+		}
+		if n != 0 && (n < manifest.ProgressDeadlineFloor || n > manifest.ProgressDeadlineCeiling) {
+			return fmt.Errorf("deploy_progress_deadline: must be 0 or between %d and %d seconds (got %d)", manifest.ProgressDeadlineFloor, manifest.ProgressDeadlineCeiling, n)
+		}
+	}
+
+	// deploy_crash_restart_limit: 0 disables, otherwise a positive restart count.
+	if v, has := params["deploy_crash_restart_limit"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("deploy_crash_restart_limit: must be an integer (got %q)", v)
+		}
+		if n < 0 {
+			return fmt.Errorf("deploy_crash_restart_limit: must be 0 to disable or a positive number of restarts (got %d)", n)
 		}
 	}
 

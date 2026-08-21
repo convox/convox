@@ -13,10 +13,13 @@ services:
     deployment:
       minimum: -1
       maximum: 99
+      progressDeadline: 29
+      crashRestartLimit: -2
   deployment-invalid-high:
     deployment:
       minimum: 101
       maximum: 201
+      progressDeadline: 21601
   internal-router-invalid:
     internal: true
     internalRouter: true

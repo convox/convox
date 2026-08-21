@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/billing"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -597,8 +598,8 @@ func DeleteReleasePromoteWatchAnnotationForTest(p *Provider, ctx context.Context
 // the action-name-from-status mapping (success -> app:promote:completed,
 // error -> app:promote:errored, cancelled -> app:promote:cancelled).
 // Test-only.
-func EmitReleasePromoteResultForTest(p *Provider, app string, state *structs.ReleasePromoteWatchState, status, errMsg string) {
-	p.emitReleasePromoteResult(app, state, status, errMsg)
+func EmitReleasePromoteResultForTest(p *Provider, app string, state *structs.ReleasePromoteWatchState, status, errMsg, bailReason string) {
+	p.emitReleasePromoteResult(app, state, status, errMsg, bailReason)
 }
 
 // TryAcquireReleasePromoteWatchSlotForTest exposes the per-(app, release-id)
@@ -678,6 +679,41 @@ func SetReleasePromoteCleanupDeferPanicHookForTest(hook func(app, releaseID stri
 // watcher lifecycle. Test-only.
 func DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p *Provider, ctx context.Context, app, expectedReleaseID string) (bool, error) {
 	return p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, p.AppNamespace(app), expectedReleaseID)
+}
+
+// EffectiveProgressDeadlineForTest and its siblings expose the fast-fail
+// resolution chain so tests can pin precedence without a full promote.
+// Test-only.
+func EffectiveProgressDeadlineForTest(s *manifest.Service, rackDefault int) int {
+	return clampProgressDeadline(effectiveProgressDeadline(s, rackDefault))
+}
+
+func EffectiveCrashRestartLimitForTest(s *manifest.Service, rackDefault int) int {
+	return effectiveCrashRestartLimit(s, rackDefault)
+}
+
+func FastFailStateForPromoteForTest(p *Provider, ss manifest.Services) (map[string]int, map[string]int, int) {
+	return p.fastFailStateForPromote(ss)
+}
+
+func DeadlineExceededServiceForTest(deps []appsv1.Deployment, opted map[string]int, startedAt time.Time) string {
+	return deadlineExceededService(deps, opted, startedAt)
+}
+
+func CrashRestartExceededForTest(pods []v1.Pod, limits map[string]int, startedAt time.Time) (string, int, int) {
+	return crashRestartExceeded(pods, limits, startedAt)
+}
+
+func MapAppStatusToWatchResultForTest(atomStatus string) (string, string, bool) {
+	return mapAppStatusToWatchResult(atomStatus)
+}
+
+func IsRollbackStatusForTest(atomStatus string) bool {
+	return isRollbackStatus(atomStatus)
+}
+
+func BailReasonOverridesErrorForTest(errMsg string) bool {
+	return bailReasonOverridesError(errMsg)
 }
 
 // HashParamValueForTest exposes the per-Provider hashParamValue method so

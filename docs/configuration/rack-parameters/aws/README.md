@@ -92,6 +92,8 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) | Controls the maximum percentage of nodes unavailable during node group updates. |
 | [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GB.                                      |
 | [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type.                                        |
+| [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
+| [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a service rollout may go without progress before it is failed. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
