@@ -45,6 +45,16 @@ variable "custom_provided_bucket" {
   default = ""
 }
 
+variable "deploy_crash_restart_limit" {
+  type    = number
+  default = 0
+}
+
+variable "deploy_progress_deadline" {
+  type    = number
+  default = 0
+}
+
 variable "deploy_extra_nlb" {
   default = false
   type    = bool

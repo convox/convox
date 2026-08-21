@@ -59,6 +59,8 @@ module "k8s" {
     EFS_FILE_SYSTEM_ID                        = var.efs_file_system_id
     BUILD_ARCHS                               = var.build_archs
     BUILD_DISABLE_CONVOX_RESOLVER             = var.build_disable_convox_resolver
+    DEPLOY_CRASH_RESTART_LIMIT                = var.deploy_crash_restart_limit
+    DEPLOY_PROGRESS_DEADLINE                  = var.deploy_progress_deadline
     PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE      = var.pdb_default_min_available_percentage
     PROVIDER                                  = "aws"
     RESOLVER                                  = var.disable_convox_resolver ? "" : var.resolver

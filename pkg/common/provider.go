@@ -255,18 +255,29 @@ func WaitForAppRunningContext(ctx context.Context, p structs.Provider, app strin
 
 	var waitError error
 
-	return WaitContext(ctx, ProviderWaitDuration, 35*time.Minute, 2, func() (bool, error) {
+	err := WaitContext(ctx, ProviderWaitDuration, 35*time.Minute, 2, func() (bool, error) {
 		a, err := p.AppGet(app)
 		if err != nil {
 			return false, err
 		}
 
 		if a.Status == "rollback" {
-			waitError = fmt.Errorf("rollback")
+			waitError = RolloutFailedError(app)
 		}
 
 		return a.Status == "running", waitError
 	})
+	if errors.Is(err, ErrWaitTimeout) {
+		return fmt.Errorf("%s did not reach a running state within 35m, the rack may still be rolling out\n  convox deploy-debug -a %s\n  convox apps cancel -a %s", app, app, app)
+	}
+
+	return err
+}
+
+// RolloutFailedError names the app and where to look, rather than the bare
+// "rollback" every failure path used to print.
+func RolloutFailedError(app string) error {
+	return fmt.Errorf("rollout failed for %s, the previous release was restored\n  convox deploy-debug -a %s", app, app)
 }
 
 func WaitForAppWithLogs(p structs.Provider, w io.Writer, app string) error {

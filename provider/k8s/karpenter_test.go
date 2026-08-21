@@ -311,6 +311,7 @@ func releasePromoteNodePoolProvider(t *testing.T, badManifestRelease string) *Pr
 	// instead of leaving it to poll to its deadline.
 	t.Cleanup(SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond))
 	setAppStatus(t, kk, "rack1-app1", "Running")
+	setAppRelease(t, kk, "rack1-app1", "rel1")
 	createBuild(t, kc, "rack1-app1", "build1")
 	createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
 	createRelease(t, kc, "rack1-app1", badManifestRelease, manifestWithNodeSelectors)

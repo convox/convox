@@ -1057,3 +1057,37 @@ func TestValidateAndMutateParams_BuildGroupRemovalNamesBuilds(t *testing.T) {
 		t.Errorf("error %q should attribute the breakage to builds, not services", err.Error())
 	}
 }
+
+func TestValidateAndMutateParams_DeployFastFail(t *testing.T) {
+	cases := []struct {
+		param   string
+		value   string
+		wantErr string
+	}{
+		{"deploy_progress_deadline", "0", ""},
+		{"deploy_progress_deadline", "30", ""},
+		{"deploy_progress_deadline", "21600", ""},
+		{"deploy_progress_deadline", "29", "between 30 and 21600"},
+		{"deploy_progress_deadline", "21601", "between 30 and 21600"},
+		{"deploy_progress_deadline", "-1", "between 30 and 21600"},
+		{"deploy_progress_deadline", "soon", "must be an integer"},
+		{"deploy_crash_restart_limit", "0", ""},
+		{"deploy_crash_restart_limit", "3", ""},
+		{"deploy_crash_restart_limit", "-1", "positive number of restarts"},
+		{"deploy_crash_restart_limit", "three", "must be an integer"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.param+"="+c.value, func(t *testing.T) {
+			err := validateAndMutateParams(map[string]string{c.param: c.value}, "aws", map[string]string{}, false)
+			switch {
+			case c.wantErr == "" && err != nil:
+				t.Fatalf("expected %s=%s to be accepted, got: %v", c.param, c.value, err)
+			case c.wantErr != "" && err == nil:
+				t.Fatalf("expected %s=%s to be rejected", c.param, c.value)
+			case c.wantErr != "" && !strings.Contains(err.Error(), c.wantErr):
+				t.Errorf("error %q should contain %q", err.Error(), c.wantErr)
+			}
+		})
+	}
+}

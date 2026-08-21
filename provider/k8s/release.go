@@ -124,6 +124,8 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return errors.WithStack(err)
 	}
 
+	priorRelease := a.Release
+
 	items := [][]byte{}
 	dependencies := []string{}
 
@@ -145,11 +147,16 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		items = append(items, data)
 	}
 
+	var progressDeadlines, crashRestartLimits map[string]int
+	var maxProgressDeadline int
+
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
+		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
 		if a.Release != "" && a.Release != id {
 			current, _, err := common.ReleaseManifest(p, app, a.Release)
 			if err != nil {
@@ -311,7 +318,17 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
-	timeout := int32(common.DefaultInt(opts.Timeout, 3000))
+	// Cover the longest per-service deadline so the Atom does not fail a rollout
+	// the Deployment was rendered to allow. An explicit caller timeout wins:
+	// AppUpdate passes 30 for what is only a metadata change.
+	promoteTimeout := common.DefaultInt(opts.Timeout, manifest.DefaultProgressDeadlineSeconds)
+	if opts.Timeout == nil && maxProgressDeadline > promoteTimeout {
+		promoteTimeout = maxProgressDeadline
+	}
+	if promoteTimeout > manifest.ProgressDeadlineCeiling {
+		promoteTimeout = manifest.ProgressDeadlineCeiling
+	}
+	timeout := int32(promoteTimeout)
 
 	if err := p.Apply(p.AppNamespace(app), "app", PromoteApplyConfig{
 		Version:      id,
@@ -347,15 +364,24 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	// success — the rollout itself proceeded; the user just doesn't
 	// get a second event.
 	state := structs.ReleasePromoteWatchState{
-		SchemaVersion: 1,
-		ReleaseID:     id,
-		AtomVersion:   atomVer,
-		StartedAt:     time.Now().UTC(),
-		ExpiresAt:     time.Now().UTC().Add(time.Duration(timeout) * time.Second),
-		Actor:         capturedActor,
+		SchemaVersion:      1,
+		ReleaseID:          id,
+		AtomVersion:        atomVer,
+		StartedAt:          time.Now().UTC(),
+		ExpiresAt:          time.Now().UTC().Add(time.Duration(timeout) * time.Second),
+		Actor:              capturedActor,
+		PriorRelease:       priorRelease,
+		ProgressDeadlines:  progressDeadlines,
+		CrashRestartLimits: crashRestartLimits,
 	}
-	if err := p.writeReleasePromoteWatchAnnotation(p.ctx, app, &state); err != nil {
-		fmt.Printf("ns=release_watcher at=warn kind=annotation_write app=%s err=%q\n", app, err)
+	// The annotation is the watcher's claim on the outcome event, so a failed
+	// write means no watcher: the GC could not adopt it either.
+	watchable := id != ""
+	if watchable {
+		if err := p.writeReleasePromoteWatchAnnotation(p.ctx, app, &state); err != nil {
+			fmt.Printf("ns=release_watcher at=warn kind=annotation_write app=%s err=%q\n", app, err)
+			watchable = false
+		}
 	}
 
 	// :start emit uses the captured actor (audit-trail consistency with
@@ -371,7 +397,9 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	p.FlushStateLog(p.ContextTID(), app)
 
-	p.launchReleasePromoteWatcher(app, &state)
+	if watchable {
+		p.launchReleasePromoteWatcher(app, &state)
+	}
 
 	return nil
 }
@@ -1066,6 +1094,21 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			wantsAutoscale = false
 		}
 
+		if (s.Agent.Enabled || s.Stateful) && s.Deployment.ProgressDeadline > 0 {
+			kind := "agent services run as DaemonSets"
+			if s.Stateful {
+				kind = "stateful services run as StatefulSets"
+			}
+			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  fmt.Sprintf("deployment.progressDeadline has no effect because %s, which have no progress deadline; use deployment.crashRestartLimit to fail this service fast", kind),
+				},
+			})
+		}
+
 		if !s.Agent.Enabled && s.Scale.Min != nil && *s.Scale.Min == 0 && !s.Scale.Autoscale.IsEnabled() && !s.Scale.IsKedaEnabled() {
 			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
 				Data: map[string]string{
@@ -1092,6 +1135,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"Environment":            env,
 			"MaxSurge":               max - 100,
 			"MaxUnavailable":         100 - min,
+			"ProgressDeadline":       clampProgressDeadline(effectiveProgressDeadline(&s, p.DeployProgressDeadline)),
 			"Namespace":              p.AppNamespace(a.Name),
 			"Password":               p.Password,
 			"Rack":                   p.Name,

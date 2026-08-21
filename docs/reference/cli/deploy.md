@@ -92,6 +92,25 @@ The `--external` flag runs the Docker build locally instead of uploading the sou
 
 See [build: External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
 
+### Failure Messages
+
+When a rollout fails, `convox deploy` reports which App it was and where to look next:
+
+```bash
+    ERROR: rollout failed for myapp, the previous release was restored
+      convox deploy-debug -a myapp
+```
+
+If the command reaches its own 35-minute ceiling while the Rack is still rolling out, it reports that instead. The Rack keeps going either way, so the deploy still finishes or still rolls back on its own.
+
+```bash
+    ERROR: myapp did not reach a running state within 35m, the rack may still be rolling out
+      convox deploy-debug -a myapp
+      convox apps cancel -a myapp
+```
+
+See [Rolling Updates: Failure Detection](/deployment/rolling-updates#failure-detection) for the settings that make a broken rollout fail in minutes rather than the default fifty.
+
 ## See Also
 
 - [Deploying Changes](/deployment/deploying-changes) for deployment workflow

@@ -35,6 +35,8 @@ services:
     deployment:
       minimum: 25
       maximum: 110
+      progressDeadline: 900
+      crashRestartLimit: 5
     domain: foo.example.org
     environment:
       - DEFAULT=test

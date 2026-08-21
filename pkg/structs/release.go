@@ -56,6 +56,14 @@ type ReleasePromoteWatchState struct {
 	StartedAt   time.Time `json:"startedAt"`
 	ExpiresAt   time.Time `json:"expiresAt"`
 	Actor       string    `json:"actor"`
+	// PriorRelease is the release the app was on before this promote, which the
+	// Atom restores into the app-release mirror when a rollout rolls back.
+	PriorRelease string `json:"priorRelease,omitempty"`
+	// ProgressDeadlines holds only services whose deadline is below the shipped
+	// default; its presence is what arms deadline detection.
+	ProgressDeadlines  map[string]int `json:"progressDeadlines,omitempty"`
+	CrashRestartLimits map[string]int `json:"crashRestartLimits,omitempty"`
+	BailedAt           time.Time      `json:"bailedAt"`
 }
 
 func NewRelease(app string) *Release {

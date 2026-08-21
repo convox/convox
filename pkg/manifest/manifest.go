@@ -12,6 +12,17 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	// DefaultProgressDeadlineSeconds is the rollout progress deadline Convox has always waited.
+	DefaultProgressDeadlineSeconds = 3000
+
+	// ProgressDeadlineFloor is the lowest deployment.progressDeadline a service may set.
+	ProgressDeadlineFloor = 30
+
+	// ProgressDeadlineCeiling is the highest deployment.progressDeadline a service may set.
+	ProgressDeadlineCeiling = 21600
+)
+
 var (
 	DefaultCpu        = 250
 	DefaultMem        = 512

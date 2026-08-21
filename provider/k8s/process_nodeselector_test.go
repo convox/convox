@@ -74,6 +74,13 @@ func setAppStatus(t *testing.T, kk *fake.Clientset, ns, status string) {
 	require.NoError(t, err)
 }
 
+func setAppRelease(t *testing.T, kk *fake.Clientset, ns, release string) {
+	t.Helper()
+	patch := fmt.Sprintf(`{"metadata":{"annotations":{"convox.com/app-release":%q}}}`, release)
+	_, err := kk.CoreV1().Namespaces().Patch(context.TODO(), ns, types.MergePatchType, []byte(patch), am.PatchOptions{})
+	require.NoError(t, err)
+}
+
 func createBuild(t *testing.T, kc *cvfake.Clientset, ns, id string) {
 	t.Helper()
 	_, err := kc.ConvoxV1().Builds(ns).Create(&ca.Build{

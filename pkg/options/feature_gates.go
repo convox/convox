@@ -17,6 +17,7 @@ const (
 	FeatureGateDisableHostUsersAsDefault     = "disable-host-users"                // will disable setting the host user in the container if enabled
 	FeatureGatePrefixBasedAwsResourceDisable = "aws-resource-prefix-based-disable" // will reject resources named with the rds- and elasticache- prefixes
 	FeatureGateRDSTemplateConfig             = "rds-template-config"               // names a config map that limits rds options to a curated set
+	FeatureGateDeployFastFailDisable         = "deploy-fast-fail-disable"          // turns off deploy fast-fail detection rack-wide
 )
 
 func GetFeatureGates() map[string]bool {

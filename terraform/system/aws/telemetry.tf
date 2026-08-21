@@ -28,7 +28,9 @@ locals {
     cost_tracking_enable                      = var.cost_tracking_enable
     custom_provided_bucket                    = var.custom_provided_bucket
     dcgm_scrape_interval                      = var.dcgm_scrape_interval
+    deploy_crash_restart_limit                = var.deploy_crash_restart_limit
     deploy_extra_nlb                          = var.deploy_extra_nlb
+    deploy_progress_deadline                  = var.deploy_progress_deadline
     disable_convox_resolver                   = var.disable_convox_resolver
     disable_image_manifest_cache              = var.disable_image_manifest_cache
     disable_public_access                     = var.disable_public_access
@@ -184,7 +186,9 @@ locals {
     cost_tracking_enable                      = "false"
     custom_provided_bucket                    = ""
     dcgm_scrape_interval                      = "15s"
+    deploy_crash_restart_limit                = "0"
     deploy_extra_nlb                          = "false"
+    deploy_progress_deadline                  = "0"
     disable_convox_resolver                   = "false"
     disable_image_manifest_cache              = "false"
     disable_public_access                     = "false"

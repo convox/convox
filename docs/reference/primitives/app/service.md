@@ -234,6 +234,8 @@ services:
 | --------- | ------ | ------- | -------------------------------------------------------------------------------- |
 | **maximum** | number | 200     | The maximum percentage of Processes to allow during rolling deploys. Defaults to 100 for agents and singletons. |
 | **minimum** | number | 50      | The minimum percentage of healthy Processes to keep alive during rolling deploys. Defaults to 0 for agents and singletons. |
+| **progressDeadline** | number |         | Seconds a rollout of this Service may go without progress before it is failed and rolled back. Unset by default, so only the Rack timeout applies. Accepts `30` to `21600`. Does not apply to agent or stateful Services. Requires rack version 3.25.5 or later. See [Rolling Updates](/deployment/rolling-updates#failure-detection). |
+| **crashRestartLimit** | number | 0 | Container restarts this Service may accumulate during a rollout before the deploy is aborted and rolled back. `0` disables the check, `-1` opts the Service out of a rack-wide default. Requires rack version 3.25.5 or later. See [Rolling Updates](/deployment/rolling-updates#failure-detection). |
 
 
 

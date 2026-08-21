@@ -68,6 +68,8 @@ type Provider struct {
 	Config                              *rest.Config
 	Convox                              cv.Interface
 	ConvoxDomainTLSCertDisable          bool
+	DeployCrashRestartLimit             int
+	DeployProgressDeadline              int
 	CertManagerClient                   cmclient.Interface
 	DiscoveryClient                     discovery.DiscoveryInterface
 	DockerUsername                      string
@@ -146,6 +148,21 @@ type webhookState struct {
 
 func init() {
 	rand.Seed(time.Now().Unix())
+}
+
+// tuningEnvInt reads an optional integer tuning knob. Unset, empty and
+// unparseable all resolve to 0, which every caller treats as "not configured".
+func tuningEnvInt(name string) int {
+	v := os.Getenv(name)
+	if v == "" {
+		return 0
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		fmt.Printf("ns=k8s at=warn kind=invalid_tuning_env name=%s value=%q\n", name, v)
+		return 0
+	}
+	return n
 }
 
 func FromEnv() (*Provider, error) {
@@ -255,6 +272,8 @@ func FromEnv() (*Provider, error) {
 		IsVpaEnabled:                     os.Getenv("VPA_ENABLED") == "true",
 	}
 
+	p.DeployProgressDeadline = tuningEnvInt("DEPLOY_PROGRESS_DEADLINE")
+	p.DeployCrashRestartLimit = tuningEnvInt("DEPLOY_CRASH_RESTART_LIMIT")
 	p.ReleasesToRetainAfterActive, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_AFTER_ACTIVE"))
 	p.ReleasesToRetainTaskRunIntervalHour, _ = strconv.Atoi(os.Getenv("RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR"))
 	p.FeatureGates = options.GetFeatureGates()

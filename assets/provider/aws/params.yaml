@@ -389,6 +389,19 @@ Groups:
           When router_type=contour, also configures Envoy connection idle timeout.
         allowedMinValue: 60
         allowedMaxValue: 4000
+      - name: deploy_progress_deadline
+        default: "0"
+        type: integer
+        description: "How long a service's rollout may go without progress before Kubernetes marks it failed."
+        sideNote: "Unset by default. Setting it turns on fast-fail for every app that does not set deployment.progressDeadline itself."
+        allowedMinValue: 0
+        allowedMaxValue: 21600
+      - name: deploy_crash_restart_limit
+        default: "0"
+        type: integer
+        description: "How many times a container may restart during a rollout before the deploy is aborted and rolled back."
+        sideNote: "Disabled by default. A service can opt out with deployment.crashRestartLimit set to -1."
+        allowedMinValue: 0
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer

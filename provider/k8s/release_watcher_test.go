@@ -22,6 +22,15 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+// runWatcherWithAnnotation seeds the watch annotation before running the
+// watcher, matching ReleasePromote, which never launches one without it: the
+// annotation is the claim that decides which process emits the outcome.
+func runWatcherWithAnnotation(t *testing.T, p *k8s.Provider, app string, state *structs.ReleasePromoteWatchState) {
+	t.Helper()
+	require.NoError(t, k8s.WriteReleasePromoteWatchAnnotationForTest(p, context.Background(), app, state))
+	k8s.RunReleasePromoteWatcherForTest(p, context.Background(), app, state)
+}
+
 // captureReleaseWatcherEvents collects all webhook payloads dispatched while
 // fn runs. Returns a slice of decoded event payloads (each map[string]any).
 func captureReleaseWatcherEvents(t *testing.T, p *k8s.Provider, fn func(), waitFor int, timeout time.Duration) []map[string]any {
@@ -123,7 +132,7 @@ func TestReleasePromoteWatcher_TerminalSuccess(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app1", &state)
+			runWatcherWithAnnotation(t, p, "app1", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:completed")
@@ -153,7 +162,7 @@ func TestReleasePromoteWatcher_TerminalError_Failure(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app2", &state)
+			runWatcherWithAnnotation(t, p, "app2", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:errored")
@@ -182,7 +191,7 @@ func TestReleasePromoteWatcher_TerminalError_AtomCancelled(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app3", &state)
+			runWatcherWithAnnotation(t, p, "app3", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:errored")
@@ -210,7 +219,7 @@ func TestReleasePromoteWatcher_TerminalError_Deadline(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app4", &state)
+			runWatcherWithAnnotation(t, p, "app4", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:errored")
@@ -237,7 +246,7 @@ func TestReleasePromoteWatcher_TerminalError_Rollback(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app5", &state)
+			runWatcherWithAnnotation(t, p, "app5", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:errored")
@@ -266,7 +275,7 @@ func TestReleasePromoteWatcher_WatcherTimeout(t *testing.T) {
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app6", &state)
+			runWatcherWithAnnotation(t, p, "app6", &state)
 		}, 1, 3*time.Second)
 
 		ev := findEventByAction(events, "app:promote:errored")
@@ -300,7 +309,7 @@ func TestReleasePromoteWatcher_GracePeriodHonor(t *testing.T) {
 		// Times where deadline hasn't elapsed (<350ms): no event.
 		// At >=350ms: watcher emits watcher-timeout.
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app6g", &state)
+			runWatcherWithAnnotation(t, p, "app6g", &state)
 		}, 1, 2*time.Second)
 
 		// Confirm the emit IS the timeout event (post-grace fire).
@@ -331,7 +340,7 @@ func TestReleasePromoteWatcher_SupersededByNewerPromote_EmitsCancelled(t *testin
 		}
 
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "app7", &state)
+			runWatcherWithAnnotation(t, p, "app7", &state)
 		}, 1, 2*time.Second)
 
 		ev := findEventByAction(events, "app:promote:cancelled")
@@ -449,7 +458,7 @@ func TestEmitReleasePromoteResult_StatusToActionMapping(t *testing.T) {
 					Actor:         "alice@example.com",
 				}
 				events := captureReleaseWatcherEvents(t, p, func() {
-					k8s.EmitReleasePromoteResultForTest(p, "appMap", &state, c.status, "")
+					k8s.EmitReleasePromoteResultForTest(p, "appMap", &state, c.status, "", "")
 				}, 1, 1*time.Second)
 
 				ev := findEventByAction(events, c.wantAction)
@@ -470,7 +479,7 @@ func TestEmitReleasePromoteResult_EmptyStatusSilent(t *testing.T) {
 			Actor:         "alice@example.com",
 		}
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.EmitReleasePromoteResultForTest(p, "appMap2", &state, "", "")
+			k8s.EmitReleasePromoteResultForTest(p, "appMap2", &state, "", "", "")
 		}, 0, 200*time.Millisecond)
 
 		assert.Empty(t, events, "empty status MUST suppress emit; got %v", events)
@@ -731,7 +740,7 @@ func TestReleasePromoteWatcher_SingleEmitPerTerminalState(t *testing.T) {
 		// the watcher's first-tick latency (20ms) plus the cleanup
 		// defer drain.
 		events := captureReleaseWatcherEvents(t, p, func() {
-			k8s.RunReleasePromoteWatcherForTest(p, context.Background(), "appSingle", &state)
+			runWatcherWithAnnotation(t, p, "appSingle", &state)
 		}, 1, 1*time.Second)
 		// Allow extra settle time so any rogue retry-emit would surface.
 		time.Sleep(200 * time.Millisecond)
