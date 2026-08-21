@@ -158,6 +158,16 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path", s.Name))
 		}
 
+		if strings.HasPrefix(s.Liveness.GrpcService, "/") {
+			errs = append(errs, fmt.Errorf("service %s liveness grpcService must be a grpc service name such as myapp.v1.Greeter, not a path", s.Name))
+		}
+
+		if s.Liveness.GrpcService != "" && s.Liveness.GrpcService == s.Health.GrpcService {
+			fmt.Fprintf(os.Stderr,
+				"WARNING: service %q: liveness grpcService matches health grpcService; setting that name NOT_SERVING fails the liveness probe and restarts the container instead of draining it\n",
+				s.Name)
+		}
+
 		if s.Agent.Enabled && s.SpreadAcrossZones {
 			errs = append(errs, fmt.Errorf("service %s can not set spreadAcrossZones when agent is enabled", s.Name))
 		}

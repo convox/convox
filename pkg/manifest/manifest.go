@@ -181,6 +181,7 @@ func (m *Manifest) ApplyDefaults() error {
 		}
 
 		m.Services[i].Health.GrpcService = strings.TrimSpace(s.Health.GrpcService)
+		m.Services[i].Liveness.GrpcService = strings.TrimSpace(s.Liveness.GrpcService)
 
 		s.Liveness.Path = strings.TrimSpace(s.Liveness.Path)
 		if s.Liveness.Path != "" {

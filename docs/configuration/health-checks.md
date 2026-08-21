@@ -100,7 +100,7 @@ services:
 
 ### Important Considerations
 
-- **Path is Required**: Unlike health checks, you must specify a `path` to enable liveness checks. Setting `liveness.port` without `liveness.path` is a silent no-op, so no liveness probe is generated
+- **Path is Required**: Unlike health checks, an HTTP service must specify a `path` to enable liveness checks. Setting `liveness.port` without `liveness.path` is a silent no-op, so no liveness probe is generated. A gRPC service using `grpcHealthEnabled` is the exception, see [gRPC Health Checks](#grpc-health-checks)
 - **`port` is optional**: If unset, the liveness probe targets the main service port, mirroring the `health.port` behavior. Startup probes ignore `liveness.port` and continue to target the main service port. If you need the liveness probe to use a specific scheme (for example, HTTPS), set `liveness.port.scheme` explicitly. Unlike readiness, liveness does not auto-inherit the main service scheme
 - **Conservative Configuration**: Liveness checks should be configured conservatively to avoid unnecessary restarts. False positives can cause service disruption
 - **Separate Endpoints**: Consider using different endpoints for health checks and liveness checks to monitor different aspects of your application
@@ -284,7 +284,7 @@ services:
 
 ### Advanced Configuration
 
-A subset of the `health` attributes applies to gRPC health checks. See the table below.
+A subset of the `health` attributes applies to gRPC health checks, along with two `liveness` attributes. See the tables below.
 
 ```yaml
 services:
@@ -297,6 +297,8 @@ services:
       interval: 5
       grpcService: myapp.v1.Greeter
       timeout: 2
+    liveness:
+      grpcService: myapp.v1.Liveness
 ```
 
 | Attribute  | Default | Description                                                                      |
@@ -309,9 +311,22 @@ services:
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
 | **disable**  | false   | Set to `true` to disable the gRPC readiness and liveness probes. Requires rack version 3.25.4 or later |
 
-`grpcService` takes a gRPC service name such as `myapp.v1.Greeter`. It is not a URL path: a value beginning with `/` is rejected when your app is built, so moving an old `path: /` value into this key fails fast rather than at rollout. Beyond that the value is passed through as written, and the name must be registered on your server. `Check` returns `NOT_FOUND` for a name your server does not know, so readiness never passes and the deploy does not converge.
+These two `liveness` attributes apply as well.
 
-`grpcService` changes the readiness probe only. The automatic liveness probe keeps sending the empty service name, so your server must report `SERVING` for both the empty name and the name you set. Go's `health.NewServer()` registers the empty name for you. A hand-written `Check` method, or a health registry you populate yourself, must handle an empty `req.Service` as well, or the liveness probe fails and the container restarts. If `liveness.port` points at a separate health listener, only that listener needs the empty name; it does not need the name you set in `grpcService`.
+| Attribute  | Default | Description                                                                      |
+| ---------- | ------- | -------------------------------------------------------------------------------- |
+| **grpcService** | empty | The gRPC health service name placed in the liveness probe's `HealthCheckRequest`. Empty means overall server health. Requires rack version 3.25.5 or later. An earlier rack accepts the key without error and ignores it, leaving the liveness probe on the empty name |
+| **port**     | Main service port | Moves the gRPC liveness probe to another port |
+
+No other `liveness` attribute reaches the gRPC probes. The `liveness.*` timing fields are still the fallback timings for a [startup probe](#startup-probes).
+
+`grpcService` takes a gRPC service name such as `myapp.v1.Greeter`. It is not a URL path: a value beginning with `/` is rejected when your app is built, so moving an old `path: /` value into this key fails fast rather than at rollout. Beyond that the value is passed through as written, and the name must be registered on your server. `Check` returns `NOT_FOUND` for a name your server does not know. In `health.grpcService` that means readiness never passes and the deploy does not converge; in `liveness.grpcService` it means the liveness probe fails and the kubelet restarts the container.
+
+`health.grpcService` changes the readiness probe only. The liveness probe sends the empty service name unless you also set `liveness.grpcService`, so by default your server must report `SERVING` for both the empty name and the name you set. Go's `health.NewServer()` registers the empty name for you. A hand-written `Check` method, or a health registry you populate yourself, must handle an empty `req.Service` as well, or the liveness probe fails and the container restarts. Registering the empty name is one line and is safe to drain against, so prefer it whenever you control the server.
+
+`liveness.grpcService` is for the cases where you cannot: a server you do not build, or one that deliberately exposes a separate liveness service. Point it at a name you never flip to `NOT_SERVING`. Setting it to the same name as `health.grpcService` means a drain fails liveness as well, and the container is restarted after five failed checks instead of being taken out of rotation, which is the opposite of what a drain is for. Your build prints a warning to the deploy output when the two names match.
+
+If `liveness.port` points at a separate health listener, only that listener has to answer the name the liveness probe sends.
 
 Before rack version 3.25.4, `health.disable: true` was ignored on a gRPC service and both probes rendered anyway. Updating a rack to 3.25.4 with `health.disable: true` already set on a gRPC service removes both of its probes.
 
@@ -335,6 +350,8 @@ Readiness now checks `myapp.v1.Greeter` on port 50051 and liveness checks the em
 
 Unlike an HTTP service, a gRPC service needs no `liveness.path` for this: the liveness probe is generated by `grpcHealthEnabled` and `liveness.port` moves it.
 
+From rack version 3.25.5 you can separate the two checks on a single port by giving each one its own name, with `health.grpcService` for readiness and `liveness.grpcService` for liveness. A second listener is still the better answer when the checks need to be independent of the main port itself, for example when that port can saturate.
+
 ### Implementation Requirements
 
 Services using gRPC health checks must implement the gRPC Health Checking Protocol, which is defined in the [gRPC health checking protocol repository](https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
@@ -356,7 +373,7 @@ Both probes use `health.grace`, `health.interval` and `health.timeout`. They do 
 
 `grpcHealthEnabled: true` is inert on a service whose main port is not gRPC, unless you also set `health.port.scheme: grpc`. That activates the gRPC probes, giving you a gRPC readiness probe on `health.port` and a gRPC liveness probe on `liveness.port`, which defaults to the main port. If `liveness.path` is also set, that HTTP liveness probe is replaced by the gRPC one. Set `liveness.port` to match, or leave `health.port.scheme` unset.
 
-For the gRPC probes, only `liveness.port` has any effect; the `liveness.*` timing fields and `liveness.path` do not. Those timings are still used as the fallback timings for a [startup probe](#startup-probes), including the automatic startup probe added to GPU services.
+For the gRPC probes, only `liveness.port` and `liveness.grpcService` have any effect; the `liveness.*` timing fields and `liveness.path` do not. Those timings are still used as the fallback timings for a [startup probe](#startup-probes), including the automatic startup probe added to GPU services.
 
 `startupProbe.path` renders a plain HTTP GET against the gRPC port and fails unless your server also answers HTTP/1.1 there. Use `startupProbe.tcpSocketPort` on a gRPC service.
 
@@ -385,13 +402,16 @@ func main() {
 	healthServer := health.NewServer()
 	healthpb.RegisterHealthServer(server, healthServer)
 	
-	// The liveness probe always checks the empty service name
+	// The liveness probe checks the empty service name unless you set liveness.grpcService
 	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 	
 	// Only needed when you set health.grpcService, which the readiness probe checks.
 	// Flip this to NOT_SERVING to drain traffic without restarting the container.
 	healthServer.SetServingStatus("myapp.v1.Greeter", healthpb.HealthCheckResponse_SERVING)
 	
+	// Only needed when you set liveness.grpcService. Never flip this one to NOT_SERVING.
+	healthServer.SetServingStatus("myapp.v1.Liveness", healthpb.HealthCheckResponse_SERVING)
+
 	// Continue with server initialization...
 }
 ```
