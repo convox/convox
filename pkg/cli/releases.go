@@ -255,7 +255,7 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 	}
 
 	if a.Release != id {
-		return fmt.Errorf("rollback")
+		return common.RolloutFailedError(app)
 	}
 
 	return c.OK()
@@ -309,7 +309,7 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if a.Release != rn.Id {
-		return fmt.Errorf("rollback")
+		return common.RolloutFailedError(app(c))
 	}
 
 	if c.Bool("id") {

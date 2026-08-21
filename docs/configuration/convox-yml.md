@@ -48,6 +48,8 @@ services:
     deployment:
       minimum: 50
       maximum: 200
+      progressDeadline: 600
+      crashRestartLimit: 5
   web:
     build: .
     command: bin/web

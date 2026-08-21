@@ -32,6 +32,8 @@ module "api" {
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
   custom_provided_bucket                    = var.custom_provided_bucket
+  deploy_crash_restart_limit                = var.deploy_crash_restart_limit
+  deploy_progress_deadline                  = var.deploy_progress_deadline
   docker_hub_authentication                 = module.k8s.docker_hub_authentication
   docker_hub_username                       = var.docker_hub_username
   docker_hub_password                       = var.docker_hub_password

@@ -64,6 +64,9 @@ spec:
     type: RollingUpdate
   {{ else if not .Service.Agent.Enabled }}
   replicas: {{.Replicas}}
+  {{- if .ProgressDeadline }}
+  progressDeadlineSeconds: {{.ProgressDeadline}}
+  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:

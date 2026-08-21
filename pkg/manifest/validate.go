@@ -142,6 +142,14 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s deployment maximum can not be greater than 200", s.Name))
 		}
 
+		if s.Deployment.ProgressDeadline != 0 && (s.Deployment.ProgressDeadline < ProgressDeadlineFloor || s.Deployment.ProgressDeadline > ProgressDeadlineCeiling) {
+			errs = append(errs, fmt.Errorf("service %s deployment progressDeadline must be 0 or between %d and %d seconds", s.Name, ProgressDeadlineFloor, ProgressDeadlineCeiling))
+		}
+
+		if s.Deployment.CrashRestartLimit < -1 {
+			errs = append(errs, fmt.Errorf("service %s deployment crashRestartLimit must be -1 to disable, 0 to inherit the rack default, or a positive number of restarts", s.Name))
+		}
+
 		if s.Internal && s.InternalRouter {
 			errs = append(errs, fmt.Errorf("service %s can not have both internal and internalRouter set as true", s.Name))
 		}
