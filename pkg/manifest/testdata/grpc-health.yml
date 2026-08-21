@@ -20,3 +20,23 @@ services:
     port: grpc:50054
     grpcHealthEnabled: true
     health: /ready
+  liveness-named:
+    build: .
+    port: grpc:50055
+    grpcHealthEnabled: true
+    liveness:
+      grpcService: myapp.v1.Liveness
+  liveness-padded:
+    build: .
+    port: grpc:50056
+    grpcHealthEnabled: true
+    liveness:
+      grpcService: "  myapp.v1.Liveness  "
+  both:
+    build: .
+    port: grpc:50057
+    grpcHealthEnabled: true
+    health:
+      grpcService: myapp.v1.Greeter
+    liveness:
+      grpcService: myapp.v1.Liveness

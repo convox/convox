@@ -30,6 +30,12 @@ services:
     grpcHealthEnabled: true
     health:
       grpcService: /ready
+  grpc-liveness-path-invalid:
+    build: .
+    port: grpc:50052
+    grpcHealthEnabled: true
+    liveness:
+      grpcService: "  /ready"
 timers:
   timer_1:
     service: someservice

@@ -437,6 +437,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | Attribute  | Type   | Default | Description                                                                                      |
 | ---------- | ------ | ------- | ------------------------------------------------------------------------------------------------ |
 | **grace**    | number | 10       | The number of seconds to wait for a [Process](/reference/primitives/app/process) to start before starting liveness checks |
+| **grpcService** | string |      | The gRPC health service name placed in the liveness probe's `HealthCheckRequest`, for services using `grpcHealthEnabled`. Empty means overall server health. Ignored unless the gRPC probes are active. Requires rack version 3.25.5 or later. See [gRPC Health Checks](/configuration/health-checks#grpc-health-checks) |
 | **interval** | number | 5       | The number of seconds between health checks                                                      |
 | **path**     | string |        | The path to request for health checks                                                            |
 | **port**     | number or map | Main service port | The port the liveness probe connects to. Same form as `health.port`. Unlike readiness, liveness does **not** auto-inherit the main service scheme. Set `scheme` explicitly when the probe needs HTTPS. See [Separate Health Port](/configuration/health-checks#separate-health-port) |
@@ -444,7 +445,7 @@ See [Health Checks](/configuration/health-checks) for configuring readiness, liv
 | **successThreshold**  | number | 1      | The number of consecutive successful checks required to consider the probe successful             |
 | **failureThreshold**  | number | 3      | The number of consecutive failed checks required before restarting the container                  |
 
-> If you want to enable liveness check, you have to specify **path** and others are optional
+> On an HTTP service you have to specify **path** to enable the liveness check, and the others are optional. A gRPC service using `grpcHealthEnabled` gets a liveness probe without **path**, unless `health.disable` is set, and only **port** and **grpcService** change that probe. The timing fields still apply to a `startupProbe`.
 
 ### scale
 

@@ -359,6 +359,9 @@ spec:
         livenessProbe:
           grpc:
             port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Liveness.GrpcService "") }}
+            service: "{{$.Service.Liveness.GrpcService}}"
+            {{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}

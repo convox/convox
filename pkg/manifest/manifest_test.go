@@ -792,6 +792,7 @@ func TestManifestValidate(t *testing.T) {
 		"service name serviceF invalid, must contain only lowercase alphanumeric and dashes",
 		"service serviceF references a resource that does not exist: foo",
 		"service grpc-path-invalid health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path",
+		"service grpc-liveness-path-invalid liveness grpcService must be a grpc service name such as myapp.v1.Greeter, not a path",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
 	}
@@ -999,7 +1000,7 @@ func TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet(t *testing.
 func TestManifestGrpcHealthService(t *testing.T) {
 	m, err := testdataManifest("grpc-health", map[string]string{})
 	require.NoError(t, err)
-	require.Equal(t, 4, len(m.Services))
+	require.Equal(t, 7, len(m.Services))
 
 	named, err := m.Service("named")
 	require.NoError(t, err)
@@ -1018,6 +1019,55 @@ func TestManifestGrpcHealthService(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "/ready", shorthand.Health.Path)
 	require.Equal(t, "", shorthand.Health.GrpcService)
+
+	require.Equal(t, "", plain.Liveness.GrpcService, "liveness grpcService must stay empty when unset")
+
+	livenessNamed, err := m.Service("liveness-named")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Liveness", livenessNamed.Liveness.GrpcService)
+	require.Equal(t, "", livenessNamed.Health.GrpcService)
+	require.Equal(t, 0, livenessNamed.Liveness.Grace, "liveness grpcService alone must not activate the liveness defaults")
+	require.Equal(t, 0, livenessNamed.Liveness.FailureThreshold)
+
+	livenessPadded, err := m.Service("liveness-padded")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Liveness", livenessPadded.Liveness.GrpcService)
+
+	both, err := m.Service("both")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", both.Health.GrpcService)
+	require.Equal(t, "myapp.v1.Liveness", both.Liveness.GrpcService)
+}
+
+func TestManifestGrpcServiceSharedNameWarning(t *testing.T) {
+	validate := func(health, liveness string) string {
+		m, err := manifest.Load([]byte(fmt.Sprintf(`services:
+  api:
+    build: .
+    port: grpc:50051
+    grpcHealthEnabled: true
+    health:
+      grpcService: %q
+    liveness:
+      grpcService: %q
+`, health, liveness)), map[string]string{})
+		require.NoError(t, err)
+
+		var verr error
+		out := captureStderr(t, func() { verr = m.Validate() })
+		require.NoError(t, verr)
+
+		return out
+	}
+
+	shared := validate("myapp.v1.Greeter", "myapp.v1.Greeter")
+	require.Contains(t, shared, `WARNING: service "api": liveness grpcService matches health grpcService`)
+	require.Equal(t, 1, strings.Count(shared, "WARNING"))
+
+	require.Empty(t, validate("myapp.v1.Greeter", "myapp.v1.Liveness"))
+	require.Empty(t, validate("", "myapp.v1.Liveness"))
+	require.Empty(t, validate("myapp.v1.Greeter", ""))
+	require.Empty(t, validate("", ""), "both unset must not warn")
 }
 
 func TestManifestKeda(t *testing.T) {

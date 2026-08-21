@@ -356,6 +356,7 @@ type ServiceHealth struct {
 
 type ServiceLiveness struct {
 	Grace            int               `yaml:"grace,omitempty"`
+	GrpcService      string            `yaml:"grpcService,omitempty"`
 	Interval         int               `yaml:"interval,omitempty"`
 	Path             string            `yaml:"path,omitempty"`
 	Port             ServicePortScheme `yaml:"port,omitempty"`
