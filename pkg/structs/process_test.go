@@ -144,3 +144,31 @@ func TestProcessGpuFields_RoundTrip(t *testing.T) {
 	assert.Equal(t, memTotal, *got.GpuMemTotal)
 	assert.Equal(t, "inference", got.Service)
 }
+
+// TestProcess_ExitCode_OmitEmpty: a nil ExitCode must be stripped from JSON so
+// an older Console parsing a newer rack sees the same shape it does today, and a
+// real exit of 0 must still serialize rather than being mistaken for absence.
+func TestProcess_ExitCode_OmitEmpty(t *testing.T) {
+	b, err := json.Marshal(Process{Id: "abc", App: "myapp"})
+	require.NoError(t, err)
+	assert.NotContains(t, string(b), `"exit-code"`)
+
+	code := 0
+	b, err = json.Marshal(Process{Id: "abc", App: "myapp", ExitCode: &code})
+	require.NoError(t, err)
+	assert.Contains(t, string(b), `"exit-code":0`)
+}
+
+func TestProcess_Terminal(t *testing.T) {
+	for status, want := range map[string]bool{
+		"complete": true,
+		"failed":   true,
+		"running":  false,
+		"pending":  false,
+		"starting": false,
+		"crashed":  false,
+		"":         false,
+	} {
+		assert.Equal(t, want, (&Process{Status: status}).Terminal(), "status %q", status)
+	}
+}

@@ -183,6 +183,14 @@ func fxProcess() *structs.Process {
 	}
 }
 
+func fxProcessExited(status string, code *int) *structs.Process {
+	ps := fxProcess()
+	ps.Status = status
+	ps.ExitCode = code
+
+	return ps
+}
+
 func fxProcessPending() *structs.Process {
 	return &structs.Process{
 		Id:       "pid1",

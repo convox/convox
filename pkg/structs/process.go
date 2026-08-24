@@ -37,6 +37,9 @@ type Process struct {
 	GpuFp16Active   *float64 `json:"gpu-fp16-active,omitempty"`   // percent 0-100
 	GpuFp32Active   *float64 `json:"gpu-fp32-active,omitempty"`   // percent 0-100
 	GpuPowerW       *float64 `json:"gpu-power-w,omitempty"`       // watts
+
+	// ExitCode is the primary container's terminated exit status; nil while running or unknown.
+	ExitCode *int `json:"exit-code,omitempty"`
 }
 
 type Processes []Process
@@ -79,9 +82,15 @@ type ProcessRunOptions struct {
 	UseServiceLifecycle *bool   `flag:"use-service-lifecycle" header:"Use-Service-Lifecycle"`
 	NodeAffinity        *string `flag:"node-affinity" header:"Node-Affinity"`
 	Tolerations         *string `flag:"tolerations" header:"Run-Tolerations"`
+	Retain              *int    `header:"Retain"`
 
 	IsBuild   bool
 	BuildArch *string
+}
+
+// Terminal reports whether the process has stopped and will not run again.
+func (p *Process) Terminal() bool {
+	return p.Status == "complete" || p.Status == "failed"
 }
 
 func (p *Process) sortKey() string {

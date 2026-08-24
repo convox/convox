@@ -158,11 +158,15 @@ func (p *Provider) processGet(ns, app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).Get(context.TODO(), pid, am.GetOptions{})
-	if err != nil {
-		p.logger.Errorf("failed to fetch pod metrics: %s", err)
-	} else if m != nil && len(m.Containers) > 0 {
-		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+	// metrics-server serves nothing for a pod that has already exited, so asking
+	// would only log an error on every poll of a retained process
+	if !ps.Terminal() {
+		m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).Get(context.TODO(), pid, am.GetOptions{})
+		if err != nil {
+			_ = p.logger.Errorf("failed to fetch pod metrics: %s", err)
+		} else if m != nil && len(m.Containers) > 0 {
+			ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+		}
 	}
 
 	// GPU runtime telemetry — best-effort enrichment from the rack's
@@ -528,6 +532,11 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 
 	if opts.IsBuild {
 		labels["service-type"] = "build"
+	}
+
+	// set ahead of the caller's annotations so the merge below leaves this one alone
+	if opts.Retain != nil {
+		ans[AnnotationProcessRetain] = strconv.Itoa(*opts.Retain)
 	}
 
 	if opts.Annotations != nil {
@@ -1324,12 +1333,18 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		}
 	}
 
+	var exitCode *int
+
 	if css := pd.Status.ContainerStatuses; len(css) > 0 && css[0].Name == app {
 		if cs := css[0]; cs.State.Waiting != nil {
 			switch cs.State.Waiting.Reason {
 			case "CrashLoopBackOff":
 				status = "crashed"
 			}
+		}
+
+		if t := css[0].State.Terminated; t != nil {
+			exitCode = options.Int(int(t.ExitCode))
 		}
 	}
 
@@ -1355,6 +1370,7 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
 		Status:   status,
+		ExitCode: exitCode,
 	}
 
 	for key := range gpuKeyToVendor {

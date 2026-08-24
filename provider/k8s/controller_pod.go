@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/convox/convox/pkg/kctl"
@@ -14,6 +15,13 @@ import (
 	ic "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+)
+
+const (
+	AnnotationProcessRetain = "convox.com/retain"
+
+	podCleanupDelay     = 5 * time.Second
+	podRetainMaxSeconds = 600
 )
 
 type PodController struct {
@@ -129,8 +137,34 @@ func (c *PodController) Update(prev, cur interface{}) error {
 	return nil
 }
 
+func cleanupDelay(p *ac.Pod, now time.Time) time.Duration {
+	retain, err := strconv.Atoi(p.Annotations[AnnotationProcessRetain])
+	if err != nil || retain <= 0 {
+		return podCleanupDelay
+	}
+
+	if retain > podRetainMaxSeconds {
+		retain = podRetainMaxSeconds
+	}
+
+	// a rack api restart replays Add for pods that are already terminal, so the
+	// window has to run from the container's exit rather than from this observation
+	from := now
+	if css := p.Status.ContainerStatuses; len(css) > 0 && css[0].State.Terminated != nil {
+		if t := css[0].State.Terminated.FinishedAt.Time; !t.IsZero() {
+			from = t
+		}
+	}
+
+	if d := from.Add(time.Duration(retain) * time.Second).Sub(now); d > podCleanupDelay {
+		return d
+	}
+
+	return podCleanupDelay
+}
+
 func (c *PodController) cleanupPod(p *ac.Pod) error {
-	time.Sleep(5 * time.Second)
+	time.Sleep(cleanupDelay(p, time.Now().UTC()))
 
 	// the pod observed here may already have been replaced by one reusing its
 	// name, which statefulsets do, so delete only this exact object
