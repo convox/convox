@@ -45,8 +45,22 @@ func releasePromoteWatchSlotHeldForTest(app, releaseID string) bool {
 var releasePromoteWatcherPanicHookForTest func(app, releaseID string)
 var releasePromoteCleanupDeferPanicHookForTest func(app, releaseID string)
 
+// launchReleasePromoteWatcher starts the post-promote watcher unless one is
+// already in flight for this exact (app, release-id): that watcher stays, and
+// sees the supersession via the release annotation on its next tick.
+func (p *Provider) launchReleasePromoteWatcher(app string, state *structs.ReleasePromoteWatchState) {
+	acquired, release := tryAcquireWatchSlot(app, state.ReleaseID)
+	if !acquired {
+		return
+	}
+	s := *state // own a heap copy so the goroutine doesn't alias
+	// p.ctx is the request context and dies when this handler returns.
+	go p.runReleasePromoteWatcher(context.WithoutCancel(p.ctx), p.AppNamespace(app), app, &s, release)
+}
+
 func (p *Provider) runReleasePromoteWatcher(
 	ctx context.Context,
+	namespace string,
 	app string,
 	state *structs.ReleasePromoteWatchState,
 	release func(),
@@ -66,8 +80,8 @@ func (p *Provider) runReleasePromoteWatcher(
 		if hook := releasePromoteCleanupDeferPanicHookForTest; hook != nil {
 			hook(app, state.ReleaseID)
 		}
-		if err := p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID); err != nil {
-			fmt.Printf("ns=release_watcher at=warn kind=annotation_delete app=%s err=%q\n", app, err)
+		if _, err := p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, namespace, state.ReleaseID); err != nil {
+			fmt.Printf("ns=release_watcher at=warn kind=annotation_delete namespace=%s app=%s err=%q\n", namespace, app, err)
 		}
 		release()
 	}()
@@ -85,7 +99,7 @@ func (p *Provider) runReleasePromoteWatcher(
 			if hook := releasePromoteWatcherPanicHookForTest; hook != nil {
 				hook(app, state.ReleaseID)
 			}
-			ns, err := p.GetNamespaceFromInformer(p.AppNamespace(app))
+			ns, err := p.GetNamespaceFromInformer(namespace)
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					resultStatus = ""
@@ -183,55 +197,56 @@ func (p *Provider) writeReleasePromoteWatchAnnotation(ctx context.Context, app s
 
 // deleteReleasePromoteWatchAnnotationIfMatches only deletes if the annotation's
 // release-id still matches ours. Uses JSON-Patch test op for atomic check-and-delete.
-func (p *Provider) deleteReleasePromoteWatchAnnotationIfMatches(ctx context.Context, app, expectedReleaseID string) error {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, p.AppNamespace(app), am.GetOptions{})
+// Reports whether this caller is the one that removed it.
+func (p *Provider) deleteReleasePromoteWatchAnnotationIfMatches(ctx context.Context, namespace, expectedReleaseID string) (bool, error) {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, namespace, am.GetOptions{})
 	if err != nil {
 		if kerr.IsNotFound(err) {
-			return nil
+			return false, nil
 		}
-		return errors.WithStack(err)
+		return false, errors.WithStack(err)
 	}
 	raw := ns.Annotations[structs.ReleasePromoteWatchAnnotation]
 	if raw == "" {
-		return nil
+		return false, nil
 	}
 	var state structs.ReleasePromoteWatchState
 	if jerr := json.Unmarshal([]byte(raw), &state); jerr != nil {
-		fmt.Printf("ns=release_watcher at=warn kind=cleanup_corrupt_json app=%s err=%q\n", app, jerr)
-		return nil
+		fmt.Printf("ns=release_watcher at=warn kind=cleanup_corrupt_json namespace=%s err=%q\n", namespace, jerr)
+		return false, nil
 	}
 	if state.ReleaseID != expectedReleaseID {
-		fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip app=%s mine=%s current=%s\n",
-			app, expectedReleaseID, state.ReleaseID)
-		return nil
+		fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip namespace=%s mine=%s current=%s\n",
+			namespace, expectedReleaseID, state.ReleaseID)
+		return false, nil
 	}
 	rawJSON, jerr := json.Marshal(raw)
 	if jerr != nil {
-		return errors.WithStack(jerr)
+		return false, errors.WithStack(jerr)
 	}
 	patch := []byte(fmt.Sprintf(
 		`[{"op":"test","path":"/metadata/annotations/convox.com~1release-promote-watch","value":%s},{"op":"remove","path":"/metadata/annotations/convox.com~1release-promote-watch"}]`,
 		rawJSON,
 	))
-	_, perr := p.Cluster.CoreV1().Namespaces().Patch(ctx, p.AppNamespace(app), types.JSONPatchType, patch, am.PatchOptions{})
+	_, perr := p.Cluster.CoreV1().Namespaces().Patch(ctx, namespace, types.JSONPatchType, patch, am.PatchOptions{})
 	if perr != nil {
 		if kerr.IsNotFound(perr) {
-			return nil
+			return false, nil
 		}
 		if kerr.IsConflict(perr) || kerr.IsInvalid(perr) {
 			// test op failed — annotation was overwritten concurrently.
-			fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip_toctou app=%s mine=%s err=%q\n",
-				app, expectedReleaseID, perr)
-			return nil
+			fmt.Printf("ns=release_watcher at=info kind=cleanup_supersession_skip_toctou namespace=%s mine=%s err=%q\n",
+				namespace, expectedReleaseID, perr)
+			return false, nil
 		}
-		return errors.WithStack(perr)
+		return false, errors.WithStack(perr)
 	}
-	return nil
+	return true, nil
 }
 
-func (p *Provider) deleteReleasePromoteWatchAnnotation(ctx context.Context, app string) error {
+func (p *Provider) deleteReleasePromoteWatchAnnotation(ctx context.Context, namespace string) error {
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, structs.ReleasePromoteWatchAnnotation))
-	_, err := p.Cluster.CoreV1().Namespaces().Patch(ctx, p.AppNamespace(app), types.MergePatchType, patch, am.PatchOptions{})
+	_, err := p.Cluster.CoreV1().Namespaces().Patch(ctx, namespace, types.MergePatchType, patch, am.PatchOptions{})
 	if kerr.IsNotFound(err) {
 		return nil
 	}
@@ -277,31 +292,30 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 		}
 		var state structs.ReleasePromoteWatchState
 		if err := json.Unmarshal([]byte(raw), &state); err != nil {
-			fmt.Printf("ns=release_watcher at=warn kind=corrupt_json app=%s err=%q\n", app, err)
-			_ = p.deleteReleasePromoteWatchAnnotation(ctx, app)
+			fmt.Printf("ns=release_watcher at=warn kind=corrupt_json namespace=%s err=%q\n", ns.Name, err)
+			if derr := p.deleteReleasePromoteWatchAnnotation(ctx, ns.Name); derr != nil {
+				fmt.Printf("ns=release_watcher at=warn kind=gc_cleanup_failed namespace=%s err=%q\n", ns.Name, derr)
+			}
 			continue
 		}
 		if state.SchemaVersion != 1 {
 			// unknown schemaVersion — skip, don't delete (may belong to a newer api-pod during rolling upgrade).
 			fmt.Printf("ns=release_watcher at=warn kind=unknown_schema_version app=%s schemaVersion=%d release_id=%s actor=%s expires_at=%q recovery=\"kubectl annotate ns %s convox.com/release-promote-watch-\"\n",
-				app, state.SchemaVersion, state.ReleaseID, state.Actor, state.ExpiresAt.Format(time.RFC3339), p.AppNamespace(app))
+				app, state.SchemaVersion, state.ReleaseID, state.Actor, state.ExpiresAt.Format(time.RFC3339), ns.Name)
 			continue
 		}
 		if state.ExpiresAt.Before(now) {
 			// consult app-status before assuming timeout — AtomController may have already written a terminal status.
-			atomStatus := ns.Annotations["convox.com/app-status"]
-			if status, errMsg, terminal := mapAppStatusToWatchResult(atomStatus); terminal {
-				p.emitReleasePromoteResult(app, &state, status, errMsg)
-			} else {
-				p.emitReleasePromoteResult(app, &state, "error", "watcher-timeout")
+			status, errMsg, terminal := mapAppStatusToWatchResult(ns.Annotations["convox.com/app-status"])
+			if !terminal {
+				status, errMsg = "error", "watcher-timeout"
 			}
-			_ = p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID)
+			p.cleanupAndEmitReleasePromoteResult(ctx, ns.Name, app, &state, status, errMsg)
 			continue
 		}
 		currentRelease := ns.Annotations["convox.com/app-release"]
 		if currentRelease != "" && state.AtomVersion != "" && currentRelease != state.AtomVersion {
-			p.emitReleasePromoteResult(app, &state, "cancelled", "superseded-by-newer-promote")
-			_ = p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, state.ReleaseID)
+			p.cleanupAndEmitReleasePromoteResult(ctx, ns.Name, app, &state, "cancelled", "superseded-by-newer-promote")
 			continue
 		}
 		acquired, release := tryAcquireWatchSlot(app, state.ReleaseID)
@@ -309,8 +323,27 @@ func (p *Provider) scanReleasePromoteAnnotations(ctx context.Context) {
 			continue
 		}
 		s := state
-		go p.runReleasePromoteWatcher(ctx, app, &s, release)
+		go p.runReleasePromoteWatcher(ctx, ns.Name, app, &s, release)
 	}
+}
+
+// cleanupAndEmitReleasePromoteResult gates the emit on the compare-and-swap so
+// racing api replicas notify once between them.
+func (p *Provider) cleanupAndEmitReleasePromoteResult(ctx context.Context, namespace, app string, state *structs.ReleasePromoteWatchState, status, errMsg string) {
+	removed, err := p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, namespace, state.ReleaseID)
+	if err != nil {
+		fmt.Printf("ns=release_watcher at=warn kind=gc_cleanup_failed namespace=%s release_id=%s err=%q\n",
+			namespace, state.ReleaseID, err)
+		return
+	}
+	if !removed {
+		fmt.Printf("ns=release_watcher at=info kind=gc_cleanup_skip namespace=%s release_id=%s\n",
+			namespace, state.ReleaseID)
+		return
+	}
+	fmt.Printf("ns=release_watcher at=info kind=gc_cleanup namespace=%s release_id=%s status=%s\n",
+		namespace, state.ReleaseID, status)
+	p.emitReleasePromoteResult(app, state, status, errMsg)
 }
 
 const (

@@ -549,7 +549,21 @@ func AcquireAppBudgetLockForTest(app string) {
 func RunReleasePromoteWatcherForTest(p *Provider, ctx context.Context, app string, state *structs.ReleasePromoteWatchState) {
 	// Acquire slot (mirror production flow); the watcher's defer releases it.
 	_, release := tryAcquireWatchSlot(app, state.ReleaseID)
-	p.runReleasePromoteWatcher(ctx, app, state, release)
+	p.runReleasePromoteWatcher(ctx, p.AppNamespace(app), app, state, release)
+}
+
+// LaunchReleasePromoteWatcherForTest exposes the promote-path launch so tests
+// can assert the watcher outlives the request context it was started from.
+// Test-only.
+func LaunchReleasePromoteWatcherForTest(p *Provider, app string, state *structs.ReleasePromoteWatchState) {
+	p.launchReleasePromoteWatcher(app, state)
+}
+
+// WithContextForTest returns the request-scoped provider copy as a concrete
+// *Provider so tests can drive request-path code. Test-only.
+func WithContextForTest(p *Provider, ctx context.Context) *Provider {
+	pp, _ := p.WithContext(ctx).(*Provider)
+	return pp
 }
 
 // ReleaseTemplateServicesForTest exposes the unexported releaseTemplateServices
@@ -576,7 +590,7 @@ func WriteReleasePromoteWatchAnnotationForTest(p *Provider, ctx context.Context,
 // DeleteReleasePromoteWatchAnnotationForTest exposes the delete path so
 // tests can clean up between scenarios. Test-only.
 func DeleteReleasePromoteWatchAnnotationForTest(p *Provider, ctx context.Context, app string) error {
-	return p.deleteReleasePromoteWatchAnnotation(ctx, app)
+	return p.deleteReleasePromoteWatchAnnotation(ctx, p.AppNamespace(app))
 }
 
 // EmitReleasePromoteResultForTest exposes the emitter so tests can pin
@@ -662,8 +676,8 @@ func SetReleasePromoteCleanupDeferPanicHookForTest(hook func(app, releaseID stri
 // supersession-aware delete variant so unit tests can assert the
 // read-before-delete invariant directly without driving the full
 // watcher lifecycle. Test-only.
-func DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p *Provider, ctx context.Context, app, expectedReleaseID string) error {
-	return p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, app, expectedReleaseID)
+func DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p *Provider, ctx context.Context, app, expectedReleaseID string) (bool, error) {
+	return p.deleteReleasePromoteWatchAnnotationIfMatches(ctx, p.AppNamespace(app), expectedReleaseID)
 }
 
 // HashParamValueForTest exposes the per-Provider hashParamValue method so
