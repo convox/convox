@@ -6,6 +6,7 @@ import (
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/require"
 )
@@ -93,5 +94,27 @@ func TestPsStopError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{"Stopping pid1... "})
+	})
+}
+
+func TestPsInfoExitCode(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("ProcessGet", "app1", "pid1").Return(fxProcessExited("failed", options.Int(3)), nil)
+
+		res, err := testExecute(e, "ps info pid1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Id        pid1",
+			"App       app1",
+			"Command   command",
+			"Instance  instance",
+			"Release   release1",
+			"Service   name",
+			"Started   2 days ago",
+			"Status    failed",
+			"Exit      3",
+		})
 	})
 }

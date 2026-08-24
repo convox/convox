@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strconv"
+
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -65,6 +67,10 @@ func PsInfo(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Service", ps.Name)
 	i.Add("Started", common.Ago(ps.Started))
 	i.Add("Status", ps.Status)
+
+	if ps.ExitCode != nil {
+		i.Add("Exit", strconv.Itoa(*ps.ExitCode))
+	}
 
 	return i.Print()
 }

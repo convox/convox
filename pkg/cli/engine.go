@@ -14,6 +14,16 @@ type Engine struct {
 	Client sdk.Interface
 }
 
+func hasFlag(flags []stdcli.Flag, name string) bool {
+	for _, f := range flags {
+		if f.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcli.CommandOptions) {
 	wfn := func(c *stdcli.Context) error {
 		r, err := rack.Current(c)
@@ -35,9 +45,12 @@ func (e *Engine) Command(command, description string, fn HandlerFunc, opts stdcl
 		return err
 	}
 
-	// the wait command flag is added for making the cli tool v2 backwards compatible
-	flagWait.SkipHelpCommand = true
-	opts.Flags = append(opts.Flags, flagWait)
+	// the wait command flag is added for making the cli tool v2 backwards compatible,
+	// unless the command declares its own, in which case a second one would panic pflag
+	if !hasFlag(opts.Flags, flagWait.Name) {
+		flagWait.SkipHelpCommand = true
+		opts.Flags = append(opts.Flags, flagWait)
+	}
 
 	e.Engine.Command(command, description, wfn, opts)
 }
@@ -67,9 +80,12 @@ func (e *Engine) CommandWithoutProvider(command, description string, fn HandlerF
 		return fn(nil, c)
 	}
 
-	// the wait command flag is added for making the cli tool v2 backwards compatible
-	flagWait.SkipHelpCommand = true
-	opts.Flags = append(opts.Flags, flagWait)
+	// the wait command flag is added for making the cli tool v2 backwards compatible,
+	// unless the command declares its own, in which case a second one would panic pflag
+	if !hasFlag(opts.Flags, flagWait.Name) {
+		flagWait.SkipHelpCommand = true
+		opts.Flags = append(opts.Flags, flagWait)
+	}
 
 	e.Engine.Command(command, description, wfn, opts)
 }

@@ -110,6 +110,19 @@ func processCreateResources(c kubernetes.Interface, ns, name, labels, cpu, mem s
 	})
 }
 
+func processCreatePhase(c kubernetes.Interface, ns, name, labels, cpu, mem string, phase ac.PodPhase) error {
+	return processCreator(c, ns, name, labels, func(p *ac.Pod) {
+		p.Status = ac.PodStatus{Phase: phase}
+
+		for i := range p.Spec.Containers {
+			p.Spec.Containers[i].Resources.Requests = ac.ResourceList{
+				ac.ResourceCPU:    resource.MustParse(cpu),
+				ac.ResourceMemory: resource.MustParse(mem),
+			}
+		}
+	})
+}
+
 func processCreateGpu(c kubernetes.Interface, ns, name, labels, gpuKey string, gpuCount int) error {
 	return processCreator(c, ns, name, labels, func(p *ac.Pod) {
 		for i := range p.Spec.Containers {
