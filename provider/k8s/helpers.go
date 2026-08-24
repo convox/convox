@@ -180,22 +180,13 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 	return vsu
 }
 
-func (p *Provider) parseTidFromNamespace(ns string) string {
-	ns = strings.TrimPrefix(ns, p.Name+"-")
-	parts := strings.SplitN(ns, "-", 2)
-	if len(parts) == 2 {
-		return parts[0]
+// namespaceTid returns the tenant segment of an app namespace, or "" when it has none.
+func (p *Provider) namespaceTid(ns, app string) string {
+	rest := strings.TrimPrefix(ns, p.Name+"-")
+	if rest == ns || !strings.HasSuffix(rest, "-"+app) {
+		return ""
 	}
-	return ""
-}
-
-func (p *Provider) parseAppFromNamespace(ns string) string {
-	ns = strings.TrimPrefix(ns, p.Name+"-")
-	parts := strings.SplitN(ns, "-", 2)
-	if len(parts) == 2 {
-		return parts[1]
-	}
-	return ns
+	return strings.TrimSuffix(rest, "-"+app)
 }
 
 func nameFilter(name string) string {
