@@ -369,3 +369,31 @@ func TestProcessRun_OrderingWithNodeLabels(t *testing.T) {
 	}
 	require.True(t, found, "user toleration must survive the --node-labels reset")
 }
+
+func TestProcessRun_Retain(t *testing.T) {
+	p, kk := runFlagsProvider(t)
+	pod := runAndGetPod(t, p, kk, "app1", "plain", structs.ProcessRunOptions{
+		Release: options.String("rel1"),
+		Retain:  options.Int(120),
+	})
+	require.Equal(t, "120", pod.Annotations[AnnotationProcessRetain])
+}
+
+func TestProcessRun_RetainUnsetLeavesNoAnnotation(t *testing.T) {
+	p, kk := runFlagsProvider(t)
+	pod := runAndGetPod(t, p, kk, "app1", "plain", structs.ProcessRunOptions{
+		Release: options.String("rel1"),
+	})
+	_, ok := pod.Annotations[AnnotationProcessRetain]
+	require.False(t, ok)
+}
+
+func TestProcessRun_RetainBeatsCollidingAnnotation(t *testing.T) {
+	p, kk := runFlagsProvider(t)
+	pod := runAndGetPod(t, p, kk, "app1", "plain", structs.ProcessRunOptions{
+		Release:     options.String("rel1"),
+		Retain:      options.Int(120),
+		Annotations: options.String(AnnotationProcessRetain + "=99999"),
+	})
+	require.Equal(t, "120", pod.Annotations[AnnotationProcessRetain])
+}

@@ -38,6 +38,11 @@ func (p *Provider) CapacityGet() (*structs.Capacity, error) {
 	}
 
 	for _, p := range ps.Items {
+		// a pod that has exited still carries its requests but reserves nothing
+		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
+			continue
+		}
+
 		c.ProcessCount += 1
 
 		for _, pc := range p.Spec.Containers {

@@ -409,6 +409,12 @@ func (p *Provider) diagnosePods(namespace string, opts structs.AppDiagnoseOption
 			continue
 		}
 
+		// a one-off run that finished is not a service health problem; a failed one
+		// still is, so it stays
+		if pod.Labels["type"] == "process" && pod.Status.Phase == ac.PodSucceeded {
+			continue
+		}
+
 		classification, stateDetail := classifyPod(&pod, ageThreshold)
 
 		switch classification {
