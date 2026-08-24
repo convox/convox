@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/manifest"
@@ -304,13 +305,12 @@ func releasePromoteNodePoolProvider(t *testing.T, badManifestRelease string) *Pr
 	require.NoError(t, err)
 	require.NoError(t, p.Initialize(structs.ProviderOptions{}))
 
-	// A promote that reaches Apply spawns runReleasePromoteWatcher, which polls
-	// until its context is done and holds a package-global watch slot meanwhile.
-	ctx, cancel := context.WithCancel(context.Background())
-	p.ctx = ctx
-	t.Cleanup(cancel)
-
 	createAppNamespace(t, kk, "rack1", "app1")
+	// A promote that reaches Apply spawns a watcher holding a package-global
+	// slot. A terminal app-status plus a short tick retire it immediately
+	// instead of leaving it to poll to its deadline.
+	t.Cleanup(SetReleasePromoteWatchPollIntervalForTest(20 * time.Millisecond))
+	setAppStatus(t, kk, "rack1-app1", "Running")
 	createBuild(t, kc, "rack1-app1", "build1")
 	createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
 	createRelease(t, kc, "rack1-app1", badManifestRelease, manifestWithNodeSelectors)
@@ -358,4 +358,28 @@ func TestReleasePromote_SkipsNodePoolCheckOnForce(t *testing.T) {
 	if err != nil {
 		require.NotContains(t, err.Error(), nodePoolRejection)
 	}
+}
+
+// TestReleasePromote_StartsTheWatcher pins the launch call site: a promote must
+// still start a watcher, and that watcher clears the annotation the promote wrote.
+func TestReleasePromote_StartsTheWatcher(t *testing.T) {
+	p := releasePromoteNodePoolProvider(t, "rel2")
+	kk, ok := p.Cluster.(*fake.Clientset)
+	require.True(t, ok)
+
+	// The watch slot is package-global, so an earlier test's watcher for this
+	// same pair would make the launch a no-op and mask the assertion.
+	require.Eventually(t, func() bool {
+		return !releasePromoteWatchSlotHeldForTest("app1", "rel1")
+	}, 5*time.Second, 10*time.Millisecond, "watch slot still held by an earlier test")
+
+	if err := p.ReleasePromote("app1", "rel1", structs.ReleasePromoteOptions{}); err != nil {
+		require.NotContains(t, err.Error(), nodePoolRejection)
+	}
+
+	require.Eventually(t, func() bool {
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		return err == nil && ns.Annotations[structs.ReleasePromoteWatchAnnotation] == ""
+	}, 3*time.Second, 20*time.Millisecond,
+		"the promote path must start a watcher that resolves and clears its annotation")
 }

@@ -371,15 +371,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	p.FlushStateLog(p.ContextTID(), app)
 
-	// Per-(app, release-id) lock — sync.Map.LoadOrStore is the atomic
-	// check-and-set primitive. If a watcher is already in-flight for
-	// this exact pair, the second promote skips the goroutine launch
-	// (the existing watcher continues; it will see the supersession
-	// via the release annotation mismatch on its next tick).
-	if acquired, release := tryAcquireWatchSlot(app, id); acquired {
-		s := state // own a heap copy so the goroutine doesn't alias
-		go p.runReleasePromoteWatcher(p.ctx, app, &s, release)
-	}
+	p.launchReleasePromoteWatcher(app, &state)
 
 	return nil
 }
