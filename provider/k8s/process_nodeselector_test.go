@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	metricfake "k8s.io/metrics/pkg/client/clientset/versioned/fake"
@@ -62,6 +64,13 @@ func createAppNamespace(t *testing.T, kk *fake.Clientset, rack, app string) {
 			},
 		},
 	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func setAppStatus(t *testing.T, kk *fake.Clientset, ns, status string) {
+	t.Helper()
+	patch := fmt.Sprintf(`{"metadata":{"annotations":{"convox.com/app-status":%q}}}`, status)
+	_, err := kk.CoreV1().Namespaces().Patch(context.TODO(), ns, types.MergePatchType, []byte(patch), am.PatchOptions{})
 	require.NoError(t, err)
 }
 

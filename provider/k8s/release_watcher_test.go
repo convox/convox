@@ -856,8 +856,9 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 		// A's cleanup reads + skips: A's cleanup defer calls
 		// the supersession-aware variant with its own release-id (R1).
 		// It should see R2 in the annotation and SKIP the delete.
-		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R1")
+		removed, err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R1")
 		require.NoError(t, err, "supersession-aware delete must succeed (no-op skip)")
+		assert.False(t, removed, "a superseded cleanup MUST NOT report a removal")
 
 		// Verify: annotation must still hold B's payload.
 		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
@@ -871,8 +872,9 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips(t *testing.T) {
 
 		// When B's own cleanup runs (with releaseID=R2), the
 		// delete proceeds because the stored release-id matches B's.
-		err = k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R2")
+		removed, err = k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(p, context.Background(), app, "R2")
 		require.NoError(t, err, "matching-release cleanup must proceed normally")
+		assert.True(t, removed, "matching-release cleanup MUST report the removal")
 		ns2, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
 			fmt.Sprintf("%s-%s", p.Name, app), am.GetOptions{})
 		assert.Empty(t, ns2.Annotations[structs.ReleasePromoteWatchAnnotation],
@@ -985,9 +987,10 @@ func TestReleasePromoteWatcher_SupersessionAware_CleanupSkips_TOCTOU_PatchTestOp
 func TestDeleteReleasePromoteWatchAnnotationIfMatches_NotFound(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		// Do NOT seed the namespace — Get returns NotFound.
-		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+		removed, err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
 			p, context.Background(), "appNotFound", "R-NF-1")
 		require.NoError(t, err, "namespace-not-found MUST be a silent no-op")
+		assert.False(t, removed, "namespace-not-found MUST NOT report a removal")
 	})
 }
 
@@ -1002,9 +1005,10 @@ func TestDeleteReleasePromoteWatchAnnotationIfMatches_EmptyAnnotation(t *testing
 		// only writes app-status / app-release annotations.
 		seedAppNamespaceWithStatus(t, p, "appEmpty", "Updating", "R-EMPTY-1")
 
-		err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+		removed, err := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
 			p, context.Background(), "appEmpty", "R-EMPTY-1")
 		require.NoError(t, err, "empty annotation MUST be a silent no-op")
+		assert.False(t, removed, "empty annotation MUST NOT report a removal")
 
 		// Confirm seed annotations are untouched.
 		ns, _ := p.Cluster.CoreV1().Namespaces().Get(context.TODO(),
@@ -1036,9 +1040,10 @@ func TestDeleteReleasePromoteWatchAnnotationIfMatches_CorruptJSON(t *testing.T) 
 			fmt.Sprintf("%s-appCorrupt", p.Name), types.MergePatchType, body, am.PatchOptions{})
 		require.NoError(t, err)
 
-		derr := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
+		removed, derr := k8s.DeleteReleasePromoteWatchAnnotationIfMatchesForTest(
 			p, context.Background(), "appCorrupt", "R-CORRUPT-1")
 		require.NoError(t, derr, "corrupt-JSON MUST be a silent no-op (deferred to GC scan)")
+		assert.False(t, removed, "corrupt-JSON MUST NOT report a removal")
 
 		// Confirm the corrupt annotation persists — the supersession-aware
 		// variant does NOT delete corrupt JSON (no payload to attribute).
