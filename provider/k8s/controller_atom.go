@@ -190,8 +190,10 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	}, v1.PatchOptions{})
 	if err != nil {
 		a.logger.Logf("%s", err.Error())
-		a.provider.systemLog(a.provider.parseTidFromNamespace(obj.Namespace),
-			a.provider.parseAppFromNamespace(obj.Namespace), "state", time.Now(), fmt.Sprintf("failed to patch atom dependency: %s", err))
+		if len(obj.Spec.Dependencies) > 0 {
+			rs := parseResourceSubstitutionId(obj.Spec.Dependencies[0])
+			_ = a.provider.systemLog(rs.Tid, rs.App, "state", time.Now(), fmt.Sprintf("failed to patch atom dependency: %s", err))
+		}
 		return
 	}
 }
