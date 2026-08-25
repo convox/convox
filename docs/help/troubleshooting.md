@@ -119,10 +119,10 @@ Error: another operation (install/upgrade/rollback) is in progress
 
 This happens when an earlier apply was killed while Helm was in the middle of an operation, for example an update that was cancelled or interrupted while it was running. The release is left in a pending state (`pending-install`, `pending-upgrade`, or `pending-rollback`) and Helm refuses to operate on it again, so retrying the identical command produces the identical error indefinitely.
 
-**Resolution:** with `convox` `3.25.3` or newer performing the apply, re-run the same command. Convox clears the stranded revision first and prints a `NOTICE` naming the release, its status, and its revision:
+**Resolution:** with `convox` `3.25.3` or newer performing the apply, or `3.25.5` or newer for a Rack reached through a private endpoint host, re-run the same command. Convox clears the stranded revision first and prints a `NOTICE` naming the release, its status, and its revision:
 
 ```text
-NOTICE: clearing stuck Helm release karpenter (pending-upgrade, revision 4) before apply
+NOTICE: cleared stuck Helm release karpenter (pending-upgrade, revision 4) before apply
 ```
 
 Only the pending revision is removed. The revision Helm still considers deployed stays current, and the apply that follows retries the operation.
@@ -130,10 +130,10 @@ Only the pending revision is removed. The revision Helm still considers deployed
 The scope of this recovery is deliberately narrow:
 
 - AWS Racks only. It does not run on GCP, Azure, Digital Ocean, Equinix Metal, or Local Racks.
-- Racks whose Kubernetes API is reached through a private endpoint host are not covered.
+- Racks whose Kubernetes API is reached through a private endpoint host are covered from `3.25.5`. Earlier versions skipped them.
 - Convox-owned releases only, matched on both release name and namespace: `aws-lbc`, `karpenter`, `karpenter-crd`, `keda`, `vpa`, `dcgm-exporter`, `nvidia-device-plugin`, `contour`, and `contour-internal`. Helm releases you installed yourself are never touched, and neither is a release that shares one of those names in a namespace Convox does not own.
 - Only releases that have been stranded for more than fifteen minutes, so an apply that is still working is never interrupted.
-- Only when the `convox` binary running the apply is `3.25.3` or newer. For a self-managed Rack that is the CLI on your machine. For a Console-managed Rack it is the CLI bundled in the Console deploy, which means a Rack version update on its own does not deliver it. See [CLI Rack Management](/management/cli-rack-management) for the full version rule.
+- Only when the `convox` binary running the apply is `3.25.3` or newer, or `3.25.5` or newer for a Rack reached through a private endpoint host. For a self-managed Rack that is the CLI on your machine. For a Console-managed Rack it is the CLI bundled in the Console deploy, which means a Rack version update on its own does not deliver it. See [CLI Rack Management](/management/cli-rack-management) for the full version rule.
 
 If a re-run fails the same way, open a [support ticket](/help/support) with the Rack logs.
 

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -71,7 +72,7 @@ func stuckHelmSecrets(found []helmReleaseSecret, allow map[string]string, now ti
 }
 
 // reconcileStuckHelmReleases clears convox-owned Helm releases stranded in
-// pending-* by an interrupted apply. Best-effort: failures log under CONVOX_DEBUG.
+// pending-* by an interrupted apply. Best-effort: it never fails an apply.
 func (t Terraform) reconcileStuckHelmReleases() {
 	if t.provider != "aws" {
 		return
@@ -81,16 +82,16 @@ func (t Terraform) reconcileStuckHelmReleases() {
 	if err != nil {
 		return
 	}
-	if vars["private_eks_host"] != "" {
-		return
-	}
+
+	// the console job that applies private racks cannot set CONVOX_DEBUG
+	privateEKS := vars["private_eks_host"] != ""
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	cluster := strings.ToLower(t.name)
 
-	client, err := eksClient(ctx, cluster, vars["region"])
+	client, err := eksClient(ctx, cluster, vars)
 	if err != nil {
 		helmReconcileDebug("build eks client for %s: %v", cluster, err)
 		return
@@ -98,6 +99,9 @@ func (t Terraform) reconcileStuckHelmReleases() {
 
 	list, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: "owner=helm"})
 	if err != nil {
+		if privateEKS {
+			fmt.Fprintln(os.Stderr, "NOTICE: skipping stuck Helm release check, could not reach the cluster")
+		}
 		helmReconcileDebug("list helm secrets: %v", err)
 		return
 	}
@@ -119,14 +123,34 @@ func (t Terraform) reconcileStuckHelmReleases() {
 	}
 
 	for _, s := range stuckHelmSecrets(found, convoxHelmReleases(t.name), time.Now(), helmStuckMinAge) {
-		fmt.Fprintf(os.Stderr, "NOTICE: clearing stuck Helm release %s (%s, revision %s) before apply\n", s.release, s.status, s.version)
 		if err := client.CoreV1().Secrets(s.namespace).Delete(ctx, s.secretName, metav1.DeleteOptions{}); err != nil {
+			if privateEKS {
+				fmt.Fprintf(os.Stderr, "NOTICE: could not confirm clearing of stuck Helm release %s (%s, revision %s)\n", s.release, s.status, s.version)
+			}
 			helmReconcileDebug("delete %s/%s: %v", s.namespace, s.secretName, err)
+			continue
 		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: cleared stuck Helm release %s (%s, revision %s) before apply\n", s.release, s.status, s.version)
 	}
 }
 
-func eksClient(ctx context.Context, cluster, region string) (*kubernetes.Clientset, error) {
+func eksClient(ctx context.Context, cluster string, vars map[string]string) (*kubernetes.Clientset, error) {
+	if host := vars["private_eks_host"]; host != "" {
+		// client-go only installs basic auth when Username is set
+		user := common.CoalesceString(vars["private_eks_user"], "convox")
+
+		return kubernetes.NewForConfig(&rest.Config{
+			Host:            host,
+			Username:        user,
+			Password:        vars["private_eks_pass"],
+			TLSClientConfig: rest.TLSClientConfig{Insecure: true},
+			Timeout:         20 * time.Second,
+		})
+	}
+
+	region := vars["region"]
+
 	endpoint, ca, err := eksClusterEndpoint(ctx, cluster, region)
 	if err != nil {
 		return nil, err
