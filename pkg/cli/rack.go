@@ -30,6 +30,7 @@ var providerKnownParams = map[string]map[string]bool{
 	"gcp":   gcpKnownParams,
 	"azure": azureKnownParams,
 	"do":    doKnownParams,
+	"oci":   ociKnownParams,
 	"metal": metalKnownParams,
 	"local": localKnownParams,
 }
@@ -157,6 +158,21 @@ var doKnownParams = map[string]bool{
 	"settings": true, "sync_tf_now": true, "syslog": true, "telemetry": true,
 	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
 	"whitelist": true,
+}
+
+var ociKnownParams = map[string]bool{
+	"cert_duration": true, "compartment_ocid": true,
+	"docker_hub_password": true, "docker_hub_username": true,
+	"fingerprint": true, "fluentd_memory": true,
+	"gpu_node_count": true, "gpu_node_type": true,
+	"high_availability": true, "image": true, "k8s_version": true,
+	"name": true, "node_count": true, "node_disk": true,
+	"node_memory": true, "node_ocpus": true, "node_type": true,
+	"private_key": true, "rack_name": true, "region": true,
+	"release": true, "settings": true, "sync_tf_now": true,
+	"syslog": true, "telemetry": true, "tenancy_ocid": true,
+	"terraform_update_timeout": true, "user_ocid": true,
+	"webhook_signing_key": true, "whitelist": true,
 }
 
 var metalKnownParams = map[string]bool{
@@ -296,6 +312,8 @@ var paramGroups = map[string]map[string]bool{
 		"dcgm_scrape_interval":                  true,
 		"gpu_metrics_max_concurrent":            true,
 		"gpu_metrics_max_pods":                  true,
+		"gpu_node_count":                        true,
+		"gpu_node_type":                         true,
 		"gpu_observability_chart_version":       true,
 		"gpu_observability_enable":              true,
 		"gpu_tag_enable":                        true,
@@ -347,7 +365,12 @@ var paramGroups = map[string]map[string]bool{
 		// v3 native (snake_case)
 		"access_id":                           true,
 		"build_node_minimal_role_enabled":     true, // dual-listed in build
+		"compartment_ocid":                    true,
 		"disable_public_access":               true,
+		"fingerprint":                         true,
+		"private_key":                         true,
+		"tenancy_ocid":                        true,
+		"user_ocid":                           true,
 		"docker_hub_password":                 true,
 		"ebs_volume_encryption_enabled":       true,
 		"ecr_additional_policy_arn":           true,
@@ -415,6 +438,7 @@ var paramGroups = map[string]map[string]bool{
 		"keda_enable":                             true,
 		"max_on_demand_count":                     true,
 		"min_on_demand_count":                     true,
+		"node_count":                              true,
 		"node_max_unavailable_percentage":         true,
 		"pdb_default_min_available_percentage":    true,
 		"schedule_rack_scale_down":                true,
@@ -459,6 +483,8 @@ var paramGroups = map[string]map[string]bool{
 		"node_capacity_type":                   true,
 		"node_disk":                            true,
 		"node_max_unavailable_percentage":      true,
+		"node_memory":                          true,
+		"node_ocpus":                           true,
 		"node_type":                            true,
 		"nvidia_device_plugin_enable":          true,
 		"nvidia_device_time_slicing_replicas":  true,
