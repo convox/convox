@@ -56,18 +56,34 @@ resource "kubernetes_service_account" "lbc" {
 }
 
 
+# One document per file from the chart's crds/crds.yaml, tracking the chart
+# version below. Helm installs CRDs only on a first install. Never deleted:
+# dropping the TargetGroupBinding CRD cascades to every binding in the cluster.
+resource "kubectl_manifest" "lbc_crds" {
+  for_each = fileset("${path.module}/files/lbc-crds", "*.yaml")
+
+  depends_on = [null_resource.wait_eks_addons]
+
+  yaml_body         = file("${path.module}/files/lbc-crds/${each.value}")
+  server_side_apply = true
+  force_conflicts   = true
+  apply_only        = true
+}
+
+
 resource "helm_release" "aws_lbc" {
   depends_on = [
     null_resource.wait_eks_addons,
     aws_iam_role.lbc,
     aws_iam_role_policy.lbc_policy,
     aws_eks_node_group.cluster,
+    kubectl_manifest.lbc_crds,
   ]
 
   name       = "aws-lbc"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-  version    = "1.7.2"
+  version    = "3.5.0"
   namespace  = "kube-system"
   timeout    = 600
 
@@ -93,6 +109,31 @@ resource "helm_release" "aws_lbc" {
 
   set {
     name  = "enableServiceMutatorWebhook"
+    value = "false"
+  }
+
+  # Chart 3.x defaults this to false, which mints a new webhook CA on every
+  # render while the running pod still serves the old one.
+  set {
+    name  = "keepTLSSecret"
+    value = "true"
+  }
+
+  # These default to on, and the controller exits if Gateway setup fails.
+  # Setting them explicitly also pins them: the controller's startup probe
+  # only adjusts gates that were left at their default.
+  set {
+    name  = "controllerConfig.featureGates.NLBGatewayAPI"
+    value = "false"
+  }
+
+  set {
+    name  = "controllerConfig.featureGates.ALBGatewayAPI"
+    value = "false"
+  }
+
+  set {
+    name  = "controllerConfig.featureGates.GatewayListenerSet"
     value = "false"
   }
 
@@ -135,6 +176,13 @@ resource "helm_release" "aws_lbc" {
     content {
       name  = "tolerations[0].effect"
       value = "NoSchedule"
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(fileset("${path.module}/files/lbc-crds", "*.yaml")) > 0
+      error_message = "files/lbc-crds is empty: the controller CRDs must be applied before the chart upgrades."
     }
   }
 }
