@@ -120,10 +120,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		sopts.Tty = false
 	} else {
 		if eo.Stdin {
-			inr, inw := io.Pipe()
-			go io.Copy(inw, rw)
-
-			sopts.Stdin = inr
+			sopts.Stdin = stdinPipe(rw)
 		}
 
 		if opts.Height != nil && opts.Width != nil {
@@ -1369,6 +1366,18 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	}
 
 	return ps, nil
+}
+
+func stdinPipe(r io.Reader) io.Reader {
+	pr, pw := io.Pipe()
+
+	go func() {
+		if _, err := io.Copy(pw, r); err == nil {
+			pw.Close()
+		}
+	}()
+
+	return pr
 }
 
 type terminalSize struct {
