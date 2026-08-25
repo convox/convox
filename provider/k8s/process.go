@@ -110,29 +110,7 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, errors.WithStack(err)
 	}
 
-	sopts := remotecommand.StreamOptions{
-		Stdout: rw,
-		Stderr: rw,
-		Tty:    true,
-	}
-
-	if !eo.Stdin && !eo.TTY {
-		sopts.Tty = false
-	} else {
-		if eo.Stdin {
-			inr, inw := io.Pipe()
-			go io.Copy(inw, rw)
-
-			sopts.Stdin = inr
-		}
-
-		if opts.Height != nil && opts.Width != nil {
-			sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
-		}
-
-	}
-
-	err = e.StreamWithContext(p.ctx, sopts)
+	err = e.StreamWithContext(p.ctx, execStreamOptions(eo, rw, opts))
 	if ee, ok := err.(exec.ExitError); ok {
 		return ee.ExitStatus(), nil
 	}
@@ -1369,6 +1347,30 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	}
 
 	return ps, nil
+}
+
+func execStreamOptions(eo *ac.PodExecOptions, rw io.ReadWriter, opts structs.ProcessExecOptions) remotecommand.StreamOptions {
+	sopts := remotecommand.StreamOptions{
+		Stdout: rw,
+		Stderr: rw,
+		Tty:    eo.TTY,
+	}
+
+	if eo.Stdin {
+		inr, inw := io.Pipe()
+
+		go func() {
+			_, _ = io.Copy(inw, rw)
+		}()
+
+		sopts.Stdin = inr
+	}
+
+	if opts.Height != nil && opts.Width != nil {
+		sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
+	}
+
+	return sopts
 }
 
 type terminalSize struct {
