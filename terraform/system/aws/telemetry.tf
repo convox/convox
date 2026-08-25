@@ -8,6 +8,7 @@ locals {
     additional_karpenter_nodepools_config     = var.additional_karpenter_nodepools_config
     additional_node_groups_config             = var.additional_node_groups_config
     api_feature_gates                         = var.api_feature_gates
+    app_cloudwatch_disable                    = var.app_cloudwatch_disable
     availability_zones                        = var.availability_zones
     aws_ebs_csi_driver_version                = var.aws_ebs_csi_driver_version
     build_disable_convox_resolver             = var.build_disable_convox_resolver
@@ -166,6 +167,7 @@ locals {
     additional_karpenter_nodepools_config     = ""
     additional_node_groups_config             = ""
     api_feature_gates                         = ""
+    app_cloudwatch_disable                    = "false"
     availability_zones                        = ""
     aws_ebs_csi_driver_version                = "v1.62.0-eksbuild.1"
     build_disable_convox_resolver             = "false"

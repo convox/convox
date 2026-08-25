@@ -784,6 +784,7 @@ func TestAdditionalNodeGroupsConfigTpuValidation(t *testing.T) {
 func TestValidateAndMutateParams_CloudwatchDisableWarnings(t *testing.T) {
 	const warnA = "cloudwatch_disable stops Convox"
 	const warnB = "disabling fluentd stops application logs"
+	const warnC = "cloudwatch_disable also covers the rack system log group"
 
 	cases := []struct {
 		name         string
@@ -837,6 +838,43 @@ func TestValidateAndMutateParams_CloudwatchDisableWarnings(t *testing.T) {
 			params:     map[string]string{"cost_tracking_enable": "true"},
 			wantAbsent: []string{warnA, warnB},
 		},
+		{
+			name:         "C fires: app_cloudwatch_disable=true while cloudwatch already disabled",
+			params:       map[string]string{"app_cloudwatch_disable": "true"},
+			current:      map[string]string{"cloudwatch_disable": "true"},
+			wantContains: []string{warnC},
+			wantAbsent:   []string{warnA, warnB},
+		},
+		{
+			name:       "C absent when cloudwatch enabled",
+			params:     map[string]string{"app_cloudwatch_disable": "true"},
+			wantAbsent: []string{warnA, warnB, warnC},
+		},
+		{
+			name:         "C fires the other way: cloudwatch_disable=true while app_cloudwatch_disable already set",
+			params:       map[string]string{"cloudwatch_disable": "true"},
+			current:      map[string]string{"app_cloudwatch_disable": "true"},
+			wantContains: []string{warnC},
+			wantAbsent:   []string{warnA, warnB},
+		},
+		{
+			name:         "C fires when both are set in one call",
+			params:       map[string]string{"app_cloudwatch_disable": "true", "cloudwatch_disable": "true"},
+			wantContains: []string{warnC},
+			wantAbsent:   []string{warnA, warnB},
+		},
+		{
+			name:       "B suppressed when app_cloudwatch_disable already set",
+			params:     map[string]string{"fluentd_disable": "true"},
+			current:    map[string]string{"app_cloudwatch_disable": "true"},
+			wantAbsent: []string{warnA, warnB, warnC},
+		},
+		{
+			name:       "no warning on unrelated param set with both already disabled",
+			params:     map[string]string{"cost_tracking_enable": "true"},
+			current:    map[string]string{"cloudwatch_disable": "true", "app_cloudwatch_disable": "true"},
+			wantAbsent: []string{warnA, warnB, warnC},
+		},
 	}
 
 	for _, tc := range cases {
@@ -865,15 +903,17 @@ func TestValidateAndMutateParams_CloudwatchDisableWarnings(t *testing.T) {
 }
 
 func TestValidateAndMutateParams_CloudwatchDisableBoolValidation(t *testing.T) {
-	captureStderr(t, func() {
-		for _, v := range []string{"true", "false", "1", "0", "t", "F"} {
-			if err := validateAndMutateParams(map[string]string{"cloudwatch_disable": v}, "aws", map[string]string{}, false); err != nil {
-				t.Errorf("cloudwatch_disable=%q: unexpected error: %v", v, err)
+	for _, param := range []string{"cloudwatch_disable", "app_cloudwatch_disable"} {
+		captureStderr(t, func() {
+			for _, v := range []string{"true", "false", "1", "0", "t", "F"} {
+				if err := validateAndMutateParams(map[string]string{param: v}, "aws", map[string]string{}, false); err != nil {
+					t.Errorf("%s=%q: unexpected error: %v", param, v, err)
+				}
 			}
+		})
+		if err := validateAndMutateParams(map[string]string{param: "maybe"}, "aws", map[string]string{}, false); err == nil {
+			t.Errorf("%s=maybe: expected error, got nil", param)
 		}
-	})
-	if err := validateAndMutateParams(map[string]string{"cloudwatch_disable": "maybe"}, "aws", map[string]string{}, false); err == nil {
-		t.Error("cloudwatch_disable=maybe: expected error, got nil")
 	}
 }
 

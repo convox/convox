@@ -122,6 +122,11 @@ variable "ecr_docker_hub_cache" {
   default = false
 }
 
+variable "app_cloudwatch_disable" {
+  type    = bool
+  default = false
+}
+
 variable "cloudwatch_disable" {
   type    = bool
   default = false

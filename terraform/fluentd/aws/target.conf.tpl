@@ -39,7 +39,7 @@
       </store>
     </match>
 
-	<match **>
+	<match ${app_cloudwatch_disable ? "rack.*.app.system.**" : "**"}>
 		@type copy
 
 		<store>
@@ -73,4 +73,26 @@
 			</store>
 		%{ endfor ~}
 	</match>
+%{ if app_cloudwatch_disable ~}
+
+	<match **>
+%{ if length(syslog) > 0 ~}
+		@type copy
+
+%{ for endpoint in syslog ~}
+		<store>
+			@type syslog
+			url ${endpoint}
+			facility user
+			severity info
+			hostname_key hostname
+			tag_key program
+			payload_key log
+		</store>
+%{ endfor ~}
+%{ else ~}
+		@type null
+%{ endif ~}
+	</match>
+%{ endif ~}
 </label>

@@ -98,6 +98,11 @@ variable "ecr_scan_on_push_enable" {
   default = false
 }
 
+variable "app_cloudwatch_disable" {
+  type    = bool
+  default = false
+}
+
 variable "cloudwatch_disable" {
   type    = bool
   default = false
