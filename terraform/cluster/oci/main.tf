@@ -8,9 +8,11 @@ data "oci_containerengine_cluster_option" "rack" {
 }
 
 locals {
-  # oke reports full versions (v1.35.1) but var.k8s_version is major.minor like the other clouds
-  k8s_versions = [for v in data.oci_containerengine_cluster_option.rack.kubernetes_versions : v if length(regexall("^v${var.k8s_version}\\.", v)) > 0]
-  k8s_version  = element(sort(local.k8s_versions), length(local.k8s_versions) - 1)
+  # oke reports full versions (v1.35.1) but var.k8s_version is major.minor like the
+  # other clouds. the patch is compared numerically because sort() would put .10
+  # before .9
+  k8s_patches = [for v in data.oci_containerengine_cluster_option.rack.kubernetes_versions : tonumber(split(".", v)[2]) if length(regexall("^v${var.k8s_version}\\.", v)) > 0]
+  k8s_version = "v${var.k8s_version}.${max(local.k8s_patches...)}"
 }
 
 resource "oci_containerengine_cluster" "rack" {
@@ -36,10 +38,11 @@ data "oci_containerengine_node_pool_option" "rack" {
 }
 
 locals {
-  # oke image names look like Oracle-Linux-8.10-2025.01.31-0-OKE-1.35.1-754, so the
-  # highest sorting name is the newest. "GPU" variants ship the nvidia drivers,
-  # "aarch64" ones are arm.
-  node_images      = { for s in data.oci_containerengine_node_pool_option.rack.sources : s.source_name => s.image_id if s.source_type == "IMAGE" }
+  # oke image names look like Oracle-Linux-8.10-2025.01.31-0-OKE-1.35.1-754. only
+  # images built for the chosen kubernetes version are considered, then the highest
+  # sorting name is the newest since the date is zero padded. "GPU" variants ship
+  # the nvidia drivers, "aarch64" ones are arm.
+  node_images      = { for s in data.oci_containerengine_node_pool_option.rack.sources : s.source_name => s.image_id if s.source_type == "IMAGE" && length(regexall("OKE-${trimprefix(local.k8s_version, "v")}-", s.source_name)) > 0 }
   node_image_names = [for n in keys(local.node_images) : n if length(regexall("GPU|aarch64", n)) == 0]
   gpu_image_names  = [for n in keys(local.node_images) : n if length(regexall("GPU", n)) > 0]
   node_image_id    = local.node_images[element(sort(local.node_image_names), length(local.node_image_names) - 1)]
