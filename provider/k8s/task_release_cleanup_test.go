@@ -119,7 +119,7 @@ func (m *MockEngine) SystemStatus() (string, error) {
 func createReleaseCleaner(
 	provider providerForReleaseCleaner,
 	engine Engine,
-	convox cvfake.Clientset,
+	convox *cvfake.Clientset,
 	cluster *fake.Clientset,
 	systemNamespace string,
 	releasesToRetainAfterActive int,
@@ -129,7 +129,7 @@ func createReleaseCleaner(
 	return &releaseCleaner{
 		provider:                    provider,
 		engine:                      engine,
-		convox:                      &convox,
+		convox:                      convox,
 		logger:                      log,
 		cluster:                     cluster,
 		systemNamespace:             systemNamespace,
@@ -232,7 +232,7 @@ func TestWaitUntilScheduledForCleanup(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create the cleaner
-			cleaner := createReleaseCleaner(provider, engine, *convox, cluster, systemNamespace, 3)
+			cleaner := createReleaseCleaner(provider, engine, convox, cluster, systemNamespace, 3)
 
 			// Override the context with a canceled one to avoid long sleeps in tests
 			cancelCtx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -387,7 +387,7 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 			}
 
 			// Create the cleaner
-			cleaner := createReleaseCleaner(mockProvider, mockEngine, *convox, cluster, "test-namespace", tc.releasesToRetainAfterActive)
+			cleaner := createReleaseCleaner(mockProvider, mockEngine, convox, cluster, "test-namespace", tc.releasesToRetainAfterActive)
 
 			// Call the method
 			err := cleaner.appReleaseAndBuildCleanup(&tc.app)
