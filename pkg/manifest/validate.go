@@ -70,6 +70,43 @@ func (m *Manifest) validateBalancers() []error {
 				errs = append(errs, fmt.Errorf("balancer %s whitelist %s is not a valid cidr range", b.Name, w))
 			}
 		}
+
+		for _, a := range b.Annotations {
+			if !strings.Contains(a, "=") {
+				errs = append(errs, fmt.Errorf("balancer %s annotation %s must be in key=value format", b.Name, a))
+			}
+		}
+
+		seen := map[int]bool{}
+		tcp := false
+		udp := false
+
+		for _, p := range b.Ports {
+			switch p.Protocol {
+			case "UDP":
+				udp = true
+			case "", "TCP":
+				tcp = true
+			default:
+				errs = append(errs, fmt.Errorf("balancer %s port %d has unsupported protocol %s", b.Name, p.Source, p.Protocol))
+			}
+
+			if b.AwsLoadBalancerController && seen[p.Source] {
+				errs = append(errs, fmt.Errorf("balancer %s declares port %d more than once, TCP and UDP on the same port number is not supported", b.Name, p.Source))
+			}
+
+			seen[p.Source] = true
+		}
+
+		if b.AwsLoadBalancerController && udp && !tcp {
+			annotations := b.AnnotationsMap()
+			_, hasPort := annotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-port"]
+			_, hasProtocol := annotations["service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol"]
+
+			if !hasPort && !hasProtocol {
+				errs = append(errs, fmt.Errorf("balancer %s has UDP ports and no TCP port, set service.beta.kubernetes.io/aws-load-balancer-healthcheck-port in annotations", b.Name))
+			}
+		}
 	}
 
 	return errs
