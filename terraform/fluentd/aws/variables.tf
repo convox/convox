@@ -7,6 +7,11 @@ variable "cluster" {
   type = string
 }
 
+variable "app_cloudwatch_disable" {
+  type    = bool
+  default = false
+}
+
 variable "fluentd_disable" {
   type    = bool
   default = false

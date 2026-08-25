@@ -24,10 +24,11 @@ module "k8s" {
   rack      = var.rack
 
   target = templatefile("${path.module}/target.conf.tpl", {
-    access_log_retention = var.access_log_retention_in_days,
-    rack                 = var.rack,
-    region               = data.aws_region.current.name,
-    syslog               = compact(split(",", var.syslog))
+    access_log_retention   = var.access_log_retention_in_days,
+    app_cloudwatch_disable = var.app_cloudwatch_disable,
+    rack                   = var.rack,
+    region                 = data.aws_region.current.name,
+    syslog                 = compact(split(",", var.syslog))
   })
 
   annotations = {

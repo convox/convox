@@ -37,7 +37,7 @@ var providerKnownParams = map[string]map[string]bool{
 var awsKnownParams = map[string]bool{
 	"access_log_retention_in_days": true, "additional_build_groups_config": true,
 	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
-	"api_feature_gates": true, "availability_zones": true,
+	"api_feature_gates": true, "app_cloudwatch_disable": true, "availability_zones": true,
 	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
 	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
@@ -186,6 +186,7 @@ var managedParams = map[string]bool{
 // boolParams lists type=bool TF variables that require ParseBool validation.
 // Maintain in sync with terraform/{system,rack}/<provider>/variables.tf.
 var boolParams = map[string]bool{
+	"app_cloudwatch_disable":          true,
 	"azure_files_enable":              true,
 	"build_disable_convox_resolver":   true,
 	"build_node_enabled":              true,
@@ -541,6 +542,7 @@ var paramGroups = map[string]map[string]bool{
 	"logging": {
 		// v3 native (snake_case)
 		"access_log_retention_in_days":    true,
+		"app_cloudwatch_disable":          true,
 		"cloudwatch_disable":              true,
 		"cost_tracking_enable":            true,
 		"eks_log_types":                   true,
@@ -2022,11 +2024,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if effectiveCloudwatch == "" {
 			effectiveCloudwatch = currentParams["cloudwatch_disable"]
 		}
-		if params["cloudwatch_disable"] == "true" && effectiveFluentd != "true" {
+		effectiveAppCloudwatch := params["app_cloudwatch_disable"]
+		if effectiveAppCloudwatch == "" {
+			effectiveAppCloudwatch = currentParams["app_cloudwatch_disable"]
+		}
+		if params["cloudwatch_disable"] == "true" && effectiveFluentd != "true" && effectiveAppCloudwatch != "true" {
 			fmt.Fprintf(os.Stderr, "WARNING: cloudwatch_disable stops Convox rack-side CloudWatch writes and makes 'convox logs' return empty, but fluentd is still enabled and will keep shipping application logs to CloudWatch and creating /convox/<rack>/<app> groups. To stop CloudWatch entirely, also set fluentd_disable=true.\n")
 		}
-		if params["fluentd_disable"] == "true" && effectiveCloudwatch != "true" {
-			fmt.Fprintf(os.Stderr, "WARNING: disabling fluentd stops application logs, but the rack still creates an empty CloudWatch log group per app (/convox/<rack>/<app>). Set cloudwatch_disable=true to prevent them.\n")
+		if params["fluentd_disable"] == "true" && effectiveCloudwatch != "true" && effectiveAppCloudwatch != "true" {
+			fmt.Fprintf(os.Stderr, "WARNING: disabling fluentd stops application logs, but the rack still creates an empty CloudWatch log group per app (/convox/<rack>/<app>). Set app_cloudwatch_disable=true to prevent them while keeping 'convox rack logs', or cloudwatch_disable=true to stop all rack CloudWatch.\n")
+		}
+		if (params["app_cloudwatch_disable"] == "true" && effectiveCloudwatch == "true") ||
+			(params["cloudwatch_disable"] == "true" && effectiveAppCloudwatch == "true") {
+			fmt.Fprintf(os.Stderr, "WARNING: cloudwatch_disable also covers the rack system log group, so 'convox rack logs' stays empty while it is set. Set cloudwatch_disable=false to get the rack view back.\n")
 		}
 	}
 

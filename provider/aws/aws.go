@@ -38,6 +38,7 @@ type Provider struct {
 	EcrScanOnPushEnable     bool
 	EcrImmutableTagsEnabled bool
 	CloudwatchDisable       bool
+	AppCloudwatchDisable    bool
 
 	Ec2 *ec2.EC2
 
@@ -74,6 +75,7 @@ func FromEnv() (*Provider, error) {
 		EcrScanOnPushEnable:     ecrScanOnPushEnable,
 		EcrImmutableTagsEnabled: ecrImmutableTagsEnabled,
 		CloudwatchDisable:       os.Getenv("CLOUDWATCH_DISABLE") == "true",
+		AppCloudwatchDisable:    os.Getenv("APP_CLOUDWATCH_DISABLE") == "true",
 	}
 
 	k.Engine = p
