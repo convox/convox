@@ -36,6 +36,11 @@ import (
 
 const (
 	APP_CONFIG_KEY = "app.json"
+
+	balancerTypeAnnotation = "service.beta.kubernetes.io/aws-load-balancer-type"
+	balancerTypeExternal   = "external"
+	balancerTypeNlb        = "nlb"
+	balancerTypeNlbIp      = "nlb-ip"
 )
 
 func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*structs.Release, error) {
@@ -156,7 +161,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		if err := p.validateBalancerOwnership(app, m.Balancers); err != nil {
+			return errors.WithStack(err)
+		}
+
 		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
+
 		if a.Release != "" && a.Release != id {
 			current, _, err := common.ReleaseManifest(p, app, a.Release)
 			if err != nil {
@@ -519,12 +529,20 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 	if p.FeatureGates[options.FeatureGateBalancerDisable] {
 		return nil, structs.ErrBadRequest("balancer resource is disabled")
 	}
+	if b.AwsLoadBalancerController && p.Provider != "aws" {
+		return nil, structs.ErrBadRequest("balancer %s: awsLoadBalancerController is only supported on AWS racks", b.Name)
+	}
+
+	annotations := b.AnnotationsMap()
+
 	params := map[string]interface{}{
-		"Annotations": b.AnnotationsMap(),
-		"Balancer":    b,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Release":     r,
-		"Labels":      lbs,
+		"Annotations":     annotations,
+		"Balancer":        b,
+		"HealthCheckPort": balancerHealthCheckPort(b.Ports),
+		"Namespace":       p.AppNamespace(a.Name),
+		"Release":         r,
+		"Labels":          lbs,
+		"Scheme":          balancerScheme(annotations),
 	}
 
 	data, err := p.RenderTemplate("app/balancer", params)
@@ -533,6 +551,78 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 	}
 
 	return data, nil
+}
+
+func balancerHealthCheckPort(ports manifest.BalancerPorts) int {
+	target := 0
+	udp := false
+
+	for _, p := range ports {
+		if p.Protocol == "UDP" {
+			udp = true
+			continue
+		}
+
+		if target == 0 {
+			target = p.Target
+		}
+	}
+
+	if !udp {
+		return 0
+	}
+
+	return target
+}
+
+func balancerScheme(annotations map[string]string) string {
+	if _, ok := annotations["service.beta.kubernetes.io/aws-load-balancer-internal"]; ok {
+		return ""
+	}
+
+	return "internet-facing"
+}
+
+func (p *Provider) validateBalancerOwnership(app string, bs manifest.Balancers) error {
+	if p.Provider != "aws" {
+		return nil
+	}
+
+	for _, b := range bs {
+		desired := balancerTypeNlb
+
+		if b.AwsLoadBalancerController {
+			desired = balancerTypeExternal
+		}
+
+		if t, ok := b.AnnotationsMap()[balancerTypeAnnotation]; ok {
+			desired = t
+		}
+
+		if !balancerControllerOwned(desired) {
+			continue
+		}
+
+		s, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).Get(context.TODO(), fmt.Sprintf("balancer-%s", b.Name), am.GetOptions{})
+		if kerr.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if balancerControllerOwned(s.Annotations[balancerTypeAnnotation]) || len(s.Status.LoadBalancer.Ingress) == 0 {
+			continue
+		}
+
+		return structs.ErrBadRequest("balancer %s cannot be switched to the AWS Load Balancer Controller in place, because the existing load balancer would be left running in your AWS account. Add a new balancer with awsLoadBalancerController: true, move traffic to it, then remove this one", b.Name)
+	}
+
+	return nil
+}
+
+func balancerControllerOwned(t string) bool {
+	return t == balancerTypeExternal || t == balancerTypeNlbIp
 }
 
 func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, error) {

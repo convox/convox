@@ -4,8 +4,20 @@ metadata:
   namespace: {{.Namespace}}
   name: balancer-{{.Balancer.Name}}
   annotations:
+    {{ if .Balancer.AwsLoadBalancerController }}
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    {{ with .Scheme }}
+    service.beta.kubernetes.io/aws-load-balancer-scheme: {{.}}
+    {{ end }}
+    {{ with .HealthCheckPort }}
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: tcp
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: "{{.}}"
+    {{ end }}
+    {{ else }}
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    {{ end }}
     {{ range keyValue .Annotations }}
     {{.Key}}: "{{ quoteEscape .Value}}"
     {{ end }}

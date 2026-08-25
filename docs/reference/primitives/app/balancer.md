@@ -32,6 +32,7 @@ services:
 | Name           | Required | Description                                                                                                    |
 | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | **annotations**| no       | A list of annotation keys and values to populate the metadata for the deployed balancer                        |
+| **awsLoadBalancerController** | no | Provision this balancer through the AWS Load Balancer Controller, which allows TCP and UDP ports on the same balancer. AWS racks only, and it cannot be enabled on a balancer that already has a load balancer. See [Load Balancers](/configuration/load-balancers) |
 | **ports**      | **yes**  | A map of ports in the format **listen:forward** where **listen** is the port that the balancer will listen on and **forward** is the port that the traffic will be forwarded to on the [Service](/reference/primitives/app/service) |
 | **service**    | **yes**  | The name of the service that will receive the traffic                                                           |
 | **whitelist**  | no       | A list of CIDR ranges from which to limit inbound traffic to this balancer                                      |
@@ -100,7 +101,7 @@ services:
 
 ### Important Notes
 
-- A custom balancer can only be configured with multiple TCP or multiple UDP ports and redirects, but you cannot have both TCP and UDP on the same balancer.
+- A custom balancer can only be configured with multiple TCP or multiple UDP ports and redirects. To mix TCP and UDP ports on one balancer, set `awsLoadBalancerController: true` on it. Even then, a single port number cannot serve both TCP and UDP.
 - Ports configured using `ports:` will never be publicly accessible; all connections must go through the load balancer, which is internet-facing.
 
 ### Difference Between `port` and `ports`

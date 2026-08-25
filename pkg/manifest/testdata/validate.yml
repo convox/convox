@@ -5,6 +5,29 @@ balancers:
     ports:
       3000: 3001
     service: nosuch
+  charlie:
+    annotations:
+      - noequalssign
+    ports:
+      3000:
+        protocol: sctp
+        port: 3001
+    service: serviceF
+  delta:
+    awsLoadBalancerController: true
+    ports:
+      6000:
+        protocol: udp
+        port: 6001
+    service: serviceF
+  echo:
+    awsLoadBalancerController: true
+    ports:
+      53: 5300
+      53:
+        protocol: UDP
+        port: 5300
+    service: serviceF
 resources:
   1resource:
     type: postgres
