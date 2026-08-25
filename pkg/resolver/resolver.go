@@ -235,6 +235,7 @@ func (r *Resolver) setupRouter() error {
 		fmt.Printf("ns=resolver fn=setupRouter using ROUTER_IP_OVERRIDE=%s\n", override)
 		r.routerInternal = override
 		r.routerExternal = override
+		r.routerExternalClusterIP = override
 		return nil
 	}
 
