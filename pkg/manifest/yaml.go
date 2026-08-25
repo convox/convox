@@ -69,7 +69,7 @@ func (v *BalancerPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err := remarshal(w, &bp); err != nil {
 			return err
 		}
-		v.Protocol = bp.Protocol
+		v.Protocol = strings.ToUpper(bp.Protocol)
 		v.Target = bp.Target
 	case int:
 		v.Protocol = "TCP"
