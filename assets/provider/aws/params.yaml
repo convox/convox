@@ -496,6 +496,10 @@ Groups:
         default: "false"
         type: boolean
         description: "Stops shipping your logs to CloudWatch. &l Enable this if you use another logging service. &l"
+      - name: app_cloudwatch_disable
+        default: "false"
+        type: boolean
+        description: "Stops CloudWatch log groups for your apps, one per app, while keeping the rack's own log group so rack logs stay visible. &l Turn this on if you route app logs elsewhere and still want the rack view. &l &l Note: convox logs returns empty for an app while this is on, and Kubernetes event and deploy state lines for apps stop being recorded. Use convox logs --service to read a service directly. &l &l If &i cloudwatch_disable &i is also on, it covers the rack log group too and rack logs stay hidden until you turn it off. &l"
       - name: cloudwatch_disable
         default: "false"
         type: boolean

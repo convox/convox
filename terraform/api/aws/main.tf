@@ -66,6 +66,7 @@ module "k8s" {
     SOCKET                                    = "/var/run/docker.sock"
     ECR_IMMUTABLE_TAGS_ENABLED                = var.ecr_immutable_tags_enabled
     ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
+    APP_CLOUDWATCH_DISABLE                    = var.app_cloudwatch_disable
     CLOUDWATCH_DISABLE                        = var.cloudwatch_disable
     SUBNET_IDS                                = join(",", var.subnets)
     VPC_ID                                    = var.vpc_id

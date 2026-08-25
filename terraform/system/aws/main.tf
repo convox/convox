@@ -249,6 +249,7 @@ module "fluentd" {
   ]
 
   access_log_retention_in_days = var.access_log_retention_in_days
+  app_cloudwatch_disable       = var.app_cloudwatch_disable
   cluster                      = module.cluster.id
   eks_addons                   = module.cluster.eks_addons
   fluentd_disable              = var.fluentd_disable
@@ -332,6 +333,7 @@ module "rack" {
   ecr_full_access                           = var.ecr_full_access
   ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  app_cloudwatch_disable                    = var.app_cloudwatch_disable
   cloudwatch_disable                        = var.cloudwatch_disable
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
