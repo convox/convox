@@ -1307,6 +1307,90 @@ func TestValidateAndMutateParams_KarpenterConfigMoreProtectedFields(t *testing.T
 			},
 			false, "",
 		},
+		{
+			"ec2NodeClass.amiFamily without amiSelectorTerms",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{"amiFamily": "AL2023"},
+			},
+			true, "amiFamily requires ec2NodeClass.amiSelectorTerms",
+		},
+		{
+			"ec2NodeClass.amiFamily not a valid family",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "Ubuntu",
+					"amiSelectorTerms": []interface{}{map[string]interface{}{"id": "ami-0123456789abcdef0"}},
+				},
+			},
+			true, "is not a valid AMI family",
+		},
+		{
+			"ec2NodeClass.amiFamily not a string",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{"amiFamily": 2023},
+			},
+			true, "ec2NodeClass.amiFamily must be a string",
+		},
+		{
+			"ec2NodeClass.amiFamily with empty amiSelectorTerms",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "AL2023",
+					"amiSelectorTerms": []interface{}{},
+				},
+			},
+			true, "amiSelectorTerms must not be empty",
+		},
+		{
+			"ec2NodeClass.amiFamily with non-array amiSelectorTerms",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "AL2023",
+					"amiSelectorTerms": "al2023@latest",
+				},
+			},
+			true, "amiSelectorTerms must be a JSON array",
+		},
+		{
+			"ec2NodeClass.amiFamily Custom without userData",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "Custom",
+					"amiSelectorTerms": []interface{}{map[string]interface{}{"id": "ami-0123456789abcdef0"}},
+				},
+			},
+			true, "requires ec2NodeClass.userData",
+		},
+		{
+			"ec2NodeClass.amiFamily Custom with userData passes",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "Custom",
+					"amiSelectorTerms": []interface{}{map[string]interface{}{"id": "ami-0123456789abcdef0"}},
+					"userData":         "#!/bin/bash\ntrue",
+				},
+			},
+			false, "",
+		},
+		{
+			"ec2NodeClass.amiFamily with id amiSelectorTerms passes",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiFamily":        "AL2023",
+					"amiSelectorTerms": []interface{}{map[string]interface{}{"id": "ami-0123456789abcdef0"}},
+				},
+			},
+			false, "",
+		},
+		{
+			"ec2NodeClass.amiSelectorTerms alone still passes",
+			map[string]interface{}{
+				"ec2NodeClass": map[string]interface{}{
+					"amiSelectorTerms": []interface{}{map[string]interface{}{"alias": "al2023@latest"}},
+				},
+			},
+			false, "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1379,6 +1463,8 @@ func TestValidateAndMutateParams_AdditionalKarpenterNodepoolsConfig(t *testing.T
 		{"reserved name system", `[{"name":"system"}]`, true, "reserved"},
 		{"invalid JSON", `[not json]`, true, "invalid karpenter nodepools config"},
 		{"invalid pool field", `[{"name":"gpu","cpu_limit":-1}]`, true, "cpu_limit"},
+		{"valid ami_id", `[{"name":"gpu","ami_id":"ami-0123456789abcdef0"}]`, false, ""},
+		{"invalid ami_id", `[{"name":"gpu","ami_id":"ami-nope"}]`, true, "invalid ami_id"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1589,6 +1675,15 @@ func TestKarpenterNodePoolConfigParam_PoolFields(t *testing.T) {
 		{"labels: reserved convox.io/nodepool", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("convox.io/nodepool=custom")}, true, "Convox-reserved label"},
 		{"labels: reserved among others", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("ok=fine,convox.io/nodepool=x")}, true, "Convox-reserved label"},
 		{"labels: non-reserved ok", KarpenterNodePoolConfigParam{Name: "test", Labels: strPtr("team=backend,env=prod")}, false, ""},
+
+		// AmiID
+		{"ami_id: valid 8 hex", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("ami-0123abcd")}, false, ""},
+		{"ami_id: valid 17 hex", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("ami-0123456789abcdef0")}, false, ""},
+		{"ami_id: missing prefix", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("0123456789abcdef0")}, true, "invalid ami_id"},
+		{"ami_id: non-hex character", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("ami-0123456789abcdefz")}, true, "invalid ami_id"},
+		{"ami_id: uppercase hex", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("ami-0123ABCD")}, true, "invalid ami_id"},
+		{"ami_id: length between 8 and 17", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("ami-0123456789ab")}, true, "invalid ami_id"},
+		{"ami_id: empty", KarpenterNodePoolConfigParam{Name: "test", AmiID: strPtr("")}, true, "invalid ami_id"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2306,6 +2401,58 @@ func TestKarpenterNodePoolConfigParam_DedicatedJSONRoundtrip(t *testing.T) {
 			} else {
 				if !strings.Contains(string(data), `"dedicated":`+tt.wantJSON) {
 					t.Errorf("expected JSON to contain dedicated:%s, got: %s", tt.wantJSON, data)
+				}
+			}
+		})
+	}
+}
+
+func TestKarpenterNodePoolConfigParam_AmiIDJSONRoundtrip(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantAmiID string
+	}{
+		{"ami_id roundtrips", `[{"name":"gpu","ami_id":"ami-0123456789abcdef0"}]`, "ami-0123456789abcdef0"},
+		{"ami_id absent stays nil", `[{"name":"gpu"}]`, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var npCfgs KarpenterNodePools
+			if err := json.Unmarshal([]byte(tt.input), &npCfgs); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			if len(npCfgs) != 1 {
+				t.Fatalf("expected 1 pool, got %d", len(npCfgs))
+			}
+
+			got := npCfgs[0].AmiID
+			if tt.wantAmiID == "" {
+				if got != nil {
+					t.Errorf("expected nil AmiID, got %v", *got)
+				}
+			} else {
+				if got == nil {
+					t.Fatalf("expected AmiID=%s, got nil", tt.wantAmiID)
+				}
+				if *got != tt.wantAmiID {
+					t.Errorf("expected AmiID=%s, got %s", tt.wantAmiID, *got)
+				}
+			}
+
+			data, err := json.Marshal(npCfgs)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+
+			if tt.wantAmiID == "" {
+				if strings.Contains(string(data), `"ami_id"`) {
+					t.Errorf("nil ami_id should be omitted from JSON, got: %s", data)
+				}
+			} else {
+				if !strings.Contains(string(data), `"ami_id":"`+tt.wantAmiID+`"`) {
+					t.Errorf("expected JSON to contain ami_id:%s, got: %s", tt.wantAmiID, data)
 				}
 			}
 		})
