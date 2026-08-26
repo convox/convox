@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const nlbSecurityGroupInertWarning = "WARNING: nlb_security_group is set but is not being applied to this rack's primary router load balancer. That load balancer is not managed by the AWS Load Balancer Controller, so the security group has no effect on it. Attaching one requires replacing the load balancer, so contact Convox support to plan that change. To restrict inbound access to the router now, set the whitelist rack parameter instead.\n"
+const nlbSecurityGroupInertWarning = "WARNING: nlb_security_group is set but is not being applied to this rack's primary router load balancer. That load balancer is not managed by the AWS Load Balancer Controller, so the security group has no effect on it. Attaching one requires replacing the load balancer, so contact Convox support to plan that change.\n"
 
 func (t Terraform) inertNLBSecurityGroupWarning() string {
 	if t.provider != "aws" {
