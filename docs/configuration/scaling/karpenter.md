@@ -272,6 +272,7 @@ Individual `karpenter_*` parameters build the defaults. `karpenter_config` overr
 | `ec2NodeClass.associatePublicIPAddress` | Associate public IP with Karpenter nodes |
 | `ec2NodeClass.instanceStorePolicy` | Instance store disk policy (e.g., `RAID0`) |
 | `ec2NodeClass.amiSelectorTerms` | Custom AMI selection. The default follows [`karpenter_node_os`](/configuration/rack-parameters/aws/karpenter_node_os): `al2023@latest` or `bottlerocket@latest`. An explicit `amiSelectorTerms` overrides it. |
+| `ec2NodeClass.amiFamily` | AMI family, which decides the generated userData format. Required by Karpenter whenever `amiSelectorTerms` does not use an `alias`, and only accepted alongside `amiSelectorTerms`. One of `AL2`, `AL2023`, `Bottlerocket`, `Custom`, `Windows2019`, `Windows2022`, `Windows2025`. Set next to an `alias`, it must match that alias's family or be `Custom`. `Custom` generates no userData at all, so it also requires `userData`, and a family other than the one matching [`karpenter_node_os`](/configuration/rack-parameters/aws/karpenter_node_os) also needs a matching `blockDeviceMappings` override. Available from Rack version `3.25.5`; a Rack downgraded below it renders the selector without the family, which Karpenter rejects, so remove `amiSelectorTerms` from `karpenter_config` before downgrading. |
 | `ec2NodeClass.metadataOptions` | EC2 instance metadata options (IMDSv2 settings) |
 | `ec2NodeClass.blockDeviceMappings` | Custom EBS volume configuration beyond `karpenter_node_disk` / `karpenter_node_volume_type` |
 
@@ -320,6 +321,7 @@ Use this for dedicated GPU pools, tenant isolation, specialized instance require
 | `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%`. Percentages above `100%` are rejected. |
 | `disk` | integer | _(workload value)_ | no | EBS volume size in GiB. `0` inherits workload pool disk. |
 | `volume_type` | string | `gp3` | no | `gp2`, `gp3`, `io1`, `io2`. |
+| `ami_id` | string | _(none)_ | no | Custom AMI for this pool's nodes, e.g. `ami-0123456789abcdef0`. The pool renders `amiFamily: AL2023`, so the AMI must be AL2023-based. See [Custom AMIs on Node Pools](#custom-amis-on-node-pools). |
 | `weight` | integer | _(unset)_ | no | Scheduling weight (0-100). Higher = preferred. |
 | `labels` | string | _(none)_ | no | Comma-separated `key=value`. `convox.io/nodepool` is reserved. |
 | `taints` | string | _(none)_ | no | Comma-separated `key=value:Effect`. Valid effects: `NoSchedule`, `PreferNoSchedule`, `NoExecute`. Prevents pods without matching tolerations from scheduling on these nodes. See [Using Taints to Protect Nodes](#using-taints-to-protect-nodes) below. |
@@ -436,6 +438,48 @@ The main use is fractional-GPU instance families such as `g6f` and `gr6f`. AWS r
    ```
 
 > The overlay's `capacity` affects scheduling simulation only. The node still needs the NVIDIA device plugin to advertise a real `nvidia.com/gpu`, and `nvidia_device_time_slicing_replicas` (if set) multiplies fractional GPUs the same way it does full ones.
+
+### Custom AMIs on Node Pools
+
+Set `ami_id` on a pool in `additional_karpenter_nodepools_config` to run its nodes on your own AMI instead of the EKS-optimized one Convox selects. Every other pool, and the workload and build pools, are unaffected.
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","ami_id":"ami-0123456789abcdef0","disk":200,"dedicated":true}]' nvidia_device_plugin_enable=true -r rackName
+Updating parameters... OK
+```
+
+The AMI must be AL2023-based. Convox renders `amiFamily: AL2023` on the pool, which is what tells Karpenter to generate nodeadm-format userData for the node to join the cluster. Managed node groups take the same field, see [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config).
+
+**GPU drivers come from the AMI**
+
+Convox installs no NVIDIA driver. The [device plugin](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) advertises `nvidia.com/gpu` to Kubernetes and the container image supplies the CUDA userspace, but the kernel driver is baked into the node's AMI. The EKS-optimized accelerated AMI decides which driver version your GPU nodes run, and AWS publishes one driver branch per release.
+
+To run a newer driver than AWS ships, build the AMI yourself from the AWS scripts in [`awslabs/amazon-eks-ami`](https://github.com/awslabs/amazon-eks-ami), which take the driver version as a build variable:
+
+```bash
+$ make k8s=1.35 os_distro=al2023 enable_accelerator=nvidia nvidia_driver_major_version=595
+```
+
+Set `k8s` to your Rack's Kubernetes version, which `convox rack params -g versions` prints. AWS documents the 595 driver as incompatible with P3, P3dn, and G6f, so it does not replace the branch they ship by default. Check your instance families against [the AWS driver notes](https://github.com/awslabs/amazon-eks-ami/blob/main/doc/usage/g7-ami.md) before building.
+
+**What you own once you set `ami_id`**
+
+- **AMI updates stop.** Without `ami_id` the pool tracks `al2023@latest` and Karpenter rolls its nodes onto each new AWS AMI as it is published. Pinning an id ends that, including OS security patches. You apply a rebuild by setting the new `ami_id`, which drifts the pool and replaces its nodes.
+- **The AMI does not follow `k8s_version`.** Rebuild it for each Kubernetes minor you move to, and set the new id in the same window.
+- **Size `disk` for the AMI.** EC2 rejects a launch whose volume is smaller than the AMI's root snapshot, and the pool then retries indefinitely with nothing surfaced through `convox`. Read your AMI's snapshot size with `aws ec2 describe-images --image-ids ami-0123456789abcdef0 --query 'Images[0].BlockDeviceMappings'` and set `disk` above it.
+- **Editing this pool list needs `convox` CLI `3.25.5` or newer.** An older CLI does not know the field, and rewrites the parameter without it the next time you edit the list.
+- **The Rack must be on `3.25.5` or newer.** An older Rack accepts the parameter and ignores the field, so the pool keeps the AWS AMI with nothing to signal it.
+- **Downgrading the Rack below `3.25.5` reverts the pool.** It renders the alias again and rolls its nodes back onto the AWS AMI, which for a GPU pool means going back to the driver that AMI ships. Re-upgrading restores the pinned AMI.
+
+**When nodes do not appear**
+
+An AMI id that is well-formed but does not exist, lives in another region, or is not shared with the Rack's account applies cleanly and then never provisions. Read the pool's EC2NodeClass back to see it:
+
+```bash
+$ convox api get /kubernetes/apis/karpenter.k8s.aws/v1/ec2nodeclasses/gpu -r rackName
+```
+
+An `AMIsReady` condition of `False` means the selector matched nothing. A pool whose `arch` does not match the AMI's architecture also never provisions, with the same silence.
 
 ### Using Taints to Protect Nodes
 

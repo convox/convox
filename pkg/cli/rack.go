@@ -1086,9 +1086,17 @@ type KarpenterNodePoolConfigParam struct {
 	Taints                *string `json:"taints,omitempty"`
 	Dedicated             *bool   `json:"dedicated,omitempty"`
 	Weight                *int    `json:"weight,omitempty"`
+	AmiID                 *string `json:"ami_id,omitempty"`
 }
 
 var karpenterNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
+
+var karpenterAmiRe = regexp.MustCompile(`^ami-([0-9a-f]{8}|[0-9a-f]{17})$`)
+
+var karpenterAmiFamilies = map[string]bool{
+	"AL2": true, "AL2023": true, "Bottlerocket": true, "Custom": true,
+	"Windows2019": true, "Windows2022": true, "Windows2025": true,
+}
 
 func (np *KarpenterNodePoolConfigParam) Validate() error {
 	if np.Name == "" {
@@ -1198,6 +1206,10 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 				return fmt.Errorf("karpenter nodepool '%s': invalid taint effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", np.Name, colonParts[1])
 			}
 		}
+	}
+
+	if np.AmiID != nil && !karpenterAmiRe.MatchString(*np.AmiID) {
+		return fmt.Errorf("karpenter nodepool '%s': invalid ami_id '%s' (must look like ami-0123456789abcdef0)", np.Name, *np.AmiID)
 	}
 
 	return nil
@@ -2422,6 +2434,30 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			for _, field := range blocked {
 				if _, exists := ec2[field]; exists {
 					return fmt.Errorf("karpenter_config: ec2NodeClass.%s is managed by Convox and cannot be overridden", field)
+				}
+			}
+
+			if familyVal, exists := ec2["amiFamily"]; exists {
+				family, ok := familyVal.(string)
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily must be a string")
+				}
+				if !karpenterAmiFamilies[family] {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily '%s' is not a valid AMI family", family)
+				}
+				termsVal, exists := ec2["amiSelectorTerms"]
+				if !exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily requires ec2NodeClass.amiSelectorTerms")
+				}
+				terms, ok := termsVal.([]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiSelectorTerms must be a JSON array")
+				}
+				if len(terms) == 0 {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiSelectorTerms must not be empty")
+				}
+				if _, exists := ec2["userData"]; family == "Custom" && !exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily 'Custom' requires ec2NodeClass.userData, Karpenter generates none")
 				}
 			}
 

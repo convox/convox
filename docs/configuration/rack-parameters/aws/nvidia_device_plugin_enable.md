@@ -34,7 +34,7 @@ Updating parameters... OK
 ```
 
 ## Additional Information
-- This parameter should only be enabled on rack instances that have NVIDIA GPUs installed. Enabling it on instances without GPUs will deploy the plugin, but it will remain inactive.
+- The plugin only runs on nodes Convox has identified as GPU instances, so enabling it on a Rack with no GPU nodes schedules nothing.
 - Before enabling this parameter, ensure your AWS EC2 instances have compatible NVIDIA GPU hardware, such as instances from the P3, P4, G4, or G5 families.
 - The device plugin works in conjunction with the `gpu` scaling option in your `convox.yml` file, which allows you to specify GPU requirements for your services:
 
@@ -48,14 +48,14 @@ services:
       gpu: 1
 ```
 
-- When using GPU-enabled services, you may need to use a custom base image that includes the NVIDIA CUDA toolkit and appropriate drivers.
+- Your container image supplies the CUDA userspace libraries. The kernel driver comes from the node's AMI, not from Convox and not from the image. To run a driver newer than the EKS-optimized AMI ships, see [Custom AMIs on Node Pools](/configuration/scaling/karpenter#custom-amis-on-node-pools).
 - GPU resources are whole units and cannot be fractionally allocated. Each container requesting a GPU will receive one or more complete GPUs.
 - When a service requests GPU resources, it will only be scheduled on nodes with available GPUs, which may affect scheduling and scaling behavior.
 
 ## Related Parameters
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter for GPU utilization, VRAM, temperature, and power metrics. Requires this parameter to be enabled for the pod-resources socket the exporter relies on.
 - [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable): Enables GPU tagging, which helps with identifying and tracking GPU resources in your AWS environment.
-- [node_type](/configuration/rack-parameters/aws/node_type): When using GPUs, this should be set to a GPU-enabled instance type (e.g., `p3.2xlarge`, `g4dn.xlarge`).
+- [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) and [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config): Put GPU instances on a dedicated pool or node group rather than on `node_type`, which is Rack-wide and would place every service on GPU hardware.
 
 ## Version Requirements
 This feature requires at least Convox rack version `3.21.0`.

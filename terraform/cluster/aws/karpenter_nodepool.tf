@@ -186,6 +186,7 @@ locals {
     lookup(local.kc_ec2, "detailedMonitoring", null) != null ? { detailedMonitoring = local.kc_ec2["detailedMonitoring"] } : {},
     lookup(local.kc_ec2, "associatePublicIPAddress", null) != null ? { associatePublicIPAddress = local.kc_ec2["associatePublicIPAddress"] } : {},
     lookup(local.kc_ec2, "instanceStorePolicy", null) != null ? { instanceStorePolicy = local.kc_ec2["instanceStorePolicy"] } : {},
+    lookup(local.kc_ec2, "amiFamily", null) != null && lookup(local.kc_ec2, "amiSelectorTerms", null) != null ? { amiFamily = local.kc_ec2["amiFamily"] } : {},
   )
 
   # Full EC2NodeClass manifest — protected fields forced after merge
@@ -228,6 +229,7 @@ locals {
       disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
       disk                    = tonumber(lookup(np, "disk", 0))
       volume_type             = lookup(np, "volume_type", "gp3")
+      ami_id                  = lookup(np, "ami_id", "")
       weight                  = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
       dedicated               = tobool(lookup(np, "dedicated", false))
       labels = {
@@ -317,6 +319,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     imds_http_tokens           = local.build_imds_tokens
     imds_http_hop_limit        = local.build_imds_hop_limit
     extra_tags                 = var.tags
+    ami_id                     = ""
   })
 
   wait = true
@@ -372,6 +375,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     imds_http_tokens           = var.imds_http_tokens
     imds_http_hop_limit        = var.imds_http_hop_limit
     extra_tags                 = var.tags
+    ami_id                     = each.value.ami_id
   })
 
   wait = true

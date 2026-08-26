@@ -10,8 +10,14 @@ spec:
   securityGroupSelectorTerms:
     - tags:
         karpenter.sh/discovery: "${cluster_name}"
+%{ if ami_id != "" ~}
+  amiFamily: AL2023
+  amiSelectorTerms:
+    - id: ${ami_id}
+%{ else ~}
   amiSelectorTerms:
     - alias: al2023@latest
+%{ endif ~}
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
