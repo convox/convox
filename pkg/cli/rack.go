@@ -682,6 +682,8 @@ var clearableParams = map[string]bool{
 	// SSL — clear means "use defaults"
 	"ssl_ciphers":   true,
 	"ssl_protocols": true,
+	// Router security group — clear means "use the rack-managed group"
+	"nlb_security_group": true,
 	// Optional overrides — clear means "use auto/default"
 	"build_node_type":             true,
 	"key_pair_name":               true,

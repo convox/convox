@@ -57,6 +57,7 @@ var preserveEmpty = map[string]bool{
 	"schedule_rack_scale_up":              true,
 	"ssl_ciphers":                         true,
 	"ssl_protocols":                       true,
+	"nlb_security_group":                  true,
 	"build_node_type":                     true,
 	"key_pair_name":                       true,
 	"nginx_additional_config":             true,
@@ -465,6 +466,10 @@ func (t Terraform) apply() error {
 	}
 
 	t.reconcileStuckHelmReleases()
+
+	if w := t.inertNLBSecurityGroupWarning(); w != "" {
+		defer fmt.Fprint(os.Stderr, w)
+	}
 
 	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
