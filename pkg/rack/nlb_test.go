@@ -65,7 +65,7 @@ func TestRouterSecurityGroupWarning(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expect, routerSecurityGroupWarning(context.Background(), tc.client, "myrack"))
+			assert.Equal(t, tc.expect, routerSecurityGroupWarning(context.Background(), tc.client, "myrack", false))
 		})
 	}
 }
@@ -76,10 +76,26 @@ func TestRouterSecurityGroupWarningUnreadable(t *testing.T) {
 		return true, nil, apierrors.NewForbidden(schema.GroupResource{Resource: "services"}, "router", fmt.Errorf("no access"))
 	})
 
-	got := routerSecurityGroupWarning(context.Background(), client, "myrack")
+	got := routerSecurityGroupWarning(context.Background(), client, "myrack", false)
 
 	assert.Contains(t, got, "could not check whether nlb_security_group applies")
 	assert.NotEqual(t, nlbSecurityGroupInertWarning, got)
+}
+
+func TestRouterSecurityGroupWarningPrivateOmitsEndpoint(t *testing.T) {
+	host := "https://console.example.com/proxy/rid1/private/eks/"
+
+	client := fake.NewSimpleClientset()
+	client.PrependReactor("get", "services", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("Get %q: dial tcp: connect: connection refused", host+"api/v1/namespaces/myrack-system/services/router")
+	})
+
+	private := routerSecurityGroupWarning(context.Background(), client, "myrack", true)
+	assert.Contains(t, private, "could not check whether nlb_security_group applies")
+	assert.NotContains(t, private, host)
+
+	public := routerSecurityGroupWarning(context.Background(), client, "myrack", false)
+	assert.Contains(t, public, host)
 }
 
 func TestInertNLBSecurityGroupWarningSkipsNonAWS(t *testing.T) {
@@ -94,7 +110,6 @@ func TestInertNLBSecurityGroupWarningParameterGate(t *testing.T) {
 		{name: "parameter absent", vars: map[string]string{"region": "us-east-1"}},
 		{name: "parameter cleared", vars: map[string]string{"region": "us-east-1", "nlb_security_group": ""}},
 		{name: "parameter whitespace", vars: map[string]string{"region": "us-east-1", "nlb_security_group": "   "}},
-		{name: "private endpoint skipped", vars: map[string]string{"region": "us-east-1", "nlb_security_group": "sg-abc123", "private_eks_host": "https://example.com/eks/"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
