@@ -84,6 +84,8 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) | Configures additional customized node groups for the cluster. |
+| [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
+| [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a Service rollout may go without progress before it is failed. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
 | [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count)       | Sets the maximum number of on-demand nodes when using the mixed capacity type. |
@@ -92,8 +94,6 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) | Controls the maximum percentage of nodes unavailable during node group updates. |
 | [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GB.                                      |
 | [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type.                                        |
-| [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
-| [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a service rollout may go without progress before it is failed. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
@@ -124,6 +124,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) | Specifies the retention period for Nginx access logs stored in CloudWatch Logs. |
+| [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) | Stops the per-App CloudWatch log groups while keeping the Rack system group. |
 | [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable)         | Stops the Rack from creating, writing, and reading its own CloudWatch log groups. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |

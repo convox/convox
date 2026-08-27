@@ -26,16 +26,20 @@ Execute a command in a new process
 | `--entrypoint` | string | Override the entrypoint |
 | `--gpu` | number | Number of GPUs to allocate (requires rack >= 3.21.3) |
 | `--gpu-vendor` | string | GPU vendor for the allocation: `nvidia` (default), `amd`, or `google` for Cloud TPUs on GKE |
+| `--id` | bool | With `--detach`, put the process id alone on stdout and all other output on stderr |
 | `--labels` | string | Pod labels as comma-separated `key=value` pairs (requires rack >= 3.25.1) |
 | `--memory` | number | Memory request in MB |
 | `--memory-limit` | number | Memory limit in MB |
 | `--node-affinity` | string | Preferred node affinity terms as comma-separated `key=value[:weight]` entries (requires rack >= 3.25.1) |
 | `--node-labels` | string | Node labels for targeting specific node groups (requires rack >= 3.21.3) |
 | `--release` | string | Run against a specific release |
+| `--retain` | number | With `--detach`, seconds to keep the finished process readable by `convox ps info` (requires rack >= 3.25.5) |
 | `--termination-grace` | number | Pod terminationGracePeriodSeconds for this run (requires rack >= 3.25.1) |
+| `--timeout` | number | Seconds before an attached run is abandoned, or before `--wait` gives up (default `3600`) |
 | `--tolerations` | string | Pod tolerations as comma-separated entries (requires rack >= 3.25.1) |
 | `--use-service-lifecycle` | bool | Copy the service's lifecycle hooks onto the run container (requires rack >= 3.25.1) |
 | `--use-service-volume` | bool | Attach all service-configured volumes to the run pod (requires rack >= 3.22.3) |
+| `--wait` | bool | With `--detach`, wait for the process to finish and exit with its status (requires rack >= 3.25.5) |
 
 ### Examples
 
@@ -50,6 +54,132 @@ Run against a specific release:
     $ convox run --release RABCDEFGHIJ web sh
     /usr/src/app #
 ```
+
+## Detached Runs
+
+`--detach` starts the process and returns as soon as the Rack accepts it.
+
+```bash
+    $ convox run web bin/cleanup-database --detach -a my-app
+    Running detached process... OK, web-s43xf
+      convox logs -a my-app
+      convox ps stop web-s43xf -a my-app
+```
+
+The two follow-up lines go to standard error. Passing `--wait` suppresses them.
+
+### `--wait`
+
+`--wait` holds the command open until the detached process finishes, then exits with the process's own exit code.
+
+```bash
+    $ convox run web bin/migrate --detach --wait -a my-app
+    Running detached process... OK, web-s43xf
+    $ echo $?
+    0
+```
+
+The CLI reads the process record every 5 seconds and accepts the result after two consecutive reads report a terminal status, either `complete` or `failed`. `--timeout` bounds the wait, not the process: when the wait runs out, the process keeps running.
+
+`--wait` raises retention to at least 60 seconds so the finished process is still readable when the last read comes back. Pass `--retain` to hold the record longer than that.
+
+`--wait` has no effect without `--detach`. Passing it alone is ignored rather than rejected.
+
+Two conditions end the wait without an exit code, and both exit non-zero. The reads never reached a terminal status:
+
+```text
+could not confirm the outcome of process web-s43xf: <reason>
+       convox ps info web-s43xf -a my-app
+```
+
+The process reached a terminal status carrying no exit code:
+
+```text
+process web-s43xf ended with status failed but the rack did not report an exit status.
+       It may have been stopped before its command ran, or the rack may predate the release that reports one
+```
+
+`-w` is the short form. Every `convox` command carries a `-w` / `--wait` flag kept for compatibility with the V2 CLI, and on every other command it does nothing. On `convox run` it selects the behavior above, so a script that passes `-w` out of habit now waits.
+
+### `--retain`
+
+`--retain <seconds>` keeps a finished detached process readable by `convox ps` and `convox ps info` after its command exits. Without it, the record is removed a few seconds after the process finishes.
+
+```bash
+    $ convox run web bin/backfill --detach --retain 600 -a my-app
+```
+
+The Rack caps retention at 600 seconds. Values of `0` or less are ignored. `--retain` is accepted only with `--detach`:
+
+```text
+--retain is only valid with --detach
+```
+
+During the retention window, `convox ps` lists the process with a status of `complete` or `failed`, and `convox ps info` returns it with an `Exit` row.
+
+### `--id`
+
+`--id` puts the process id alone on standard output and moves progress output to standard error, so a shell can capture the id directly.
+
+```bash
+    $ pid=$(convox run web bin/backfill --detach --id --retain 600 -a my-app)
+    Running detached process... OK, web-s43xf
+    $ echo $pid
+    web-s43xf
+```
+
+`--id` is handled entirely by the CLI and works against any Rack version.
+
+## Detached Runs in CI
+
+### Gate a step on the process
+
+Use `--wait` when the pipeline must stop if the command fails:
+
+```bash
+    $ convox run web "bin/migrate" --detach --wait -a my-app
+```
+
+The step passes only when the Rack reports an exit code of `0`. It fails when the command exits non-zero, when the wait exceeds `--timeout`, and when no exit status arrives.
+
+### Start now, check later
+
+Use `--id` and `--retain` when the pipeline starts the work in one step and inspects it in a later one:
+
+```bash
+    $ pid=$(convox run web "bin/backfill" --detach --id --retain 600 -a my-app)
+```
+
+Then, within the retention window:
+
+```bash
+    $ convox ps info "$pid" -a my-app
+    Id        web-s43xf
+    App       my-app
+    Command   bin/backfill
+    Instance  i-0cbaa6d2dd1d094c0
+    Release   RCRLBREFPBX
+    Service   web
+    Started   4 minutes ago
+    Status    complete
+    Exit      0
+```
+
+Retention is capped at 600 seconds, and `--wait` raises it to 60 seconds when the run asks for less. Retention is best effort: a Rack API restart or a node replacement can drop the record before its window ends. A process the pipeline can no longer find is an unknown outcome, and the step must treat it as a failure rather than as success.
+
+## Exit Status
+
+`convox run` exits with the command's exit code. When the command's output stream ends without one, the CLI prints an error and exits `1`:
+
+```text
+the rack did not report an exit status for this command, so it may not have finished.
+       Check the output above for a reason. This run's process has been stopped.
+       A command that must gate a deploy should write its own success marker to the output for the caller to check
+```
+
+Earlier CLI versions exited `0` here, so a CI step gated on `convox run` passed while the command's outcome was unknown.
+
+A stream lost in transit is caught by the CLI on its own and needs no Rack upgrade. An error the Rack raises before the command starts needs Rack 3.25.5 or later; earlier Racks send `0` as the exit status even when the command never ran.
 
 ## GPU Support
 
@@ -243,9 +373,13 @@ Running with `--use-service-volume` ensures the `/data` directory is available i
 - Automatic node placement (inherits `nodeSelectorLabels`): Requires CLI and rack version >= 3.24.3
 - Pod customization flags (`--termination-grace`, `--annotations`, `--labels`, `--use-service-lifecycle`, `--node-affinity`, `--tolerations`): Requires CLI and rack version >= 3.25.1. Against older racks the flags are ignored
 - Node pool validation on `--node-labels`: Requires rack version >= 3.25.4. The check runs on the rack, so it applies to any CLI version
+- Detached wait and retention (`--wait`, `--retain`): Requires CLI and rack version >= 3.25.5
+- `--id`: Handled by the CLI, so it applies to any rack version
+- Failing on a missing exit status: The CLI catches a stream lost in transit on its own; an error the rack raises before the command starts requires rack version >= 3.25.5
 
 ## See Also
 
 - [One-off Commands](/management/run) for run command patterns
 - [Workload Placement](/configuration/scaling/workload-placement) for `nodeSelectorLabels` configuration
+- [ps](/reference/cli/ps) for inspecting a detached or retained process
 - [Karpenter](/configuration/scaling/karpenter) for dedicated pool isolation with `dedicated: true`

@@ -284,7 +284,7 @@ services:
 
 ### Advanced Configuration
 
-A subset of the `health` attributes applies to gRPC health checks, along with two `liveness` attributes. See the tables below.
+A subset of the `health` attributes applies to gRPC health checks, along with two `liveness` attributes.
 
 ```yaml
 services:
@@ -301,6 +301,8 @@ services:
       grpcService: myapp.v1.Liveness
 ```
 
+**health attributes**
+
 | Attribute  | Default | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
 | **grace**    | `interval` | The amount of time in seconds to wait for a [Process](/reference/primitives/app/process) to boot before beginning health checks. Defaults to the value of `interval` |
@@ -311,20 +313,32 @@ services:
 | **timeout**  | `interval - 1` | The number of seconds to wait for a valid response. Defaults to `interval` minus one |
 | **disable**  | false   | Set to `true` to disable the gRPC readiness and liveness probes. Requires rack version 3.25.4 or later |
 
-These two `liveness` attributes apply as well.
+**liveness attributes**
 
 | Attribute  | Default | Description                                                                      |
 | ---------- | ------- | -------------------------------------------------------------------------------- |
-| **grpcService** | empty | The gRPC health service name placed in the liveness probe's `HealthCheckRequest`. Empty means overall server health. Requires rack version 3.25.5 or later. An earlier rack accepts the key without error and ignores it, leaving the liveness probe on the empty name |
+| **grpcService** | empty | The gRPC health service name placed in the liveness probe's `HealthCheckRequest`. Empty means overall server health. Requires rack version 3.25.5 or later |
 | **port**     | Main service port | Moves the gRPC liveness probe to another port |
 
-No other `liveness` attribute reaches the gRPC probes. The `liveness.*` timing fields are still the fallback timings for a [startup probe](#startup-probes).
+No other `liveness` attribute applies to the gRPC probes. The `liveness.*` timing fields are still the fallback timings for a [startup probe](#startup-probes).
 
-`grpcService` takes a gRPC service name such as `myapp.v1.Greeter`. It is not a URL path: a value beginning with `/` is rejected when your app is built, so moving an old `path: /` value into this key fails fast rather than at rollout. Beyond that the value is passed through as written, and the name must be registered on your server. `Check` returns `NOT_FOUND` for a name your server does not know. In `health.grpcService` that means readiness never passes and the deploy does not converge; in `liveness.grpcService` it means the liveness probe fails and the kubelet restarts the container.
+`grpcService` takes a gRPC service name such as `myapp.v1.Greeter`. It is not a URL path. A value beginning with `/` is rejected when your app is built, so moving an old `path: /` value into this key fails before rollout. The error names the key that carries it:
 
-`health.grpcService` changes the readiness probe only. The liveness probe sends the empty service name unless you also set `liveness.grpcService`, so by default your server must report `SERVING` for both the empty name and the name you set. Go's `health.NewServer()` registers the empty name for you. A hand-written `Check` method, or a health registry you populate yourself, must handle an empty `req.Service` as well, or the liveness probe fails and the container restarts. Registering the empty name is one line and is safe to drain against, so prefer it whenever you control the server.
+```text
+service api liveness grpcService must be a grpc service name such as myapp.v1.Greeter, not a path
+```
 
-`liveness.grpcService` is for the cases where you cannot: a server you do not build, or one that deliberately exposes a separate liveness service. Point it at a name you never flip to `NOT_SERVING`. Setting it to the same name as `health.grpcService` means a drain fails liveness as well, and the container is restarted after five failed checks instead of being taken out of rotation, which is the opposite of what a drain is for. Your build prints a warning to the deploy output when the two names match.
+Beyond that the value is passed through as written, and the name must be registered on your server. `Check` returns `NOT_FOUND` for a name your server does not know. In `health.grpcService` that means readiness never passes and the deploy does not converge; in `liveness.grpcService` it means the liveness probe fails and the kubelet restarts the container.
+
+`health.grpcService` changes the readiness probe only. The liveness probe sends the empty service name unless you also set `liveness.grpcService`, so by default your server must report `SERVING` for both the empty name and the name you set. Go's `health.NewServer()` registers the empty name for you. A hand-written `Check` method, or a health registry you populate yourself, must handle an empty `req.Service` as well, or the liveness probe fails and the container restarts. Registering the empty name is one line and keeps the liveness probe passing while you flip `health.grpcService` to `NOT_SERVING`, so prefer it whenever you control the server.
+
+Set `liveness.grpcService` when you cannot register the empty name: a server you do not build, or one that deliberately exposes a separate liveness service. Point it at a name you never flip to `NOT_SERVING`. Setting it to the same name as `health.grpcService` means a drain fails liveness too, so the container is restarted after five failed checks instead of being taken out of rotation. `convox build` prints a warning when the two names match:
+
+```text
+WARNING: service "api": liveness grpcService matches health grpcService; setting that name NOT_SERVING fails the liveness probe and restarts the container instead of draining it
+```
+
+Before rack version 3.25.5, `liveness.grpcService` was accepted without error and ignored, leaving the liveness probe on the empty name.
 
 If `liveness.port` points at a separate health listener, only that listener has to answer the name the liveness probe sends.
 
@@ -346,11 +360,11 @@ services:
       port: 50052
 ```
 
-Readiness now checks `myapp.v1.Greeter` on port 50051 and liveness checks the empty name on port 50052. Run a second health listener on 50052 that always reports `SERVING` for the empty name, and the main registry only has to answer for the name you set. Flipping `myapp.v1.Greeter` to `NOT_SERVING` at runtime then takes the pod out of rotation without restarting the container, which is the drain behavior `grpcService` exists for.
+Readiness now checks `myapp.v1.Greeter` on port 50051 and liveness checks the empty name on port 50052. Run a second health listener on 50052 that always reports `SERVING` for the empty name, and the main registry only has to answer for the name you set. Flipping `myapp.v1.Greeter` to `NOT_SERVING` at runtime then takes the pod out of rotation without restarting the container.
 
 Unlike an HTTP service, a gRPC service needs no `liveness.path` for this: the liveness probe is generated by `grpcHealthEnabled` and `liveness.port` moves it.
 
-From rack version 3.25.5 you can separate the two checks on a single port by giving each one its own name, with `health.grpcService` for readiness and `liveness.grpcService` for liveness. A second listener is still the better answer when the checks need to be independent of the main port itself, for example when that port can saturate.
+From rack version 3.25.5 you can separate the two checks on a single port by giving each one its own name, with `health.grpcService` for readiness and `liveness.grpcService` for liveness. Use a second listener when the checks need to be independent of the main port itself, for example when that port can saturate.
 
 ### Implementation Requirements
 
@@ -411,7 +425,7 @@ func main() {
 	
 	// Only needed when you set liveness.grpcService. Never flip this one to NOT_SERVING.
 	healthServer.SetServingStatus("myapp.v1.Liveness", healthpb.HealthCheckResponse_SERVING)
-
+	
 	// Continue with server initialization...
 }
 ```

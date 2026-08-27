@@ -1,6 +1,6 @@
 ---
 title: "Scaling"
-description: "Convox scaling approaches for services, from manual replica counts to event-driven autoscaling, VPA, KEDA, Karpenter, and workload placement."
+description: "Convox scaling approaches for services, from manual replica counts to event-driven autoscaling, VPA, KEDA, Karpenter, GPU nodes with custom AMIs, and workload placement."
 slug: scaling
 url: /configuration/scaling
 ---
@@ -55,6 +55,11 @@ See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for de
 Opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning. Karpenter provisions the optimal instance type and size in seconds rather than minutes, supports scale-to-zero builds, automatic node consolidation, and cost-aware instance selection across spot and on-demand capacity.
 
 See [Karpenter](/configuration/scaling/karpenter) for details.
+> AWS only
+
+## GPU Nodes and Custom AMIs
+
+The NVIDIA kernel driver comes from the node's AMI, not from Convox. Pin `ami_id` on a Karpenter node pool to run its GPU nodes on an AL2023 AMI you build with the driver branch you need. See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for details.
 > AWS only
 
 ## Workload Placement

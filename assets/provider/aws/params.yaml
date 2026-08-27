@@ -125,12 +125,8 @@ Groups:
         description: |
           &l The ID of an existing security group to attach to the rack's
           internet-facing router load balancer. &l &l Leave this blank and the
-          rack creates and manages the security group for you, allowing inbound
-          traffic from the CIDRs in the &i whitelist &i parameter, which defaults
-          to 0.0.0.0/0. &l &l Setting your own group replaces the managed one, and
-          the &i whitelist &i parameter is then no longer enforced at the load
-          balancer. Be cautious, an improper group can cut off access to your
-          services. &l
+          rack creates and manages the security group. &l &l Be cautious, an
+          improper group can cut off access to your services. &l
       - name: key_pair_name
         default: "null"
         sideNote: Not set by default

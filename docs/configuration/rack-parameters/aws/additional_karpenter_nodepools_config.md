@@ -74,7 +74,8 @@ This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraf
 - **Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.
 - Every custom pool automatically gets a `convox.io/nodepool={name}` label. Target Services to a custom pool using `nodeSelectorLabels` in `convox.yml`.
 - **Pool name validation:** Lowercase alphanumeric with dashes, max 63 chars. Reserved names: `workload`, `build`, `default`, `system`. Duplicate names are rejected.
-- **Custom AMIs:** Set `"ami_id": "ami-..."` on a pool to run its nodes on your own AL2023-based AMI, which is how you run an NVIDIA driver newer than the one AWS ships. Editing this pool list needs `convox` CLI `3.25.5` or newer once the field is in use; an older CLI rewrites the parameter without it. See [Custom AMIs on Node Pools](/configuration/scaling/karpenter#custom-amis-on-node-pools).
+- **Custom AMIs:** Set `"ami_id": "ami-..."` on a pool to run its nodes on your own AL2023-based AMI, which a GPU pool needs to run an NVIDIA driver newer than the one AWS ships. See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes).
+- **CLI version for `ami_id`:** Editing this pool list needs `convox` CLI `3.25.5` or newer once the field is in use. An older CLI rewrites the parameter without it.
 - **Pool isolation:** Set `"dedicated": true` on a pool entry to automatically add a `dedicated-node={name}:NoSchedule` taint. Convox auto-injects the matching toleration for Services targeting the pool via `nodeSelectorLabels`. This is the simplest way to isolate a pool without manual taint configuration.
 - For pools with custom taints beyond `dedicated`, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
 - See the [Karpenter](/configuration/scaling/karpenter#additional_karpenter_nodepools_config-custom-nodepools) feature page for the full per-pool field reference and examples.
@@ -85,3 +86,4 @@ This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraf
 - [karpenter_config](/configuration/rack-parameters/aws/karpenter_config) for overriding the workload NodePool
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for custom EKS managed node groups
 - [Workload Placement](/configuration/scaling/workload-placement) for node targeting with `nodeSelectorLabels`
+- [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for the `ami_id` field and the NVIDIA driver it carries
