@@ -45,17 +45,20 @@ services:
     command: python train.py
     scale:
       count: 1
-      gpu: 1
+      gpu:
+        count: 1
+        vendor: nvidia
 ```
 
-- Your container image supplies the CUDA userspace libraries. The kernel driver comes from the node's AMI, not from Convox and not from the image. To run a driver newer than the EKS-optimized AMI ships, see [Custom AMIs on Node Pools](/configuration/scaling/karpenter#custom-amis-on-node-pools).
+- Your container image supplies the CUDA userspace libraries. The kernel driver comes from the node's AMI. To run a driver newer than the one the EKS-optimized AMI ships, see [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes).
 - GPU resources are whole units and cannot be fractionally allocated. Each container requesting a GPU will receive one or more complete GPUs.
 - When a service requests GPU resources, it will only be scheduled on nodes with available GPUs, which may affect scheduling and scaling behavior.
 
 ## Related Parameters
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the NVIDIA DCGM exporter for GPU utilization, VRAM, temperature, and power metrics. Requires this parameter to be enabled for the pod-resources socket the exporter relies on.
 - [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable): Enables GPU tagging, which helps with identifying and tracking GPU resources in your AWS environment.
-- [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) and [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config): Put GPU instances on a dedicated pool or node group rather than on `node_type`, which is Rack-wide and would place every service on GPU hardware.
+- [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config): Put GPU instances on a dedicated Karpenter node pool rather than on `node_type`, which is Rack-wide and would place every Service on GPU hardware.
+- [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config): Put GPU instances on a dedicated EKS managed node group on a Rack that does not run Karpenter.
 
 ## Version Requirements
 This feature requires at least Convox rack version `3.21.0`.

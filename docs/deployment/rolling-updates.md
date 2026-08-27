@@ -50,7 +50,7 @@ See [Troubleshooting](/help/troubleshooting) for some tips on diagnosing common 
 
 ## Failure Detection
 
-By default a broken rollout is failed by the Rack's own timeout, which takes about fifty minutes. Two per-Service settings shorten that.
+By default a broken rollout is failed by the App's own rollout timeout, which takes 50 minutes. Two per-Service settings shorten that.
 
 ```yaml
 services:
@@ -60,29 +60,37 @@ services:
       crashRestartLimit: 5
 ```
 
-`progressDeadline` is the number of seconds the rollout may go without progress. A rollout makes progress whenever a new [Process](/reference/primitives/app/process) becomes ready, and the clock resets on every such event, so a large rollout that is genuinely advancing one Process at a time is never cut short. Once the deadline passes with no progress, the rollout is failed and the previous [Release](/reference/primitives/app/release) is restored.
+`progressDeadline` is the number of seconds the rollout may go without progress. A rollout makes progress whenever a new [Process](/reference/primitives/app/process) becomes ready, and the clock resets on every such event, so a large rollout that is advancing one Process at a time is never cut short. Once the deadline passes with no progress, the rollout is failed and the previous [Release](/reference/primitives/app/release) is restored.
 
-`crashRestartLimit` is the number of container restarts the rollout may accumulate. This is the complement to `progressDeadline`, not an optional extra: a Process that becomes ready and only then starts crashing keeps making progress, so the deadline never trips.
+`crashRestartLimit` is the number of container restarts the rollout may accumulate. A Process that becomes ready and only then starts crashing keeps making progress, so `progressDeadline` never trips on it. Set `crashRestartLimit` to catch a crash loop.
 
-Both settings are off by default. With neither set, deploy timing is unchanged.
+Both settings are off by default.
 
-### Choosing values
+### Choosing Values
 
-`progressDeadline` has to exceed the slowest healthy start-up time of the Service, or a healthy deploy will be rolled back. GPU Services are configured for up to thirty minutes of cold start by default.
+`progressDeadline` has to exceed the slowest healthy start-up time of the Service, or a healthy deploy will be rolled back. GPU Services are configured for up to 35 minutes of cold start by default. A value of 3000 or higher arms no detection; it only raises the App's rollout timeout.
 
 `crashRestartLimit` does not map evenly onto wall clock, because Kubernetes waits ten seconds before the first restart and doubles that wait up to a five-minute cap. Restart 3 lands at roughly a minute, restart 5 at roughly five minutes, and restart 10 at roughly thirty minutes. A limit of N aborts on restart N+1, so a limit of 10 lands around the `convox deploy` command's own 35-minute ceiling. Three to five is a reasonable range.
 
-### What each setting covers
+### What Each Setting Covers
 
 `ImagePullBackOff`, `ErrImagePull` and `CreateContainerConfigError` never increment a restart count, so they are covered by `progressDeadline` only.
 
-Agent Services run as DaemonSets and stateful Services run as StatefulSets. Neither has a rollout progress deadline, so `progressDeadline` has no effect on them and `crashRestartLimit` is the only fast-failure mechanism available. A Process that never gets scheduled at all, for example because a volume cannot be bound, is covered by neither.
+Agent Services run as DaemonSets and stateful Services run as StatefulSets. Neither kind carries a rollout progress deadline, so `progressDeadline` renders nothing on those workloads and `crashRestartLimit` is the only fast-failure mechanism available for them. A stateful Service's `progressDeadline` still counts toward the App's rollout timeout, so setting one above 3000 extends how long the whole App may take to converge.
 
-### Rack-wide defaults
+A Process that never gets scheduled at all, for example because a volume cannot be bound, is covered by neither setting.
 
-An operator can turn either check on for every App on a Rack with the [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) and [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) Rack parameters. A Service's own `convox.yml` wins over the Rack parameter, which wins over the shipped default. A Service can opt out of a rack-wide `deploy_crash_restart_limit` with `crashRestartLimit: -1`.
+### Rack-Wide Defaults
 
-To turn failure detection off across a Rack without changing any App, add `deploy-fast-fail-disable=true` to the `api_feature_gates` Rack parameter. That parameter is replaced rather than appended to, so read the current value first and set the full comma-separated list.
+An operator can turn either check on for every App on a Rack with the [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) and [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) Rack parameters. A Service's own `convox.yml` wins over the Rack parameter, which wins over the shipped default.
+
+| To turn off | Supported way |
+|-------------|---------------|
+| Rack-wide | Set `deploy_progress_deadline=0` and `deploy_crash_restart_limit=0`, the shipped default |
+| One Service, against a Rack default | `crashRestartLimit: -1` in `convox.yml` |
+| One Service's own setting | Remove the `deployment.progressDeadline` or `deployment.crashRestartLimit` field |
+
+There is no per-Service opt-out from a Rack-wide `deploy_progress_deadline`. A Service can raise or lower its own deadline, but not remove it.
 
 ## See Also
 

@@ -119,21 +119,42 @@ Error: another operation (install/upgrade/rollback) is in progress
 
 This happens when an earlier apply was killed while Helm was in the middle of an operation, for example an update that was cancelled or interrupted while it was running. The release is left in a pending state (`pending-install`, `pending-upgrade`, or `pending-rollback`) and Helm refuses to operate on it again, so retrying the identical command produces the identical error indefinitely.
 
-**Resolution:** with `convox` `3.25.3` or newer performing the apply, or `3.25.5` or newer for a Rack reached through a private endpoint host, re-run the same command. Convox clears the stranded revision first and prints a `NOTICE` naming the release, its status, and its revision:
+**Resolution:** re-run the same command with a `convox` binary that carries the check:
+
+| Rack | Minimum `convox` version |
+|------|--------------------------|
+| Public Kubernetes API endpoint | `3.25.3` |
+| Private endpoint host | `3.25.5` |
+
+Convox clears the stranded revision first and prints a `NOTICE` naming the release, its status, and its revision:
 
 ```text
 NOTICE: cleared stuck Helm release karpenter (pending-upgrade, revision 4) before apply
 ```
 
+The `NOTICE` prints after the revision is gone, so it reports a clear that completed rather than one that was attempted.
+
 Only the pending revision is removed. The revision Helm still considers deployed stays current, and the apply that follows retries the operation.
+
+The check is best effort and never fails the apply. On a Rack reached through a private endpoint host, two more messages report what it could not do:
+
+```text
+NOTICE: skipping stuck Helm release check, could not reach the cluster
+```
+
+```text
+NOTICE: could not confirm clearing of stuck Helm release karpenter (pending-upgrade, revision 4)
+```
+
+The first prints when Convox cannot list the cluster's Helm release secrets. The second prints when the delete itself fails. Neither appears on a Rack with a public endpoint, where a failed clear prints nothing.
 
 The scope of this recovery is deliberately narrow:
 
 - AWS Racks only. It does not run on GCP, Azure, Digital Ocean, Equinix Metal, or Local Racks.
-- Racks whose Kubernetes API is reached through a private endpoint host are covered from `3.25.5`. Earlier versions skipped them.
+- Racks whose Kubernetes API is reached through a private endpoint host are covered from `3.25.5`. Earlier versions skip them.
 - Convox-owned releases only, matched on both release name and namespace: `aws-lbc`, `karpenter`, `karpenter-crd`, `keda`, `vpa`, `dcgm-exporter`, `nvidia-device-plugin`, `contour`, and `contour-internal`. Helm releases you installed yourself are never touched, and neither is a release that shares one of those names in a namespace Convox does not own.
 - Only releases that have been stranded for more than fifteen minutes, so an apply that is still working is never interrupted.
-- Only when the `convox` binary running the apply is `3.25.3` or newer, or `3.25.5` or newer for a Rack reached through a private endpoint host. For a self-managed Rack that is the CLI on your machine. For a Console-managed Rack it is the CLI bundled in the Console deploy, which means a Rack version update on its own does not deliver it. See [CLI Rack Management](/management/cli-rack-management) for the full version rule.
+- Only when the `convox` binary running the apply meets the version in the table above. For a self-managed Rack that is the CLI on your machine. For a Console-managed Rack it is the CLI bundled in the Console deploy, which means a Rack version update on its own does not deliver it. See [CLI Rack Management](/management/cli-rack-management) for the full version rule.
 
 If a re-run fails the same way, open a [support ticket](/help/support) with the Rack logs.
 

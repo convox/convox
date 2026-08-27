@@ -34,6 +34,8 @@ The default value is `false`.
 
 `cloudwatch_disable` and [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) gate two different writers into the same CloudWatch log groups. Fluentd ships container output and Nginx access logs. The Rack controller writes Kubernetes events, deploy state, and AWS resource state.
 
+The table below assumes [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) is `false`.
+
 | `cloudwatch_disable` | `fluentd_disable` | What still reaches CloudWatch | `convox logs -a my-app` | `convox rack logs` |
 |----------------------|-------------------|-------------------------------|-------------------------|--------------------|
 | `false` | `false` | Fluentd writes container output and Nginx access logs. The Rack writes Kubernetes events, deploy state, and AWS resource state. | Container output interleaved with Rack lines | Rack lines plus Rack system Pod output, including Nginx access logs |
@@ -44,6 +46,20 @@ The default value is `false`.
 The second row is the one to watch. Setting `cloudwatch_disable=true` on its own hides the CloudWatch view without stopping the CloudWatch writes: Fluentd creates the groups if they do not exist, keeps shipping into them, and keeps incurring their storage cost, while `convox logs` and `convox rack logs` show nothing.
 
 In all four rows, `convox logs -a my-app -s my-service`, `convox builds logs`, and `convox ps` are unchanged.
+
+## Interaction with app_cloudwatch_disable
+
+Neither `cloudwatch_disable` nor [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) is a subset of the other, and setting one does not imply the other. `cloudwatch_disable` stops one writer across both groups. `app_cloudwatch_disable` stops both writers across one group.
+
+| | `cloudwatch_disable=true` | `app_cloudwatch_disable=true` |
+|---|---|---|
+| Writers stopped | Rack controller only | Rack controller and Fluentd |
+| Groups covered | Per-App groups and the Rack system group | Per-App groups only |
+| Fluentd | Unaffected, keeps creating and filling both groups | Stops shipping App container output |
+| `convox logs -a my-app` | Empty | Empty |
+| `convox rack logs` | Empty | Unchanged |
+
+Set `app_cloudwatch_disable=true` to stop the per-App groups outright while keeping the Rack view. Set both parameters to stop the per-App groups and hide the Rack view as well, which still leaves Fluentd writing Rack system Pod output and Nginx access logs into `/convox/<rack>/system`.
 
 ## Setting the Parameter
 
@@ -61,7 +77,11 @@ $ convox rack params set cloudwatch_disable=true -r rackName
 Updating parameters... OK
 ```
 
-Setting either parameter to `true` while the other is not `true`, either already stored on the Rack or set in the same command, prints a warning describing what the other half still does. The batched command above sets both at once, so it does not warn. The check reads the Rack's stored values, so setting the second half later on a Rack that already has the first is silent, as is setting either parameter to `false`. The warning does not block the change; the parameters are applied either way.
+Setting either parameter to `true` while the other is not `true`, either already stored on the Rack or set in the same command, prints a warning describing what the other one still does. The batched command above sets both at once, so it does not warn. Setting the second parameter later on a Rack that already has the first is silent, as is setting either parameter to `false`. Neither warning fires while `app_cloudwatch_disable` is `true`, since that parameter already stops both writers on the per-App groups.
+
+Setting `cloudwatch_disable=true` while `app_cloudwatch_disable` is `true`, or the reverse, prints a different warning: `cloudwatch_disable` covers the Rack system group too, so `convox rack logs` stays empty until you set `cloudwatch_disable=false`.
+
+No warning blocks the change; the parameters are applied either way.
 
 ## Existing Log Groups
 
@@ -71,7 +91,7 @@ Rack lines produced while the parameter is on are dropped rather than buffered. 
 
 ## Additional Information
 
-This parameter is available on AWS Racks only and requires Rack version `3.25.3` or later. On an earlier Rack the command is accepted and the value is then removed by parameter reconciliation before the apply runs, so CloudWatch behavior does not change. Setting it also requires a `convox` CLI at `3.25.3` or newer; an older CLI rejects the name as an unknown parameter, so run [`sudo convox update`](/reference/cli/update) first.
+This parameter is available on AWS Racks only and requires Rack version `3.25.3` or later. On an earlier Rack the command is accepted and the value is then removed by parameter reconciliation before the apply runs, so CloudWatch behavior does not change. Setting it also requires a `convox` CLI at `3.25.3` or newer; an older CLI rejects the name as an unknown parameter, so run [`sudo convox update`](/reference/cli/update) first. [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) arrived later and has a floor of `3.25.5` on both the Rack and the CLI.
 
 - **Validation:** must be `true` or `false`. Any other value is rejected.
 - `convox rack params` lists stored values only, so `cloudwatch_disable` does not appear in its output until you set it.
@@ -83,6 +103,7 @@ This parameter is available on AWS Racks only and requires Rack version `3.25.3`
 
 ## See Also
 
+- [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) to stop the per-App log groups outright while keeping `convox rack logs`
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) to stop Fluentd shipping container output to CloudWatch
 - [syslog](/configuration/rack-parameters/aws/syslog) for forwarding logs to an external syslog endpoint
 - [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) for Nginx access log retention

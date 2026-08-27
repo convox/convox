@@ -134,7 +134,7 @@ services:
       - queue
     test: make test
 ```
-See [Service](/reference/primitives/app/service) for configuration options. A Service can also be declared as an [Agent](/configuration/agents) to run one process on every node.
+See [Service](/reference/primitives/app/service) for configuration options. A Service can also be declared as an [Agent](/configuration/agents) to run one process on every node. The `deployment` block also sets rollout failure detection; see [Rolling Updates: Failure Detection](/deployment/rolling-updates#failure-detection) for `progressDeadline` and `crashRestartLimit`.
 
 ## labels
 

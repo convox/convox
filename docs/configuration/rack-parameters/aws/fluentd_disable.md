@@ -28,9 +28,17 @@ This command disables the installation of Fluentd in your rack.
 ## Additional Information
 Disabling Fluentd can be beneficial if you have a different logging infrastructure in place or if you want to reduce the overhead of running additional services. Without Fluentd, you will need to ensure that your logs are still being captured and managed effectively by your alternative logging solution.
 
-Fluentd forwards application container output to CloudWatch. Disabling it does not take the Rack off CloudWatch: the Rack still creates a log group per App (`/convox/<rack>/<app>`) and writes Kubernetes events and deploy state into it. Set [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) as well to stop that. Make sure to configure your logging system to maintain centralized log management if you choose to disable Fluentd.
+Fluentd forwards application container output to CloudWatch. Disabling it does not take the Rack off CloudWatch: the Rack still creates a log group per App (`/convox/<rack>/<app>`) and writes Kubernetes events and deploy state into it. Two parameters stop that, and they differ in what else goes with it.
+
+| Parameter | Per-App groups `/convox/<rack>/<app>` | `convox rack logs` |
+|-----------|---------------------------------------|--------------------|
+| [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) | Not created, not written | Unchanged |
+| [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) | Not created, not written | Returns empty |
+
+Set `app_cloudwatch_disable=true` to keep the Rack view. Set `cloudwatch_disable=true` when you want the Rack system group closed off as well. Setting `fluentd_disable=true` with neither of them prints a warning naming both. Make sure to configure your logging system to maintain centralized log management if you choose to disable Fluentd.
 
 ## See Also
+- [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) to stop the per-App log groups while keeping `convox rack logs`
 - [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) to stop the Rack's own CloudWatch writes and reads
 - [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory) to adjust Fluentd memory allocation without disabling it
 - [syslog](/configuration/rack-parameters/aws/syslog) for forwarding logs to an external syslog endpoint

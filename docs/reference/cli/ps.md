@@ -1,6 +1,6 @@
 ---
 title: "ps"
-description: "The convox ps command lists an app's running processes and manages per-process operations such as info and stop, including budget-cap sub-states."
+description: "The convox ps command lists an app's running processes and manages per-process operations such as info and stop, including exit status for a finished process and budget-cap sub-states."
 slug: ps
 url: /reference/cli/ps
 ---
@@ -42,6 +42,8 @@ The column is omitted when the cap is not tripped to keep healthy-state
 output table-width-stable. See [Budget Caps](/management/budget-caps) for
 the full sub-state lifecycle and recovery flow.
 
+A one-off process started with [`convox run --detach --retain`](/reference/cli/run#detached-runs) stays in this listing after its command exits, with a status of `complete` or `failed`, for the length of its retention window. Retention requires rack version 3.25.5 or later; without it, a finished one-off process leaves the listing a few seconds after its command exits.
+
 ## ps info
 
 Get information about a process
@@ -62,6 +64,26 @@ Get information about a process
     Started   1 week ago
     Status    running
 ```
+
+A finished process adds an `Exit` row carrying the primary container's exit status:
+
+```bash
+    $ convox ps info web-s43xf
+    Id        web-s43xf
+    App       nodejs
+    Command   bin/migrate
+    Instance  i-0cbaa6d2dd1d094c0
+    Release   RCRLBREFPBX
+    Service   web
+    Started   2 minutes ago
+    Status    complete
+    Exit      0
+```
+
+The `Exit` row is absent while the process is still running, absent when no container ever started (the process was stopped before its command ran, or it never scheduled), and absent on racks before 3.25.5.
+
+A one-off process is removed a few seconds after it finishes, so pass `--retain` or `--wait` to [`convox run`](/reference/cli/run#detached-runs) to keep its record readable long enough to inspect.
+
 ## ps stop
 
 Stop a process
@@ -81,3 +103,4 @@ Stop a process
 - [exec](/reference/cli/exec) for running commands in existing processes
 - [run](/reference/cli/run) for running commands in new processes
 - [scale](/reference/cli/scale) for adjusting process counts and resources
+- [Detached Runs](/reference/cli/run#detached-runs) for keeping a finished one-off process readable

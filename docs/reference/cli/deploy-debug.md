@@ -42,10 +42,12 @@ The command runs three checks by default. You can select individual checks with 
 **Init Containers** (`--checks init`) finds pods stuck in init container state and fetches logs from each init container. Reports container state (Running, Waiting, Terminated with exit code).
 
 **Services** (`--checks services`) classifies every pod:
-- **unhealthy** - pod phase is not Running
+- **unhealthy** - pod phase is not Running, unless the pod is a one-off `convox run` process that finished successfully
 - **not-ready** - Running but health checks are failing
 - **new** - Running and ready but age is below threshold (default 300s)
 - **healthy** - Running, ready, and established
+
+A one-off process started by `convox run` is skipped once it succeeds, so a finished migration or backfill does not count against a service's health. A one-off process that failed is still classified as unhealthy and still appears in the output. The exclusion runs on the rack and requires rack version 3.25.5 or later.
 
 Collects current and previous container logs, per-pod Kubernetes events, and maps failure states to plain-language hints.
 
@@ -138,3 +140,4 @@ Watch mode for ongoing diagnosis:
 - [Health Checks](/configuration/health-checks) for configuring readiness and liveness probes
 - [Logs](/reference/cli/logs) for streaming logs from processes that have passed health checks
 - [Troubleshooting](/help/troubleshooting) for common deployment issues
+- [run](/reference/cli/run) for one-off processes and their exit status

@@ -173,7 +173,7 @@ services:
 
 ### Custom Balancer Protocols
 
-A balancer port is either TCP or UDP; no other protocol is accepted. By default a custom balancer can carry multiple TCP ports or multiple UDP ports, but not a mix of both. Setting `awsLoadBalancerController: true` on the balancer lifts that restriction for TCP and UDP on *different* port numbers. The same port number serving both TCP and UDP is not supported.
+A balancer port is either TCP or UDP; no other protocol is accepted. By default a custom balancer can carry multiple TCP ports or multiple UDP ports, but not a mix of both, a restriction the in-cluster Kubernetes cloud provider enforces rather than Convox. Setting `awsLoadBalancerController: true` on the balancer lifts that restriction for TCP and UDP on **different** port numbers, and requires Rack version `3.25.5` or later. The same port number serving both TCP and UDP is not supported.
 
 ```yaml
 balancers:
@@ -194,29 +194,54 @@ services:
       - 6001/udp
 ```
 
-### The AWS Load Balancer Controller Path
+On an earlier Rack the `awsLoadBalancerController` key is ignored rather than rejected. The balancer is provisioned on the default route, and its mixed TCP and UDP ports never receive an address.
 
-`awsLoadBalancerController` provisions the balancer through the AWS Load Balancer Controller rather than the in-cluster Kubernetes cloud provider. It is supported on AWS racks only; a deploy on any other provider is rejected. There are a few things to know before enabling it.
+## The awsLoadBalancerController Attribute
 
-**It cannot be added to a balancer that already has a load balancer.** Switching an existing balancer over would leave its old load balancer running in your AWS account with nothing in Kubernetes referencing it, so Convox refuses the deploy. A balancer that never received an address, such as one whose mixed TCP and UDP ports were rejected on the default path, has nothing to leave behind, so the flag can be set on it directly. Otherwise migrate:
+`awsLoadBalancerController` provisions the balancer through the AWS Load Balancer Controller rather than through the in-cluster Kubernetes cloud provider. It requires Rack version `3.25.5` or later, and AWS Racks only. A deploy on any other provider is rejected:
+
+```text
+balancer custom: awsLoadBalancerController is only supported on AWS racks
+```
+
+### Switching an Existing Balancer
+
+The attribute cannot be added to a balancer that already has a load balancer. Switching an existing balancer over would leave its old load balancer running in your AWS account with nothing in Kubernetes referencing it, so Convox rejects the promote:
+
+```text
+balancer custom cannot be switched to the AWS Load Balancer Controller in place, because the existing load balancer would be left running in your AWS account. Add a new balancer with awsLoadBalancerController: true, move traffic to it, then remove this one
+```
+
+The same rejection fires when the balancer's own `annotations` set `service.beta.kubernetes.io/aws-load-balancer-type` to `external` or `nlb-ip`, which hands the Service to the controller the way the attribute does.
+
+A balancer that never received an address, such as one whose mixed TCP and UDP ports were rejected on the default route, is not affected, so the attribute can be set on it directly. Otherwise migrate:
 
 1. Add a second balancer under a new name with `awsLoadBalancerController: true` and deploy. `convox balancers` now shows both endpoints.
 2. Move whatever points at the old endpoint over to the new one.
 3. Remove the old balancer entry and deploy. Its load balancer, target groups and node security group rules are cleaned up.
 
-**The endpoint is new.** The controller never adopts an existing load balancer, so the balancer gets a different address.
+### What Changes
 
-**The health check follows the first TCP port.** A balancer with UDP ports gets a TCP health check pointed at its first TCP target port, because a TCP probe against a UDP port can never pass. Set `service.beta.kubernetes.io/aws-load-balancer-healthcheck-port` in the balancer's `annotations` to override it, and set it explicitly if the balancer has no TCP port at all.
+| Aspect | Behavior | Determined by |
+|--------|----------|---------------|
+| Endpoint | The controller never adopts an existing load balancer, so the balancer gets a new address. | Controller |
+| Health check | A TCP probe against the balancer's first TCP target port. | Convox |
+| Scheme | `internet-facing`, unless the balancer's own annotations set `service.beta.kubernetes.io/aws-load-balancer-scheme` or `service.beta.kubernetes.io/aws-load-balancer-internal`. | Convox |
+| Targets | Registered by Pod IP rather than through a node port. | Controller |
+| Client IP on UDP | Always preserved. | AWS |
+| `whitelist` | Not enforced when the balancer's annotations set `service.beta.kubernetes.io/aws-load-balancer-security-groups`. | Controller |
 
-**The scheme is internet-facing** unless the balancer's own annotations set `service.beta.kubernetes.io/aws-load-balancer-scheme` or `service.beta.kubernetes.io/aws-load-balancer-internal`.
+Rows marked Controller or AWS are AWS Load Balancer Controller and AWS behavior, not Convox behavior.
 
-**A `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation disables `whitelist` enforcement**, because it replaces the security group the controller would otherwise manage for you.
+A balancer with UDP ports gets a TCP health check because a TCP probe against a UDP port can never pass. Set `service.beta.kubernetes.io/aws-load-balancer-healthcheck-port` in the balancer's `annotations` to point the probe somewhere else. A balancer with UDP ports and no TCP port has no port to probe, and the deploy is rejected unless the annotations set either that key or `service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol`.
 
-**Targets are registered by pod IP** rather than through a node port. During a rolling deploy the target group can briefly hold only targets that are still registering, so a service with few replicas may drop connections mid-deploy.
+Pod IP targets change how a rolling deploy behaves. The target group can briefly hold only targets that are still registering, so a Service with few replicas may drop connections mid-deploy.
 
-**Client IP preservation is always on for UDP targets.** A pod that reaches its own balancer's UDP port from inside the cluster is not reachable that way when it lands on the same node as a target pod.
+Client IP preservation on UDP targets means a Pod that reaches its own balancer's UDP port from inside the cluster is not reachable that way when it lands on the same node as a target Pod.
 
-If a balancer never gets an address and `convox balancers` shows it empty, the most common cause is an annotation that stops the controller from claiming the Service at all, in particular overriding `service.beta.kubernetes.io/aws-load-balancer-nlb-target-type`. The controller declines silently in that case, with no event on the Service.
+### A Balancer With No Endpoint
+
+If a balancer never gets an address and `convox balancers` shows it empty, the most common cause is an annotation that stops the controller from claiming the Service, in particular overriding `service.beta.kubernetes.io/aws-load-balancer-nlb-target-type`. The controller declines with no event on the Service, so nothing in Convox reports the cause.
 
 ## See Also
 
