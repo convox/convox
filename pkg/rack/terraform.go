@@ -1054,6 +1054,16 @@ func terraformEnv(provider string) (map[string]string, error) {
 		return requireEnv("DIGITALOCEAN_ACCESS_ID", "DIGITALOCEAN_SECRET_KEY", "DIGITALOCEAN_TOKEN")
 	case "gcp":
 		return requireEnv("GOOGLE_CREDENTIALS", "GOOGLE_PROJECT")
+	case "oci":
+		env, err := requireEnv("OCI_TENANCY_OCID", "OCI_USER_OCID", "OCI_FINGERPRINT", "OCI_PRIVATE_KEY", "OCI_REGION")
+		if err != nil {
+			return nil, err
+		}
+		// defaults to the tenancy root
+		for k, v := range optionalEnv("OCI_COMPARTMENT_OCID") {
+			env[k] = v
+		}
+		return env, nil
 	default:
 		return map[string]string{}, nil
 	}
@@ -1176,6 +1186,16 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 			"access_id":  os.Getenv("DIGITALOCEAN_ACCESS_ID"),
 			"secret_key": os.Getenv("DIGITALOCEAN_SECRET_KEY"),
 			"token":      os.Getenv("DIGITALOCEAN_TOKEN"),
+		}
+		return vars, nil
+	case "oci":
+		vars := map[string]string{
+			"compartment_ocid": os.Getenv("OCI_COMPARTMENT_OCID"),
+			"fingerprint":      os.Getenv("OCI_FINGERPRINT"),
+			"private_key":      os.Getenv("OCI_PRIVATE_KEY"),
+			"region":           os.Getenv("OCI_REGION"),
+			"tenancy_ocid":     os.Getenv("OCI_TENANCY_OCID"),
+			"user_ocid":        os.Getenv("OCI_USER_OCID"),
 		}
 		return vars, nil
 	default:
