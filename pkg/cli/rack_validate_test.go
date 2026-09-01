@@ -366,6 +366,41 @@ func TestValidateAndMutateParams_KarpenterNodeOS(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_KarpenterAmiAlias(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"latest", "al2023@latest", false},
+		{"pinned version", "al2023@v20260828", false},
+		{"empty clears", "", false},
+		{"missing v prefix", "al2023@20260828", true},
+		{"short version", "al2023@v2026828", true},
+		{"bottlerocket family", "bottlerocket@latest", true},
+		{"uppercase family", "AL2023@latest", true},
+		{"trailing space", "al2023@latest ", true},
+		{"karpenter alias wildcard", "al2023@*", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"karpenter_ami_alias": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("karpenter_ami_alias=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("stored value revalidated when karpenter is enabled", func(t *testing.T) {
+		params := map[string]string{"karpenter_enabled": "true"}
+		current := map[string]string{"karpenter_auth_mode": "true", "karpenter_ami_alias": "al2023@nope"}
+		if err := validateAndMutateParams(params, "aws", current, false); err == nil {
+			t.Error("expected the stored karpenter_ami_alias to be rejected")
+		}
+	})
+}
+
 func TestValidateAndMutateParams_WebhookSigningKey_AllProviders(t *testing.T) {
 	for _, provider := range []string{"aws", "gcp", "azure", "do", "metal", "local"} {
 		t.Run(provider, func(t *testing.T) {

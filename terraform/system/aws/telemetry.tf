@@ -73,6 +73,7 @@ locals {
     internal_router                           = var.internal_router
     internet_gateway_id                       = var.internet_gateway_id
     k8s_version                               = var.k8s_version
+    karpenter_ami_alias                       = var.karpenter_ami_alias
     karpenter_arch                            = var.karpenter_arch
     karpenter_auth_mode                       = var.karpenter_auth_mode
     karpenter_build_capacity_types            = var.karpenter_build_capacity_types
@@ -232,6 +233,7 @@ locals {
     internal_router                           = "false"
     internet_gateway_id                       = ""
     k8s_version                               = "1.35"
+    karpenter_ami_alias                       = ""
     karpenter_arch                            = ""
     karpenter_auth_mode                       = "false"
     karpenter_build_capacity_types            = "on-demand"

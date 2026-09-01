@@ -208,6 +208,11 @@ variable "karpenter_node_os" {
   default = "al2023"
 }
 
+variable "karpenter_ami_alias" {
+  type    = string
+  default = ""
+}
+
 variable "karpenter_node_labels" {
   type    = string
   default = ""
