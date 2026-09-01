@@ -16,7 +16,7 @@ spec:
     - id: ${ami_id}
 %{ else ~}
   amiSelectorTerms:
-    - alias: al2023@latest
+    - alias: ${ami_alias}
 %{ endif ~}
   blockDeviceMappings:
     - deviceName: /dev/xvda

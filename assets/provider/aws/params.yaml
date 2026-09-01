@@ -640,6 +640,25 @@ Groups:
         allowedValues:
           - al2023
           - bottlerocket
+      - name: karpenter_ami_alias
+        optional: true
+        default: "null"
+        sideNote: Tracks the latest AL2023 AMI if not set
+        type: string
+        regex: ^al2023@(latest|v[0-9]{8})$
+        description: |
+          Pins the EKS-optimized AL2023 AMI on the Karpenter node pools. &l
+          &i e.g. &i al2023@v20260828 &l &l
+          Leave unset to track &i al2023@latest &i, which picks up each AMI as
+          AWS publishes it. &l &l A pool that already selects its own AMI keeps
+          it: &i ami_id &i on an &i additional_karpenter_nodepools_config &i
+          entry, or &i ec2NodeClass.amiSelectorTerms &i in &i karpenter_config
+          &i for the workload pool. A &i karpenter_node_os=bottlerocket &i
+          workload pool is pinned through &i karpenter_config &i as well. &l &l
+          The version must exist for the rack's Kubernetes version and for
+          every architecture the pools launch, or those pools cannot start
+          nodes. Clear or advance the pin before a Kubernetes version
+          upgrade. &l
       - name: karpenter_node_labels
         optional: true
         default: "null"

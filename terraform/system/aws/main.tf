@@ -153,6 +153,7 @@ module "cluster" {
   pod_imds_block_enabled                  = var.pod_imds_block_enabled
   network_policy_enable                   = var.network_policy_enable
   eks_access_entries                      = var.eks_access_entries == "true"
+  karpenter_ami_alias                     = var.karpenter_ami_alias
   karpenter_auth_mode                     = var.karpenter_auth_mode == "true"
   karpenter_enabled                       = var.karpenter_enabled == "true"
   karpenter_instance_families             = var.karpenter_instance_families

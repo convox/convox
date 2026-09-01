@@ -493,3 +493,69 @@ func TestValidateAndMutateParams_PodSecurity(t *testing.T) {
 		}
 	}
 }
+
+// TestEC2NodeClassTemplateArgsComplete asserts both templatefile() calls for
+// the Karpenter EC2NodeClass template supply every name it references. CI runs
+// terraform validate with continue-on-error, so a missing key is silent.
+func TestEC2NodeClassTemplateArgsComplete(t *testing.T) {
+	const tplPath = "../../terraform/cluster/aws/templates/karpenter-ec2nodeclass.yaml.tpl"
+	const npPath = "../../terraform/cluster/aws/karpenter_nodepool.tf"
+
+	tpl := readTestFile(t, tplPath)
+
+	loopBound := map[string]bool{}
+	for _, m := range regexp.MustCompile(`%\{\s*for\s+([^}]+?)\s+in\s`).FindAllStringSubmatch(tpl, -1) {
+		for _, name := range strings.Split(m[1], ",") {
+			loopBound[strings.TrimSpace(name)] = true
+		}
+	}
+
+	want := map[string]bool{}
+	for _, re := range []*regexp.Regexp{
+		regexp.MustCompile(`\$\{\s*([a-zA-Z_][a-zA-Z0-9_]*)`),
+		regexp.MustCompile(`%\{\s*if\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
+		regexp.MustCompile(`%\{\s*for\s+[^}]*?\bin\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
+	} {
+		for _, m := range re.FindAllStringSubmatch(tpl, -1) {
+			if !loopBound[m[1]] {
+				want[m[1]] = true
+			}
+		}
+	}
+	if len(want) == 0 {
+		t.Fatalf("parsed no references out of %s", tplPath)
+	}
+
+	calls := regexp.MustCompile(`(?s)templatefile\("\$\{path\.module\}/templates/karpenter-ec2nodeclass\.yaml\.tpl",\s*\{(.*?)\n  \}\)`).
+		FindAllStringSubmatch(readTestFile(t, npPath), -1)
+	if len(calls) != 2 {
+		t.Fatalf("found %d templatefile calls for the EC2NodeClass template in %s; expected 2", len(calls), npPath)
+	}
+
+	argRe := regexp.MustCompile(`(?m)^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=`)
+	for i, call := range calls {
+		got := map[string]bool{}
+		for _, m := range argRe.FindAllStringSubmatch(call[1], -1) {
+			got[m[1]] = true
+		}
+		var missing []string
+		for name := range want {
+			if !got[name] {
+				missing = append(missing, name)
+			}
+		}
+		sort.Strings(missing)
+		if len(missing) > 0 {
+			t.Errorf("templatefile call %d in %s does not supply %v", i+1, npPath, missing)
+		}
+	}
+}
+
+func readTestFile(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(b)
+}
