@@ -1131,3 +1131,237 @@ func TestValidateAndMutateParams_DeployFastFail(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_Whitelist(t *testing.T) {
+	const (
+		warning      = "WARNING: whitelist does not include 0.0.0.0/0. Clients outside these ranges, including Convox Console, can no longer reach this rack."
+		warningStart = "WARNING: whitelist"
+	)
+
+	for _, tc := range []struct {
+		name     string
+		params   map[string]string
+		current  map[string]string
+		provider string
+		force    bool
+		err      string
+		notErr   string
+		want     string
+		absent   bool
+		warn     bool
+	}{
+		{
+			name:   "open value accepted unchanged",
+			params: map[string]string{"whitelist": "0.0.0.0/0"},
+			want:   "0.0.0.0/0",
+		},
+		{
+			name:   "restricted value refused",
+			params: map[string]string{"whitelist": "10.0.0.0/8"},
+			err:    "does not include 0.0.0.0/0",
+		},
+		{
+			name:   "restricted value refusal names force",
+			params: map[string]string{"whitelist": "10.0.0.0/8"},
+			err:    "--force",
+		},
+		{
+			name:   "restricted value refusal explains the consequence",
+			params: map[string]string{"whitelist": "10.0.0.0/8"},
+			err:    "balancer rules in your cloud provider",
+		},
+		{
+			name:   "restricted value accepted with force",
+			params: map[string]string{"whitelist": "10.0.0.0/8"},
+			force:  true,
+			want:   "10.0.0.0/8",
+			warn:   true,
+		},
+		{
+			name:   "restricted range alongside the default route",
+			params: map[string]string{"whitelist": "10.0.0.0/8,0.0.0.0/0"},
+			want:   "10.0.0.0/8,0.0.0.0/0",
+		},
+		{
+			name:   "surrounding whitespace trimmed",
+			params: map[string]string{"whitelist": "0.0.0.0/0, 10.0.0.0/8"},
+			want:   "0.0.0.0/0,10.0.0.0/8",
+		},
+		{
+			name:   "padded mask counts as the default route",
+			params: map[string]string{"whitelist": "0.0.0.0/00"},
+			want:   "0.0.0.0/0",
+		},
+		{
+			name:   "host address with a zero prefix is the default route",
+			params: map[string]string{"whitelist": "1.2.3.4/0"},
+			want:   "0.0.0.0/0",
+		},
+		{
+			name:   "ipv4 mapped default route",
+			params: map[string]string{"whitelist": "::ffff:0.0.0.0/96"},
+			want:   "0.0.0.0/0",
+		},
+		{
+			name:   "host bits canonicalized",
+			params: map[string]string{"whitelist": "10.0.0.1/8"},
+			force:  true,
+			want:   "10.0.0.0/8",
+			warn:   true,
+		},
+		{
+			name:   "prefix out of range",
+			params: map[string]string{"whitelist": "10.0.0.0/33"},
+			err:    "not a valid cidr range",
+		},
+		{
+			name:   "prefix out of range is not forceable",
+			params: map[string]string{"whitelist": "10.0.0.0/33"},
+			force:  true,
+			err:    "not a valid cidr range",
+		},
+		{
+			name:   "not a cidr at all",
+			params: map[string]string{"whitelist": "not-a-cidr"},
+			err:    "not a valid cidr range",
+		},
+		{
+			name:   "bare address without a mask",
+			params: map[string]string{"whitelist": "1.2.3.4"},
+			err:    "not a valid cidr range",
+		},
+		{
+			name:   "trailing comma dropped",
+			params: map[string]string{"whitelist": "0.0.0.0/0,"},
+			want:   "0.0.0.0/0",
+		},
+		{
+			name:   "only separators",
+			params: map[string]string{"whitelist": ","},
+			err:    "requires at least one cidr range",
+		},
+		{
+			name:   "ipv6 range refused",
+			params: map[string]string{"whitelist": "::/0"},
+			err:    "not an ipv4 cidr range",
+		},
+		{
+			name:   "ipv6 range is not forceable",
+			params: map[string]string{"whitelist": "::/0"},
+			force:  true,
+			err:    "not an ipv4 cidr range",
+		},
+		{
+			name:   "ipv6 range refused alongside the default route",
+			params: map[string]string{"whitelist": "0.0.0.0/0,::/0"},
+			err:    "not an ipv4 cidr range",
+		},
+		{
+			name:   "ipv4 mapped range accepted",
+			params: map[string]string{"whitelist": "::ffff:10.0.0.0/104"},
+			force:  true,
+			want:   "10.0.0.0/8",
+			warn:   true,
+		},
+		{
+			name:     "refused on gcp",
+			params:   map[string]string{"whitelist": "10.0.0.0/8"},
+			provider: "gcp",
+			err:      "does not include 0.0.0.0/0",
+		},
+		{
+			name:     "refused on metal",
+			params:   map[string]string{"whitelist": "10.0.0.0/8"},
+			provider: "metal",
+			err:      "does not include 0.0.0.0/0",
+		},
+		{
+			name:     "refused when the provider has no known param map",
+			params:   map[string]string{"whitelist": "10.0.0.0/8"},
+			provider: "unknown",
+			err:      "does not include 0.0.0.0/0",
+		},
+		{
+			name:    "unrelated param on a restricted rack",
+			params:  map[string]string{"node_disk": "50"},
+			current: map[string]string{"whitelist": "10.0.0.0/8"},
+		},
+		{
+			name:   "unrelated param does not invent the key",
+			params: map[string]string{"node_disk": "50"},
+			absent: true,
+		},
+		{
+			name:   "empty value keeps the existing message",
+			params: map[string]string{"whitelist": ""},
+			err:    "requires an explicit value",
+			notErr: "cidr",
+		},
+		{
+			name:   "whitespace value keeps the existing message",
+			params: map[string]string{"whitelist": "   "},
+			err:    "requires an explicit value",
+			notErr: "cidr",
+		},
+		{
+			name:    "v2 rack on a known provider skips validation",
+			params:  map[string]string{"whitelist": "10.0.0.0/8"},
+			current: map[string]string{"HighAvailability": "true"},
+		},
+		{
+			name:     "local rack reports the unknown key first",
+			params:   map[string]string{"whitelist": "10.0.0.0/8"},
+			provider: "local",
+			err:      "unknown parameter",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := tc.provider
+			if provider == "" {
+				provider = "aws"
+			}
+
+			current := tc.current
+			if current == nil {
+				current = map[string]string{}
+			}
+
+			var err error
+
+			out := captureStderr(t, func() {
+				err = validateAndMutateParams(tc.params, provider, current, tc.force)
+			})
+
+			switch {
+			case tc.err == "" && err != nil:
+				t.Fatalf("unexpected error: %v", err)
+			case tc.err != "" && err == nil:
+				t.Fatalf("expected error containing %q, got nil", tc.err)
+			case tc.err != "" && !strings.Contains(err.Error(), tc.err):
+				t.Fatalf("error %q should contain %q", err.Error(), tc.err)
+			}
+
+			if tc.notErr != "" && err != nil && strings.Contains(err.Error(), tc.notErr) {
+				t.Errorf("error %q should not contain %q", err.Error(), tc.notErr)
+			}
+
+			if tc.want != "" && tc.params["whitelist"] != tc.want {
+				t.Errorf("whitelist = %q, want %q", tc.params["whitelist"], tc.want)
+			}
+
+			if tc.absent {
+				if _, ok := tc.params["whitelist"]; ok {
+					t.Errorf("whitelist key was added to a call that did not set it")
+				}
+			}
+
+			if tc.warn && !strings.Contains(out, warning) {
+				t.Errorf("expected stderr to contain %q, got %q", warning, out)
+			}
+
+			if !tc.warn && strings.Contains(out, warningStart) {
+				t.Errorf("unexpected whitelist warning on stderr: %q", out)
+			}
+		})
+	}
+}
