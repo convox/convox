@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"regexp"
 	"sort"
@@ -1613,6 +1614,63 @@ func validateNodePoolRemoval(params, currentParams map[string]string, force bool
 	return nil
 }
 
+func validateWhitelist(params map[string]string, force bool) error {
+	v, ok := params["whitelist"]
+	if !ok {
+		return nil
+	}
+
+	var entries []string
+	open := false
+
+	for _, e := range strings.Split(v, ",") {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+
+		_, n, err := net.ParseCIDR(e)
+		if err != nil {
+			return fmt.Errorf("param 'whitelist' entry %q is not a valid cidr range", e)
+		}
+
+		if n.IP.To4() == nil {
+			return fmt.Errorf("param 'whitelist' entry %q is not an ipv4 cidr range, the rack router is ipv4 only", e)
+		}
+
+		if n.String() == "0.0.0.0/0" {
+			open = true
+		}
+
+		// AWS canonicalizes a security group CIDR on write and the controller compares
+		// the raw string, so a non-canonical entry never matches on the next reconcile.
+		entries = append(entries, n.String())
+	}
+
+	if len(entries) == 0 {
+		return fmt.Errorf("param 'whitelist' requires at least one cidr range")
+	}
+
+	params["whitelist"] = strings.Join(entries, ",")
+
+	if open {
+		return nil
+	}
+
+	if !force {
+		return fmt.Errorf("param 'whitelist' does not include 0.0.0.0/0\n" +
+			"  The rack router serves the rack API, so this blocks every client outside\n" +
+			"  these ranges, including Convox Console. A Console-managed rack that blocks\n" +
+			"  Console cannot be updated through Convox again without editing the load\n" +
+			"  balancer rules in your cloud provider.\n" +
+			"  Re-run with --force to proceed")
+	}
+
+	fmt.Fprintf(os.Stderr, "WARNING: whitelist does not include 0.0.0.0/0. Clients outside these ranges, including Convox Console, can no longer reach this rack.\n")
+
+	return nil
+}
+
 func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string, force bool) error {
 	// Install-only params — these define infrastructure that cannot be changed
 	// after rack creation without catastrophic consequences (network recreation,
@@ -2629,6 +2687,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				return fmt.Errorf("%s: must contain only letters, digits, and underscore (got %q)", k, v)
 			}
 		}
+	}
+
+	if err := validateWhitelist(params, force); err != nil {
+		return err
 	}
 
 	return nil
