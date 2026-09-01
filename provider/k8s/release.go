@@ -165,6 +165,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		if err := p.validateBalancerPortStability(app, m.Balancers); err != nil {
+			return errors.WithStack(err)
+		}
+
 		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
 
 		if a.Release != "" && a.Release != id {
@@ -533,6 +537,12 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 		return nil, structs.ErrBadRequest("balancer %s: awsLoadBalancerController is only supported on AWS racks", b.Name)
 	}
 
+	ports, tcpUdp := balancerRenderPorts(b.Ports)
+
+	if tcpUdp && !b.AwsLoadBalancerController {
+		return nil, structs.ErrBadRequest("balancer %s: protocol TCP_UDP requires awsLoadBalancerController: true, update convox.yml and build again", b.Name)
+	}
+
 	annotations := b.AnnotationsMap()
 
 	params := map[string]interface{}{
@@ -540,9 +550,11 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 		"Balancer":        b,
 		"HealthCheckPort": balancerHealthCheckPort(b.Ports),
 		"Namespace":       p.AppNamespace(a.Name),
+		"Ports":           ports,
 		"Release":         r,
 		"Labels":          lbs,
 		"Scheme":          balancerScheme(annotations),
+		"TcpUdp":          tcpUdp,
 	}
 
 	data, err := p.RenderTemplate("app/balancer", params)
@@ -573,6 +585,146 @@ func balancerHealthCheckPort(ports manifest.BalancerPorts) int {
 	}
 
 	return target
+}
+
+type balancerRenderPort struct {
+	Name     string
+	Source   int
+	Protocol string
+	Target   int
+}
+
+func balancerRenderPorts(ports manifest.BalancerPorts) ([]balancerRenderPort, bool) {
+	rps := []balancerRenderPort{}
+	tcpUdp := false
+
+	for _, p := range ports {
+		if p.Protocol == manifest.BalancerProtocolTcpUdp {
+			tcpUdp = true
+
+			rps = append(rps,
+				balancerRenderPort{Name: fmt.Sprintf("%d-tcp", p.Source), Source: p.Source, Protocol: manifest.BalancerProtocolTcp, Target: p.Target},
+				balancerRenderPort{Name: fmt.Sprintf("%d-udp", p.Source), Source: p.Source, Protocol: manifest.BalancerProtocolUdp, Target: p.Target},
+			)
+
+			continue
+		}
+
+		rps = append(rps, balancerRenderPort{Name: strconv.Itoa(p.Source), Source: p.Source, Protocol: p.Protocol, Target: p.Target})
+	}
+
+	return rps, tcpUdp
+}
+
+type balancerPortKey struct {
+	Source   int
+	Protocol string
+	Target   int
+}
+
+func balancerRenderedKeys(ports []balancerRenderPort) []balancerPortKey {
+	ks := make([]balancerPortKey, len(ports))
+
+	for i, p := range ports {
+		k := balancerPortKey{Source: p.Source, Protocol: p.Protocol, Target: p.Target}
+
+		if k.Protocol == "" {
+			k.Protocol = manifest.BalancerProtocolTcp
+		}
+
+		if k.Target == 0 {
+			k.Target = k.Source
+		}
+
+		ks[i] = k
+	}
+
+	return ks
+}
+
+func balancerLiveKeys(ports []v1.ServicePort) []balancerPortKey {
+	ks := make([]balancerPortKey, len(ports))
+
+	for i, p := range ports {
+		ks[i] = balancerPortKey{Source: int(p.Port), Protocol: string(p.Protocol), Target: p.TargetPort.IntValue()}
+	}
+
+	return ks
+}
+
+func balancerMixedPair(ks []balancerPortKey) bool {
+	seen := map[int]string{}
+
+	for _, k := range ks {
+		if protocol, ok := seen[k.Source]; ok && protocol != k.Protocol {
+			return true
+		}
+
+		seen[k.Source] = k.Protocol
+	}
+
+	return false
+}
+
+func balancerPortKeysEqual(a, b []balancerPortKey) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func balancerPortKeysDescription(ks []balancerPortKey) string {
+	ss := make([]string, len(ks))
+
+	for i, k := range ks {
+		ss[i] = fmt.Sprintf("%d/%s->%d", k.Source, k.Protocol, k.Target)
+	}
+
+	return strings.Join(ss, ", ")
+}
+
+func (p *Provider) validateBalancerPortStability(app string, bs manifest.Balancers) error {
+	if p.Provider != "aws" {
+		return nil
+	}
+
+	for _, b := range bs {
+		s, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).Get(context.TODO(), fmt.Sprintf("balancer-%s", b.Name), am.GetOptions{})
+		if kerr.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		rendered, _ := balancerRenderPorts(b.Ports)
+
+		want := balancerRenderedKeys(rendered)
+		have := balancerLiveKeys(s.Spec.Ports)
+
+		if !b.AwsLoadBalancerController && !balancerMixedPair(have) {
+			continue
+		}
+
+		if !balancerMixedPair(want) && !balancerMixedPair(have) {
+			continue
+		}
+
+		if balancerPortKeysEqual(want, have) {
+			continue
+		}
+
+		return structs.ErrBadRequest("balancer %s: TCP and UDP on one port number can only be set up on a new balancer, and its ports cannot be changed afterwards. It is currently serving %s. Restore this balancer's previous ports in convox.yml to deploy it again, or replace it: add a second balancer with the ports you want and move traffic to it, or remove this one, deploy, then add it back. Replacing it gives a new address", b.Name, balancerPortKeysDescription(have))
+	}
+
+	return nil
 }
 
 func balancerScheme(annotations map[string]string) string {

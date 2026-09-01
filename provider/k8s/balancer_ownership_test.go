@@ -36,7 +36,7 @@ services:
     port: 5000
 `
 
-func createBalancerService(t *testing.T, kk *fake.Clientset, ns, name, lbType string, ingress bool) {
+func createBalancerService(t *testing.T, kk *fake.Clientset, ns, name, lbType string, ingress bool, ports ...ac.ServicePort) {
 	t.Helper()
 
 	s := &ac.Service{
@@ -45,6 +45,7 @@ func createBalancerService(t *testing.T, kk *fake.Clientset, ns, name, lbType st
 			Namespace:   ns,
 			Annotations: map[string]string{"service.beta.kubernetes.io/aws-load-balancer-type": lbType},
 		},
+		Spec: ac.ServiceSpec{Ports: ports},
 	}
 
 	if ingress {
