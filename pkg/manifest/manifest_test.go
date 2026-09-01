@@ -790,7 +790,7 @@ func TestManifestValidate(t *testing.T) {
 		"balancer charlie annotation noequalssign must be in key=value format",
 		"balancer charlie port 3000 has unsupported protocol SCTP",
 		"balancer delta has UDP ports and no TCP port, set service.beta.kubernetes.io/aws-load-balancer-healthcheck-port in annotations",
-		"balancer echo declares port 53 more than once, TCP and UDP on the same port number is not supported",
+		"balancer echo declares port 53 more than once, use protocol: TCP_UDP on a single entry to serve both protocols on one port number",
 		"resource name 1resource invalid, must contain only lowercase alphanumeric and dashes",
 		"service deployment-invalid-low deployment minimum can not be less than 0",
 		"service deployment-invalid-low deployment maximum can not be less than 100",

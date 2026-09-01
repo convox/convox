@@ -83,16 +83,27 @@ func (m *Manifest) validateBalancers() []error {
 
 		for _, p := range b.Ports {
 			switch p.Protocol {
-			case "UDP":
+			case BalancerProtocolUdp:
 				udp = true
-			case "", "TCP":
+			case "", BalancerProtocolTcp:
 				tcp = true
+			case BalancerProtocolTcpUdp:
+				tcp = true
+				udp = true
+
+				if !b.AwsLoadBalancerController {
+					errs = append(errs, fmt.Errorf("balancer %s port %d uses protocol TCP_UDP, which requires awsLoadBalancerController: true", b.Name, p.Source))
+				}
+
+				if p.Target == 0 {
+					errs = append(errs, fmt.Errorf("balancer %s port %d uses protocol TCP_UDP and must set a target port", b.Name, p.Source))
+				}
 			default:
 				errs = append(errs, fmt.Errorf("balancer %s port %d has unsupported protocol %s", b.Name, p.Source, p.Protocol))
 			}
 
 			if b.AwsLoadBalancerController && seen[p.Source] {
-				errs = append(errs, fmt.Errorf("balancer %s declares port %d more than once, TCP and UDP on the same port number is not supported", b.Name, p.Source))
+				errs = append(errs, fmt.Errorf("balancer %s declares port %d more than once, use protocol: TCP_UDP on a single entry to serve both protocols on one port number", b.Name, p.Source))
 			}
 
 			seen[p.Source] = true
