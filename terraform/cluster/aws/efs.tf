@@ -49,11 +49,16 @@ resource "aws_efs_file_system" "convox_efs" {
   tags             = local.tags
 }
 
+locals {
+  // keep existing mount targets in place on racks that have private subnets
+  efs_mount_subnets_ids = var.private || length(var.private_subnets_ids) > 0 ? local.private_subnets_ids : local.public_subnets_ids
+}
+
 resource "aws_efs_mount_target" "efs_mount" {
-  count = var.efs_csi_driver_enable ? length(local.private_subnets_ids) : 0
+  count = var.efs_csi_driver_enable ? length(local.efs_mount_subnets_ids) : 0
 
   file_system_id  = aws_efs_file_system.convox_efs[0].id
-  subnet_id       = local.private_subnets_ids[count.index]
+  subnet_id       = local.efs_mount_subnets_ids[count.index]
   security_groups = [aws_security_group.efs_security_group[0].id]
 }
 
