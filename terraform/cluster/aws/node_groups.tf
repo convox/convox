@@ -1,10 +1,26 @@
 
 locals {
-  launch_template_user_data_raw = var.user_data_url != "" || var.user_data != "" || var.kubelet_registry_pull_qps != 5 || var.kubelet_registry_burst != 10 ? templatefile("${path.module}/files/custom_user_data.sh", {
-    kubelet_registry_pull_qps = var.kubelet_registry_pull_qps
-    kubelet_registry_burst    = var.kubelet_registry_burst
+  launch_template_user_data_raw = var.user_data_url != "" || var.user_data != "" || local.kubelet_registry_set ? templatefile("${path.module}/files/custom_user_data.sh", {
+    kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
+    kubelet_registry_burst    = local.kubelet_registry_burst_effective
     user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
     user_data                 = var.user_data
+  }) : ""
+
+  # Values outside int32 make kubelet exit, and a zero burst admits no pull at all. Zero QPS is
+  # kubelet's own "no limit", which is why only the burst floor is 1.
+  kubelet_registry_pull_qps_effective = min(2147483647, floor(max(0, var.kubelet_registry_pull_qps)))
+  kubelet_registry_burst_effective    = min(2147483647, floor(max(1, var.kubelet_registry_burst)))
+
+  # Compare the clamped values, so this can never disagree with the gate inside the templates,
+  # which see the clamped values and nothing else.
+  kubelet_registry_set = local.kubelet_registry_pull_qps_effective != 5 || local.kubelet_registry_burst_effective != 10
+
+  kubelet_registry_user_data = local.kubelet_registry_set ? templatefile("${path.module}/files/custom_user_data.sh", {
+    kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
+    kubelet_registry_burst    = local.kubelet_registry_burst_effective
+    user_data_script_file     = ""
+    user_data                 = ""
   }) : ""
 
   kube_dns_ip = cidrhost(aws_eks_cluster.cluster.kubernetes_network_config[0].service_ipv4_cidr, 10)
@@ -181,14 +197,18 @@ resource "aws_launch_template" "cluster_additional" {
     }
   }
 
-  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? null : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
-    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
-    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
-    name                = aws_eks_cluster.cluster.name,
-    cidr                = var.cidr,
-    cluster_dns         = local.kube_dns_ip,
-    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}",
-    user_data           = local.launch_template_user_data_raw,
+  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? (
+    local.kubelet_registry_user_data != "" ? base64encode(local.kubelet_registry_user_data) : null
+    ) : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+      api_server_endpoint       = aws_eks_cluster.cluster.endpoint,
+      api_server_ca             = aws_eks_cluster.cluster.certificate_authority[0].data,
+      name                      = aws_eks_cluster.cluster.name,
+      cidr                      = var.cidr,
+      cluster_dns               = local.kube_dns_ip,
+      node_labels               = "eks.amazonaws.com/nodegroup=${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}",
+      user_data                 = local.launch_template_user_data_raw,
+      kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective,
+      kubelet_registry_burst    = local.kubelet_registry_burst_effective,
   }))
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
@@ -318,14 +338,18 @@ resource "aws_launch_template" "build_additional" {
     instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? null : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
-    api_server_endpoint = aws_eks_cluster.cluster.endpoint,
-    api_server_ca       = aws_eks_cluster.cluster.certificate_authority[0].data,
-    name                = aws_eks_cluster.cluster.name,
-    cidr                = var.cidr,
-    cluster_dns         = local.kube_dns_ip,
-    node_labels         = "eks.amazonaws.com/nodegroup=${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}",
-    user_data           = "",
+  user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? (
+    local.kubelet_registry_user_data != "" ? base64encode(local.kubelet_registry_user_data) : null
+    ) : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
+      api_server_endpoint       = aws_eks_cluster.cluster.endpoint,
+      api_server_ca             = aws_eks_cluster.cluster.certificate_authority[0].data,
+      name                      = aws_eks_cluster.cluster.name,
+      cidr                      = var.cidr,
+      cluster_dns               = local.kube_dns_ip,
+      node_labels               = "eks.amazonaws.com/nodegroup=${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}",
+      user_data                 = "",
+      kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective,
+      kubelet_registry_burst    = local.kubelet_registry_burst_effective,
   }))
 
   dynamic "tag_specifications" {
