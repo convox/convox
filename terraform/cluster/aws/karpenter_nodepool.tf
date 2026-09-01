@@ -6,6 +6,8 @@ locals {
 
   karpenter_is_bottlerocket = var.karpenter_node_os == "bottlerocket"
 
+  karpenter_effective_ami_alias = var.karpenter_ami_alias != "" ? var.karpenter_ami_alias : "al2023@latest"
+
   # Parse workload NodePool custom labels from "k1=v1,k2=v2" to map
   karpenter_workload_extra_labels = {
     for pair in compact(split(",", var.karpenter_node_labels)) :
@@ -177,7 +179,7 @@ locals {
   )
 
   # amiSelectorTerms: OS-aware default, still overridable
-  ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = "al2023@latest" }]
+  ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = local.karpenter_effective_ami_alias }]
   ec2_final_ami   = lookup(local.kc_ec2, "amiSelectorTerms", local.ec2_default_ami)
 
   # Optional fields from override only (no individual params for these)
@@ -320,6 +322,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     imds_http_hop_limit        = local.build_imds_hop_limit
     extra_tags                 = var.tags
     ami_id                     = ""
+    ami_alias                  = local.karpenter_effective_ami_alias
   })
 
   wait = true
@@ -376,6 +379,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     imds_http_hop_limit        = var.imds_http_hop_limit
     extra_tags                 = var.tags
     ami_id                     = each.value.ami_id
+    ami_alias                  = local.karpenter_effective_ami_alias
   })
 
   wait = true

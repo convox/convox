@@ -72,7 +72,7 @@ var awsKnownParams = map[string]bool{
 	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
 	"pod_imds_block_enabled": true, "network_policy_enable": true,
 	"internet_gateway_id": true, "k8s_version": true,
-	"karpenter_arch": true, "karpenter_auth_mode": true,
+	"karpenter_ami_alias": true, "karpenter_arch": true, "karpenter_auth_mode": true,
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
 	"karpenter_build_disruption_budget_nodes": true,
@@ -263,6 +263,7 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"karpenter": {
 		"additional_karpenter_nodepools_config":   true,
+		"karpenter_ami_alias":                     true,
 		"karpenter_arch":                          true,
 		"karpenter_auth_mode":                     true,
 		"karpenter_build_capacity_types":          true,
@@ -685,6 +686,7 @@ var clearableParams = map[string]bool{
 	// Router security group — clear means "use the rack-managed group"
 	"nlb_security_group": true,
 	// Optional overrides — clear means "use auto/default"
+	"karpenter_ami_alias":         true,
 	"build_node_type":             true,
 	"key_pair_name":               true,
 	"nginx_additional_config":     true,
@@ -1994,6 +1996,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
 			"karpenter_node_labels", "karpenter_build_node_labels",
 			"karpenter_build_imds_tokens", "karpenter_build_imds_hop_limit",
+			"karpenter_ami_alias",
 		}
 		for _, rk := range karpenterRevalidateKeys {
 			if _, inCall := params[rk]; !inCall {
@@ -2101,6 +2104,13 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			if !budgetRe.MatchString(v) {
 				return fmt.Errorf("%s must be a node count or a percentage from 0%% to 100%% (e.g. 100%%)", bk)
 			}
+		}
+	}
+
+	amiAliasRe := regexp.MustCompile(`^al2023@(latest|v[0-9]{8})$`)
+	if v, ok := params["karpenter_ami_alias"]; ok && v != "" {
+		if !amiAliasRe.MatchString(v) {
+			return fmt.Errorf("karpenter_ami_alias pins AL2023 node pools and must be al2023@latest or al2023@vYYYYMMDD (e.g. al2023@v20260828)")
 		}
 	}
 

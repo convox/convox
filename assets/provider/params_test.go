@@ -204,6 +204,15 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 			{"ECDHE-RSA-AES128-GCM-SHA256", true},
 			{"A:B:C", true},
 		},
+		// Karpenter AMI pin
+		"aws/karpenter_ami_alias": {
+			{"al2023@latest", true},
+			{"al2023@v20260828", true},
+			{"al2023@20260828", false},
+			{"al2023@v2026828", false},
+			{"bottlerocket@latest", false},
+			{"AL2023@latest", false},
+		},
 		// Syslog (all providers share)
 		"aws/syslog": {
 			{"tcp://host:514", true},
