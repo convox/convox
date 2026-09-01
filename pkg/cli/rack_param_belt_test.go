@@ -510,15 +510,16 @@ func TestEC2NodeClassTemplateArgsComplete(t *testing.T) {
 		}
 	}
 
+	keyword := map[string]bool{
+		"for": true, "endfor": true, "if": true, "else": true, "endif": true,
+		"in": true, "null": true, "true": true, "false": true,
+	}
+	ident := regexp.MustCompile(`(\.?)([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?`)
 	want := map[string]bool{}
-	for _, re := range []*regexp.Regexp{
-		regexp.MustCompile(`\$\{\s*([a-zA-Z_][a-zA-Z0-9_]*)`),
-		regexp.MustCompile(`%\{\s*if\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-		regexp.MustCompile(`%\{\s*for\s+[^}]*?\bin\s+([a-zA-Z_][a-zA-Z0-9_]*)`),
-	} {
-		for _, m := range re.FindAllStringSubmatch(tpl, -1) {
-			if !loopBound[m[1]] {
-				want[m[1]] = true
+	for _, body := range regexp.MustCompile(`[$%]\{([^}]*)\}`).FindAllStringSubmatch(tpl, -1) {
+		for _, m := range ident.FindAllStringSubmatch(body[1], -1) {
+			if m[1] == "" && m[3] == "" && !keyword[m[2]] && !loopBound[m[2]] {
+				want[m[2]] = true
 			}
 		}
 	}

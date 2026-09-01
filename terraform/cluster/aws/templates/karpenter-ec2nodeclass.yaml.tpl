@@ -18,6 +18,10 @@ spec:
   amiSelectorTerms:
     - alias: ${ami_alias}
 %{ endif ~}
+%{ if kubelet_user_data != "" ~}
+  userData: |
+    ${indent(4, chomp(kubelet_user_data))}
+%{ endif ~}
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
