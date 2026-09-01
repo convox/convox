@@ -2,6 +2,12 @@ package manifest
 
 import "strings"
 
+const (
+	BalancerProtocolTcp    = "TCP"
+	BalancerProtocolTcpUdp = "TCP_UDP"
+	BalancerProtocolUdp    = "UDP"
+)
+
 type Balancer struct {
 	Name string `yaml:"-"`
 

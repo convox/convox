@@ -21,6 +21,9 @@ metadata:
     {{ range keyValue .Annotations }}
     {{.Key}}: "{{ quoteEscape .Value}}"
     {{ end }}
+    {{ if and .Balancer.AwsLoadBalancerController .TcpUdp }}
+    service.beta.kubernetes.io/aws-load-balancer-enable-tcp-udp-listener: "true"
+    {{ end }}
   labels:
     balancer: {{.Balancer.Name}}
     service: {{.Balancer.Service}}
@@ -41,8 +44,8 @@ spec:
     service: {{.Balancer.Service}}
     type: service
   ports:
-    {{ range .Balancer.Ports }}
-    - name: "{{.Source}}"
+    {{ range .Ports }}
+    - name: "{{.Name}}"
       port: {{.Source}}
       protocol: {{.Protocol}}
       targetPort: {{.Target}}
