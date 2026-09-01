@@ -178,11 +178,4 @@ resource "helm_release" "aws_lbc" {
       value = "NoSchedule"
     }
   }
-
-  lifecycle {
-    precondition {
-      condition     = length(fileset("${path.module}/files/lbc-crds", "*.yaml")) > 0
-      error_message = "files/lbc-crds is empty: the controller CRDs must be applied before the chart upgrades."
-    }
-  }
 }
