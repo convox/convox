@@ -17,6 +17,10 @@ spec:
     config:
       clusterDNS:
       - ${cluster_dns}
+%{ if kubelet_registry_pull_qps != 5 || kubelet_registry_burst != 10 ~}
+      registryPullQPS: ${kubelet_registry_pull_qps}
+      registryBurst: ${kubelet_registry_burst}
+%{ endif ~}
     maxPodsExpression: "((default_enis - 1) * (ips_per_eni - 1)) + 2"
     flags:
     - "--node-labels=${node_labels}"

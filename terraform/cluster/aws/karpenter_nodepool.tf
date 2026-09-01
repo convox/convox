@@ -190,8 +190,23 @@ locals {
   ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = local.karpenter_effective_ami_alias }]
   ec2_final_ami   = lookup(local.kc_ec2, "amiSelectorTerms", local.ec2_default_ami)
 
-  # Optional fields from override only (no individual params for these)
+  # userData: NodeConfig for the kubelet registry params. Skipped when karpenter_config picks
+  # the AMI, since a Bottlerocket class parses userData as TOML rather than YAML.
+  ec2_kubelet_nodeconfig = <<-EOT
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      kubelet:
+        config:
+          registryPullQPS: ${local.kubelet_registry_pull_qps_effective}
+          registryBurst: ${local.kubelet_registry_burst_effective}
+  EOT
+
+  ec2_kubelet_user_data = local.kubelet_registry_set ? local.ec2_kubelet_nodeconfig : ""
+
+  # Params first, then override, so karpenter_config wins on any key it sets
   ec2_optional_fields = merge(
+    !local.karpenter_is_bottlerocket && lookup(local.kc_ec2, "amiSelectorTerms", null) == null && local.ec2_kubelet_user_data != "" ? { userData = local.ec2_kubelet_user_data } : {},
     lookup(local.kc_ec2, "userData", null) != null ? { userData = local.kc_ec2["userData"] } : {},
     lookup(local.kc_ec2, "detailedMonitoring", null) != null ? { detailedMonitoring = local.kc_ec2["detailedMonitoring"] } : {},
     lookup(local.kc_ec2, "associatePublicIPAddress", null) != null ? { associatePublicIPAddress = local.kc_ec2["associatePublicIPAddress"] } : {},
@@ -333,6 +348,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     extra_tags                 = var.tags
     ami_id                     = ""
     ami_alias                  = local.karpenter_effective_ami_alias
+    kubelet_user_data          = local.ec2_kubelet_user_data
   })
 
   wait = true
@@ -392,6 +408,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     extra_tags                 = var.tags
     ami_id                     = each.value.ami_id
     ami_alias                  = local.karpenter_effective_ami_alias
+    kubelet_user_data          = local.ec2_kubelet_user_data
   })
 
   wait = true
