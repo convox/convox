@@ -518,7 +518,7 @@ resource "kubernetes_service" "api" {
 locals {
   ingress_annotations = var.router_type == "contour" ? {
     for k, v in var.annotations : k => v
-    if !startswith(k, "cert-manager.io/")
+    if length(regexall("^cert-manager\\.io/", k)) == 0
   } : var.annotations
 }
 
