@@ -82,6 +82,33 @@ jobs:
             (cd "$dir" && tflint --config "$(git rev-parse --show-toplevel)/.tflint.hcl")
           done
 
+  terraform-fleet-floor:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: terraform fleet floor
+        run: |
+          set +e
+          hits=$(grep -rnE --include='*.tf' --include='*.tpl' --include='*.sh' --exclude-dir=.terraform \
+            -e '(^|[^A-Za-z0-9_])(alltrue|anytrue|endswith|ephemeralasnull|issensitive|nonsensitive|one|optional|plantimestamp|sensitive|startswith|strcontains|templatestring|textdecodebase64|textencodebase64|timecmp)\(' \
+            -e '^(check|import|moved|removed)[[:space:]]*[{"]' \
+            -e '(^|[^A-Za-z0-9_])(precondition|postcondition)[[:space:]]*\{' \
+            -e '(^|[^A-Za-z0-9_])replace_triggered_by[[:space:]]*=' \
+            -e '(^[[:space:]]*|\{[[:space:]]*)(sensitive|nullable)[[:space:]]*=' \
+            terraform)
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            printf '%s\n' "$hits"
+            echo "Terraform construct above the fleet floor. A rack keeps the binary it was installed with, so terraform/ must stay parseable on the oldest binary in the fleet."
+            exit 1
+          fi
+          if [ "$rc" -ne 1 ]; then
+            echo "fleet floor scan failed: grep exited $rc"
+            exit 1
+          fi
+
   terraform-security:
     runs-on: ubuntu-22.04
     steps:
