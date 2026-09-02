@@ -49,3 +49,9 @@ spec:
         reasons: ["Empty"]
       - nodes: "10%"
         reasons: ["Drifted", "Underutilized"]
+%{ if block_schedule != "" && block_duration != "" ~}
+      - nodes: "0"
+        schedule: ${jsonencode(block_schedule)}
+        duration: ${jsonencode(block_duration)}
+        reasons: ["Drifted", "Underutilized"]
+%{ endif ~}

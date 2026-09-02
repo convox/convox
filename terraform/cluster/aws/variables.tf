@@ -193,6 +193,16 @@ variable "karpenter_disruption_budget_nodes" {
   default = "10%"
 }
 
+variable "karpenter_disruption_block_schedule" {
+  type    = string
+  default = ""
+}
+
+variable "karpenter_disruption_block_duration" {
+  type    = string
+  default = ""
+}
+
 variable "karpenter_node_disk" {
   type    = number
   default = 0
