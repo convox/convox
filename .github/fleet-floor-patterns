@@ -1,0 +1,8 @@
+# Terraform constructs newer than the oldest binary in the rack fleet. A rack keeps the
+# binary it was installed with, so terraform/ must stay parseable on that floor.
+# One ERE per line. Blank lines and # comments are stripped before grep reads them.
+(^|[^A-Za-z0-9_])(alltrue|anytrue|endswith|ephemeralasnull|issensitive|nonsensitive|one|optional|plantimestamp|sensitive|startswith|strcontains|templatestring|textdecodebase64|textencodebase64|timecmp)\(
+^(check|import|moved|removed)[[:space:]]*[{"]
+(^|[^A-Za-z0-9_])(precondition|postcondition)[[:space:]]*\{
+(^|[^A-Za-z0-9_])replace_triggered_by[[:space:]]*=
+(^[[:space:]]*|\{[[:space:]]*)(sensitive|nullable)[[:space:]]*=

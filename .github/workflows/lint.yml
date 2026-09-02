@@ -89,14 +89,14 @@ jobs:
         uses: actions/checkout@v4
       - name: terraform fleet floor
         run: |
+          grep -vE '^[[:space:]]*(#|$)' .github/fleet-floor-patterns > "$RUNNER_TEMP/fleet-floor-patterns"
+          if [ ! -s "$RUNNER_TEMP/fleet-floor-patterns" ]; then
+            echo "no patterns loaded from .github/fleet-floor-patterns"
+            exit 1
+          fi
           set +e
           hits=$(grep -rnE --include='*.tf' --include='*.tpl' --include='*.sh' --exclude-dir=.terraform \
-            -e '(^|[^A-Za-z0-9_])(alltrue|anytrue|endswith|ephemeralasnull|issensitive|nonsensitive|one|optional|plantimestamp|sensitive|startswith|strcontains|templatestring|textdecodebase64|textencodebase64|timecmp)\(' \
-            -e '^(check|import|moved|removed)[[:space:]]*[{"]' \
-            -e '(^|[^A-Za-z0-9_])(precondition|postcondition)[[:space:]]*\{' \
-            -e '(^|[^A-Za-z0-9_])replace_triggered_by[[:space:]]*=' \
-            -e '(^[[:space:]]*|\{[[:space:]]*)(sensitive|nullable)[[:space:]]*=' \
-            terraform)
+            -f "$RUNNER_TEMP/fleet-floor-patterns" terraform)
           rc=$?
           set -e
           if [ "$rc" -eq 0 ]; then
