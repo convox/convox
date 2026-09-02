@@ -90,6 +90,8 @@ locals {
     karpenter_consolidate_after               = var.karpenter_consolidate_after
     karpenter_consolidation_enabled           = var.karpenter_consolidation_enabled
     karpenter_cpu_limit                       = var.karpenter_cpu_limit
+    karpenter_disruption_block_duration       = var.karpenter_disruption_block_duration
+    karpenter_disruption_block_schedule       = var.karpenter_disruption_block_schedule
     karpenter_disruption_budget_nodes         = var.karpenter_disruption_budget_nodes
     karpenter_enabled                         = var.karpenter_enabled
     karpenter_instance_families               = var.karpenter_instance_families
@@ -249,6 +251,8 @@ locals {
     karpenter_consolidate_after               = "30s"
     karpenter_consolidation_enabled           = "true"
     karpenter_cpu_limit                       = "100"
+    karpenter_disruption_block_duration       = ""
+    karpenter_disruption_block_schedule       = ""
     karpenter_disruption_budget_nodes         = "10%"
     karpenter_enabled                         = "false"
     karpenter_instance_families               = ""

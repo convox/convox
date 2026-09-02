@@ -165,6 +165,8 @@ module "cluster" {
   karpenter_consolidate_after             = var.karpenter_consolidate_after
   karpenter_node_expiry                   = var.karpenter_node_expiry
   karpenter_disruption_budget_nodes       = var.karpenter_disruption_budget_nodes
+  karpenter_disruption_block_schedule     = var.karpenter_disruption_block_schedule
+  karpenter_disruption_block_duration     = var.karpenter_disruption_block_duration
   karpenter_node_disk                     = var.karpenter_node_disk
   karpenter_node_volume_type              = var.karpenter_node_volume_type
   karpenter_node_os                       = var.karpenter_node_os

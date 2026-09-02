@@ -2732,3 +2732,73 @@ func TestValidateAndMutateParams_K8sResourceClearable(t *testing.T) {
 }
 
 func boolPtr(b bool) *bool { return &b }
+
+func TestValidateAndMutateParams_KarpenterDisruptionWindow(t *testing.T) {
+	cases := []struct {
+		name    string
+		params  map[string]string
+		current map[string]string
+		reject  bool
+	}{
+		{"both set", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, nil, false},
+		{"lowercase day names", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * mon-fri", "karpenter_disruption_block_duration": "8h"}, nil, false},
+		{"weekly complement", map[string]string{"karpenter_disruption_block_schedule": "0 13 * * SAT", "karpenter_disruption_block_duration": "164h"}, nil, false},
+		{"macro", map[string]string{"karpenter_disruption_block_schedule": "@weekly", "karpenter_disruption_block_duration": "100h"}, nil, false},
+		{"minutes", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * *", "karpenter_disruption_block_duration": "90m"}, nil, false},
+		{"zero padded fields", map[string]string{"karpenter_disruption_block_schedule": "00 09 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, nil, false},
+		{"nightly window", map[string]string{"karpenter_disruption_block_schedule": "30 22 * * *", "karpenter_disruption_block_duration": "7h30m"}, nil, false},
+
+		{"schedule alone", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI"}, nil, true},
+		{"duration alone", map[string]string{"karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"monthly macro", map[string]string{"karpenter_disruption_block_schedule": "@monthly", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"day of month restricted", map[string]string{"karpenter_disruption_block_schedule": "0 9 1 * *", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"month restricted", map[string]string{"karpenter_disruption_block_schedule": "0 9 * 3 *", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"six fields", map[string]string{"karpenter_disruption_block_schedule": "0 0 9 * * MON", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"every two hours", map[string]string{"karpenter_disruption_block_schedule": "30 */2 * * *", "karpenter_disruption_block_duration": "20h"}, nil, true},
+		{"hourly cron", map[string]string{"karpenter_disruption_block_schedule": "0 * * * *", "karpenter_disruption_block_duration": "2h"}, nil, true},
+		{"every minute", map[string]string{"karpenter_disruption_block_schedule": "* * * * *", "karpenter_disruption_block_duration": "23h"}, nil, true},
+		{"hour range", map[string]string{"karpenter_disruption_block_schedule": "0 9-17 * * *", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"minute out of range", map[string]string{"karpenter_disruption_block_schedule": "60 9 * * *", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"hour out of range", map[string]string{"karpenter_disruption_block_schedule": "0 24 * * *", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"quote in schedule", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * SAT\"", "karpenter_disruption_block_duration": "8h"}, nil, true},
+		{"zero duration", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "0h"}, nil, true},
+		{"bad duration unit", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "1d"}, nil, true},
+		{"daily schedule reaches next firing", map[string]string{"karpenter_disruption_block_schedule": "0 4 * * *", "karpenter_disruption_block_duration": "164h"}, nil, true},
+		{"weekly schedule reaches next firing", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON", "karpenter_disruption_block_duration": "168h"}, nil, true},
+		{"weekday range reaches next firing", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "72h"}, nil, true},
+		{"weekday list reaches next firing", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * 0,6", "karpenter_disruption_block_duration": "100h"}, nil, true},
+		{"weekday step reaches next firing", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * */2", "karpenter_disruption_block_duration": "100h"}, nil, true},
+
+		{"duration edited against stored schedule", map[string]string{"karpenter_disruption_block_duration": "6h"},
+			map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, false},
+		{"clearing one leaves the other stored", map[string]string{"karpenter_disruption_block_duration": ""},
+			map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, true},
+		{"clearing both", map[string]string{"karpenter_disruption_block_schedule": "", "karpenter_disruption_block_duration": ""},
+			map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, false},
+
+		{"window with stored karpenter_config budgets", map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"},
+			map[string]string{"karpenter_config": base64.StdEncoding.EncodeToString([]byte(`{"nodePool":{"disruption":{"budgets":[{"nodes":"5"}]}}}`))}, true},
+		{"karpenter_config budgets with stored window", map[string]string{"karpenter_config": `{"nodePool":{"disruption":{"budgets":[{"nodes":"5"}]}}}`},
+			map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, true},
+		{"karpenter_config without budgets", map[string]string{"karpenter_config": `{"nodePool":{"disruption":{"consolidateAfter":"24h"}}}`},
+			map[string]string{"karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, false},
+		{"stored config budgets untouched by an unrelated set", map[string]string{"karpenter_cpu_limit": "200"},
+			map[string]string{"karpenter_config": base64.StdEncoding.EncodeToString([]byte(`{"nodePool":{"disruption":{"budgets":[{"nodes":"5"}]}}}`)), "karpenter_disruption_block_schedule": "0 9 * * MON-FRI", "karpenter_disruption_block_duration": "8h"}, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			current := tc.current
+			if current == nil {
+				current = map[string]string{}
+			}
+			err := validateAndMutateParams(tc.params, "aws", current, false)
+			if tc.reject && err == nil {
+				t.Fatalf("expected rejection, got nil")
+			}
+			if !tc.reject && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}

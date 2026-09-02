@@ -81,6 +81,7 @@ var awsKnownParams = map[string]bool{
 	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
 	"karpenter_config": true, "karpenter_consolidate_after": true,
 	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
+	"karpenter_disruption_block_duration": true, "karpenter_disruption_block_schedule": true,
 	"karpenter_disruption_budget_nodes": true, "karpenter_enabled": true,
 	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
 	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
@@ -278,6 +279,8 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_consolidate_after":             true,
 		"karpenter_consolidation_enabled":         true,
 		"karpenter_cpu_limit":                     true,
+		"karpenter_disruption_block_duration":     true,
+		"karpenter_disruption_block_schedule":     true,
 		"karpenter_disruption_budget_nodes":       true,
 		"karpenter_enabled":                       true,
 		"karpenter_instance_families":             true,
@@ -414,6 +417,8 @@ var paramGroups = map[string]map[string]bool{
 		"deploy_progress_deadline":                true,
 		"high_availability":                       true,
 		"karpenter_build_disruption_budget_nodes": true, // dual-listed in build
+		"karpenter_disruption_block_duration":     true, // dual-listed in karpenter
+		"karpenter_disruption_block_schedule":     true, // dual-listed in karpenter
 		"karpenter_disruption_budget_nodes":       true,
 		"karpenter_enabled":                       true,
 		"keda_enable":                             true,
@@ -677,6 +682,9 @@ var clearableParams = map[string]bool{
 	// Schedule — clear means "disable schedule" (must be paired)
 	"schedule_rack_scale_down": true,
 	"schedule_rack_scale_up":   true,
+	// Karpenter disruption window, clear means "no window" (must be paired)
+	"karpenter_disruption_block_schedule": true,
+	"karpenter_disruption_block_duration": true,
 	// Tags — clear means "remove all custom tags"
 	"tags": true,
 	// SSL — clear means "use defaults"
@@ -1494,6 +1502,101 @@ func validateKarpenterArchFamilies(params, currentParams map[string]string) erro
 		buildArchs = append(buildArchs, a)
 	}
 	return checkArchFamilies("karpenter_build_instance_families", effective("karpenter_build_instance_families"), buildArchs, "build_node_type")
+}
+
+var (
+	karpenterBlockScheduleRe = regexp.MustCompile(`^(@(hourly|daily|midnight|weekly)|[0-5]?[0-9] +([01]?[0-9]|2[0-3]) +\* +\* +[0-9A-Za-z*,/-]+)$`)
+	karpenterBlockDurationRe = regexp.MustCompile(`^([0-9]+h([0-9]+m)?|[0-9]+m)$`)
+)
+
+// karpenterBlockMaxHours is the smallest gap between two firings of schedule.
+// A window that reaches the next firing never lifts.
+func karpenterBlockMaxHours(schedule string) int {
+	switch schedule {
+	case "@hourly":
+		return 1
+	case "@daily", "@midnight":
+		return 24
+	case "@weekly":
+		return 168
+	}
+	if f := strings.Fields(schedule); len(f) == 5 && !strings.ContainsAny(f[4], "*,-/") {
+		return 168
+	}
+	return 24
+}
+
+func karpenterConfigHasBudgets(raw string) bool {
+	cfg := map[string]interface{}{}
+	if !decodeConfigParam(raw, &cfg) {
+		return false
+	}
+	np, ok := cfg["nodePool"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	disruption, ok := np["disruption"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	_, ok = disruption["budgets"]
+	return ok
+}
+
+func validateKarpenterDisruptionWindow(params, currentParams map[string]string) error {
+	effective := func(key string) string {
+		if v, ok := params[key]; ok {
+			return v
+		}
+		return currentParams[key]
+	}
+
+	_, setsSchedule := params["karpenter_disruption_block_schedule"]
+	_, setsDuration := params["karpenter_disruption_block_duration"]
+	_, setsConfig := params["karpenter_config"]
+	if !setsSchedule && !setsDuration && !setsConfig {
+		return nil
+	}
+
+	if setsSchedule || setsDuration {
+		if v := params["karpenter_disruption_block_schedule"]; v != "" && !karpenterBlockScheduleRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_block_schedule must be a five-field cron that fires at most once a day:\n  a single minute and hour, '*' for day-of-month and month. For example '0 9 * * MON-FRI'.\n  @hourly, @daily, @midnight and @weekly are also accepted")
+		}
+		if v := params["karpenter_disruption_block_duration"]; v != "" && !karpenterBlockDurationRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_block_duration must be a duration in hours and minutes, for example 8h, 90m or 8h30m")
+		}
+
+		schedule, duration := effective("karpenter_disruption_block_schedule"), effective("karpenter_disruption_block_duration")
+		if (schedule == "") != (duration == "") {
+			return errors.New("karpenter_disruption_block_schedule and karpenter_disruption_block_duration must be set together, and cleared together")
+		}
+		if schedule != "" {
+			d, err := time.ParseDuration(duration)
+			if err != nil || d <= 0 {
+				return fmt.Errorf("karpenter_disruption_block_duration must be a positive duration, for example 8h, 90m or 8h30m")
+			}
+			if max := karpenterBlockMaxHours(schedule); d >= time.Duration(max)*time.Hour {
+				return fmt.Errorf("karpenter_disruption_block_duration must be shorter than %dh for schedule '%s'.\n  A window that reaches the next firing never lifts, and Karpenter stops replacing nodes entirely", max, schedule)
+			}
+		}
+	}
+
+	if effective("karpenter_disruption_block_schedule") != "" && effective("karpenter_disruption_block_duration") != "" &&
+		karpenterConfigHasBudgets(effective("karpenter_config")) {
+		return errors.New("karpenter_disruption_block_schedule cannot be combined with karpenter_config.nodePool.disruption.budgets.\n  Those budgets replace the generated list, window entry included.\n  Put the window entry in karpenter_config instead, or remove budgets from it")
+	}
+
+	for _, k := range []string{"karpenter_disruption_block_schedule", "karpenter_disruption_block_duration"} {
+		if v, ok := params[k]; !ok || v == "" {
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: the disruption window paces drift and consolidation, not node expiry. A node reaching karpenter_node_expiry is deleted inside the window, with no budget and no replacement waiting.\n")
+		fmt.Fprintf(os.Stderr, "Existing nodes keep the expiry they were created with, so karpenter_node_expiry=Never reaches a node only when that node is replaced.\n")
+		fmt.Fprintf(os.Stderr, "Set karpenter_node_expiry=Never and let the fleet roll before arming the window.\n")
+		break
+	}
+
+	return nil
 }
 
 func decodeConfigParam(raw string, out interface{}) bool {
@@ -2539,6 +2642,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return fmt.Errorf("failed to process karpenter_config: %s", err)
 		}
 		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	if err := validateKarpenterDisruptionWindow(params, currentParams); err != nil {
+		return err
 	}
 
 	// prometheus_url: SSRF-guarded validation (rejects private/loopback, allows *.svc.cluster.local).

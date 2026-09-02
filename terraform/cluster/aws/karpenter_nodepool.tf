@@ -86,13 +86,21 @@ locals {
     memory = "${var.karpenter_memory_limit_gb}Gi"
   })
 
+  # Scoped so empty-node reclamation keeps running inside the window
+  np_block_budget = var.karpenter_disruption_block_schedule != "" && var.karpenter_disruption_block_duration != "" ? [{
+    nodes    = "0"
+    schedule = var.karpenter_disruption_block_schedule
+    duration = var.karpenter_disruption_block_duration
+    reasons  = ["Drifted", "Underutilized"]
+  }] : []
+
   # Disruption: override or params
   np_default_disruption = {
     consolidationPolicy = var.karpenter_consolidation_enabled ? "WhenEmptyOrUnderutilized" : "WhenEmpty"
     consolidateAfter    = var.karpenter_consolidate_after
-    budgets             = [{ nodes = var.karpenter_disruption_budget_nodes }]
+    budgets             = concat([{ nodes = var.karpenter_disruption_budget_nodes }], local.np_block_budget)
   }
-  np_final_disruption = length(keys(local.kc_np_disruption)) > 0 ? merge(local.np_default_disruption, local.kc_np_disruption) : local.np_default_disruption
+  np_final_disruption = merge(local.np_default_disruption, local.kc_np_disruption)
 
   # Weight: override or default (0 = not set)
   np_final_weight = lookup(local.kc_np, "weight", null)
@@ -225,7 +233,7 @@ locals {
       memory_limit_gb         = tonumber(lookup(np, "memory_limit_gb", 400))
       consolidation_policy    = lookup(np, "consolidation_policy", "WhenEmptyOrUnderutilized")
       consolidate_after       = lookup(np, "consolidate_after", "30s")
-      node_expiry             = lookup(np, "node_expiry", "720h")
+      node_expiry             = lookup(np, "node_expiry", var.karpenter_node_expiry)
       disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
       disk                    = tonumber(lookup(np, "disk", 0))
       volume_type             = lookup(np, "volume_type", "gp3")
@@ -300,6 +308,8 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
     karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
     karpenter_build_arch                    = var.build_arm_type ? "arm64" : "amd64"
     extra_labels                            = local.karpenter_build_extra_labels
+    block_schedule                          = var.karpenter_disruption_block_schedule
+    block_duration                          = var.karpenter_disruption_block_duration
   })
 
   wait       = true
@@ -356,6 +366,8 @@ resource "kubectl_manifest" "karpenter_nodepool_additional" {
     weight                  = each.value.weight
     labels                  = each.value.labels
     taints                  = each.value.taints
+    block_schedule          = var.karpenter_disruption_block_schedule
+    block_duration          = var.karpenter_disruption_block_duration
   })
 
   wait       = true

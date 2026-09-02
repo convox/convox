@@ -55,6 +55,8 @@ var preserveEmpty = map[string]bool{
 	"karpenter_build_instance_sizes":      true,
 	"schedule_rack_scale_down":            true,
 	"schedule_rack_scale_up":              true,
+	"karpenter_disruption_block_schedule": true,
+	"karpenter_disruption_block_duration": true,
 	"ssl_ciphers":                         true,
 	"ssl_protocols":                       true,
 	"nlb_security_group":                  true,
