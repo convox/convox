@@ -548,7 +548,7 @@ func (t Terraform) reconcileBeforeApply(release string, vars map[string]string) 
 		return err
 	}
 
-	return t.reconcileAdditionalNodeGroupDesired(vars)
+	return t.reconcileEKSNodeGroupDesired(vars)
 }
 
 // reconcileVarsWithModule filters rack parameters to only those accepted by
@@ -601,26 +601,68 @@ type nodeGroupDesired struct {
 	MaxSize *int `json:"max_size"`
 }
 
-// reconcileAdditionalNodeGroupDesired raises each additional node group's EKS
-// desiredSize to its new min_size before apply. AWS only, best-effort.
-func (t Terraform) reconcileAdditionalNodeGroupDesired(vars map[string]string) error {
+type pendingUpdate struct {
+	nodegroup string
+	id        string
+}
+
+type nodeGroupTargets struct {
+	cluster     string
+	groups      []nodeGroupDesired
+	buildMin    int64
+	onDemandMin int64
+}
+
+func targetsFromVars(vars map[string]string, name string) nodeGroupTargets {
+	targets := nodeGroupTargets{cluster: strings.ToLower(common.CoalesceString(vars["name"], name))}
+
+	if raw := vars["additional_node_groups_config"]; strings.TrimSpace(raw) != "" {
+		data := []byte(raw)
+		if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+			data = decoded
+		}
+		if err := json.Unmarshal(data, &targets.groups); err != nil {
+			targets.groups = nil
+		}
+	}
+
+	if vars["karpenter_enabled"] == "true" {
+		return targets
+	}
+
+	if enabled, err := strconv.ParseBool(vars["build_node_enabled"]); err == nil && enabled {
+		targets.buildMin = parseMinimum(vars["build_node_min_count"], 100)
+	}
+
+	if strings.EqualFold(vars["node_capacity_type"], "mixed") {
+		ceiling := int64(100)
+		if n, err := strconv.ParseInt(vars["max_on_demand_count"], 10, 64); err == nil {
+			ceiling = n
+		}
+		targets.onDemandMin = parseMinimum(vars["min_on_demand_count"], ceiling)
+	}
+
+	return targets
+}
+
+func parseMinimum(raw string, ceiling int64) int64 {
+	n, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || n <= 0 || n > ceiling {
+		return 0
+	}
+	return n
+}
+
+// reconcileEKSNodeGroupDesired raises the EKS desiredSize of the additional, build
+// and on-demand node groups to their new minimums before apply. AWS only, best-effort.
+func (t Terraform) reconcileEKSNodeGroupDesired(vars map[string]string) error {
 	if t.provider != "aws" {
 		return nil
 	}
 
-	raw := vars["additional_node_groups_config"]
-	if strings.TrimSpace(raw) == "" {
+	targets := targetsFromVars(vars, t.name)
+	if len(targets.groups) == 0 && targets.buildMin == 0 && targets.onDemandMin == 0 {
 		return nil
-	}
-
-	data := []byte(raw)
-	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
-		data = decoded
-	}
-
-	var groups []nodeGroupDesired
-	if err := json.Unmarshal(data, &groups); err != nil || len(groups) == 0 {
-		return nil //nolint:nilerr // best-effort: malformed or empty config is a no-op, not an apply blocker
 	}
 
 	region := common.CoalesceString(vars["region"], os.Getenv("AWS_REGION"), os.Getenv("AWS_DEFAULT_REGION"))
@@ -631,23 +673,21 @@ func (t Terraform) reconcileAdditionalNodeGroupDesired(vars map[string]string) e
 		return nil
 	}
 
-	return reconcileNodeGroupDesired(eks.New(s), common.CoalesceString(vars["name"], t.name), groups)
+	return reconcileNodeGroupDesired(eks.New(s), targets)
 }
 
-func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nodeGroupDesired) error {
+func reconcileNodeGroupDesired(api eksiface.EKSAPI, targets nodeGroupTargets) error {
+	cluster := targets.cluster
+
 	listed, err := api.ListNodegroups(&eks.ListNodegroupsInput{ClusterName: aws.String(cluster)})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "NOTICE: skipping node group desired size reconcile, could not list node groups for %s: %v\n", cluster, err)
 		return nil
 	}
 
-	type pendingUpdate struct {
-		nodegroup string
-		id        string
-	}
 	var pending []pendingUpdate
 
-	for i, g := range groups {
+	for i, g := range targets.groups {
 		if g.MinSize == nil {
 			continue
 		}
@@ -658,12 +698,7 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nod
 		}
 		prefix := fmt.Sprintf("%s-additional-%d-", cluster, key)
 
-		var matches []string
-		for _, n := range listed.Nodegroups {
-			if strings.HasPrefix(aws.StringValue(n), prefix) {
-				matches = append(matches, aws.StringValue(n))
-			}
-		}
+		matches := matchNodeGroups(listed.Nodegroups, prefix, "")
 		if len(matches) == 0 {
 			continue
 		}
@@ -675,47 +710,23 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nod
 			fmt.Fprintf(os.Stderr, "NOTICE: node group id %d matches %d node groups: %s\n", key, len(matches), strings.Join(matches, ", "))
 		}
 
-		newMin := int64(*g.MinSize)
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, int64(*g.MinSize))...)
+	}
 
-		for _, name := range matches {
-			desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
-				ClusterName:   aws.String(cluster),
-				NodegroupName: aws.String(name),
-			})
-			if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
-				nodeGroupDebugf("describe node group %s: %v", name, err)
-				continue
-			}
-
-			currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
-			currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
-
-			if newMin <= currentDesired {
-				continue
-			}
-
-			// widen max too: EKS validates desired <= max against the pre-apply live max.
-			scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
-			if newMin > currentMax {
-				scaling.MaxSize = aws.Int64(newMin)
-			}
-
-			out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
-				ClusterName:   aws.String(cluster),
-				NodegroupName: aws.String(name),
-				ScalingConfig: scaling,
-			})
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "NOTICE: could not raise desired size on node group %s: %v\n", name, err)
-				continue
-			}
-
-			fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
-
-			if out.Update != nil {
-				pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
-			}
+	if targets.buildMin > 0 {
+		matches := matchNodeGroups(listed.Nodegroups, cluster+"-build-", cluster+"-build-additional-")
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: build node group matches %d node groups: %s\n", len(matches), strings.Join(matches, ", "))
 		}
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.buildMin)...)
+	}
+
+	if targets.onDemandMin > 0 {
+		matches := matchOnDemandNodeGroups(listed.Nodegroups, cluster)
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: on-demand node group matches %d node groups: %s\n", len(matches), strings.Join(matches, ", "))
+		}
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.onDemandMin)...)
 	}
 
 	for _, p := range pending {
@@ -723,6 +734,80 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, cluster string, groups []nod
 	}
 
 	return nil
+}
+
+func matchNodeGroups(names []*string, prefix, exclude string) []string {
+	var matches []string
+	for _, n := range names {
+		name := aws.StringValue(n)
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if exclude != "" && strings.HasPrefix(name, exclude) {
+			continue
+		}
+		matches = append(matches, name)
+	}
+	return matches
+}
+
+func matchOnDemandNodeGroups(names []*string, cluster string) []string {
+	re := regexp.MustCompile("^" + regexp.QuoteMeta(cluster) + `-.+-0[0-9a-f]{16}$`)
+	var matches []string
+	for _, n := range names {
+		name := aws.StringValue(n)
+		if strings.HasPrefix(name, cluster+"-build-") || !re.MatchString(name) {
+			continue
+		}
+		matches = append(matches, name)
+	}
+	return matches
+}
+
+func raiseNodeGroupsDesired(api eksiface.EKSAPI, cluster string, names []string, newMin int64) []pendingUpdate {
+	var pending []pendingUpdate
+
+	for _, name := range names {
+		desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+		})
+		if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
+			nodeGroupDebugf("describe node group %s: %v", name, err)
+			continue
+		}
+
+		currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
+		currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
+
+		if newMin <= currentDesired {
+			continue
+		}
+
+		// widen max too: EKS validates desired <= max against the pre-apply live max.
+		scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
+		if newMin > currentMax {
+			scaling.MaxSize = aws.Int64(newMin)
+		}
+
+		out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+			ScalingConfig: scaling,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "NOTICE: could not raise desired size on node group %s: %v\n", name, err)
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
+
+		if out.Update != nil {
+			pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
+		}
+	}
+
+	return pending
 }
 
 func waitForNodeGroupUpdate(api eksiface.EKSAPI, cluster, nodegroup, id string) {
