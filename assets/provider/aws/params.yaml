@@ -617,6 +617,37 @@ Groups:
         type: string
         regex: ^((100|[0-9]{1,2})%|[0-9]+)$
         description: Maximum nodes that can be disrupted simultaneously. &l &i e.g. &i 10%, 3 &l
+      - name: karpenter_disruption_block_schedule
+        optional: true
+        default: "null"
+        sideNote: Requires karpenter_disruption_block_duration
+        type: string
+        regex: ^(@(hourly|daily|midnight|weekly)|[0-5]?[0-9] +([01]?[0-9]|2[0-3]) +\* +\* +[0-9A-Za-z*,/-]+)$
+        description: |
+          Cron marking the start of a window in which Karpenter may not
+          replace nodes. &l &i e.g. &i 0 9 * * MON-FRI &l &l
+          Always UTC; Karpenter does not support time zones. The schedule must
+          fire at most once a day: a single minute, a single hour, and &b * &b
+          for day-of-month and month. &l &l
+          Blocks drift and consolidation on the workload, build and custom
+          node pools. Empty nodes are still reclaimed. Node expiry ignores the
+          window: a node reaching &i karpenter_node_expiry &i is deleted
+          inside it. &l &l
+          A &i budgets &i list in &i karpenter_config.nodePool.disruption &i
+          replaces the generated one, window entry included. &l
+      - name: karpenter_disruption_block_duration
+        optional: true
+        default: "null"
+        sideNote: Requires karpenter_disruption_block_schedule
+        type: string
+        regex: ^([0-9]+h([0-9]+m)?|[0-9]+m)$
+        description: |
+          How long the &i karpenter_disruption_block_schedule &i window
+          lasts. &l &i e.g. &i 8h, 90m, 8h30m &l &l
+          Must be shorter than the smallest gap between two firings of the
+          schedule: under &b 168h &b when the schedule names one weekday,
+          under &b 24h &b otherwise. A duration that reaches the next firing
+          blocks node replacement permanently. &l
       - name: karpenter_node_disk
         default: "0"
         type: integer

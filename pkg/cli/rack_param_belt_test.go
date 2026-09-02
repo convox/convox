@@ -559,3 +559,73 @@ func readTestFile(t *testing.T, path string) string {
 	}
 	return string(b)
 }
+
+// TestNodePoolTemplateArgsComplete asserts each templatefile() call for the
+// build and custom Karpenter NodePool templates supplies every name it
+// references. CI runs terraform validate with continue-on-error, so a missing
+// key is silent.
+func TestNodePoolTemplateArgsComplete(t *testing.T) {
+	const npPath = "../../terraform/cluster/aws/karpenter_nodepool.tf"
+
+	npBytes, err := os.ReadFile(npPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", npPath, err)
+	}
+	np := string(npBytes)
+
+	for _, tplName := range []string{"karpenter-nodepool-build", "karpenter-nodepool-custom"} {
+		t.Run(tplName, func(t *testing.T) {
+			tplPath := "../../terraform/cluster/aws/templates/" + tplName + ".yaml.tpl"
+			tplBytes, err := os.ReadFile(tplPath)
+			if err != nil {
+				t.Fatalf("read %s: %v", tplPath, err)
+			}
+			tpl := string(tplBytes)
+
+			loopBound := map[string]bool{}
+			for _, m := range regexp.MustCompile(`%\{\s*for\s+([^}]+?)\s+in\s`).FindAllStringSubmatch(tpl, -1) {
+				for _, name := range strings.Split(m[1], ",") {
+					loopBound[strings.TrimSpace(name)] = true
+				}
+			}
+
+			keyword := map[string]bool{
+				"for": true, "endfor": true, "if": true, "else": true, "endif": true,
+				"in": true, "null": true, "true": true, "false": true,
+			}
+			ident := regexp.MustCompile(`(\.?)([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()?`)
+			want := map[string]bool{}
+			for _, body := range regexp.MustCompile(`[$%]\{([^}]*)\}`).FindAllStringSubmatch(tpl, -1) {
+				for _, m := range ident.FindAllStringSubmatch(body[1], -1) {
+					if m[1] == "" && m[3] == "" && !keyword[m[2]] && !loopBound[m[2]] {
+						want[m[2]] = true
+					}
+				}
+			}
+			if len(want) == 0 {
+				t.Fatalf("parsed no references out of %s", tplPath)
+			}
+
+			calls := regexp.MustCompile(`(?s)templatefile\("\$\{path\.module\}/templates/`+regexp.QuoteMeta(tplName)+`\.yaml\.tpl",\s*\{(.*?)\n  \}\)`).
+				FindAllStringSubmatch(np, -1)
+			if len(calls) != 1 {
+				t.Fatalf("found %d templatefile calls for %s in %s; expected 1", len(calls), tplName, npPath)
+			}
+
+			got := map[string]bool{}
+			for _, m := range regexp.MustCompile(`(?m)^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=`).FindAllStringSubmatch(calls[0][1], -1) {
+				got[m[1]] = true
+			}
+			var missing []string
+			for name := range want {
+				if !got[name] {
+					missing = append(missing, name)
+				}
+			}
+			sort.Strings(missing)
+			if len(missing) > 0 {
+				t.Errorf("templatefile call for %s in %s does not supply %v", tplName, npPath, missing)
+			}
+		})
+	}
+}
