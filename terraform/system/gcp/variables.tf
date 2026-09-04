@@ -114,3 +114,8 @@ variable "dcgm_scrape_interval" {
   default     = "15s"
   description = "Prometheus scrape interval hint set as a pod annotation on the DCGM exporter. Range 15s-300s enforced by pkg/cli/rack.go validator."
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}

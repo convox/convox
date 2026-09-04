@@ -154,3 +154,9 @@ variable "cert_duration" {
   type    = string
   default = ""
 }
+
+variable "private_api" {
+  description = "When true, skip creating public ingress resources for the Rack API"
+  type        = bool
+  default     = false
+}

@@ -82,6 +82,7 @@ module "rack" {
   nginx_additional_config              = var.nginx_additional_config
   nginx_image                          = var.nginx_image
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
+  private_api                          = var.private_api
   rack_name                            = local.rack_name
   region                               = var.region
   release                              = local.release

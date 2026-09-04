@@ -158,6 +158,7 @@ For detailed descriptions and instructions, visit the [AWS Rack Parameters](/con
 | **node_type**                             | **t3.small**           |
 | **pod_identity_agent_enable**             | **false**              |
 | **private**                               | **true**               |
+| **private_api**                           | **false**              |
 | **private_subnets_ids**                   |                        |
 | **proxy_protocol** (2)                    | **false**              |
 | **public_subnets_ids**                    |                        |
