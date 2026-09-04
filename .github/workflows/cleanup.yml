@@ -18,8 +18,10 @@ jobs:
       - name: AWS secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: aws
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: System dependencies
         run: ci/dependencies.sh
       - name: Set up Go
@@ -47,8 +49,11 @@ jobs:
       - name: do secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: do
+          DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
+          DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
       - name: dependencies
         run: ci/dependencies.sh
       - name: do cleanup

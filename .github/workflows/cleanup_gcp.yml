@@ -16,8 +16,10 @@ jobs:
       - name: gcp secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: gcp
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_REGION: ${{ secrets.GOOGLE_REGION }}
       - name: dependencies
         run: ci/dependencies.sh
       - name: gcp cleanup
