@@ -11,9 +11,11 @@ url: /configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes
 
 The `karpenter_build_disruption_budget_nodes` parameter caps how many empty [Karpenter](/configuration/scaling/karpenter) build nodes Karpenter reclaims in a single disruption pass. The value is a node count or a percentage of the current build node count, and a percentage is re-evaluated against the live build node count on every pass.
 
-The value governs the `Empty` disruption reason on the build NodePool only. Drift and underutilization on the build pool stay capped at a fixed `10%` that no rack parameter exposes. The build NodePool uses the `WhenEmpty` consolidation policy, so underutilization is unreachable there in practice and the fixed cap acts as a drift cap.
+The value governs the `Empty` disruption reason on the build NodePool only. Drift and underutilization on the build pool stay capped at a fixed `10%` that no rack parameter raises or lowers. The build NodePool uses the `WhenEmpty` consolidation policy, so underutilization is unreachable there in practice and the fixed cap acts as a drift cap.
 
-Workload nodes and nodes in custom NodePools are governed by [karpenter_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_disruption_budget_nodes) and by the per-pool `disruption_budget_nodes` field. Those settings never read this parameter, and this parameter never reads them.
+The fixed `10%` is not the only thing pacing build pool drift. Setting [`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) and [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) adds a third entry to the build NodePool's budgets, `nodes: "0"` scoped to `Drifted` and `Underutilized`, alongside the fixed `10%`. Build node drift stops entirely until the window lifts. The window does not scope `Empty`, so this parameter is unaffected and reclamation keeps running.
+
+Workload nodes are governed by [karpenter_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_disruption_budget_nodes), which the workload pool alone reads. Nodes in custom NodePools are governed by that pool's own `disruption_budget_nodes` field, which defaults to `10%`. Neither setting reads this parameter, and this parameter never reads them.
 
 This parameter applies only when [karpenter_enabled](/configuration/rack-parameters/aws/karpenter_enabled) and [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) are both `true`. Without dedicated build nodes there is no build NodePool to configure.
 
@@ -59,3 +61,5 @@ Setting the value to `0` is accepted and deliberately freezes reclamation of emp
 - [karpenter_build_consolidate_after](/configuration/rack-parameters/aws/karpenter_build_consolidate_after)
 - [karpenter_node_expiry](/configuration/rack-parameters/aws/karpenter_node_expiry)
 - [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled)
+- [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) for a window that stops build node drift
+- [karpenter_disruption_block_duration](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) for how long that window stays open

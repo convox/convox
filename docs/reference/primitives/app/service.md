@@ -603,7 +603,7 @@ services:
 
 Convox uses the standard `topology.kubernetes.io/zone` node label and allows a maximum difference of one pod between eligible zones. It also asks the scheduler to keep the pods spread across nodes, with the same tolerance Kubernetes applies by default. The scheduler favors an even spread but still schedules a pod when it cannot meet that spread.
 
-The zone spread only has an effect when the Rack has eligible nodes in at least 2 zones and the Service runs at least 2 replicas. The setting does not create zones. Node selectors, node affinity and zonal storage can reduce the eligible zones. On Racks running [Karpenter](/configuration/scaling/karpenter), Karpenter may launch extra nodes to satisfy the spread and may keep them running instead of consolidating them away.
+The zone spread only has an effect when the Rack has eligible nodes in at least 2 zones and the Service runs at least 2 replicas. The setting does not create zones. Node selectors, node affinity and zonal storage can reduce the eligible zones. On Racks running [Karpenter](/configuration/scaling/karpenter), Karpenter may launch extra nodes to satisfy the spread and may keep them running instead of consolidating them away. On Racks using the Cluster Autoscaler, the setting spreads pods across nodes that already exist and does not pick which node group the autoscaler grows (see [Observing Cluster Autoscaler Scale-Ups](/configuration/scaling/autoscaling#observing-cluster-autoscaler-scale-ups)).
 
 Agent services do not support `spreadAcrossZones` because they run one pod on each eligible node as a DaemonSet.
 

@@ -13,7 +13,7 @@ Karpenter is **bidirectional**. `karpenter_enabled` can be toggled on and off sa
 
 > Karpenter is available on **AWS only**. Karpenter parameters are rejected for GCP, Azure, and DigitalOcean Racks.
 
-> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets**, a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation, expiry, or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
+> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets**, a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
 
 ## How Karpenter Works with Convox
 
@@ -36,7 +36,7 @@ Cluster Autoscaler (CAS) works at the Auto Scaling Group (ASG) level. It can onl
 - **Faster scaling.** Karpenter provisions nodes in response to pending pods within seconds, compared to the multi-minute feedback loop of CAS
 - **Cost optimization.** Karpenter selects the cheapest instance type that satisfies pod requirements from across all allowed families and sizes
 - **Node consolidation.** Underutilized nodes are automatically consolidated. Karpenter moves pods to fewer, better-utilized nodes and terminates the empty ones
-- **Automatic node replacement.** Nodes are replaced after `karpenter_node_expiry` (default 30 days), keeping your fleet on current AMIs
+- **Automatic node replacement.** Nodes are replaced after `karpenter_node_expiry` (default 30 days), keeping your fleet on current AMIs. Expiry is not paced by a disruption budget and does not wait for a replacement node, so a fleet created at the same time expires at the same time
 - **Scale-to-zero builds.** The build NodePool scales to zero when no builds are running, eliminating idle build node costs
 - **Multi-architecture support.** Workload node architecture is auto-detected from `node_type`, or set explicitly with `karpenter_arch`
 
@@ -71,7 +71,9 @@ The CLI validates parameter combinations when enabling Karpenter to prevent sche
 - Enabling Karpenter with SPOT or mixed capacity types can deadlock node replacement: Karpenter taints the old node group while the replacement may not schedule due to capacity constraints.
 - On non-HA racks (single node), combining `karpenter_enabled=true` with launch template changes triggers a rolling update on the only node while Karpenter simultaneously taints it, leaving no schedulable nodes.
 
-All guards can be bypassed with `--force` if you are confident the combination is safe for your specific rack configuration.
+These three guards cannot be bypassed. They run outside the `--force` check, so the resolution column is the only way through.
+
+As of Rack version `3.25.6`, [`kubelet_registry_pull_qps`](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) and [`kubelet_registry_burst`](/configuration/rack-parameters/aws/kubelet_registry_burst) apply to Karpenter node pools as well as to EKS managed node groups.
 
 ### Migrating Workloads to Karpenter Nodes
 
@@ -163,9 +165,25 @@ This renders as a required node affinity on the service's deployment, timers, an
 | `karpenter_consolidation_enabled` | bool | `true` | | When `true`: `WhenEmptyOrUnderutilized` (consolidates underutilized and empty nodes). When `false`: `WhenEmpty` (only removes fully empty nodes). |
 | `karpenter_consolidate_after` | string | `30s` | `^\d+[smh]$` | Delay before consolidation triggers (e.g., `30s`, `5m`, `1h`). |
 | `karpenter_node_expiry` | string | `720h` | `^\d+h$` or `Never` | Maximum node lifetime before automatic replacement. Default is 30 days. `Never` disables automatic replacement. |
-| `karpenter_disruption_budget_nodes` | string | `10%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `10%`, `3`). Percentages above `100%` are rejected. |
+| `karpenter_disruption_budget_nodes` | string | `10%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `10%`, `3`). Percentages above `100%` are rejected. Applies to consolidation and drift. Node expiry is not budget-gated. |
+| [`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) | string | _(none)_ | Five-field cron firing at most once a day, or `@hourly`, `@daily`, `@midnight`, `@weekly` | Opens a recurring window in which Karpenter will not replace nodes for drift or consolidation. Available from Rack version `3.25.6`. |
+| [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) | string | _(none)_ | `8h`, `90m` or `8h30m`, shorter than the schedule's firing gap | How long the window stays open. Available from Rack version `3.25.6`. |
 
 A Rack update that carries a new Karpenter chart version can change the NodePool drift hash, which makes Karpenter replace the existing nodes once, gradually. That replacement is graceful and bounded by `karpenter_disruption_budget_nodes`, so lower it before the update if you want a slower roll.
+
+Drift also fires with no Rack update at all. On the default `al2023@latest` alias, each AL2023 AMI AWS publishes drifts every pool and rolls its nodes, so a fleet can replace itself overnight. Set [`karpenter_ami_alias`](/configuration/rack-parameters/aws/karpenter_ami_alias) to decide when that happens. See [Telling Drift From Expiry](/configuration/rack-parameters/aws/karpenter_node_expiry#telling-drift-from-expiry) for which of the two replaced a set of nodes.
+
+#### The Disruption Window
+
+`karpenter_disruption_block_schedule` and `karpenter_disruption_block_duration` open a recurring window in which Karpenter will not replace a node for drift or for consolidation of an underutilized node. They must be set together and cleared together, and they apply to the workload pool, the build pool, and every pool in `additional_karpenter_nodepools_config`.
+
+Two things continue inside the window. Empty node reclamation still runs, because reclaiming a node that carries only daemonset pods evicts nothing. Node expiry still runs: a node reaching `karpenter_node_expiry` is deleted inside the window exactly as it is outside, with no budget and no replacement waiting.
+
+Window times are UTC. Karpenter builds its cron with a hardcoded `TZ=UTC` and there is no time zone parameter.
+
+`expireAfter` is copied onto each NodeClaim when it is created, so `karpenter_node_expiry=Never` reaches a node only when that node is replaced. Set `karpenter_node_expiry=Never` first, let the drift roll replace the fleet, and set the window after that. In the other order the window blocks the roll that would have disarmed the fleet.
+
+See [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) for the accepted schedules, the rejected combinations, and the worked maintenance-window examples.
 
 ### Storage
 
@@ -174,6 +192,7 @@ A Rack update that carries a new Karpenter chart version can change the NodePool
 | `karpenter_node_disk` | number | `0` | >= 0 | EBS volume size in GiB for Karpenter-provisioned nodes. `0` inherits the Rack's [`node_disk`](/configuration/rack-parameters/aws/node_disk) value. |
 | `karpenter_node_volume_type` | string | `gp3` | `gp2`, `gp3`, `io1`, `io2` | EBS volume type for Karpenter-provisioned nodes. |
 | `karpenter_node_os` | string | `al2023` | `al2023`, `bottlerocket` | Node OS for the workload NodePool. `bottlerocket` selects the EKS-optimized Bottlerocket AMI and the two-volume layout it requires (a `gp3` OS volume on `/dev/xvda` and a data volume on `/dev/xvdb`). |
+| [`karpenter_ami_alias`](/configuration/rack-parameters/aws/karpenter_ami_alias) | string | _(none)_ | `al2023@latest` or `al2023@vYYYYMMDD` | Pins the AL2023 workload, build and custom node pools to one EKS-optimized AMI version. Unset, every pool tracks `al2023@latest`. An `amiSelectorTerms` override in `karpenter_config`, or a pool's `ami_id`, wins over it. Available from Rack version `3.25.6`. |
 
 ### Labels and Taints
 
@@ -282,6 +301,8 @@ Individual `karpenter_*` parameters build the defaults. `karpenter_config` overr
 
 `amiFamily` is available from Rack version `3.25.5`. A Rack downgraded below it renders the selector without the family, and Karpenter rejects an `amiSelectorTerms` that carries neither an alias nor a family, so remove `amiSelectorTerms` from `karpenter_config` before downgrading.
 
+Setting either `ec2NodeClass.userData` or `ec2NodeClass.amiSelectorTerms` suppresses [`kubelet_registry_pull_qps`](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) and [`kubelet_registry_burst`](/configuration/rack-parameters/aws/kubelet_registry_burst) on the workload pool, each on its own, because both replace the generated NodeConfig. The build and additional pools do not read `karpenter_config` at all and keep those settings.
+
 **Protected fields** (managed by Convox, cannot be overridden):
 
 | Field | Reason |
@@ -301,6 +322,10 @@ Individual `karpenter_*` parameters build the defaults. `karpenter_config` overr
 $ convox rack params set karpenter_config='{"nodePool":{"disruption":{"budgets":[{"nodes":"10%"},{"nodes":"0","schedule":"0 9 * * mon-fri","duration":"8h"}]}}}' -r rackName
 Updating parameters... OK
 ```
+
+A `budgets` list whose entries carry different keys, as this one does, requires Rack version `3.25.6` or later. On an earlier Rack it fails `terraform apply`.
+
+[`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) and [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) open a window in two parameters and cover the build and custom pools that this example does not. The entry they generate is narrower: it carries `reasons: ["Drifted", "Underutilized"]`, so empty node reclamation keeps running inside the window, while the entry above carries no `reasons` and blocks every reason, `Empty` included. Use `karpenter_config` for a budget list the two parameters cannot express, such as several windows or a per-reason cap. The two cannot be combined with a `budgets` list here, because the list replaces the generated budgets, window entry included.
 
 ### `additional_karpenter_nodepools_config` (Custom NodePools)
 
@@ -323,8 +348,8 @@ Use this for dedicated GPU pools, tenant isolation, specialized instance require
 | `memory_limit_gb` | integer | `400` | no | Maximum total memory (GiB) for this pool. |
 | `consolidation_policy` | string | `WhenEmptyOrUnderutilized` | no | `WhenEmpty` or `WhenEmptyOrUnderutilized`. |
 | `consolidate_after` | string | `30s` | no | Delay before consolidation (e.g., `30s`, `5m`). |
-| `node_expiry` | string | `720h` | no | Max node lifetime. `Never` to disable. |
-| `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%`. Percentages above `100%` are rejected. |
+| `node_expiry` | string | _(the Rack's `karpenter_node_expiry`)_ | no | Max node lifetime. `Never` to disable. From Rack version `3.25.6` a pool that omits the field inherits the Rack's [`karpenter_node_expiry`](/configuration/rack-parameters/aws/karpenter_node_expiry), which is `720h` unless you changed it; earlier versions used a fixed `720h`. |
+| `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%`. Percentages above `100%` are rejected. Applies to consolidation and drift. Node expiry is not budget-gated. |
 | `disk` | integer | _(workload value)_ | no | EBS volume size in GiB. `0` inherits workload pool disk. |
 | `volume_type` | string | `gp3` | no | `gp2`, `gp3`, `io1`, `io2`. |
 | `ami_id` | string | _(none)_ | no | Custom AMI for this pool's nodes, e.g. `ami-0123456789abcdef0`. The pool renders `amiFamily: AL2023`, so the AMI must be AL2023-based. See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes). |
@@ -526,11 +551,12 @@ When `karpenter_enabled=true`:
 
 ## Cluster Autoscaler Coexistence
 
-Karpenter and Cluster Autoscaler (CAS) can coexist when additional (non-Karpenter) node groups are present:
+Karpenter and Cluster Autoscaler (CAS) can coexist when additional (non-Karpenter) node groups are present. Only [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) counts here: the CAS replica count and the explicit `--nodes` flags both read that parameter alone, and [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) reaches neither.
 
 | Scenario | CAS state | CAS targeting |
 |----------|----------|---------------|
 | Karpenter enabled, no additional node groups | Scaled to 0 replicas | N/A |
+| Karpenter enabled, additional build groups only | Scaled to 0 replicas | N/A. Those groups stay at their configured size and nothing scales them |
 | Karpenter enabled, additional node groups (all `dedicated=true`) | Running (1 replica, pinned to system nodes) | Explicit `--nodes` per additional ASG (no auto-discovery) |
 | Karpenter disabled | Running (normal) | Auto-discovery |
 

@@ -35,16 +35,20 @@ $ convox rack params set user_data="echo 'Hello, world!' >> /tmp/init.log" -r ra
 Updating parameters... OK
 ```
 
-## Additional Information
+### Script Requirements
 - The Convox-managed user data script already includes the shebang `#!/bin/bash`. Your custom commands **must not include this line** to avoid conflicts.
+- Your commands **must contain only ASCII characters**. A single non-ASCII byte anywhere in them stops the entire script from running, not only the line that contains it. The node still joins the cluster and reports Ready, and the failure is reported nowhere: not in `convox`, not in the Rack update output, and not in the cloud-init log.
+
+## Additional Information
 - Avoid complex multi-line scripts in this parameter. For more extensive scripts, consider using the [`user_data_url`](/configuration/rack-parameters/aws/user_data_url) parameter instead.
 - To debug your user data scripts, you can SSH into an instance and examine the cloud-init logs at `/var/log/cloud-init-output.log`.
 - You can extract and view the execution of your custom user data script with the following command:
   ```bash
-  sudo cat /var/log/cloud-init-output.log | grep -A1000 'USER PROVIDED USER DATA SCRIPT' | grep -B999 '+ B64_CLUSTER_CA' | grep -v '+ B64_CLUSTER_CA'
+  sudo cat /var/log/cloud-init-output.log | grep -A1000 'USER PROVIDED USER DATA SCRIPT'
   ```
+  Everything after the marker is the rest of the node's bootstrap output, so read only the lines your own commands produce. If your commands' output does not follow this marker, or the marker itself does not appear, the script did not run. A non-ASCII character in it is the first thing to check.
 - This parameter is useful for one-time configuration during instance initialization. For ongoing configuration management, consider using a dedicated configuration management tool.
 - The user data script runs with root privileges, so be cautious with the commands you specify.
-- Custom user data execution occurs after the Convox-managed setup but before the instance joins the EKS cluster, allowing you to prepare the instance environment before workloads are scheduled.
+- On Rack version `3.25.6` and later, the Convox-managed user data does not start or restart kubelet before your commands run, following AWS guidance not to start or modify kubelet from launch template user data. Check any commands that relied on kubelet already running.
 
 For more complex initialization needs, the [`user_data_url`](/configuration/rack-parameters/aws/user_data_url) parameter provides an alternative approach by allowing you to reference a script hosted at a URL.

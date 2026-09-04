@@ -15,6 +15,8 @@ It does not apply to the internal load balancer installed by [internal_router](/
 ## Default Value
 The default value for `nlb_security_group` is an empty string. When it is empty, the Rack creates and manages a security group for the router load balancer, which allows inbound traffic on the router's listener ports from the CIDRs in the `whitelist` Rack parameter.
 
+`convox rack params set` refuses a `whitelist` that does not include `0.0.0.0/0` unless `--force` is passed, because the Rack cannot tell which narrower ranges still reach Convox Console. A Console-managed Rack whose whitelist blocks Console cannot be updated through Convox afterwards, and access has to be restored on the load balancer's security group in your cloud provider.
+
 ## Use Cases
 - **Organization security policy**: Attach a security group managed by your security team so the router load balancer sits inside your existing rule set.
 - **Narrow ingress**: Restrict the source addresses and protocols that can reach the Rack router.

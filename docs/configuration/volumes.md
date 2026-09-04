@@ -159,7 +159,7 @@ Azure Files volumes are ideal for:
 
 ## AWS EFS Volumes
 
-> AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter.
+> AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter. On a Rack installed with `private=false`, requires Rack version `3.25.6` or later.
 
 AWS EFS (Elastic File System) provides a scalable, persistent storage solution that allows multiple Convox services to access the same file system simultaneously. EFS volumes are useful for applications that require shared access to files and need persistent data storage across services and restarts.
 
@@ -176,6 +176,10 @@ To use AWS EFS volumes, you must enable the EFS CSI driver on your rack. Run the
 ```bash
 convox rack params set efs_csi_driver_enable=true -r rackName
 ```
+
+On a Rack installed with `private=false`, EFS requires Rack version `3.25.6` or later. Earlier versions place the mount targets in the Rack's private subnets, so a Rack that has none cannot mount EFS volumes, and `private` cannot be changed after install. A Rack that supplied its own private subnet ids keeps its mount targets there either way. Downgrading a Rack with no private subnets below `3.25.6` removes the mount targets, which leaves the filesystem and its data intact but unmountable until the Rack is updated forward.
+
+Disabling `efs_csi_driver_enable` deletes the EFS filesystem and everything stored on it.
 
 ### Configuring AWS EFS Volumes in convox.yml
 
@@ -220,10 +224,12 @@ services:
           id: "data"
           accessMode: ReadWriteMany
           mountPath: "/opt/data/"
-          storageClass: "efs-sc-33"
+          storageClass: "efs-sc-777"
 ```
 
 - **awsEfs.storageClass**: (Optional) Specifies the AWS EFS storage class to use for the volume. This allows you to apply custom storage policies and integrate with your organization's storage management requirements.
+
+The Rack creates four EFS storage classes: `efs-sc`, `efs-sc-775`, `efs-sc-777` and `efs-sc-base`. A name outside that set produces a claim that never binds.
 
 ### Best Practices and Use Cases for AWS EFS Volumes
 

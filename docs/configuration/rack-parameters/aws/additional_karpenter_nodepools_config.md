@@ -78,6 +78,8 @@ This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraf
 - **CLI version for `ami_id`:** Editing this pool list needs `convox` CLI `3.25.5` or newer once the field is in use. An older CLI rewrites the parameter without it.
 - **Pool isolation:** Set `"dedicated": true` on a pool entry to automatically add a `dedicated-node={name}:NoSchedule` taint. Convox auto-injects the matching toleration for Services targeting the pool via `nodeSelectorLabels`. This is the simplest way to isolate a pool without manual taint configuration.
 - For pools with custom taints beyond `dedicated`, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
+- **Node expiry:** from Rack version `3.25.6`, a pool with no `node_expiry` field inherits the Rack's [`karpenter_node_expiry`](/configuration/rack-parameters/aws/karpenter_node_expiry) instead of a fixed `720h`. A per-pool `node_expiry` still overrides it.
+- The disruption window set by [`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) and [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) applies to every pool declared here.
 - See the [Karpenter](/configuration/scaling/karpenter#additional_karpenter_nodepools_config-custom-nodepools) feature page for the full per-pool field reference and examples.
 
 ## See Also

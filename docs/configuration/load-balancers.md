@@ -173,7 +173,7 @@ services:
 
 ### Custom Balancer Protocols
 
-A balancer port is either TCP or UDP; no other protocol is accepted. By default a custom balancer can carry multiple TCP ports or multiple UDP ports, but not a mix of both, a restriction the in-cluster Kubernetes cloud provider enforces rather than Convox. Setting `awsLoadBalancerController: true` on the balancer lifts that restriction for TCP and UDP on **different** port numbers, and requires Rack version `3.25.5` or later. The same port number serving both TCP and UDP is not supported.
+A balancer port takes `TCP`, `UDP` or `TCP_UDP`; no other protocol is accepted. By default a custom balancer can carry multiple TCP ports or multiple UDP ports, but not a mix of both, a restriction the in-cluster Kubernetes cloud provider enforces rather than Convox. Setting `awsLoadBalancerController: true` on the balancer lifts that restriction. TCP and UDP on different port numbers requires Rack version `3.25.5` or later. `TCP_UDP`, which serves both protocols on one port number, requires Rack version `3.25.6` or later.
 
 ```yaml
 balancers:
@@ -194,11 +194,68 @@ services:
       - 6001/udp
 ```
 
+`protocol: TCP_UDP` serves both protocols on one port number through a single AWS `TCP_UDP` listener and target group. It requires `awsLoadBalancerController: true`, and unlike the other protocols it must set a target port.
+
+```yaml
+balancers:
+  dns:
+    service: resolver
+    awsLoadBalancerController: true
+    ports:
+      53:
+        protocol: TCP_UDP
+        port: 5300
+services:
+  resolver:
+    build: .
+```
+
+A balancer serving both protocols on one port number has to be created that way, and its ports cannot be changed afterwards. See [A Balancer Serving Both Protocols on One Port](#a-balancer-serving-both-protocols-on-one-port).
+
+One manifest entry renders as two Kubernetes ports at the same number, so `convox api get /apps/myapp/balancers` reports two entries for it.
+
+Do not put the balancer's target port in the Service's `port:`. `port:` renders an HTTP readiness probe against the health path, which defaults to `/`, so an HTTP GET against a DNS listener never succeeds and the Processes never become Ready. `port:` also publishes that port on the default ingress with a domain and a certificate. A Service can still have its own `port:` for HTTP, as long as it is not the balancer's target port. A Service's `ports:` list cannot carry the same number twice, so a port a balancer serves as `TCP_UDP` reaches the internal `.local` address for one protocol only, either `ports: [5300]` or `ports: [5300/udp]`.
+
+Protocol values are case-insensitive from Rack version `3.25.5`, so `tcp_udp` and `TCP_UDP` both work, and on an earlier Rack the value must be uppercase. The `awsLoadBalancerController` field name is case-sensitive.
+
+Balancer protocols are validated at build, not at promote, and a build reports every balancer error it finds together:
+
+```text
+validation errors:
+balancer dns port 53 uses protocol TCP_UDP, which requires awsLoadBalancerController: true
+balancer dns port 53 uses protocol TCP_UDP and must set a target port
+```
+
+| Manifest | Message |
+|----------|---------|
+| `protocol: TCP_UDP` without `awsLoadBalancerController: true` | `balancer dns port 53 uses protocol TCP_UDP, which requires awsLoadBalancerController: true` |
+| `protocol: TCP_UDP` with no `port:` | `balancer dns port 53 uses protocol TCP_UDP and must set a target port` |
+| The same `ports:` key twice on a balancer with `awsLoadBalancerController: true` | `balancer dns declares port 53 more than once, use protocol: TCP_UDP on a single entry to serve both protocols on one port number` |
+| Any other protocol value | `balancer dns port 53 has unsupported protocol SCTP` |
+
+A `TCP_UDP` manifest can still reach a promote without the attribute, from an older Release promoted forward or a Build made on a Rack that did not run the check. That promote is rejected instead:
+
+```text
+balancer dns: protocol TCP_UDP requires awsLoadBalancerController: true, update convox.yml and build again
+```
+
 On an earlier Rack the `awsLoadBalancerController` key is ignored rather than rejected. The balancer is provisioned on the default route, and its mixed TCP and UDP ports never receive an address.
+
+`protocol: TCP_UDP` is rejected rather than ignored on an earlier Rack, and where it surfaces depends on what triggered the deploy.
+
+| Rack downgraded to | With a `TCP_UDP` manifest | Where it surfaces |
+|--------------------|---------------------------|-------------------|
+| `3.25.5`, with a rebuild | `balancer dns port 53 has unsupported protocol TCP_UDP` | At build |
+| `3.25.5`, on a promote, a rollback, `convox apps params set` or `convox apps update` of an existing Release | The manifest is not revalidated, so the value reaches Kubernetes: `Unsupported value: "TCP_UDP": supported values: "SCTP", "TCP", "UDP"`. It keeps failing until a new Build | At deploy |
+| `3.25.4` or earlier | The same Kubernetes rejection | At deploy |
+
+Each of those rejects the deploy and leaves the live balancer's Kubernetes object unchanged.
+
+> Do not downgrade a Rack below `3.25.5` while a balancer with `protocol: TCP_UDP` is live. The Rack's AWS Load Balancer Controller reverts to a chart with no `TCP_UDP` support, reconciles the balancer, and drops one of its two listeners with no deploy, no error and no event. The Kubernetes object is untouched, so nothing reports it. Remove the balancer first.
 
 ## The awsLoadBalancerController Attribute
 
-`awsLoadBalancerController` provisions the balancer through the AWS Load Balancer Controller rather than through the in-cluster Kubernetes cloud provider. It requires Rack version `3.25.5` or later, and AWS Racks only. A deploy on any other provider is rejected:
+`awsLoadBalancerController` provisions the balancer through the AWS Load Balancer Controller rather than through the in-cluster Kubernetes cloud provider. It requires Rack version `3.25.5` or later, and AWS Racks only. Serving both protocols on one port number with `protocol: TCP_UDP` requires Rack version `3.25.6` or later. A deploy on any other provider is rejected:
 
 ```text
 balancer custom: awsLoadBalancerController is only supported on AWS racks
@@ -214,18 +271,37 @@ balancer custom cannot be switched to the AWS Load Balancer Controller in place,
 
 The same rejection fires when the balancer's own `annotations` set `service.beta.kubernetes.io/aws-load-balancer-type` to `external` or `nlb-ip`, which hands the Service to the controller the way the attribute does.
 
-A balancer that never received an address, such as one whose mixed TCP and UDP ports were rejected on the default route, is not affected, so the attribute can be set on it directly. Otherwise migrate:
+A balancer that never received an address, such as one whose mixed TCP and UDP ports were rejected on the default route, is not affected, so the attribute can be set on it directly. A `TCP_UDP` port never reaches that state, because a build without `awsLoadBalancerController: true` is rejected and no Service is created. Otherwise migrate:
 
 1. Add a second balancer under a new name with `awsLoadBalancerController: true` and deploy. `convox balancers` now shows both endpoints.
 2. Move whatever points at the old endpoint over to the new one.
 3. Remove the old balancer entry and deploy. Its load balancer, target groups and node security group rules are cleaned up.
+
+### A Balancer Serving Both Protocols on One Port
+
+A balancer serving both protocols on one port number has to be created that way. On `3.25.6` a `TCP_UDP` port cannot be added to a balancer that already exists, and once a balancer has a `TCP_UDP` port its ports cannot be changed: adding a port, removing a port, changing a target port, changing a protocol, removing `awsLoadBalancerController: true`, and reordering the entries under `ports:` are all refused. Convox refuses these because it cannot apply the change safely, not because AWS or the controller rejects them.
+
+This is a separate rule from the ownership check above, with a different trigger and no exemption for a balancer that has no address yet. It fires only when a same-port TCP and UDP pair exists either in `convox.yml` or on the live balancer. An `awsLoadBalancerController: true` balancer with no `TCP_UDP` port keeps full port mutability, reordering included.
+
+```text
+balancer dns: TCP and UDP on one port number can only be set up on a new balancer, and its ports cannot be changed afterwards. It is currently serving 53/TCP->5300, 53/UDP->5300. Restore this balancer's previous ports in convox.yml to deploy it again, or replace it: add a second balancer with the ports you want and move traffic to it, or remove this one, deploy, then add it back. Replacing it gives a new address
+```
+
+The ports the message lists are the live Service's ports in their live order, which is what to restore.
+
+- The refusal fails that deploy and nothing else. The App's current Release is unaffected, so `convox apps params set`, `convox apps update` and a promote of the current Release all keep working.
+- **Adding UDP to a port a balancer already serves as plain TCP is refused.** Putting `protocol: TCP_UDP` on an existing DNS-over-TCP balancer is this case, and the message lists only the one live port, so it reads shorter than expected.
+- **Removing the balancer's block from `convox.yml` always works.** It deletes the balancer and its load balancer, and it is never refused, because the rule only looks at balancers the manifest still declares. Removing a balancer and adding it back under the same name is two deploys, not one.
+- **A rollback ends two different ways.** A rollback to a Release that has the balancer at different ports is refused with the same message. A rollback to a Release from before the balancer existed succeeds and deletes the balancer and its load balancer, because the balancer is absent from that manifest.
+- Removing `awsLoadBalancerController: true` while a `TCP_UDP` pair is live is refused with the same message. Reverting the commit that gave an App its `TCP_UDP` balancer is that edit.
+- Renaming a balancer is not refused and deletes its load balancer, which is true of every balancer.
 
 ### What Changes
 
 | Aspect | Behavior | Determined by |
 |--------|----------|---------------|
 | Endpoint | The controller never adopts an existing load balancer, so the balancer gets a new address. | Controller |
-| Health check | A TCP probe against the balancer's first TCP target port. | Convox |
+| Health check | A TCP probe against the balancer's first TCP target port. A balancer whose only UDP-bearing ports are `TCP_UDP` gets no health check annotations, so each target group is probed over TCP on its own port. | Convox |
 | Scheme | `internet-facing`, unless the balancer's own annotations set `service.beta.kubernetes.io/aws-load-balancer-scheme` or `service.beta.kubernetes.io/aws-load-balancer-internal`. | Convox |
 | Targets | Registered by Pod IP rather than through a node port. | Controller |
 | Client IP on UDP | Always preserved. | AWS |
@@ -233,7 +309,11 @@ A balancer that never received an address, such as one whose mixed TCP and UDP p
 
 Rows marked Controller or AWS are AWS Load Balancer Controller and AWS behavior, not Convox behavior.
 
-A balancer with UDP ports gets a TCP health check because a TCP probe against a UDP port can never pass. Set `service.beta.kubernetes.io/aws-load-balancer-healthcheck-port` in the balancer's `annotations` to point the probe somewhere else. A balancer with UDP ports and no TCP port has no port to probe, and the deploy is rejected unless the annotations set either that key or `service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol`.
+A balancer with UDP ports gets a TCP health check because a TCP probe against a UDP port can never pass. Set `service.beta.kubernetes.io/aws-load-balancer-healthcheck-port` in the balancer's `annotations` to point the probe somewhere else. A balancer with UDP ports and no TCP port has no port to probe, and the build is rejected unless the annotations set either that key or `service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol`. A `TCP_UDP` port counts as a TCP port, so that rule does not fire for a balancer whose only port is `TCP_UDP`.
+
+A `TCP_UDP` target group is probed over TCP on the port both protocols share, so a container that accepts only UDP there reports unhealthy. Traffic usually keeps flowing, because an NLB forwards to every target once they all fail their check. What is lost is health reporting, alarms, and zonal DNS behavior when only some targets fail. Point the probe at a port the container does accept TCP on with `service.beta.kubernetes.io/aws-load-balancer-healthcheck-port`, which does not have to be a port the balancer carries.
+
+Convox generates `service.beta.kubernetes.io/aws-load-balancer-enable-tcp-udp-listener` on a balancer that has a `TCP_UDP` port, and it is the one generated annotation a balancer's own `annotations` cannot override.
 
 Pod IP targets change how a rolling deploy behaves. The target group can briefly hold only targets that are still registering, so a Service with few replicas may drop connections mid-deploy.
 

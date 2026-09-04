@@ -1,6 +1,6 @@
 ---
 title: "Autoscaling"
-description: "Autoscale Convox services on horizontal count, CPU, memory, and GPU, using scale.autoscale preconfigured triggers including scale-to-zero on AWS."
+description: "Autoscale Convox services on horizontal count, CPU, memory, and GPU with scale.autoscale triggers, and observe how the Cluster Autoscaler adds nodes per zone."
 slug: autoscaling
 url: /configuration/scaling/autoscaling
 ---
@@ -350,6 +350,84 @@ services:
 With PDB disabled, the service's pods can be evicted without budget protection during node scale-down, node drain, or maintenance events. Use only on services that tolerate unplanned disruption, for example stateless workers that can be restarted anywhere at any time.
 
 Both `convox.com/pdb-disabled` (canonical) and `convox.com/pdb-disbaled` (legacy spelling, kept for backward compatibility) are accepted. New configurations should use the canonical spelling.
+
+## Observing Cluster Autoscaler Scale-Ups
+
+On AWS Racks, the Kubernetes Cluster Autoscaler adds nodes by raising the desired capacity of an EKS managed node group. Which group it grows depends on the pending pods and on the per-zone layout of the node groups.
+
+> On Racks running [Karpenter](/configuration/scaling/karpenter), the Cluster Autoscaler manages only additional node groups, and a Rack with no additional node groups runs it at zero replicas, so the commands below return nothing and the status ConfigMap goes stale instead of being written. Additional build groups do not count toward that: a Rack whose only extra groups are additional build groups also runs the autoscaler at zero replicas, leaving those groups unmanaged. See [Cluster Autoscaler Coexistence](/configuration/scaling/karpenter#cluster-autoscaler-coexistence) for the full matrix.
+
+### Node Group Layout
+
+Convox creates one EKS managed node group per availability zone for primary nodes, three of them with the default [`high_availability=true`](/configuration/rack-parameters/aws/high_availability). They share one instance type and one launch template, and each group is pinned to a single subnet. The group name carries its zone, followed by an index and a 16-character random suffix with no separator between them:
+
+```text
+rackName-us-east-1a-04f7b2c9a1e6d3805
+```
+
+Treat that name as illustrative. The index comes from subnet ordering rather than from the zone list, so index `0` is not guaranteed to be the first zone alphabetically. The [dedicated build node group](/configuration/rack-parameters/aws/build_node_enabled) is not per-zone: there is one group whatever the zone count, always pinned to the first subnet. Its name carries that subnet's zone the same way (`rackName-build-us-east-1a-0...`).
+
+[Additional node groups](/configuration/rack-parameters/aws/additional_node_groups_config) are not per-zone either. One group spans every subnet, and its name (`rackName-additional-<id>-<suffix>`) carries no zone, so you cannot read a zone out of the activity history of an additional group.
+
+### How the Autoscaler Picks a Group
+
+The autoscaler runs with `--expander=least-waste`, so among the groups that can host the pending pods it grows the one that leaves the least unused CPU and memory.
+
+When Karpenter is disabled it also runs with `--balance-similar-node-groups`. That splits each scale-up across the per-zone primary groups, smallest group first, so consecutive scale-ups keep the zones within one node of each other. A group joins the split only if every pod in the batch that fits the main group also fits it. Pods that can only run in one zone, for example a pod bound to an EBS volume that already exists there or a pod carrying a zone node selector, pin their batch to that zone.
+
+On a Karpenter Rack the discovery arguments are replaced wholesale and `--balance-similar-node-groups` is not passed, so no scale-up is ever split.
+
+### Capacity Errors in One Zone
+
+When EC2 cannot satisfy a launch in one zone, the Auto Scaling group retries on its own. If launches keep failing, the autoscaler puts that zone's group into backoff and sends the next scale-up to the other zones. It never routes a scale-up toward a group that is backed off.
+
+The first backoff lasts 5 minutes. Each subsequent failure doubles it, up to a 30-minute maximum, and the ladder resets after 3 hours with no failure. The doubling only happens once a backoff window has already expired, so several scale-ups failing inside one window keep the same duration.
+
+Each primary node group carries a single instance type, so there is no instance type fallback from the managed node groups. [Karpenter](/configuration/scaling/karpenter) selects from a set of instance types and zones on each launch.
+
+### The Scale-Up Metric Carries No Zone
+
+`cluster_autoscaler_scaled_up_nodes_total` is a single cluster-wide counter with no labels. It reports how many nodes the autoscaler added, never which zone, node group, or instance type they landed in. The only related counter is a GPU one, labeled by GPU resource name and GPU name, which also carries no zone, node group, or instance type.
+
+Any `availability-zone`, `host`, or `instance-type` tag on an autoscaler series is added by whatever scrapes the metrics and belongs to the node running the single autoscaler pod, not to the nodes that were added. Grouping the scale-up counter by zone graphs where the autoscaler pod has lived. The same holds for every other autoscaler series: per-host or per-zone grouping of any of them describes the pod's host.
+
+The autoscaler exposes its metrics on the pod through `prometheus.io/scrape` annotations rather than through a Service, so there is no scrape Service to look for.
+
+### Finding Where Nodes Were Added
+
+Three sources, in order of how far back they reach.
+
+- **Auto Scaling group activity history**, about six weeks. In the EC2 console, open the Auto Scaling group behind each per-zone node group and read its Activity tab. This is the only source that survives an autoscaler restart.
+- **The autoscaler log**, for as long as the current pod has been running.
+- **The current node list**, for where the surviving nodes are now.
+
+Read the log for the scale-up decisions:
+
+```bash
+$ kubectl logs -n kube-system deployment/cluster-autoscaler | grep -E 'Scale-up: setting group|Splitting scale-up between|No similar node groups found'
+```
+
+`Scale-up: setting group <group> size to <n>` prints at every verbosity level and names the group, and therefore the zone. `Splitting scale-up between <n> similar node groups: {<names>}` appears only when balancing splits a scale-up and lists the groups it went to; `No similar node groups found` appears when there is nothing to split across.
+
+Read the node list for the current picture:
+
+```bash
+$ kubectl get nodes -L topology.kubernetes.io/zone,eks.amazonaws.com/nodegroup --sort-by=.metadata.creationTimestamp
+```
+
+### Autoscaler Status per Node Group
+
+The autoscaler writes a status ConfigMap named `cluster-autoscaler-status` in the namespace it runs in, `kube-system` on a Convox Rack. This is the fastest way to see a zone in backoff:
+
+```bash
+$ kubectl -n kube-system get configmap cluster-autoscaler-status -o jsonpath='{.data.status}'
+```
+
+The single `status` key holds YAML with the top-level fields `time`, `autoscalerStatus`, `message`, `clusterWide`, and `nodeGroups`. Each entry under `nodeGroups` carries `name`, `health`, `scaleUp`, and `scaleDown`. For the backoff behavior above, read `scaleUp.status`, which reads `Backoff` while a group is backed off, and `scaleUp.backoffInfo`, which carries the error code and message from the failed launch. `clusterWide.health.nodeCounts` carries the registered node counts.
+
+### Zone Spread Does Not Steer Scale-Up
+
+The [`spreadAcrossZones`](/reference/primitives/app/service#spreadacrosszones) Service attribute keeps a Service's pods spread across zones and nodes. It shapes where pods land on nodes that already exist and does not choose which node group the autoscaler grows. Both constraints it renders are scheduler preferences rather than requirements, so a skew the scheduler cannot satisfy still places the pod; nothing is left Pending, and the autoscaler has nothing to react to.
 
 ## See Also
 

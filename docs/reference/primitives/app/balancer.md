@@ -32,8 +32,8 @@ services:
 | Name           | Required | Description                                                                                                    |
 | -------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | **annotations**| no       | A list of annotation keys and values to populate the metadata for the deployed balancer                        |
-| **awsLoadBalancerController** | no | Provision this balancer through the AWS Load Balancer Controller, which allows TCP and UDP ports on the same balancer. Requires Rack version 3.25.5 or later, AWS Racks only, and it cannot be enabled on a balancer that already has a load balancer. See [Load Balancers](/configuration/load-balancers) |
-| **ports**      | **yes**  | A map of ports in the format **listen:forward** where **listen** is the port that the balancer will listen on and **forward** is the port that the traffic will be forwarded to on the [Service](/reference/primitives/app/service) |
+| **awsLoadBalancerController** | no | Provision this balancer through the AWS Load Balancer Controller, which allows TCP and UDP ports on the same balancer. TCP and UDP on different port numbers requires Rack version 3.25.5 or later. `protocol: TCP_UDP`, which serves both protocols on one port number, requires Rack version 3.25.6 or later. AWS Racks only. The attribute cannot be enabled on a balancer that already has a load balancer. Separately, a balancer serving both protocols on one port number must be created that way, and its ports cannot be changed afterwards. See [Load Balancers](/configuration/load-balancers) |
+| **ports**      | **yes**  | A map of ports in the format **listen:forward** where **listen** is the port that the balancer will listen on and **forward** is the port that the traffic will be forwarded to on the [Service](/reference/primitives/app/service). A port can also take a long form that sets `protocol:` (`TCP`, `UDP` or `TCP_UDP`) and `port:` for the target. `TCP_UDP` requires `awsLoadBalancerController: true` and must set a target port. The other protocols default the target to the listen port |
 | **service**    | **yes**  | The name of the service that will receive the traffic                                                           |
 | **whitelist**  | no       | A list of CIDR ranges from which to limit inbound traffic to this balancer                                      |
 
@@ -101,9 +101,33 @@ services:
       - 3002/udp
 ```
 
+### Configuring a Port for Both TCP and UDP
+
+`protocol: TCP_UDP` serves both protocols on one port number through a single AWS `TCP_UDP` listener and target group. It requires `awsLoadBalancerController: true` and Rack version `3.25.6` or later, and unlike the other protocols it must set a target port.
+
+```yaml
+balancers:
+  dns:
+    service: resolver
+    awsLoadBalancerController: true
+    ports:
+      53:
+        protocol: TCP_UDP
+        port: 5300
+services:
+  resolver:
+    build: .
+```
+
+Do not use the balancer's target port as the Service's `port:`. `port:` renders an HTTP readiness probe against the health path, which defaults to `/`, so a Process serving DNS on that port never becomes Ready and the deploy fails. `port:` also publishes the port on the default ingress with a domain and a certificate. A Service can still declare its own `port:` for HTTP, as long as it is not a port the balancer targets.
+
+A Service's `ports:` list cannot carry the same number twice, so a port a balancer serves as `TCP_UDP` reaches the internal `.local` address for one protocol only, either `ports: [5300]` or `ports: [5300/udp]`.
+
+A balancer serving both protocols on one port number must be created that way, and its ports cannot be changed afterwards. See [Load Balancers](/configuration/load-balancers) for the migration and downgrade rules.
+
 ### Important Notes
 
-- A custom balancer can only be configured with multiple TCP or multiple UDP ports and redirects. To mix TCP and UDP ports on one balancer, set `awsLoadBalancerController: true`. Even then, a single port number cannot serve both TCP and UDP.
+- A custom balancer can only be configured with multiple TCP or multiple UDP ports and redirects. To mix TCP and UDP ports on one balancer, set `awsLoadBalancerController: true`. From Rack version `3.25.6` one port number can serve both protocols with `protocol: TCP_UDP`.
 - Ports configured using `ports:` will never be publicly accessible; all connections must go through the load balancer, which is internet-facing.
 
 ### Difference Between `port` and `ports`

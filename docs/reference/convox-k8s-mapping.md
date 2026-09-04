@@ -641,6 +641,7 @@ Custom balancers defined in `convox.yml`.
 
 -   **K8s Resource**: `Service` of type `LoadBalancer`.
 -   **Naming Pattern**: `balancer-<balancer-name>`
+-   **Port Names**: the balancer port number. A port with `protocol: TCP_UDP` renders as two `ServicePort` entries at the same number, named `<port>-tcp` and `<port>-udp`.
 -   **YAML Snippet (`Service`)**:
     ```yaml
     apiVersion: v1
@@ -656,8 +657,35 @@ Custom balancers defined in `convox.yml`.
       ports:
         - name: "6000"
           port: 6000 # from convox.yml: ports
-          targetPort: 6001
           protocol: TCP
+          targetPort: 6001
+    ```
+-   **YAML Snippet (`Service` for a `TCP_UDP` port)**: a `TCP_UDP` port requires `awsLoadBalancerController: true`, and Convox generates the annotations that hand the Service to the AWS Load Balancer Controller. See [Load Balancers](/configuration/load-balancers).
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: balancer-dns # from convox.yml: balancers.dns
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-enable-tcp-udp-listener: "true"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+      labels:
+        type: balancer
+    spec:
+      type: LoadBalancer
+      selector:
+        service: resolver # from convox.yml: balancers.dns.service
+      ports:
+        - name: 5353-tcp
+          port: 5353 # from convox.yml: ports, protocol: TCP_UDP
+          protocol: TCP
+          targetPort: 5300
+        - name: 5353-udp
+          port: 5353
+          protocol: UDP
+          targetPort: 5300
     ```
 -   **`kubectl` Commands**:
     ```bash

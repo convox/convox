@@ -181,6 +181,8 @@ Earlier CLI versions exited `0` here, so a CI step gated on `convox run` passed 
 
 A stream lost in transit is caught by the CLI on its own and needs no Rack upgrade. An error the Rack raises before the command starts needs Rack 3.25.5 or later; earlier Racks send `0` as the exit status even when the command never ran.
 
+On an attached run, if your connection ends before the command finishes, the command keeps running in its pod with no output and no exit status. On this path `--timeout` bounds the pod itself, not only the wait: the pod ends when the timeout elapses, one hour by default, and takes the command with it. That bound applies when the CLI is gone or can no longer reach the Rack; a CLI that survives a broken stream asks the Rack to stop the process as it exits, which removes the run pod right away. Use `--detach` for work that must be tracked rather than abandoned.
+
 ## GPU Support
 
 The `--gpu` flag allows you to request GPU resources for one-off processes. This is particularly useful for machine learning tasks, batch processing, or testing GPU-accelerated code without modifying your service definitions.

@@ -57,7 +57,27 @@ Both streams arrive over one connection, so lines from the two can interleave. D
 
 ### Racks reached through the Console
 
-On a Rack reached through the Console, or on a Convox Cloud machine, a command that reads standard input until end of input with nothing piped in never sees that end and waits until the session times out. Pipe at least one byte to release it, or start the command with [`convox run --detach --wait`](/reference/cli/run#detached-runs) instead.
+On a Rack reached through the Console, or on a Convox Cloud machine, a command that reads standard input until end of input with nothing piped in never sees that end, and the session eventually times out with the command still waiting in the container. Pipe at least one byte to release it, or start the command with [`convox run --detach --wait`](/reference/cli/run#detached-runs) instead.
+
+## Losing the Connection
+
+If your connection to the Rack ends while a command is running, by closing the terminal or losing the network, the command keeps running inside the container. Its output has nowhere to go and no exit status is reported.
+
+Nothing stops it on a timer. It runs until it finishes on its own, or until the process you exec'd into is replaced by a deploy, a scale, or a node roll.
+
+Re-running the command may run it a second time while the first is still going. For anything that is not safe to run twice, check the container's state first.
+
+A command that reads standard input may see the end of its input early and act on the part it received.
+
+For work that must survive a lost connection and stay observable, use [`convox run --detach`](/reference/cli/run#detached-runs) instead:
+
+```bash
+    $ convox run web bin/migrate --detach --wait -a my-app
+```
+
+A detached process keeps running after the connection ends and can be stopped with [`convox ps stop`](/reference/cli/ps). With `--wait`, the CLI holds the command open until the process finishes and exits with its status. Without `--wait`, pass `--retain` and read the status later with [`convox ps info`](/reference/cli/ps).
+
+Interrupting an interactive session is not this case. The CLI puts the terminal in raw mode, so Ctrl-C reaches the command inside the container instead of killing the CLI.
 
 ## Exit Status
 

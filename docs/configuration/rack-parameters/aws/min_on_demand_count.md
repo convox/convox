@@ -31,3 +31,9 @@ The `min_on_demand_count` parameter is used in conjunction with the [node_capaci
 Adjusting the `min_on_demand_count` helps you ensure that there are always a sufficient number of reliable on-demand nodes available for your workloads, complementing the use of spot instances to reduce costs.
 
 Additionally, consider configuring the [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameter to limit the maximum number of on-demand nodes and optimize resource allocation.
+
+This parameter has no effect when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`, because Karpenter holds every system node group at one node. Enabling Karpenter also requires `node_capacity_type=ON_DEMAND`, so a Karpenter Rack is not a `mixed` Rack and the two settings do not normally meet. See [Karpenter](/configuration/scaling/karpenter#enablement-validation-guards).
+
+On AWS Racks, raising `min_on_demand_count` above the number of nodes the on-demand node group is currently running requires a `convox` CLI at `3.25.6` or newer performing the apply. Earlier versions fail the apply with an EKS validation error and roll the value back. Setting the value at install and lowering it work on any version.
+
+This is not a Rack version requirement. The handling lives in the `convox` binary performing the apply, which for a Console-managed Rack is the CLI bundled in the Console deploy rather than the CLI on your machine. See [Raising a node group minimum fails EKS validation](/help/troubleshooting#raising-a-node-group-minimum-fails-eks-validation) and [CLI Rack Management](/management/cli-rack-management).

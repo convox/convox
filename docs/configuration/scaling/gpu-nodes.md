@@ -66,7 +66,7 @@ AWS documents the 595 driver as incompatible with P3, P3dn, and G6f instances, s
 
 ### AMI Updates Stop
 
-Without `ami_id` the pool tracks `al2023@latest`, and Karpenter rolls its nodes onto each new AWS AMI as it is published. Pinning an id ends that drift, including OS security patches. The pool stays on the AMI you named until you name another one.
+Without `ami_id` the pool follows the Rack-wide alias, which is [`karpenter_ami_alias`](/configuration/rack-parameters/aws/karpenter_ami_alias) where it is set and `al2023@latest` otherwise. On `al2023@latest` Karpenter rolls the pool's nodes onto each new AWS AMI as it is published. Pinning an id takes the pool out of the alias and ends AMI drift for it, including OS security patches. The pool stays on the AMI you named until you name another one.
 
 To move the pool onto a rebuilt AMI, set the new `ami_id`. Karpenter marks the existing nodes drifted and replaces them, bounded by the pool's `disruption_budget_nodes`.
 
@@ -120,6 +120,7 @@ Downgrading a Rack below `3.25.5` renders the pool with the `al2023@latest` alia
 - [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) for the per-pool field reference
 - [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) for advertising node GPUs to Kubernetes
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) for GPU utilization, VRAM, temperature, and power metrics
+- [karpenter_ami_alias](/configuration/rack-parameters/aws/karpenter_ami_alias) for pinning every AL2023 pool to one EKS-optimized AMI version, the lighter alternative to a per-pool `ami_id` because Convox keeps resolving the AMI
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for custom AMIs on EKS managed node groups
 - [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) for custom AMIs on managed build node groups
 - [Autoscaling](/configuration/scaling/autoscaling#gpu-scaling) for `scale.gpu` and GPU-based autoscaling

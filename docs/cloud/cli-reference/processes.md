@@ -30,7 +30,7 @@ hello
 
 Output the command writes to standard error comes back with its standard output over the same connection, so lines from the two can interleave.
 
-A Cloud machine is reached through the Console, so a command that reads standard input until end of input with nothing piped in never sees that end and waits until the session times out. Pipe at least one byte to release it, or start the command with `convox cloud run --detach --wait` instead. Both behaviors require machine version 3.25.5 or later.
+A Cloud machine is reached through the Console, so a command that reads standard input until end of input with nothing piped in never sees that end, and the session eventually times out with the command still waiting in the container. Pipe at least one byte to release it, or start the command with `convox cloud run --detach --wait` instead. Both behaviors require machine version 3.25.5 or later.
 
 ### ps
 

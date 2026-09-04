@@ -25,7 +25,7 @@ services:
           threshold: 70
 ```
 
-This scales the service between 2 and 10 replicas, targeting 70% CPU utilization. Scale-to-zero is supported with `min: 0`. See [Autoscaling](/configuration/scaling/autoscaling) for the full trigger reference and examples.
+This scales the service between 2 and 10 replicas, targeting 70% CPU utilization. Scale-to-zero is supported with `min: 0`. See [Autoscaling](/configuration/scaling/autoscaling) for the full trigger reference and examples, or [Observing Cluster Autoscaler Scale-Ups](/configuration/scaling/autoscaling#observing-cluster-autoscaler-scale-ups) for how the default Cluster Autoscaler picks a per-zone node group and how to see where it added nodes.
 
 > `scale.autoscale` requires `keda_enable=true` on the rack (AWS only). CPU and memory autoscaling via `scale.targets` works on all providers without KEDA.
 
@@ -54,7 +54,7 @@ See [Datadog Metrics Autoscaling](/configuration/scaling/datadog-metrics) for de
 
 Opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning. Karpenter provisions the optimal instance type and size in seconds rather than minutes, supports scale-to-zero builds, automatic node consolidation, and cost-aware instance selection across spot and on-demand capacity.
 
-See [Karpenter](/configuration/scaling/karpenter) for details.
+See [Karpenter](/configuration/scaling/karpenter) for details, or [Observing Cluster Autoscaler Scale-Ups](/configuration/scaling/autoscaling#observing-cluster-autoscaler-scale-ups) for how the default Cluster Autoscaler picks a per-zone node group and how to see where it added nodes.
 > AWS only
 
 ## GPU Nodes and Custom AMIs

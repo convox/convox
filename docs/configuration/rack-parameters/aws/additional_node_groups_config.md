@@ -173,7 +173,8 @@ Raising `min_size` above the number of nodes a group is currently running used t
 This handling has limits:
 
 - It covers AWS Racks only.
-- It covers `additional_node_groups_config` only. [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) does not have the underlying problem and does not need it, and the primary node groups are outside its scope, so it does not apply to [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) or [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count).
+- `additional_node_groups_config` is covered from `3.25.3`. The build node group ([`build_node_min_count`](/configuration/rack-parameters/aws/build_node_min_count)) and, on a Rack with `node_capacity_type=mixed`, the on-demand system node group ([`min_on_demand_count`](/configuration/rack-parameters/aws/min_on_demand_count)) are covered from `3.25.6`. Those two are skipped when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`; additional node groups are still covered. [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) does not have the underlying problem and does not need it.
+- It only raises a group's desired size. It never lowers one.
 - It runs in the convox binary rather than in the Rack's Terraform modules, so it arrives with a newer convox CLI, or with a Console rebuilt against one, and not with a Rack version upgrade.
 
 ### Removing a Node Group

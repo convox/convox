@@ -71,7 +71,7 @@ Enforcement lags the policy object slightly: a freshly started pod is briefly re
 
 ## Before You Enable It
 
-- **An App that defines `balancers:` loses isolation across its whole namespace.** A [balancers](/configuration/load-balancers) entry creates a `type: LoadBalancer` Service with instance targets, so requests arrive from whichever node the load balancer selected, which no pod or namespace source can express. The Rack deletes the policy from any namespace holding a balancer Service. Adding a `balancers:` block to an App on a Rack with this parameter on therefore removes isolation from every Service in that App, not only from the balanced one.
+- **An App that defines `balancers:` loses isolation across its whole namespace.** A [balancers](/configuration/load-balancers) entry creates a `type: LoadBalancer` Service, and the Rack deletes the policy from any namespace holding a balancer Service. Adding a `balancers:` block to an App on a Rack with this parameter on therefore removes isolation from every Service in that App, not only from the balanced one.
 - **Hand-written KEDA triggers that dial an in-cluster App endpoint stop working.** The `keda` namespace is not an allowed source. This applies to a trigger written under [`scale.autoscale.custom`](/configuration/scaling/autoscaling); every trigger Convox generates reads CPU or memory metrics or a Prometheus endpoint, so generated triggers are unaffected.
 - **A Service running as an agent is covered like any other pod.** `agent: true` runs the Service as a DaemonSet and binds its ports on the node. The policy selects every pod in the namespace, agents included, so confirm what needs to reach an agent's host port first.
 
