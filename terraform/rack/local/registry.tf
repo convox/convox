@@ -76,11 +76,18 @@ resource "kubernetes_deployment" "registry" {
           name = "registry"
 
           persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
+            claim_name = kubernetes_persistent_volume_claim.registry.metadata[0].name
           }
         }
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 
@@ -155,7 +162,7 @@ resource "kubernetes_ingress_v1" "registry" {
         path {
           backend {
             service {
-              name = kubernetes_service.registry.metadata.0.name
+              name = kubernetes_service.registry.metadata[0].name
               port {
                 number = 80
               }
@@ -166,4 +173,3 @@ resource "kubernetes_ingress_v1" "registry" {
     }
   }
 }
-
