@@ -11,7 +11,7 @@ convox instances keyroll > ~/keyroll.out
 
 sed '0,/^Generated private key:$/d' ~/keyroll.out > ~/priv.key
 
-cat ~/priv.key
+grep -q 'PRIVATE KEY' ~/priv.key
 
 while true
 do
