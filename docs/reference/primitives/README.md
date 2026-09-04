@@ -15,7 +15,7 @@ focus on the things that make your [App](/reference/primitives/app) unique.
 
 | Primitive                   | Description                                                                                  |
 |:----------------------------|:---------------------------------------------------------------------------------------------|
-| [Balancer](/reference/primitives/app/balancer) | Custom TCP load balancers in front of a [Service](/reference/primitives/app/service)                            |
+| [Balancer](/reference/primitives/app/balancer) | Custom TCP and UDP load balancers in front of a [Service](/reference/primitives/app/service)                    |
 | [Build](/reference/primitives/app/build)       | Compiled version of a codebase                                                               |
 | [Object](/reference/primitives/app/object)     | Blob/file storage                                                                            |
 | [Process](/reference/primitives/app/process)   | Running containers created by running a command on a [Release](/reference/primitives/app/release)                 |

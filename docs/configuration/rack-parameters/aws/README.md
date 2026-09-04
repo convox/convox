@@ -49,6 +49,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) | Creates custom Karpenter NodePools for specialized workloads. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_ami_alias](/configuration/rack-parameters/aws/karpenter_ami_alias)       | Pins the AL2023 Karpenter node pools to one EKS-optimized AMI version. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_arch](/configuration/rack-parameters/aws/karpenter_arch)                 | Karpenter workload node CPU architecture. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_auth_mode](/configuration/rack-parameters/aws/karpenter_auth_mode)       | One-way migration preparing EKS for Karpenter. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_build_capacity_types](/configuration/rack-parameters/aws/karpenter_build_capacity_types) | Purchasing model for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
@@ -66,6 +67,8 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_consolidate_after](/configuration/rack-parameters/aws/karpenter_consolidate_after) | Delay before Karpenter consolidation triggers. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_consolidation_enabled](/configuration/rack-parameters/aws/karpenter_consolidation_enabled) | Enables Karpenter node consolidation. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_cpu_limit](/configuration/rack-parameters/aws/karpenter_cpu_limit)       | Maximum total vCPUs Karpenter can provision. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_block_duration](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) | How long the Karpenter disruption window stays open. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) | Opens a recurring window in which Karpenter pauses drift and consolidation. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_disruption_budget_nodes) | Maximum Karpenter nodes disrupted simultaneously. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_enabled](/configuration/rack-parameters/aws/karpenter_enabled)           | Enables Karpenter node autoscaling. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_instance_families](/configuration/rack-parameters/aws/karpenter_instance_families) | EC2 instance families for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |

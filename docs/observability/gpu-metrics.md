@@ -1,6 +1,6 @@
 ---
 title: "GPU Observability"
-description: "GPU observability gives per-pod, per-service, and per-app GPU telemetry such as utilization, memory, and power draw via DCGM. Full Console dashboards are AWS-only; GCP racks can install the DCGM exporter for a Prometheus you run yourself."
+description: "Per-pod, per-service, and per-app GPU telemetry through DCGM, with Console dashboards on AWS and a self-hosted Prometheus exporter option on GCP."
 slug: gpu-metrics
 url: /observability/gpu-metrics
 ---

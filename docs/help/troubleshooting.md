@@ -158,7 +158,7 @@ The scope of this recovery is deliberately narrow:
 
 If a re-run fails the same way, open a [support ticket](/help/support) with the Rack logs.
 
-## Raising min_size on an additional node group fails EKS validation
+## Raising a node group minimum fails EKS validation
 
 Increasing `min_size` on an entry in [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) fails the apply with an EKS validation error:
 
@@ -166,9 +166,19 @@ Increasing `min_size` on an entry in [additional_node_groups_config](/configurat
 Error: updating EKS Node Group (my-rack:my-rack-additional-0-a1b2c3d4e5f60718) config: operation error EKS: UpdateNodegroupConfig, https response error StatusCode: 400, InvalidParameterException: Minimum capacity 3 can't be greater than desired size 1
 ```
 
-Convox does not manage the running size of an additional node group, so the autoscaler is free to move it. When the pool has already scaled below the new floor, the update carries the new `min_size` on its own, and EKS rejects a minimum that is above the pool's current desired size.
+Convox does not manage the running size of these node groups, so the autoscaler is free to move them. When a group has already scaled below the new floor, the update carries the new minimum on its own, and EKS rejects a minimum that is above the group's current desired size.
 
-**Resolution:** with `convox` `3.25.3` or newer performing the apply, re-run the same command. Convox raises the pool's desired size to the new `min_size` first, waits for that scale-up to finish, and then applies, so the command succeeds. It prints a `NOTICE` for each pool it raises:
+The same error appears when raising [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count), or [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) on a Rack with `node_capacity_type=mixed`, above the number of nodes that group is currently running.
+
+**Resolution:** re-run the same command with a `convox` binary that carries the handling for the group you raised:
+
+| Node group | Minimum `convox` version |
+|------------|--------------------------|
+| Additional node groups (`additional_node_groups_config`) | `3.25.3` |
+| Build node group (`build_node_min_count`) | `3.25.6` |
+| On-demand system node group (`min_on_demand_count`, `node_capacity_type=mixed`) | `3.25.6` |
+
+Convox raises the group's desired size to the new minimum first, waits for that scale-up to finish, and then applies, so the command succeeds. It prints a `NOTICE` for each group it raises:
 
 ```text
 NOTICE: raising node group my-rack-additional-0-a1b2c3d4e5f60718 desired size to 3 before apply
@@ -176,10 +186,10 @@ NOTICE: raising node group my-rack-additional-0-a1b2c3d4e5f60718 desired size to
 
 Two things follow from this:
 
-- The update takes longer than usual when `min_size` jumps by a large amount, because the nodes are added before Terraform runs.
+- The update takes longer than usual when the minimum jumps by a large amount, because the nodes are added before Terraform runs.
 - The same version condition applies as above. The behavior lives in the `convox` binary performing the apply, which for a Console-managed Rack means a Console deploy carrying that CLI version, not a Rack version update.
 
-This handling applies to `additional_node_groups_config` on AWS Racks.
+This handling applies to AWS Racks, on `additional_node_groups_config`, the build node group and the on-demand system node group. With [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) set to `true`, the build node group and the on-demand system node group are not raised; additional node groups still are.
 
 ## My environment variables disappear after deploying
 

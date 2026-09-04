@@ -10,7 +10,7 @@ url: /configuration/rack-parameters/aws/node_max_unavailable_percentage
 ## Description
 The `node_max_unavailable_percentage` parameter controls the maximum percentage of nodes that can be unavailable simultaneously during EKS node group updates. This applies to operations like Kubernetes version upgrades, AMI updates, and node group scaling changes.
 
-When set, this value is applied to the `update_config` block on all EKS managed node groups (primary, build, and additional).
+When set, this value is applied to the `update_config` block on the primary node groups and on the additional node groups. The build node group and any additional build groups do not receive it and always recycle one node at a time.
 
 ## Default Value
 The default value for `node_max_unavailable_percentage` is `0` (disabled).
@@ -39,7 +39,7 @@ Updating parameters... OK
 
 ## Additional Information
 - This parameter affects **EKS node group updates** (infrastructure-level node rolling), not application pod disruptions. For controlling pod-level disruptions, see [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage).
-- The setting applies uniformly to all node groups in the rack: primary nodes, build nodes, and any additional node groups configured via [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config).
+- The setting applies to the primary node groups and to any additional node groups configured via [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config). The build node group and the groups configured via [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) carry no `update_config` block, so they always recycle one node at a time regardless of this value.
 - When combined with [high_availability](/configuration/rack-parameters/aws/high_availability), ensure the percentage allows enough nodes to remain available to run your workloads during updates.
 
 ## See Also
