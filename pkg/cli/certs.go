@@ -92,6 +92,91 @@ func init() {
 		},
 		Validate: stdcli.Args(0),
 	})
+
+	register("letsencrypt dns cloudflare add", "configure letsencrypt dns cloudflare solver", CertLetsEncryptDnsCloudflareAdd, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+			stdcli.StringFlag("dns-zones", "", "comma separated dns zones"),
+			stdcli.StringFlag("api-token", "", "cloudflare api token value"),
+			stdcli.StringFlag("api-key", "", "cloudflare api key value"),
+			stdcli.StringFlag("email", "", "cloudflare account email (required for api key auth)"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns cloudflare update", "update letsencrypt dns cloudflare solver", CertLetsEncryptDnsCloudflareUpdate, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+			stdcli.StringFlag("dns-zones", "", "comma separated dns zones"),
+			stdcli.StringFlag("api-token", "", "cloudflare api token value"),
+			stdcli.StringFlag("api-key", "", "cloudflare api key value"),
+			stdcli.StringFlag("email", "", "cloudflare account email (required for api key auth)"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns cloudflare delete", "delete letsencrypt dns cloudflare solver", CertLetsEncryptDnsCloudflareDelete, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.IntFlag("id", "", "dns solver id"),
+		},
+		Validate: stdcli.Args(0),
+	})
+
+	register("letsencrypt dns cloudflare list", "list letsencrypt dns cloudflare solver", CertLetsEncryptDnsCloudflareList, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+		},
+		Validate: stdcli.Args(0),
+	})
+}
+
+func optionalString(v string) *string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	return options.String(v)
+}
+
+func cloudflareCredentialFromCLI(id int, c *stdcli.Context) (*structs.Cloudflare, error) {
+	tokenValue := strings.TrimSpace(c.String("api-token"))
+	keyValue := strings.TrimSpace(c.String("api-key"))
+	emailValue := strings.TrimSpace(c.String("email"))
+
+	if tokenValue != "" && keyValue != "" {
+		return nil, fmt.Errorf("cloudflare api token and api key options are mutually exclusive")
+	}
+
+	if tokenValue == "" && keyValue == "" && emailValue == "" {
+		return nil, nil
+	}
+
+	if tokenValue == "" && keyValue == "" {
+		return nil, fmt.Errorf("either --api-token or --api-key must be provided")
+	}
+
+	secretName := fmt.Sprintf("cloudflare-dns-credential-%d", id)
+	cf := &structs.Cloudflare{}
+
+	if tokenValue != "" {
+		cf.ApiTokenValue = options.String(tokenValue)
+		cf.ApiTokenSecretRefName = options.String(secretName)
+		cf.ApiTokenSecretRefKey = options.String("api-token")
+		cf.Email = nil
+	} else {
+		if emailValue == "" {
+			return nil, fmt.Errorf("email is required when using --api-key")
+		}
+		cf.ApiKeyValue = options.String(keyValue)
+		cf.ApiKeySecretRefName = options.String(secretName)
+		cf.ApiKeySecretRefKey = options.String("api-key")
+		cf.Email = options.String(emailValue)
+	}
+
+	return cf, nil
 }
 
 func Certs(rack sdk.Interface, c *stdcli.Context) error {
@@ -258,7 +343,7 @@ func CertLetsEncryptDnsRoute53Add(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if exists[solver.Id] {
-		return fmt.Errorf("id required or provided id is already in use")
+		return fmt.Errorf("provided id is already in use")
 	}
 
 	config.Solvers = append(config.Solvers, solver)
@@ -267,6 +352,196 @@ func CertLetsEncryptDnsRoute53Add(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 	return c.OK()
+}
+
+func CertLetsEncryptDnsCloudflareAdd(rack sdk.Interface, c *stdcli.Context) error {
+	solver := &structs.Dns01Solver{}
+	solver.Id = c.Int("id")
+	if solver.Id <= 0 {
+		return fmt.Errorf("invalid id or id is not provided")
+	}
+
+	zonesInput := strings.TrimSpace(c.String("dns-zones"))
+	if zonesInput == "" {
+		return fmt.Errorf("dns zones are required")
+	}
+
+	for _, d := range strings.Split(zonesInput, ",") {
+		dd := strings.TrimSpace(d)
+		if dd != "" {
+			solver.DnsZones = append(solver.DnsZones, dd)
+		}
+	}
+
+	if len(solver.DnsZones) == 0 {
+		return fmt.Errorf("dns zones are required")
+	}
+
+	cf, err := cloudflareCredentialFromCLI(solver.Id, c)
+	if err != nil {
+		return err
+	}
+	if cf == nil {
+		return fmt.Errorf("either --api-token or --api-key must be provided")
+	}
+	solver.Cloudflare = cf
+
+	if err := solver.Validate(); err != nil {
+		return err
+	}
+
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	exists := map[int]bool{}
+	for i := range config.Solvers {
+		exists[config.Solvers[i].Id] = true
+	}
+
+	if exists[solver.Id] {
+		return fmt.Errorf("provided id is already in use")
+	}
+
+	config.Solvers = append(config.Solvers, solver)
+
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsCloudflareUpdate(rack sdk.Interface, c *stdcli.Context) error {
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	id := c.Int("id")
+	if id <= 0 {
+		return fmt.Errorf("invalid id or id is not provided")
+	}
+
+	var solver *structs.Dns01Solver
+	for _, s := range config.Solvers {
+		if s.Id == id {
+			solver = s
+			break
+		}
+	}
+
+	if solver == nil {
+		return fmt.Errorf("solver with id %d not found", id)
+	}
+
+	if dz := strings.TrimSpace(c.String("dns-zones")); dz != "" {
+		zones := []string{}
+		for _, d := range strings.Split(dz, ",") {
+			dd := strings.TrimSpace(d)
+			if dd != "" {
+				zones = append(zones, dd)
+			}
+		}
+		if len(zones) == 0 {
+			return fmt.Errorf("dns zones are required")
+		}
+		solver.DnsZones = zones
+	}
+
+	cf, err := cloudflareCredentialFromCLI(solver.Id, c)
+	if err != nil {
+		return err
+	}
+	if cf != nil {
+		solver.Cloudflare = cf
+	}
+
+	if err := solver.Validate(); err != nil {
+		return err
+	}
+
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsCloudflareDelete(rack sdk.Interface, c *stdcli.Context) error {
+	id := c.Int("id")
+	if id <= 0 {
+		return fmt.Errorf("invalid id or id is not provided")
+	}
+
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	found := false
+	solvers := []*structs.Dns01Solver{}
+	for i := range config.Solvers {
+		if config.Solvers[i].Id == id {
+			found = true
+		} else {
+			solvers = append(solvers, config.Solvers[i])
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("solver with id %d not found", id)
+	}
+
+	config.Solvers = solvers
+	if err := rack.LetsEncryptConfigApply(*config); err != nil {
+		return err
+	}
+	return c.OK()
+}
+
+func CertLetsEncryptDnsCloudflareList(rack sdk.Interface, c *stdcli.Context) error {
+	config, err := rack.LetsEncryptConfigGet()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %s", err)
+	}
+
+	t := c.Table("ID", "DNS-ZONES", "TYPE", "SECRET", "FIELDS", "EMAIL")
+
+	for _, solver := range config.Solvers {
+		if solver.Cloudflare != nil {
+			cl := solver.Cloudflare
+
+			authType := ""
+			secretName := ""
+			fields := []string{}
+
+			if cl.ApiTokenSecretRefName != nil && *cl.ApiTokenSecretRefName != "" {
+				authType = "API Token"
+				secretName = *cl.ApiTokenSecretRefName
+				if cl.ApiTokenSecretRefKey != nil && *cl.ApiTokenSecretRefKey != "" {
+					fields = append(fields, *cl.ApiTokenSecretRefKey)
+				}
+			} else if cl.ApiKeySecretRefName != nil && *cl.ApiKeySecretRefName != "" {
+				authType = "API Key"
+				secretName = *cl.ApiKeySecretRefName
+				if cl.ApiKeySecretRefKey != nil && *cl.ApiKeySecretRefKey != "" {
+					fields = append(fields, *cl.ApiKeySecretRefKey)
+				}
+				fields = append(fields, "email")
+			}
+
+			t.AddRow(
+				strconv.Itoa(solver.Id),
+				strings.Join(solver.DnsZones, ","),
+				authType,
+				secretName,
+				strings.Join(fields, ", "),
+				options.StringValueSafe(cl.Email),
+			)
+		}
+	}
+
+	return t.Print()
 }
 
 func CertLetsEncryptDnsRoute53Update(rack sdk.Interface, c *stdcli.Context) error {
