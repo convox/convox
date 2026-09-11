@@ -4,6 +4,20 @@
 locals {
   karpenter_effective_disk = var.karpenter_node_disk > 0 ? var.karpenter_node_disk : var.node_disk
 
+  # Zero inherits the rack-wide value. Both fields are gp3-only: nothing cross-checks them
+  # against the volume type, so a mismatch applies cleanly and fails at instance launch.
+  karpenter_volume_gp3                  = var.karpenter_node_volume_type == "gp3"
+  karpenter_volume_iops_requested       = var.karpenter_node_volume_iops > 0 ? min(80000, floor(var.karpenter_node_volume_iops)) : local.node_volume_iops_requested
+  karpenter_volume_throughput_requested = var.karpenter_node_volume_throughput > 0 ? min(1000, floor(var.karpenter_node_volume_throughput)) : local.node_volume_throughput_requested
+
+  karpenter_volume_iops_effective       = local.karpenter_volume_gp3 && local.karpenter_volume_iops_requested > 0 ? max(3000, min(local.karpenter_volume_iops_requested, local.karpenter_effective_disk * 500)) : 0
+  karpenter_volume_throughput_effective = local.karpenter_volume_gp3 && local.karpenter_volume_throughput_requested > 0 ? max(125, min(local.karpenter_volume_throughput_requested, floor(max(3000, local.karpenter_volume_iops_effective) * 0.25))) : 0
+
+  karpenter_volume_perf = merge(
+    local.karpenter_volume_iops_effective > 0 ? { iops = local.karpenter_volume_iops_effective } : {},
+    local.karpenter_volume_throughput_effective > 0 ? { throughput = local.karpenter_volume_throughput_effective } : {},
+  )
+
   karpenter_is_bottlerocket = var.karpenter_node_os == "bottlerocket"
 
   karpenter_effective_ami_alias = var.karpenter_ami_alias != "" ? var.karpenter_ami_alias : "al2023@latest"
@@ -140,8 +154,9 @@ locals {
   # Workload EC2NodeClass — build defaults, merge overrides, force protected fields
   ###########################################################################
 
-  # blockDeviceMappings: Bottlerocket needs two volumes (OS + data); still overridable
-  ec2_default_block_devices = local.karpenter_is_bottlerocket ? [
+  # Bottlerocket needs two volumes (OS + data); still overridable. Built by concat rather than
+  # one ternary over both lists: element types that differ by a key unify to map(string).
+  ec2_bottlerocket_os_device = local.karpenter_is_bottlerocket ? [
     {
       deviceName = "/dev/xvda"
       ebs = {
@@ -150,24 +165,18 @@ locals {
         encrypted  = var.ebs_volume_encryption_enabled
       }
     },
+  ] : []
+
+  ec2_default_block_devices = concat(local.ec2_bottlerocket_os_device, [
     {
-      deviceName = "/dev/xvdb"
-      ebs = {
+      deviceName = local.karpenter_is_bottlerocket ? "/dev/xvdb" : "/dev/xvda"
+      ebs = merge({
         volumeType = var.karpenter_node_volume_type
         volumeSize = "${local.karpenter_effective_disk}Gi"
         encrypted  = var.ebs_volume_encryption_enabled
-      }
+      }, local.karpenter_volume_perf)
     },
-    ] : [
-    {
-      deviceName = "/dev/xvda"
-      ebs = {
-        volumeType = var.karpenter_node_volume_type
-        volumeSize = "${local.karpenter_effective_disk}Gi"
-        encrypted  = var.ebs_volume_encryption_enabled
-      }
-    },
-  ]
+  ])
   ec2_final_block_devices = lookup(local.kc_ec2, "blockDeviceMappings", local.ec2_default_block_devices)
 
   # metadataOptions: override or params
@@ -190,23 +199,29 @@ locals {
   ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = local.karpenter_effective_ami_alias }]
   ec2_final_ami   = lookup(local.kc_ec2, "amiSelectorTerms", local.ec2_default_ami)
 
-  # userData: NodeConfig for the kubelet registry params. Skipped when karpenter_config picks
-  # the AMI, since a Bottlerocket class parses userData as TOML rather than YAML.
-  ec2_kubelet_nodeconfig = <<-EOT
-    apiVersion: node.eks.aws/v1alpha1
-    kind: NodeConfig
-    spec:
-      kubelet:
-        config:
-          registryPullQPS: ${local.kubelet_registry_pull_qps_effective}
-          registryBurst: ${local.kubelet_registry_burst_effective}
-  EOT
+  # Skipped when karpenter_config picks the AMI, since a Bottlerocket class parses userData as
+  # TOML rather than YAML. Not indented: a %{ if } inside a <<- heredoc cancels the unindenting.
+  ec2_node_config = <<EOT
+apiVersion: node.eks.aws/v1alpha1
+kind: NodeConfig
+spec:
+%{if var.fast_image_pull_enable~}
+  featureGates:
+    FastImagePull: true
+%{endif~}
+%{if local.kubelet_registry_set~}
+  kubelet:
+    config:
+      registryPullQPS: ${local.kubelet_registry_pull_qps_effective}
+      registryBurst: ${local.kubelet_registry_burst_effective}
+%{endif~}
+EOT
 
-  ec2_kubelet_user_data = local.kubelet_registry_set ? local.ec2_kubelet_nodeconfig : ""
+  ec2_node_config_user_data = local.node_config_set ? local.ec2_node_config : ""
 
   # Params first, then override, so karpenter_config wins on any key it sets
   ec2_optional_fields = merge(
-    !local.karpenter_is_bottlerocket && lookup(local.kc_ec2, "amiSelectorTerms", null) == null && local.ec2_kubelet_user_data != "" ? { userData = local.ec2_kubelet_user_data } : {},
+    !local.karpenter_is_bottlerocket && lookup(local.kc_ec2, "amiSelectorTerms", null) == null && local.ec2_node_config_user_data != "" ? { userData = local.ec2_node_config_user_data } : {},
     lookup(local.kc_ec2, "userData", null) != null ? { userData = local.kc_ec2["userData"] } : {},
     lookup(local.kc_ec2, "detailedMonitoring", null) != null ? { detailedMonitoring = local.kc_ec2["detailedMonitoring"] } : {},
     lookup(local.kc_ec2, "associatePublicIPAddress", null) != null ? { associatePublicIPAddress = local.kc_ec2["associatePublicIPAddress"] } : {},
@@ -254,6 +269,8 @@ locals {
       disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
       disk                    = tonumber(lookup(np, "disk", 0))
       volume_type             = lookup(np, "volume_type", "gp3")
+      volume_iops             = tonumber(lookup(np, "volume_iops", 0))
+      volume_throughput       = tonumber(lookup(np, "volume_throughput", 0))
       ami_id                  = lookup(np, "ami_id", "")
       weight                  = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
       dedicated               = tobool(lookup(np, "dedicated", false))
@@ -274,6 +291,22 @@ locals {
         }]
       )
     }
+  }
+
+  karpenter_pool_volume_requested = {
+    for name, np in local.additional_karpenter_nodepools_with_defaults : name => {
+      gp3        = np.volume_type == "gp3"
+      disk       = np.disk > 0 ? np.disk : local.karpenter_effective_disk
+      iops       = np.volume_iops > 0 ? min(80000, floor(np.volume_iops)) : local.karpenter_volume_iops_requested
+      throughput = np.volume_throughput > 0 ? min(1000, floor(np.volume_throughput)) : local.karpenter_volume_throughput_requested
+    }
+  }
+
+  karpenter_pool_volume_iops = { for name, r in local.karpenter_pool_volume_requested : name =>
+    r.gp3 && r.iops > 0 ? max(3000, min(r.iops, r.disk * 500)) : 0
+  }
+  karpenter_pool_volume_throughput = { for name, r in local.karpenter_pool_volume_requested : name =>
+    r.gp3 && r.throughput > 0 ? max(125, min(r.throughput, floor(max(3000, local.karpenter_pool_volume_iops[name]) * 0.25))) : 0
   }
 }
 
@@ -342,13 +375,15 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
     karpenter_node_role_name   = local.build_minimal_role_enabled ? aws_iam_role.karpenter_build_nodes[0].name : aws_iam_role.karpenter_nodes[0].name
     karpenter_node_volume_type = var.karpenter_node_volume_type
     karpenter_effective_disk   = local.karpenter_effective_disk
+    volume_iops                = local.karpenter_volume_iops_effective
+    volume_throughput          = local.karpenter_volume_throughput_effective
     ebs_encrypted              = var.ebs_volume_encryption_enabled
     imds_http_tokens           = local.build_imds_tokens
     imds_http_hop_limit        = local.build_imds_hop_limit
     extra_tags                 = var.tags
     ami_id                     = ""
     ami_alias                  = local.karpenter_effective_ami_alias
-    kubelet_user_data          = local.ec2_kubelet_user_data
+    node_config_user_data      = local.ec2_node_config_user_data
   })
 
   wait = true
@@ -402,13 +437,15 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     karpenter_node_role_name   = aws_iam_role.karpenter_nodes[0].name
     karpenter_node_volume_type = each.value.volume_type
     karpenter_effective_disk   = each.value.disk > 0 ? each.value.disk : local.karpenter_effective_disk
+    volume_iops                = local.karpenter_pool_volume_iops[each.key]
+    volume_throughput          = local.karpenter_pool_volume_throughput[each.key]
     ebs_encrypted              = var.ebs_volume_encryption_enabled
     imds_http_tokens           = var.imds_http_tokens
     imds_http_hop_limit        = var.imds_http_hop_limit
     extra_tags                 = var.tags
     ami_id                     = each.value.ami_id
     ami_alias                  = local.karpenter_effective_ami_alias
-    kubelet_user_data          = local.ec2_kubelet_user_data
+    node_config_user_data      = local.ec2_node_config_user_data
   })
 
   wait = true

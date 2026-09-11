@@ -52,6 +52,7 @@ var awsKnownParams = map[string]bool{
 	"docker_hub_password":  true, "docker_hub_username": true,
 	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_immutable_tags_enabled": true, "ecr_scan_on_push_enable": true,
 	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
+	"fast_image_pull_enable":              true,
 	"eks_access_entries":                  true,
 	"eks_api_server_private_access_cidrs": true,
 	"eks_api_server_public_access_cidrs":  true,
@@ -89,6 +90,7 @@ var awsKnownParams = map[string]bool{
 	"karpenter_node_expiry": true, "karpenter_node_labels": true,
 	"karpenter_node_os": true, "karpenter_node_overlays_config": true,
 	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
+	"karpenter_node_volume_iops": true, "karpenter_node_volume_throughput": true,
 	"keda_enable": true, "key_pair_name": true,
 	"kube_proxy_version": true, "kubelet_registry_burst": true,
 	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
@@ -97,6 +99,7 @@ var awsKnownParams = map[string]bool{
 	"nginx_additional_config": true, "nginx_image": true,
 	"nlb_security_group": true, "node_capacity_type": true,
 	"node_disk": true, "node_max_unavailable_percentage": true,
+	"node_volume_iops": true, "node_volume_throughput": true,
 	"node_type": true, "nvidia_device_plugin_enable": true,
 	"nvidia_device_time_slicing_replicas": true, "pdb_default_min_available_percentage": true,
 	"pod_identity_agent_enable": true, "pod_identity_agent_version": true,
@@ -208,6 +211,7 @@ var boolParams = map[string]bool{
 	"ecr_scan_on_push_enable":         true,
 	"efs_csi_driver_enable":           true,
 	"enable_private_access":           true,
+	"fast_image_pull_enable":          true,
 	"fluentd_disable":                 true,
 	"gpu_observability_enable":        true,
 	"gpu_tag_enable":                  true,
@@ -294,6 +298,8 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_os":                       true,
 		"karpenter_node_overlays_config":          true,
 		"karpenter_node_taints":                   true,
+		"karpenter_node_volume_iops":              true,
+		"karpenter_node_volume_throughput":        true,
 		"karpenter_node_volume_type":              true,
 		"keda_enable":                             true,
 	},
@@ -457,6 +463,7 @@ var paramGroups = map[string]map[string]bool{
 		// v3 native (snake_case)
 		"additional_node_groups_config":        true,
 		"dcgm_scrape_interval":                 true,
+		"fast_image_pull_enable":               true,
 		"gpu_metrics_max_concurrent":           true,
 		"gpu_metrics_max_pods":                 true,
 		"gpu_observability_chart_version":      true,
@@ -471,6 +478,8 @@ var paramGroups = map[string]map[string]bool{
 		"node_disk":                            true,
 		"node_max_unavailable_percentage":      true,
 		"node_type":                            true,
+		"node_volume_iops":                     true,
+		"node_volume_throughput":               true,
 		"nvidia_device_plugin_enable":          true,
 		"nvidia_device_time_slicing_replicas":  true,
 		"os":                                   true,
@@ -593,15 +602,19 @@ var paramGroups = map[string]map[string]bool{
 	},
 	"storage": {
 		// v3 native (snake_case)
-		"aws_ebs_csi_driver_version":    true,
-		"azure_files_enable":            true,
-		"ebs_volume_encryption_enabled": true,
-		"efs_csi_driver_enable":         true,
-		"efs_csi_driver_version":        true,
-		"karpenter_node_disk":           true, // dual-listed in karpenter
-		"karpenter_node_volume_type":    true, // dual-listed in karpenter
-		"node_disk":                     true, // dual-listed in nodes
-		"registry_disk":                 true,
+		"aws_ebs_csi_driver_version":       true,
+		"azure_files_enable":               true,
+		"ebs_volume_encryption_enabled":    true,
+		"efs_csi_driver_enable":            true,
+		"efs_csi_driver_version":           true,
+		"karpenter_node_disk":              true, // dual-listed in karpenter
+		"karpenter_node_volume_iops":       true, // dual-listed in karpenter
+		"karpenter_node_volume_throughput": true, // dual-listed in karpenter
+		"karpenter_node_volume_type":       true, // dual-listed in karpenter
+		"node_disk":                        true, // dual-listed in nodes
+		"node_volume_iops":                 true, // dual-listed in nodes
+		"node_volume_throughput":           true, // dual-listed in nodes
+		"registry_disk":                    true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"DynamoDbTableDeletionProtectionEnabled":  true,
 		"DynamoDbTablePointInTimeRecoveryEnabled": true,
@@ -1095,6 +1108,8 @@ type KarpenterNodePoolConfigParam struct {
 	DisruptionBudgetNodes *string `json:"disruption_budget_nodes,omitempty"`
 	Disk                  *int    `json:"disk,omitempty"`
 	VolumeType            *string `json:"volume_type,omitempty"`
+	VolumeIops            *int    `json:"volume_iops,omitempty"`
+	VolumeThroughput      *int    `json:"volume_throughput,omitempty"`
 	Labels                *string `json:"labels,omitempty"`
 	Taints                *string `json:"taints,omitempty"`
 	Dedicated             *bool   `json:"dedicated,omitempty"`
@@ -1182,6 +1197,28 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 
 	if np.Disk != nil && *np.Disk < 0 {
 		return fmt.Errorf("karpenter nodepool '%s': disk must be non-negative", np.Name)
+	}
+
+	volumeType := "gp3"
+	if np.VolumeType != nil {
+		volumeType = *np.VolumeType
+	}
+	for _, vp := range []struct {
+		key   string
+		value *int
+	}{
+		{"volume_iops", np.VolumeIops},
+		{"volume_throughput", np.VolumeThroughput},
+	} {
+		if vp.value == nil {
+			continue
+		}
+		if issue := nodeVolumeRangeIssue(vp.key, *vp.value); issue != "" {
+			return fmt.Errorf("karpenter nodepool '%s': %s %s", np.Name, vp.key, issue)
+		}
+		if *vp.value != 0 && volumeType != "gp3" {
+			return fmt.Errorf("karpenter nodepool '%s': %s requires volume_type gp3 (currently %s)", np.Name, vp.key, volumeType)
+		}
 	}
 
 	if np.Weight != nil && (*np.Weight < 0 || *np.Weight > 100) {
@@ -1670,6 +1707,226 @@ func droppedFrom(old, next []string) []string {
 	return dropped
 }
 
+// gp3 provisions 3,000 to 80,000 IOPS; the launch template provider validates throughput
+// at 125 to 1,000, not AWS's 2,000.
+var nodeVolumeRanges = map[string]struct {
+	min, max int
+	unit     string
+}{
+	"volume_iops":       {3000, 80000, "IOPS"},
+	"volume_throughput": {125, 1000, "MiB/s"},
+}
+
+var nodeVolumeParams = map[string]string{
+	"node_volume_iops":                 "volume_iops",
+	"node_volume_throughput":           "volume_throughput",
+	"karpenter_node_volume_iops":       "volume_iops",
+	"karpenter_node_volume_throughput": "volume_throughput",
+}
+
+func nodeVolumeRangeIssue(field string, value int) string {
+	r := nodeVolumeRanges[field]
+	if value == 0 || (value >= r.min && value <= r.max) {
+		return ""
+	}
+	return fmt.Sprintf("must be 0 or between %d and %d %s", r.min, r.max, r.unit)
+}
+
+func validateNodeVolumeParams(params, currentParams map[string]string) error {
+	values := map[string]int{}
+
+	for key, field := range nodeVolumeParams {
+		v, ok := params[key]
+		if !ok || v == "" {
+			continue
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("param '%s' must be a non-negative integer", key)
+		}
+		if issue := nodeVolumeRangeIssue(field, n); issue != "" {
+			return fmt.Errorf("param '%s' %s", key, issue)
+		}
+		values[key] = n
+	}
+
+	volumeType := effectiveParam(params, currentParams, "karpenter_node_volume_type", "gp3")
+	if volumeType == "gp3" {
+		return nil
+	}
+
+	for _, key := range []string{"karpenter_node_volume_iops", "karpenter_node_volume_throughput"} {
+		if values[key] > 0 {
+			return fmt.Errorf("param '%s' requires karpenter_node_volume_type=gp3 (currently %s).\n"+
+				"  AWS takes these fields on gp3 only, so Convox does not render them on any other type.\n"+
+				"  To raise one custom nodepool that does run gp3, set its volume_iops or volume_throughput\n"+
+				"  in additional_karpenter_nodepools_config instead", key, volumeType)
+		}
+		if _, moved := params["karpenter_node_volume_type"]; moved && effectiveParamInt(params, currentParams, key) > 0 {
+			fmt.Fprintf(os.Stderr, "WARNING: %s no longer applies to the Karpenter workload and build pools now that karpenter_node_volume_type is %s. Custom nodepools that set volume_type gp3 still receive it.\n", key, volumeType)
+		}
+	}
+
+	return nil
+}
+
+// nodeadm documents this as the floor for the gate; below it AWS warns pulls get slower.
+const fastImagePullMinThroughput = 600
+
+// Mirrors the Terraform clamp: the gp3 default is 125 and throughput caps at a quarter of IOPS.
+func effectiveVolumeThroughput(iops, throughput int) int {
+	if throughput <= 0 {
+		return 125
+	}
+	if iops < 3000 {
+		iops = 3000
+	}
+	ceiling := iops / 4
+	if ceiling > 1000 {
+		ceiling = 1000
+	}
+	if throughput > ceiling {
+		throughput = ceiling
+	}
+	if throughput < 125 {
+		throughput = 125
+	}
+	return throughput
+}
+
+func validateFastImagePull(params, currentParams map[string]string, force bool) error {
+	if !strings.EqualFold(effectiveParam(params, currentParams, "fast_image_pull_enable", "false"), "true") {
+		return nil
+	}
+
+	touched := false
+	for key := range nodeVolumeParams {
+		if _, ok := params[key]; ok {
+			touched = true
+		}
+	}
+	for _, key := range []string{"fast_image_pull_enable", "additional_karpenter_nodepools_config"} {
+		if _, ok := params[key]; ok {
+			touched = true
+		}
+	}
+	if !touched {
+		return nil
+	}
+
+	nodeIops := effectiveParamInt(params, currentParams, "node_volume_iops")
+	nodeThroughput := effectiveVolumeThroughput(nodeIops, effectiveParamInt(params, currentParams, "node_volume_throughput"))
+
+	below := []string{}
+	raise := []string{}
+	if nodeThroughput < fastImagePullMinThroughput {
+		below = append(below, fmt.Sprintf("node_volume_throughput=%d", nodeThroughput))
+		raise = append(raise, "node_volume_throughput")
+	}
+
+	if strings.EqualFold(effectiveParam(params, currentParams, "karpenter_enabled", "false"), "true") {
+		karpenterIops := effectiveParamInt(params, currentParams, "karpenter_node_volume_iops")
+		if karpenterIops == 0 {
+			karpenterIops = nodeIops
+		}
+		karpenterThroughput := effectiveParamInt(params, currentParams, "karpenter_node_volume_throughput")
+		if karpenterThroughput == 0 {
+			karpenterThroughput = effectiveParamInt(params, currentParams, "node_volume_throughput")
+		}
+		karpenterType := effectiveParam(params, currentParams, "karpenter_node_volume_type", "gp3")
+
+		if karpenterType != "gp3" {
+			fmt.Fprintf(os.Stderr, "WARNING: karpenter_node_volume_type=%s takes no provisioned throughput, so Karpenter nodes stay at that type's own rate with fast_image_pull_enable on.\n", karpenterType)
+		} else if t := effectiveVolumeThroughput(karpenterIops, karpenterThroughput); t < fastImagePullMinThroughput {
+			below = append(below, fmt.Sprintf("karpenter_node_volume_throughput=%d", t))
+			if effectiveParamInt(params, currentParams, "karpenter_node_volume_throughput") > 0 {
+				raise = append(raise, "karpenter_node_volume_throughput")
+			}
+		}
+
+		// A stored value that will not decode leaves nothing to check; the in-call value was validated above.
+		pools, _ := decodeKarpenterNodePools(effectiveParam(params, currentParams, "additional_karpenter_nodepools_config", ""))
+		for i := range pools {
+			np := &pools[i]
+			if np.VolumeType != nil && *np.VolumeType != "gp3" {
+				continue
+			}
+			iops, throughput := karpenterIops, karpenterThroughput
+			if np.VolumeIops != nil && *np.VolumeIops > 0 {
+				iops = *np.VolumeIops
+			}
+			if np.VolumeThroughput != nil && *np.VolumeThroughput > 0 {
+				throughput = *np.VolumeThroughput
+			}
+			if t := effectiveVolumeThroughput(iops, throughput); t < fastImagePullMinThroughput {
+				below = append(below, fmt.Sprintf("nodepool %s volume_throughput=%d", np.Name, t))
+				if np.VolumeThroughput != nil && *np.VolumeThroughput > 0 {
+					raise = append(raise, fmt.Sprintf("volume_throughput on nodepool %s", np.Name))
+				}
+			}
+		}
+	}
+
+	if len(below) == 0 {
+		return nil
+	}
+
+	msg := fmt.Sprintf("fast_image_pull_enable requires at least %d MiB/s of node volume throughput.\n"+
+		"  AWS documents image pulls getting SLOWER below that with this feature on.\n"+
+		"  Currently: %s", fastImagePullMinThroughput, strings.Join(below, ", "))
+
+	if force {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", msg)
+		return nil
+	}
+
+	if len(raise) == 0 {
+		raise = append(raise, "node_volume_throughput")
+	}
+
+	return fmt.Errorf("%s\n  Raise %s to %d or higher in the same call, or re-run with --force to proceed",
+		msg, strings.Join(raise, " and "), fastImagePullMinThroughput)
+}
+
+func decodeKarpenterNodePools(v string) (KarpenterNodePools, error) {
+	if v == "" {
+		return nil, nil
+	}
+	data := []byte(v)
+	if !strings.HasPrefix(v, "[") {
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid karpenter nodepools config: %s", err)
+		}
+		data = decoded
+	}
+	pools := KarpenterNodePools{}
+	if err := json.Unmarshal(data, &pools); err != nil {
+		return nil, fmt.Errorf("invalid karpenter nodepools config: %s", err)
+	}
+	return pools, nil
+}
+
+// effectiveParam is the value the rack holds after this call. Cleared params store "null".
+func effectiveParam(params, currentParams map[string]string, key, fallback string) string {
+	v, ok := params[key]
+	if !ok {
+		v = currentParams[key]
+	}
+	if v == "" || v == "null" {
+		return fallback
+	}
+	return v
+}
+
+func effectiveParamInt(params, currentParams map[string]string, key string) int {
+	n, err := strconv.Atoi(effectiveParam(params, currentParams, key, "0"))
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
 func validateNodePoolRemoval(params, currentParams map[string]string, force bool) error {
 	if force {
 		return nil
@@ -2094,6 +2351,11 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"kubelet_registry_pull_qps",
 			"kubelet_registry_burst",
 			"key_pair_name",
+			"fast_image_pull_enable",
+			"node_volume_iops",
+			"node_volume_throughput",
+			"karpenter_node_volume_iops",
+			"karpenter_node_volume_throughput",
 		}
 		var conflicts []string
 		for _, p := range ltParams {
@@ -2517,6 +2779,15 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	if err := validateNodePoolRemoval(params, currentParams, force); err != nil {
 		return err
+	}
+
+	if provider == "aws" {
+		if err := validateNodeVolumeParams(params, currentParams); err != nil {
+			return err
+		}
+		if err := validateFastImagePull(params, currentParams, force); err != nil {
+			return err
+		}
 	}
 
 	// karpenter_node_overlays_config: validate NodeOverlay entries and re-encode
