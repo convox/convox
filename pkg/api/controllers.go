@@ -657,6 +657,22 @@ func (s *Server) BalancerList(c *stdapi.Context) error {
 	return c.RenderJSON(v)
 }
 
+func (s *Server) BuildCancel(c *stdapi.Context) error {
+	if err := s.hook("BuildCancelValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	id := c.Var("id")
+
+	err := s.provider(c).WithContext(contextFrom(c)).BuildCancel(app, id)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (s *Server) BuildCreate(c *stdapi.Context) error {
 	if err := s.hook("BuildCreateValidate", c); err != nil {
 		return err

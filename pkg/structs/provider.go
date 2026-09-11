@@ -39,6 +39,7 @@ type Provider interface {
 
 	BalancerList(app string) (Balancers, error)
 
+	BuildCancel(app, id string) error
 	BuildCreate(app, url string, opts BuildCreateOptions) (*Build, error)
 	BuildExport(app, id string, w io.Writer) error
 	BuildGet(app, id string) (*Build, error)

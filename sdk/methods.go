@@ -305,6 +305,16 @@ func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	return v, err
 }
 
+func (c *Client) BuildCancel(app, id string) error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	err = c.Post(fmt.Sprintf("/apps/%s/builds/%s/cancel", app, id), ro, nil)
+
+	return err
+}
+
 func (c *Client) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	var err error
 

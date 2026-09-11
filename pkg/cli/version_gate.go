@@ -15,8 +15,12 @@ func isRackVersionGated(err error) bool {
 }
 
 func wrapVersionGate(err error, feature string) error {
+	return wrapVersionGateSince(err, feature, "3.24.6")
+}
+
+func wrapVersionGateSince(err error, feature, version string) error {
 	if !isRackVersionGated(err) {
 		return err
 	}
-	return fmt.Errorf("%s requires rack version 3.24.6 or later", feature)
+	return fmt.Errorf("%s requires rack version %s or later", feature, version)
 }
