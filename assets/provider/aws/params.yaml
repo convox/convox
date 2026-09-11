@@ -320,6 +320,26 @@ Groups:
         description: "Disk size in GiB (gibibytes, close to GB) for each node (server) in your cluster."
         sideNote: "How this is used can change with other settings, such as enabling Karpenter."
         allowedMinValue: 20
+      - name: node_volume_iops
+        default: "0"
+        type: integer
+        description: "Provisioned IOPS for the root volume of each node. &b 0 &b keeps the AWS gp3 default of 3,000."
+        sideNote: "Capped at 500 IOPS per GiB of node_disk. Raising this rolls every node group."
+        allowedMinValue: 0
+        allowedMaxValue: 80000
+      - name: node_volume_throughput
+        default: "0"
+        type: integer
+        description: "Provisioned throughput in MiB/s for the root volume of each node. &b 0 &b keeps the AWS gp3 default of 125."
+        sideNote: "Capped at a quarter of the provisioned IOPS, so above 750 also needs node_volume_iops. Raising this rolls every node group."
+        allowedMinValue: 0
+        allowedMaxValue: 1000
+      - name: fast_image_pull_enable
+        default: "false"
+        type: boolean
+        description: Pull and unpack image layers in parallel through the SOCI snapshotter
+          on AL2023 nodes.
+        sideNote: "AWS documents image pulls getting slower below 600 MiB/s of node volume throughput, so raise node_volume_throughput first. Needs 7 GiB of memory and 4 vCPUs per node."
       - name: node_max_unavailable_percentage
         default: "0"
         type: integer
@@ -664,6 +684,20 @@ Groups:
           - gp3
           - io1
           - io2
+      - name: karpenter_node_volume_iops
+        default: "0"
+        type: integer
+        description: "Provisioned IOPS for the root volume of Karpenter-provisioned nodes. &b 0 &b means use the &i node_volume_iops &i value. &l"
+        sideNote: "gp3 only. Capped at 500 IOPS per GiB of disk."
+        allowedMinValue: 0
+        allowedMaxValue: 80000
+      - name: karpenter_node_volume_throughput
+        default: "0"
+        type: integer
+        description: "Provisioned throughput in MiB/s for the root volume of Karpenter-provisioned nodes. &b 0 &b means use the &i node_volume_throughput &i value. &l"
+        sideNote: "gp3 only. Capped at a quarter of the provisioned IOPS."
+        allowedMinValue: 0
+        allowedMaxValue: 1000
       - name: karpenter_node_os
         default: al2023
         type: string

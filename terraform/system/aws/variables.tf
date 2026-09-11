@@ -368,6 +368,16 @@ variable "karpenter_node_volume_type" {
   default = "gp3"
 }
 
+variable "karpenter_node_volume_iops" {
+  type    = number
+  default = 0
+}
+
+variable "karpenter_node_volume_throughput" {
+  type    = number
+  default = 0
+}
+
 variable "karpenter_node_os" {
   type    = string
   default = "al2023"
@@ -469,6 +479,11 @@ variable "kube_proxy_version" {
   default = "v1.35.3-eksbuild.13"
 }
 
+variable "fast_image_pull_enable" {
+  type    = bool
+  default = false
+}
+
 variable "kubelet_registry_pull_qps" {
   type    = number
   default = 5
@@ -512,6 +527,16 @@ variable "node_capacity_type" {
 
 variable "node_disk" {
   default = 20
+}
+
+variable "node_volume_iops" {
+  type    = number
+  default = 0
+}
+
+variable "node_volume_throughput" {
+  type    = number
+  default = 0
 }
 
 variable "node_max_unavailable_percentage" {

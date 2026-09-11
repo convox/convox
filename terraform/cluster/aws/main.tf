@@ -534,6 +534,8 @@ resource "aws_launch_template" "cluster" {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
       encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.node_volume_iops_effective > 0 ? local.node_volume_iops_effective : null
+      throughput  = local.node_volume_throughput_effective > 0 ? local.node_volume_throughput_effective : null
     }
   }
 
@@ -557,9 +559,11 @@ resource "aws_launch_template" "cluster" {
     }
   }
 
-  user_data = var.user_data_url != "" || var.user_data != "" || local.kubelet_registry_set ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
+  user_data = var.user_data_url != "" || var.user_data != "" || local.node_config_set ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
     kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
     kubelet_registry_burst    = local.kubelet_registry_burst_effective
+    kubelet_registry_set      = local.kubelet_registry_set
+    fast_image_pull           = var.fast_image_pull_enable
     user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
     user_data                 = var.user_data
   })) : ""
@@ -574,6 +578,8 @@ resource "aws_launch_template" "cluster-build" {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
       encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.node_volume_iops_effective > 0 ? local.node_volume_iops_effective : null
+      throughput  = local.node_volume_throughput_effective > 0 ? local.node_volume_throughput_effective : null
     }
   }
 
@@ -595,7 +601,7 @@ resource "aws_launch_template" "cluster-build" {
     }
   }
 
-  user_data = local.kubelet_registry_user_data != "" ? base64encode(local.kubelet_registry_user_data) : null
+  user_data = local.node_config_user_data != "" ? base64encode(local.node_config_user_data) : null
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }

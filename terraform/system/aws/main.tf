@@ -170,6 +170,8 @@ module "cluster" {
   karpenter_disruption_block_duration     = var.karpenter_disruption_block_duration
   karpenter_node_disk                     = var.karpenter_node_disk
   karpenter_node_volume_type              = var.karpenter_node_volume_type
+  karpenter_node_volume_iops              = var.karpenter_node_volume_iops
+  karpenter_node_volume_throughput        = var.karpenter_node_volume_throughput
   karpenter_node_os                       = var.karpenter_node_os
   karpenter_node_labels                   = var.karpenter_node_labels
   karpenter_node_taints                   = var.karpenter_node_taints
@@ -195,6 +197,8 @@ module "cluster" {
   name                                    = local.name
   node_capacity_type                      = upper(var.node_capacity_type)
   node_disk                               = var.node_disk
+  node_volume_iops                        = var.node_volume_iops
+  node_volume_throughput                  = var.node_volume_throughput
   node_type                               = var.node_type
   node_max_unavailable_percentage         = var.node_max_unavailable_percentage
   terraform_update_timeout                = var.terraform_update_timeout
@@ -216,6 +220,7 @@ module "cluster" {
   eks_log_types                           = local.eks_log_types
   kubelet_registry_pull_qps               = var.kubelet_registry_pull_qps
   kubelet_registry_burst                  = var.kubelet_registry_burst
+  fast_image_pull_enable                  = var.fast_image_pull_enable
   schedule_rack_scale_down                = var.schedule_rack_scale_down
   schedule_rack_scale_up                  = var.schedule_rack_scale_up
   tags                                    = local.tag_map

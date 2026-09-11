@@ -203,6 +203,16 @@ variable "karpenter_disruption_block_duration" {
   default = ""
 }
 
+variable "karpenter_node_volume_iops" {
+  type    = number
+  default = 0
+}
+
+variable "karpenter_node_volume_throughput" {
+  type    = number
+  default = 0
+}
+
 variable "karpenter_node_disk" {
   type    = number
   default = 0
@@ -314,6 +324,11 @@ variable "kube_proxy_version" {
   default = null
 }
 
+variable "fast_image_pull_enable" {
+  type    = bool
+  default = false
+}
+
 variable "kubelet_registry_pull_qps" {
   type    = number
   default = 5
@@ -343,6 +358,16 @@ variable "name" {
 
 variable "node_capacity_type" {
   default = "ON_DEMAND"
+}
+
+variable "node_volume_iops" {
+  type    = number
+  default = 0
+}
+
+variable "node_volume_throughput" {
+  type    = number
+  default = 0
 }
 
 variable "node_disk" {
