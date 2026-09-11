@@ -156,7 +156,7 @@ func TestRenderBalancerControllerPortsGolden(t *testing.T) {
     targetPort: 5001
   - name: "7000"
     port: 7000
-    protocol: null
+    protocol: TCP
     targetPort: 7001
   - name: "6000"
     port: 6000
@@ -227,7 +227,7 @@ func TestBalancerRenderPorts(t *testing.T) {
 	require.True(t, tcpUdp)
 	require.Equal(t, []balancerRenderPort{
 		{Name: "5000", Source: 5000, Protocol: "TCP", Target: 5001},
-		{Name: "7000", Source: 7000, Protocol: "", Target: 7001},
+		{Name: "7000", Source: 7000, Protocol: "TCP", Target: 7001},
 		{Name: "5353-tcp", Source: 5353, Protocol: "TCP", Target: 5300},
 		{Name: "5353-udp", Source: 5353, Protocol: "UDP", Target: 5300},
 	}, ports)
