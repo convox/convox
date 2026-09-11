@@ -259,7 +259,7 @@ func (c *Client) apply(a *aa.Atom) error {
 
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%s.%s", ua.Namespace, ua.Name))))[0:60]
 
-	if out, err := applyTemplate(a.ObjectMeta.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
+	if out, err := c.applyTemplate(a.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
 		fmt.Println(string(av.Spec.Template))
 		fmt.Println(string(out))
 		return errors.WithStack(err)
@@ -507,7 +507,7 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	return pd, nil
 }
 
-func applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
+func (c *Client) applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
 	rs, err := templateResources(filter)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -517,6 +517,8 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 
 	parts := bytes.Split(data, []byte("---\n"))
 	re := regexp.MustCompile(`^Kind: (extensions\/v1beta|networking\.k8s\.io\/v1beta1)`) // skipcq: GO-C4007
+
+	serverSide := [][]byte{}
 
 	for i := range parts {
 		// skip previous atom version's deprecated resources
@@ -530,9 +532,25 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 		}
 
 		parts[i] = dp
+
+		ss, err := c.balancerNeedsServerSide(namespace, dp)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if ss {
+			serverSide = append(serverSide, dp)
+		}
 	}
 
 	data = bytes.Join(parts, []byte("---\n"))
+
+	if len(serverSide) > 0 {
+		// no --field-manager: the apiserver refreshes last-applied-configuration, which --prune keys on, only for the manager named kubectl
+		if out, err := kubectlApply(bytes.Join(serverSide, []byte("---\n")), "--server-side", "--force-conflicts", "--namespace", namespace); err != nil {
+			return out, errors.WithStack(err)
+		}
+	}
 
 	args := []string{"--prune", "-l", filter, "--namespace", namespace}
 
@@ -555,6 +573,94 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	}
 
 	return out, nil
+}
+
+// Client-side apply keys Service ports on the port number alone, so it cannot edit a balancer
+// that serves TCP and UDP on one number. Those go through server-side apply first.
+func (c *Client) balancerNeedsServerSide(namespace string, data []byte) (bool, error) {
+	var o struct {
+		Kind     string
+		Metadata struct {
+			Labels map[string]interface{}
+			Name   string
+		}
+	}
+
+	if err := yaml.Unmarshal(data, &o); err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if o.Kind != "Service" || o.Metadata.Name == "" || fmt.Sprintf("%v", o.Metadata.Labels["type"]) != "balancer" {
+		return false, nil
+	}
+
+	paired, clientSideOnly, err := documentPorts(data)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	s, err := c.k8s.CoreV1().Services(namespace).Get(c.ctx, o.Metadata.Name, am.GetOptions{})
+	if ae.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	return servicePortsPaired(s.Spec.Ports) || (paired && !clientSideOnly), nil
+}
+
+func documentPorts(data []byte) (paired, clientSideOnly bool, err error) {
+	var o struct {
+		Spec struct {
+			Ports []struct {
+				Name     string
+				Port     int
+				Protocol string
+			}
+		}
+	}
+
+	if err := yaml.Unmarshal(data, &o); err != nil {
+		return false, false, errors.WithStack(err)
+	}
+
+	names := map[string]bool{}
+	entries := map[string]bool{}
+	protocols := map[int]string{}
+
+	for _, p := range o.Spec.Ports {
+		entry := fmt.Sprintf("%d/%s", p.Port, p.Protocol)
+
+		if p.Protocol == "" || names[p.Name] || entries[entry] {
+			return false, true, nil
+		}
+
+		names[p.Name] = true
+		entries[entry] = true
+
+		if protocol, ok := protocols[p.Port]; ok && protocol != p.Protocol {
+			paired = true
+		}
+
+		protocols[p.Port] = p.Protocol
+	}
+
+	return paired, false, nil
+}
+
+func servicePortsPaired(ports []ac.ServicePort) bool {
+	protocols := map[int32]string{}
+
+	for _, p := range ports {
+		if protocol, ok := protocols[p.Port]; ok && protocol != string(p.Protocol) {
+			return true
+		}
+
+		protocols[p.Port] = string(p.Protocol)
+	}
+
+	return false
 }
 
 // isRecoverableApplyError reports whether a failed kubectl apply can be retried with --force
@@ -616,7 +722,7 @@ func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 	return cs, nil
 }
 
-func kubectlApply(data []byte, args ...string) ([]byte, error) {
+var kubectlApply = func(data []byte, args ...string) ([]byte, error) {
 	ka := append([]string{"apply", "-f", "-"}, args...)
 
 	cmd := exec.Command("kubectl", ka...)
@@ -662,7 +768,7 @@ func parseLabels(labels string) map[string]string {
 	return ls
 }
 
-func templateResources(filter string) ([]string, error) {
+var templateResources = func(filter string) ([]string, error) {
 	data, err := exec.Command("kubectl", "api-resources", "--verbs=list", "--namespaced", "-o", "name").Output()
 	if err != nil {
 		return []string{}, nil
