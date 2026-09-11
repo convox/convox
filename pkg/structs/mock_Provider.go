@@ -496,6 +496,20 @@ func (_m *MockProvider) BalancerList(app string) (Balancers, error) {
 	return r0, r1
 }
 
+// BuildCancel provides a mock function with given fields: app, id
+func (_m *MockProvider) BuildCancel(app string, id string) error {
+	ret := _m.Called(app, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // BuildCreate provides a mock function with given fields: app, url, opts
 func (_m *MockProvider) BuildCreate(app string, url string, opts BuildCreateOptions) (*Build, error) {
 	ret := _m.Called(app, url, opts)

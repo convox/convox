@@ -25,6 +25,7 @@ func init() {
 	routes["MetricsByService"] = "GET /apps/{app}/metrics-by-service"
 	routes["AppUpdate"] = "PUT /apps/{name}"
 	routes["BalancerList"] = "GET /apps/{app}/balancers"
+	routes["BuildCancel"] = "POST /apps/{app}/builds/{id}/cancel"
 	routes["BuildCreate"] = "POST /apps/{app}/builds"
 	routes["BuildExport"] = "GET /apps/{app}/builds/{id}.tgz"
 	routes["BuildGet"] = "GET /apps/{app}/builds/{id}"

@@ -539,6 +539,20 @@ func (_m *Interface) BalancerList(app string) (structs.Balancers, error) {
 	return r0, r1
 }
 
+// BuildCancel provides a mock function with given fields: app, id
+func (_m *Interface) BuildCancel(app string, id string) error {
+	ret := _m.Called(app, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // BuildCreate provides a mock function with given fields: app, _a1, opts
 func (_m *Interface) BuildCreate(app string, _a1 string, opts structs.BuildCreateOptions) (*structs.Build, error) {
 	ret := _m.Called(app, _a1, opts)

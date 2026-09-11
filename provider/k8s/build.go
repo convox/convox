@@ -26,6 +26,7 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
+	ac "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -40,6 +41,61 @@ func (p *Provider) buildImage(provider string) string {
 
 func (*Provider) buildPrivileged(provider string) bool {
 	return strings.Contains("do gcp aws azure local", provider) // skipcq
+}
+
+func (p *Provider) BuildCancel(app, id string) error {
+	b, err := p.BuildGet(app, id)
+	if k8serrors.IsNotFound(err) {
+		return errors.WithStack(structs.ErrNotFound("no such build: %s", id))
+	}
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if b.Status != "running" || b.Process == "" {
+		return errors.WithStack(structs.ErrBadRequest("build %s is not running", b.Id))
+	}
+
+	pd, ns, err := p.buildPod(app, b.Process)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if pd != nil {
+		uid := pd.UID
+		err := p.Cluster.CoreV1().Pods(ns).Delete(context.TODO(), pd.Name, am.DeleteOptions{
+			Preconditions: &am.Preconditions{UID: &uid},
+		})
+		if err != nil && !k8serrors.IsNotFound(err) && !k8serrors.IsConflict(err) {
+			return errors.WithStack(err)
+		}
+	}
+
+	// Re-read now the builder is gone, so a build that finished during the
+	// call keeps its own outcome.
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if kb.Spec.Status != "running" {
+		return nil
+	}
+
+	kb.Spec.Ended = time.Now().UTC().Format(common.SortableTime)
+	kb.Spec.Reason = fmt.Sprintf("cancelled by %s", p.ContextActor())
+	kb.Spec.Status = "failed"
+
+	if _, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Update(kb); err != nil {
+		if k8serrors.IsConflict(err) {
+			return errors.WithStack(structs.ErrConflict("build %s is being modified, try again", b.Id))
+		}
+		return errors.WithStack(err)
+	}
+
+	_ = p.EventSend("build:cancel", structs.EventSendOptions{Data: map[string]string{"app": app, "id": b.Id}})
+
+	return nil
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -729,22 +785,35 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	return target, nil
 }
 
-// buildLogsNamespace anchors log streaming to wherever the build pod actually
-// runs; label-aware routing can change between pod creation and stream attach.
-func (p *Provider) buildLogsNamespace(app, process string) string {
+// buildPod finds the build pod wherever it actually runs; label-aware routing
+// can change between pod creation and the call that looks for it.
+func (p *Provider) buildPod(app, process string) (*ac.Pod, string, error) {
 	ns := p.processBuildNamespace(app)
-	if _, err := p.Cluster.CoreV1().Pods(ns).Get(context.TODO(), process, am.GetOptions{}); err == nil {
-		return ns
+	pd, err := p.Cluster.CoreV1().Pods(ns).Get(context.TODO(), process, am.GetOptions{})
+	switch {
+	case err == nil:
+		return pd, ns, nil
+	case !k8serrors.IsNotFound(err):
+		return nil, ns, errors.WithStack(err)
 	}
 
 	alt := p.buildNamespace(app)
 	if alt == ns {
 		alt = p.AppNamespace(app)
 	}
-	if _, err := p.Cluster.CoreV1().Pods(alt).Get(context.TODO(), process, am.GetOptions{}); err == nil {
-		return alt
+	pd, err = p.Cluster.CoreV1().Pods(alt).Get(context.TODO(), process, am.GetOptions{})
+	switch {
+	case err == nil:
+		return pd, alt, nil
+	case !k8serrors.IsNotFound(err):
+		return nil, ns, errors.WithStack(err)
 	}
 
+	return nil, ns, nil
+}
+
+func (p *Provider) buildLogsNamespace(app, process string) string {
+	_, ns, _ := p.buildPod(app, process)
 	return ns
 }
 
