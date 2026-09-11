@@ -88,6 +88,12 @@ func init() {
 		Validate: stdcli.Args(0),
 	}, WithCloud())
 
+	register("builds cancel", "cancel a running build", BuildsCancel, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Usage:    "<build>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
+
 	register("builds export", "export a build", BuildsExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
@@ -352,6 +358,9 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 			case "complete":
 				return b, nil
 			case "failed":
+				if b.Reason != "" {
+					return nil, fmt.Errorf("build failed: %s", b.Reason)
+				}
 				return nil, fmt.Errorf("build failed")
 			default:
 				return nil, fmt.Errorf("unexpected build status: %s", b.Status)
@@ -498,6 +507,16 @@ func Builds(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return t.Print()
+}
+
+func BuildsCancel(rack sdk.Interface, c *stdcli.Context) error {
+	c.Startf("Cancelling build <id>%s</id>", c.Arg(0))
+
+	if err := rack.BuildCancel(app(c), c.Arg(0)); err != nil {
+		return wrapVersionGateSince(err, "convox builds cancel", "3.25.7")
+	}
+
+	return c.OK()
 }
 
 func BuildsExport(rack sdk.Interface, c *stdcli.Context) error {
@@ -709,6 +728,9 @@ func BuildsInfo(rack sdk.Interface, c *stdcli.Context) error {
 
 	i.Add("Id", b.Id)
 	i.Add("Status", b.Status)
+	if b.Reason != "" {
+		i.Add("Reason", b.Reason)
+	}
 	i.Add("Release", b.Release)
 	i.Add("Description", b.Description)
 	i.Add("Started", common.Ago(b.Started))

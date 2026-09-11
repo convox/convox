@@ -26,6 +26,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("POST", "/apps/{app}/budget/dismiss-recovery", s.AppBudgetDismissRecovery)
 	r.Route("GET", "/apps/{app}/cost", s.AppCost)
 	r.Route("GET", "/apps/{app}/balancers", s.BalancerList)
+	r.Route("POST", "/apps/{app}/builds/{id}/cancel", s.BuildCancel)
 	r.Route("POST", "/apps/{app}/builds", s.BuildCreate)
 	r.Route("GET", "/apps/{app}/builds/{id}.tgz", s.BuildExport)
 	r.Route("GET", "/apps/{app}/builds/{id}", s.BuildGet)

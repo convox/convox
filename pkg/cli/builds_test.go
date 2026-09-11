@@ -48,6 +48,27 @@ func TestBuild(t *testing.T) {
 	})
 }
 
+func TestBuildReportsACancelReason(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		cancelled := fxBuild()
+		cancelled.Status = "failed"
+		cancelled.Reason = "cancelled by someone"
+
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(cancelled, nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: build failed: cancelled by someone"})
+	})
+}
+
 func TestBuildFinalizeLogs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		// i.On("ClientType").Return("standard")
@@ -330,6 +351,42 @@ func TestBuildsError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{""})
+	})
+}
+
+func TestBuildsCancel(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(nil)
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Cancelling build build1... OK"})
+	})
+}
+
+func TestBuildsCancelError(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(fmt.Errorf("build BUILD1 is not running"))
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: build BUILD1 is not running"})
+	})
+}
+
+// A rack without the cancel route answers 404; the user must be told to
+// upgrade rather than shown a bare status line.
+func TestBuildsCancelOldRack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(fmt.Errorf("response status 404"))
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: convox builds cancel requires rack version 3.25.7 or later"})
 	})
 }
 
@@ -710,6 +767,29 @@ func TestBuildsInfo(t *testing.T) {
 		res.RequireStdout(t, []string{
 			"Id           build1",
 			"Status       complete",
+			"Release      release1",
+			"Description  desc",
+			"Started      2 days ago",
+			"Elapsed      2m0s",
+		})
+	})
+}
+
+func TestBuildsInfoCancelled(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		b := fxBuild()
+		b.Status = "failed"
+		b.Reason = "cancelled by someone"
+		i.On("BuildGet", "app1", "build1").Return(b, nil)
+
+		res, err := testExecute(e, "builds info build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Id           build1",
+			"Status       failed",
+			"Reason       cancelled by someone",
 			"Release      release1",
 			"Description  desc",
 			"Started      2 days ago",
