@@ -1,8 +1,10 @@
 package atom
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
@@ -10,8 +12,11 @@ import (
 	afake "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestStatus(t *testing.T) {
@@ -268,4 +273,488 @@ func testClient(t *testing.T, fn func(*Client)) {
 	}
 
 	fn(a)
+}
+
+type kubectlCall struct {
+	data []byte
+	args []string
+}
+
+func stubKubectl(t *testing.T, resources []string, fn func(call int, data []byte, args ...string) ([]byte, error)) *[]kubectlCall {
+	t.Helper()
+
+	calls := []kubectlCall{}
+
+	ka := kubectlApply
+	tr := templateResources
+
+	kubectlApply = func(data []byte, args ...string) ([]byte, error) {
+		i := len(calls)
+		calls = append(calls, kubectlCall{data: data, args: args})
+
+		if fn == nil {
+			return []byte("applied\n"), nil
+		}
+
+		return fn(i, data, args...)
+	}
+
+	templateResources = func(_ string) ([]string, error) {
+		return resources, nil
+	}
+
+	t.Cleanup(func() {
+		kubectlApply = ka
+		templateResources = tr
+	})
+
+	return &calls
+}
+
+const testDeploymentDocument = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ns1
+  name: web
+spec:
+  replicas: 1
+`
+
+func testBalancerDocument(ports string) string {
+	return `apiVersion: v1
+kind: Service
+metadata:
+  namespace: ns1
+  name: balancer-web
+  labels:
+    type: balancer
+spec:
+  type: LoadBalancer
+` + ports
+}
+
+const testPairPorts = `  ports:
+  - name: "5000-tcp"
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: "5000-udp"
+    port: 5000
+    protocol: UDP
+    targetPort: 5000
+`
+
+const testSinglePorts = `  ports:
+  - name: "5000"
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+`
+
+func testStream(documents ...string) []byte {
+	return []byte(strings.Join(documents, "---\n"))
+}
+
+func testLabelledStream(t *testing.T, data []byte, labels map[string]string) []byte {
+	t.Helper()
+
+	parts := bytes.Split(data, []byte("---\n"))
+
+	for i := range parts {
+		dp, err := applyLabels(parts[i], labels)
+		require.NoError(t, err)
+
+		parts[i] = dp
+	}
+
+	return bytes.Join(parts, []byte("---\n"))
+}
+
+func testService(ports []ac.ServicePort, managers ...am.ManagedFieldsEntry) *ac.Service {
+	return &ac.Service{
+		ObjectMeta: am.ObjectMeta{
+			Namespace:     "ns1",
+			Name:          "balancer-web",
+			ManagedFields: managers,
+		},
+		Spec: ac.ServiceSpec{Ports: ports},
+	}
+}
+
+func servicePort(name string, port int32, protocol ac.Protocol) ac.ServicePort {
+	return ac.ServicePort{Name: name, Port: port, Protocol: protocol}
+}
+
+func TestDocumentPorts(t *testing.T) {
+	cases := []struct {
+		name           string
+		ports          string
+		paired         bool
+		clientSideOnly bool
+	}{
+		{
+			name:  "single port",
+			ports: testSinglePorts,
+		},
+		{
+			name:   "tcp and udp on one number",
+			ports:  testPairPorts,
+			paired: true,
+		},
+		{
+			name: "two distinct ports",
+			ports: `  ports:
+  - name: "5000"
+    port: 5000
+    protocol: TCP
+  - name: "5001"
+    port: 5001
+    protocol: TCP
+`,
+		},
+		{
+			name: "duplicate port name",
+			ports: `  ports:
+  - name: "5000"
+    port: 5000
+    protocol: TCP
+  - name: "5000"
+    port: 5000
+    protocol: UDP
+`,
+			clientSideOnly: true,
+		},
+		{
+			name: "duplicate port and protocol",
+			ports: `  ports:
+  - name: "5000-a"
+    port: 5000
+    protocol: TCP
+  - name: "5000-b"
+    port: 5000
+    protocol: TCP
+`,
+			clientSideOnly: true,
+		},
+		{
+			name: "unset protocol",
+			ports: `  ports:
+  - name: "5000"
+    port: 5000
+`,
+			clientSideOnly: true,
+		},
+		{
+			name: "unset protocol alongside a pair",
+			ports: `  ports:
+  - name: "5000-tcp"
+    port: 5000
+    protocol: TCP
+  - name: "5000-udp"
+    port: 5000
+    protocol: UDP
+  - name: "7000"
+    port: 7000
+`,
+			clientSideOnly: true,
+		},
+		{
+			name:  "no ports",
+			ports: "",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			paired, clientSideOnly, err := documentPorts([]byte(testBalancerDocument(c.ports)))
+			require.NoError(t, err)
+			assert.Equal(t, c.paired, paired)
+			assert.Equal(t, c.clientSideOnly, clientSideOnly)
+		})
+	}
+}
+
+func TestBalancerNeedsServerSide(t *testing.T) {
+	kubectlManager := am.ManagedFieldsEntry{Manager: "kubectl", Operation: am.ManagedFieldsOperationApply}
+
+	cases := []struct {
+		name     string
+		document string
+		live     *ac.Service
+		want     bool
+	}{
+		{
+			name:     "empty document",
+			document: "",
+		},
+		{
+			name:     "deployment",
+			document: testDeploymentDocument,
+		},
+		{
+			name: "ingress carrying the balancer label alongside a live pair",
+			document: `apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: ns1
+  name: balancer-web
+  labels:
+    type: balancer
+`,
+			live: testService([]ac.ServicePort{
+				servicePort("5000-tcp", 5000, ac.ProtocolTCP),
+				servicePort("5000-udp", 5000, ac.ProtocolUDP),
+			}),
+		},
+		{
+			name: "service without the balancer label",
+			document: `apiVersion: v1
+kind: Service
+metadata:
+  namespace: ns1
+  name: balancer-web
+spec:
+` + testPairPorts,
+			live: testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}),
+		},
+		{
+			name:     "pair with no live service",
+			document: testBalancerDocument(testPairPorts),
+		},
+		{
+			name:     "pair over a live service",
+			document: testBalancerDocument(testPairPorts),
+			live:     testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}),
+			want:     true,
+		},
+		{
+			name:     "single port over an untouched live service",
+			document: testBalancerDocument(testSinglePorts),
+			live:     testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}),
+		},
+		{
+			name:     "single port over a live pair",
+			document: testBalancerDocument(testSinglePorts),
+			live: testService([]ac.ServicePort{
+				servicePort("5000-tcp", 5000, ac.ProtocolTCP),
+				servicePort("5000-udp", 5000, ac.ProtocolUDP),
+			}),
+			want: true,
+		},
+		{
+			name:     "a server-side field manager on its own does not qualify a single port",
+			document: testBalancerDocument(testSinglePorts),
+			live:     testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}, kubectlManager),
+		},
+		{
+			name: "duplicate port names over a live service",
+			document: testBalancerDocument(`  ports:
+  - name: "5000"
+    port: 5000
+    protocol: TCP
+  - name: "5000"
+    port: 5000
+    protocol: UDP
+`),
+			live: testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}),
+		},
+		{
+			name: "unset protocol over a live pair",
+			want: true,
+			document: testBalancerDocument(`  ports:
+  - name: "5000-tcp"
+    port: 5000
+    protocol: TCP
+  - name: "5000-udp"
+    port: 5000
+    protocol: UDP
+  - name: "7000"
+    port: 7000
+`),
+			live: testService([]ac.ServicePort{
+				servicePort("5000-tcp", 5000, ac.ProtocolTCP),
+				servicePort("5000-udp", 5000, ac.ProtocolUDP),
+			}, kubectlManager),
+		},
+		{
+			name: "duplicate port names over a live pair",
+			want: true,
+			document: testBalancerDocument(`  ports:
+  - name: "5000"
+    port: 5000
+    protocol: TCP
+  - name: "5000"
+    port: 5000
+    protocol: UDP
+`),
+			live: testService([]ac.ServicePort{
+				servicePort("5000-tcp", 5000, ac.ProtocolTCP),
+				servicePort("5000-udp", 5000, ac.ProtocolUDP),
+			}, kubectlManager),
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			objects := []runtime.Object{}
+			if c.live != nil {
+				objects = append(objects, c.live)
+			}
+
+			client := &Client{k8s: fake.NewSimpleClientset(objects...)}
+
+			got, err := client.balancerNeedsServerSide("ns1", []byte(c.document))
+			require.NoError(t, err)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}
+
+func TestApplyTemplateWithoutBalancer(t *testing.T) {
+	calls := stubKubectl(t, []string{"core/v1/Service", "apps/v1/Deployment"}, nil)
+
+	data := testStream(testDeploymentDocument)
+
+	c := &Client{k8s: fake.NewSimpleClientset()}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 1)
+	assert.Equal(t, []string{
+		"--prune", "-l", "atom=abc", "--namespace", "ns1",
+		"--prune-allowlist", "core/v1/Service",
+		"--prune-allowlist", "apps/v1/Deployment",
+	}, (*calls)[0].args)
+	assert.Equal(t, testLabelledStream(t, data, map[string]string{"atom": "abc"}), (*calls)[0].data)
+}
+
+func TestApplyTemplateBalancerWithoutLiveService(t *testing.T) {
+	calls := stubKubectl(t, nil, nil)
+
+	data := testStream(testDeploymentDocument, testBalancerDocument(testPairPorts))
+
+	c := &Client{k8s: fake.NewSimpleClientset()}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 1)
+	assert.Equal(t, []string{"--prune", "-l", "atom=abc", "--namespace", "ns1"}, (*calls)[0].args)
+	assert.Equal(t, testLabelledStream(t, data, map[string]string{"atom": "abc"}), (*calls)[0].data)
+}
+
+func TestApplyTemplateForceRetrySendsTheWholeStream(t *testing.T) {
+	calls := stubKubectl(t, nil, func(i int, _ []byte, _ ...string) ([]byte, error) {
+		if i == 1 {
+			return []byte(`The Service "web" is invalid: spec.clusterIP: field is immutable`), fmt.Errorf("exit status 1")
+		}
+
+		return []byte("applied\n"), nil
+	})
+
+	data := testStream(testDeploymentDocument, testBalancerDocument(testPairPorts))
+	labelled := testLabelledStream(t, data, map[string]string{"atom": "abc"})
+
+	c := &Client{k8s: fake.NewSimpleClientset(testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}))}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 3)
+	assert.Equal(t, []string{"--force"}, (*calls)[2].args)
+	assert.Equal(t, labelled, (*calls)[2].data)
+}
+
+func TestApplyTemplateServerSideLeg(t *testing.T) {
+	calls := stubKubectl(t, nil, nil)
+
+	data := testStream(testDeploymentDocument, testBalancerDocument(testPairPorts))
+	labelled := testLabelledStream(t, data, map[string]string{"atom": "abc"})
+
+	c := &Client{k8s: fake.NewSimpleClientset(testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}))}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 2)
+
+	assert.Equal(t, []string{"--server-side", "--force-conflicts", "--namespace", "ns1"}, (*calls)[0].args)
+	assert.NotContains(t, (*calls)[0].args, "--prune")
+
+	balancer := bytes.Split(labelled, []byte("---\n"))[1]
+	assert.Equal(t, balancer, (*calls)[0].data)
+
+	assert.Equal(t, []string{"--prune", "-l", "atom=abc", "--namespace", "ns1"}, (*calls)[1].args)
+	assert.Equal(t, labelled, (*calls)[1].data)
+}
+
+func TestApplyTemplateServerSideLegJoinsSeveralBalancers(t *testing.T) {
+	calls := stubKubectl(t, nil, nil)
+
+	second := strings.Replace(testBalancerDocument(testPairPorts), "balancer-web", "balancer-api", 1)
+
+	data := testStream(testDeploymentDocument, testBalancerDocument(testPairPorts), second)
+	labelled := testLabelledStream(t, data, map[string]string{"atom": "abc"})
+	parts := bytes.Split(labelled, []byte("---\n"))
+
+	api := testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)})
+	api.Name = "balancer-api"
+
+	c := &Client{k8s: fake.NewSimpleClientset(testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}), api)}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 2)
+	assert.Equal(t, bytes.Join([][]byte{parts[1], parts[2]}, []byte("---\n")), (*calls)[0].data)
+	assert.Equal(t, labelled, (*calls)[1].data)
+}
+
+func TestApplyTemplateServerSideLegFailureStopsTheApply(t *testing.T) {
+	calls := stubKubectl(t, nil, func(_ int, _ []byte, _ ...string) ([]byte, error) {
+		return []byte("server-side boom\n"), fmt.Errorf("exit status 1")
+	})
+
+	data := testStream(testBalancerDocument(testPairPorts))
+
+	c := &Client{k8s: fake.NewSimpleClientset(testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}))}
+
+	out, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.Error(t, err)
+	assert.Equal(t, []byte("server-side boom\n"), out)
+	assert.Len(t, *calls, 1)
+}
+
+func TestApplyTemplateServerSideOutputCannotTriggerForce(t *testing.T) {
+	calls := stubKubectl(t, nil, func(i int, _ []byte, _ ...string) ([]byte, error) {
+		if i == 0 {
+			return []byte(`The Service "balancer-web" is invalid: spec.clusterIP: field is immutable`), nil
+		}
+
+		return []byte("unrelated failure\n"), fmt.Errorf("exit status 1")
+	})
+
+	data := testStream(testBalancerDocument(testPairPorts))
+
+	c := &Client{k8s: fake.NewSimpleClientset(testService([]ac.ServicePort{servicePort("5000", 5000, ac.ProtocolTCP)}))}
+
+	_, err := c.applyTemplate("ns1", data, "atom=abc")
+	require.Error(t, err)
+	assert.Len(t, *calls, 2)
+}
+
+func TestApplyTemplateServiceLookupFailureStopsTheApply(t *testing.T) {
+	calls := stubKubectl(t, nil, nil)
+
+	kc := fake.NewSimpleClientset()
+	kc.PrependReactor("get", "services", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("etcdserver: request timed out")
+	})
+
+	c := &Client{k8s: kc}
+
+	_, err := c.applyTemplate("ns1", testStream(testBalancerDocument(testPairPorts)), "atom=abc")
+	require.Error(t, err)
+	assert.Empty(t, *calls)
 }

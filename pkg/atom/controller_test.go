@@ -237,6 +237,7 @@ func testController(fn func(*AtomController)) {
 	client := &Client{
 		Atom:   fa,
 		config: &rest.Config{},
+		k8s:    fakeK8s,
 	}
 
 	fac := client.Atom.(*afake.Clientset)
