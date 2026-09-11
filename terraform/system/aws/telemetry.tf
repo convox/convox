@@ -52,6 +52,7 @@ locals {
     enable_private_access                     = var.enable_private_access
     envoy_cpu_request                         = var.envoy_cpu_request
     envoy_memory_request                      = var.envoy_memory_request
+    fast_image_pull_enable                    = var.fast_image_pull_enable
     fluentd_disable                           = var.fluentd_disable
     fluentd_memory                            = var.fluentd_memory
     gpu_metrics_max_concurrent                = var.gpu_metrics_max_concurrent
@@ -104,6 +105,8 @@ locals {
     karpenter_node_os                         = var.karpenter_node_os
     karpenter_node_overlays_config            = var.karpenter_node_overlays_config
     karpenter_node_taints                     = var.karpenter_node_taints
+    karpenter_node_volume_iops                = var.karpenter_node_volume_iops
+    karpenter_node_volume_throughput          = var.karpenter_node_volume_throughput
     karpenter_node_volume_type                = var.karpenter_node_volume_type
     keda_enable                               = var.keda_enable
     key_pair_name                             = var.key_pair_name
@@ -121,6 +124,8 @@ locals {
     node_disk                                 = var.node_disk
     node_max_unavailable_percentage           = var.node_max_unavailable_percentage
     node_type                                 = var.node_type
+    node_volume_iops                          = var.node_volume_iops
+    node_volume_throughput                    = var.node_volume_throughput
     nvidia_device_plugin_enable               = var.nvidia_device_plugin_enable
     nvidia_device_time_slicing_replicas       = var.nvidia_device_time_slicing_replicas
     pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
@@ -214,6 +219,7 @@ locals {
     enable_private_access                     = "false"
     envoy_cpu_request                         = "100m"
     envoy_memory_request                      = "256Mi"
+    fast_image_pull_enable                    = "false"
     fluentd_disable                           = "false"
     fluentd_memory                            = "200Mi"
     gpu_metrics_max_concurrent                = "10"
@@ -266,6 +272,8 @@ locals {
     karpenter_node_os                         = "al2023"
     karpenter_node_overlays_config            = ""
     karpenter_node_taints                     = ""
+    karpenter_node_volume_iops                = "0"
+    karpenter_node_volume_throughput          = "0"
     karpenter_node_volume_type                = "gp3"
     keda_enable                               = "false"
     key_pair_name                             = ""
@@ -283,6 +291,8 @@ locals {
     node_disk                                 = "20"
     node_max_unavailable_percentage           = "0"
     node_type                                 = "t3.small"
+    node_volume_iops                          = "0"
+    node_volume_throughput                    = "0"
     nvidia_device_plugin_enable               = "false"
     nvidia_device_time_slicing_replicas       = "0"
     pdb_default_min_available_percentage      = "50"

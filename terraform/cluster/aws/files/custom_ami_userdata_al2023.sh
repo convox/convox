@@ -8,6 +8,10 @@ Content-Type: application/node.eks.aws
 apiVersion: node.eks.aws/v1alpha1
 kind: NodeConfig
 spec:
+%{ if fast_image_pull ~}
+  featureGates:
+    FastImagePull: true
+%{ endif ~}
   cluster:
     apiServerEndpoint: ${api_server_endpoint}
     certificateAuthority: ${api_server_ca}
@@ -17,7 +21,7 @@ spec:
     config:
       clusterDNS:
       - ${cluster_dns}
-%{ if kubelet_registry_pull_qps != 5 || kubelet_registry_burst != 10 ~}
+%{ if kubelet_registry_set ~}
       registryPullQPS: ${kubelet_registry_pull_qps}
       registryBurst: ${kubelet_registry_burst}
 %{ endif ~}

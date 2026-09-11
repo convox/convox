@@ -3,6 +3,8 @@ locals {
   launch_template_user_data_raw = var.user_data_url != "" || var.user_data != "" || local.kubelet_registry_set ? templatefile("${path.module}/files/custom_user_data.sh", {
     kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
     kubelet_registry_burst    = local.kubelet_registry_burst_effective
+    kubelet_registry_set      = local.kubelet_registry_set
+    fast_image_pull           = false
     user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
     user_data                 = var.user_data
   }) : ""
@@ -12,18 +14,42 @@ locals {
   kubelet_registry_pull_qps_effective = min(2147483647, floor(max(0, var.kubelet_registry_pull_qps)))
   kubelet_registry_burst_effective    = min(2147483647, floor(max(1, var.kubelet_registry_burst)))
 
-  # Compare the clamped values, so this can never disagree with the gate inside the templates,
-  # which see the clamped values and nothing else.
+  # Derive the gate from the clamped values, never from the raw variables.
   kubelet_registry_set = local.kubelet_registry_pull_qps_effective != 5 || local.kubelet_registry_burst_effective != 10
+  node_config_set      = local.kubelet_registry_set || var.fast_image_pull_enable
 
-  kubelet_registry_user_data = local.kubelet_registry_set ? templatefile("${path.module}/files/custom_user_data.sh", {
+  node_config_user_data = local.node_config_set ? templatefile("${path.module}/files/custom_user_data.sh", {
     kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
     kubelet_registry_burst    = local.kubelet_registry_burst_effective
+    kubelet_registry_set      = local.kubelet_registry_set
+    fast_image_pull           = var.fast_image_pull_enable
     user_data_script_file     = ""
     user_data                 = ""
   }) : ""
 
   kube_dns_ip = cidrhost(aws_eks_cluster.cluster.kubernetes_network_config[0].service_ipv4_cidr, 10)
+
+  # gp3 takes at most 500 IOPS per GiB and 0.25 MiB/s per IOPS, and floors at 3000 and 125, so
+  # the pair resolves against each volume's own size. 1000 is the provider's ceiling, not AWS's.
+  node_volume_iops_requested       = min(80000, floor(max(0, var.node_volume_iops)))
+  node_volume_throughput_requested = min(1000, floor(max(0, var.node_volume_throughput)))
+
+  node_volume_iops_effective       = local.node_volume_iops_requested > 0 ? max(3000, min(local.node_volume_iops_requested, var.node_disk * 500)) : 0
+  node_volume_throughput_effective = local.node_volume_throughput_requested > 0 ? max(125, min(local.node_volume_throughput_requested, floor(max(3000, local.node_volume_iops_effective) * 0.25))) : 0
+
+  additional_node_volume_iops = { for ng in local.additional_node_groups_with_defaults : ng.id =>
+    local.node_volume_iops_requested > 0 ? max(3000, min(local.node_volume_iops_requested, ng.disk * 500)) : 0
+  }
+  additional_node_volume_throughput = { for ng in local.additional_node_groups_with_defaults : ng.id =>
+    local.node_volume_throughput_requested > 0 ? max(125, min(local.node_volume_throughput_requested, floor(max(3000, local.additional_node_volume_iops[ng.id]) * 0.25))) : 0
+  }
+
+  additional_build_volume_iops = { for ng in local.additional_build_groups_with_defaults : ng.id =>
+    local.node_volume_iops_requested > 0 ? max(3000, min(local.node_volume_iops_requested, ng.disk * 500)) : 0
+  }
+  additional_build_volume_throughput = { for ng in local.additional_build_groups_with_defaults : ng.id =>
+    local.node_volume_throughput_requested > 0 ? max(125, min(local.node_volume_throughput_requested, floor(max(3000, local.additional_build_volume_iops[ng.id]) * 0.25))) : 0
+  }
 
   additional_node_groups_with_defaults = [
     for idx, ng in var.additional_node_groups : {
@@ -172,6 +198,8 @@ resource "aws_launch_template" "cluster_additional" {
       volume_type = "gp3"
       volume_size = random_id.additional_node_groups[each.key].keepers.node_disk
       encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.additional_node_volume_iops[each.key] > 0 ? local.additional_node_volume_iops[each.key] : null
+      throughput  = local.additional_node_volume_throughput[each.key] > 0 ? local.additional_node_volume_throughput[each.key] : null
     }
   }
 
@@ -198,7 +226,7 @@ resource "aws_launch_template" "cluster_additional" {
   }
 
   user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? (
-    local.kubelet_registry_user_data != "" ? base64encode(local.kubelet_registry_user_data) : null
+    local.node_config_user_data != "" ? base64encode(local.node_config_user_data) : null
     ) : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
       api_server_endpoint       = aws_eks_cluster.cluster.endpoint,
       api_server_ca             = aws_eks_cluster.cluster.certificate_authority[0].data,
@@ -209,6 +237,8 @@ resource "aws_launch_template" "cluster_additional" {
       user_data                 = local.launch_template_user_data_raw,
       kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective,
       kubelet_registry_burst    = local.kubelet_registry_burst_effective,
+      kubelet_registry_set      = local.kubelet_registry_set,
+      fast_image_pull           = var.fast_image_pull_enable,
   }))
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
@@ -324,6 +354,8 @@ resource "aws_launch_template" "build_additional" {
       volume_type = "gp3"
       volume_size = random_id.build_node_additional[each.key].keepers.node_disk
       encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.additional_build_volume_iops[each.key] > 0 ? local.additional_build_volume_iops[each.key] : null
+      throughput  = local.additional_build_volume_throughput[each.key] > 0 ? local.additional_build_volume_throughput[each.key] : null
     }
   }
 
@@ -339,7 +371,7 @@ resource "aws_launch_template" "build_additional" {
   }
 
   user_data = random_id.build_node_additional[each.key].keepers.ami_id == null ? (
-    local.kubelet_registry_user_data != "" ? base64encode(local.kubelet_registry_user_data) : null
+    local.node_config_user_data != "" ? base64encode(local.node_config_user_data) : null
     ) : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
       api_server_endpoint       = aws_eks_cluster.cluster.endpoint,
       api_server_ca             = aws_eks_cluster.cluster.certificate_authority[0].data,
@@ -350,6 +382,8 @@ resource "aws_launch_template" "build_additional" {
       user_data                 = "",
       kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective,
       kubelet_registry_burst    = local.kubelet_registry_burst_effective,
+      kubelet_registry_set      = local.kubelet_registry_set,
+      fast_image_pull           = var.fast_image_pull_enable,
   }))
 
   dynamic "tag_specifications" {
