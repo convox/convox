@@ -548,7 +548,18 @@ func (t Terraform) reconcileBeforeApply(release string, vars map[string]string) 
 		return err
 	}
 
-	return t.reconcileEKSNodeGroupDesired(vars)
+	return t.reconcileEKSNodeGroupDesired(t.varsAfterModuleReconcile(vars))
+}
+
+// varsAfterModuleReconcile returns the variables reconcileVarsWithModule left on disk,
+// so a parameter it stripped cannot still drive a reconcile.
+func (t Terraform) varsAfterModuleReconcile(fallback map[string]string) map[string]string {
+	current, err := t.vars()
+	if err != nil || len(current) == 0 {
+		return fallback
+	}
+
+	return current
 }
 
 // reconcileVarsWithModule filters rack parameters to only those accepted by
@@ -606,11 +617,31 @@ type pendingUpdate struct {
 	id        string
 }
 
+// KarpenterSystemNodeMaxPerAZ is the Karpenter-mode max_size the system node groups
+// render in terraform/cluster/aws/main.tf. A higher minimum makes the apply invalid.
+const KarpenterSystemNodeMaxPerAZ = 100
+
 type nodeGroupTargets struct {
 	cluster     string
 	groups      []nodeGroupDesired
 	buildMin    int64
 	onDemandMin int64
+	systemMin   int64
+}
+
+func (t nodeGroupTargets) empty() bool {
+	return len(t.groups) == 0 && t.buildMin == 0 && t.onDemandMin == 0 && t.systemMin == 0
+}
+
+// reconcileTargets reports the minimums to raise before apply, and whether any are owed.
+func (t Terraform) reconcileTargets(vars map[string]string) (nodeGroupTargets, bool) {
+	if t.provider != "aws" {
+		return nodeGroupTargets{}, false
+	}
+
+	targets := targetsFromVars(vars, t.name)
+
+	return targets, !targets.empty()
 }
 
 func targetsFromVars(vars map[string]string, name string) nodeGroupTargets {
@@ -627,6 +658,7 @@ func targetsFromVars(vars map[string]string, name string) nodeGroupTargets {
 	}
 
 	if vars["karpenter_enabled"] == "true" {
+		targets.systemMin = parseMinimum(vars["karpenter_system_node_min_count_per_az"], KarpenterSystemNodeMaxPerAZ)
 		return targets
 	}
 
@@ -656,12 +688,8 @@ func parseMinimum(raw string, ceiling int64) int64 {
 // reconcileEKSNodeGroupDesired raises the EKS desiredSize of the additional, build
 // and on-demand node groups to their new minimums before apply. AWS only, best-effort.
 func (t Terraform) reconcileEKSNodeGroupDesired(vars map[string]string) error {
-	if t.provider != "aws" {
-		return nil
-	}
-
-	targets := targetsFromVars(vars, t.name)
-	if len(targets.groups) == 0 && targets.buildMin == 0 && targets.onDemandMin == 0 {
+	targets, ok := t.reconcileTargets(vars)
+	if !ok {
 		return nil
 	}
 
@@ -721,6 +749,11 @@ func reconcileNodeGroupDesired(api eksiface.EKSAPI, targets nodeGroupTargets) er
 		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.buildMin)...)
 	}
 
+	if targets.systemMin > 0 {
+		matches := matchSystemNodeGroups(listed.Nodegroups, cluster)
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.systemMin)...)
+	}
+
 	if targets.onDemandMin > 0 {
 		matches := matchOnDemandNodeGroups(listed.Nodegroups, cluster)
 		if len(matches) > 1 {
@@ -751,8 +784,8 @@ func matchNodeGroups(names []*string, prefix, exclude string) []string {
 	return matches
 }
 
-func matchOnDemandNodeGroups(names []*string, cluster string) []string {
-	re := regexp.MustCompile("^" + regexp.QuoteMeta(cluster) + `-.+-0[0-9a-f]{16}$`)
+func matchIndexedNodeGroups(names []*string, cluster, index string) []string {
+	re := regexp.MustCompile("^" + regexp.QuoteMeta(cluster) + `-.+-` + index + `[0-9a-f]{16}$`)
 	var matches []string
 	for _, n := range names {
 		name := aws.StringValue(n)
@@ -762,6 +795,15 @@ func matchOnDemandNodeGroups(names []*string, cluster string) []string {
 		matches = append(matches, name)
 	}
 	return matches
+}
+
+// min_on_demand_count reaches system group index 0 only, the sole ON_DEMAND group on a MIXED rack.
+func matchOnDemandNodeGroups(names []*string, cluster string) []string {
+	return matchIndexedNodeGroups(names, cluster, "0")
+}
+
+func matchSystemNodeGroups(names []*string, cluster string) []string {
+	return matchIndexedNodeGroups(names, cluster, "[0-9]")
 }
 
 func raiseNodeGroupsDesired(api eksiface.EKSAPI, cluster string, names []string, newMin int64) []pendingUpdate {

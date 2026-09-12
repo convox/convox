@@ -70,8 +70,38 @@ func TestReconcileNodeGroupDesired(t *testing.T) {
 		wantMax           int64
 		buildMin          int64
 		onDemandMin       int64
+		systemMin         int64
 		wantDesiredByName map[string]int64
 	}{
+		{
+			name:       "karpenter system minimum raises every system group and nothing else",
+			nodegroups: []string{"rack-us-east-1a-0e5c51b34954fb0fd", "rack-us-east-1b-1e5c51b34954fb0fd", "rack-us-east-1c-2e5c51b34954fb0fd", "rack-build-us-east-1a-0e5c51b34954fb0fd", "rack-additional-101-63f68b7908e2d00a", "rack-build-additional-1-63f68b7908e2d00a"},
+			scaling: map[string]*eks.NodegroupScalingConfig{
+				"rack-us-east-1a-0e5c51b34954fb0fd":        scaling(1, 1, 10),
+				"rack-us-east-1b-1e5c51b34954fb0fd":        scaling(1, 1, 10),
+				"rack-us-east-1c-2e5c51b34954fb0fd":        scaling(1, 1, 10),
+				"rack-build-us-east-1a-0e5c51b34954fb0fd":  scaling(1, 1, 10),
+				"rack-additional-101-63f68b7908e2d00a":     scaling(1, 1, 5),
+				"rack-build-additional-1-63f68b7908e2d00a": scaling(1, 1, 5),
+			},
+			systemMin:   2,
+			wantNames:   []string{"rack-us-east-1a-0e5c51b34954fb0fd", "rack-us-east-1b-1e5c51b34954fb0fd", "rack-us-east-1c-2e5c51b34954fb0fd"},
+			wantDesired: 2,
+		},
+		{
+			name:       "karpenter system minimum at or below live desired is a no-op",
+			nodegroups: []string{"rack-us-east-1a-0e5c51b34954fb0fd"},
+			scaling:    map[string]*eks.NodegroupScalingConfig{"rack-us-east-1a-0e5c51b34954fb0fd": scaling(3, 1, 10)},
+			systemMin:  3,
+		},
+		{
+			name:        "karpenter system minimum on a non-high-availability rack raises the one group",
+			nodegroups:  []string{"rack-us-east-1a-0e5c51b34954fb0fd"},
+			scaling:     map[string]*eks.NodegroupScalingConfig{"rack-us-east-1a-0e5c51b34954fb0fd": scaling(1, 1, 10)},
+			systemMin:   2,
+			wantNames:   []string{"rack-us-east-1a-0e5c51b34954fb0fd"},
+			wantDesired: 2,
+		},
 		{
 			name:       "no min set is a no-op",
 			nodegroups: []string{"rack-additional-0-abcd"},
@@ -367,7 +397,7 @@ func TestReconcileNodeGroupDesired(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := &fakeEKS{nodegroups: tc.nodegroups, scaling: tc.scaling, listErr: tc.listErr}
 
-			err := reconcileNodeGroupDesired(f, nodeGroupTargets{cluster: "rack", groups: tc.groups, buildMin: tc.buildMin, onDemandMin: tc.onDemandMin})
+			err := reconcileNodeGroupDesired(f, nodeGroupTargets{cluster: "rack", groups: tc.groups, buildMin: tc.buildMin, onDemandMin: tc.onDemandMin, systemMin: tc.systemMin})
 			assert.NoError(t, err)
 			assert.Len(t, f.updates, len(tc.wantNames))
 
@@ -399,12 +429,13 @@ func TestTargetsFromVars(t *testing.T) {
 	twoGroups := []nodeGroupDesired{{Id: intp(0), MinSize: intp(1)}, {Id: intp(1), MinSize: intp(2)}}
 
 	cases := []struct {
-		name         string
-		vars         map[string]string
-		wantCluster  string
-		wantGroups   []nodeGroupDesired
-		wantBuildMin int64
-		wantOnDemand int64
+		name          string
+		vars          map[string]string
+		wantCluster   string
+		wantGroups    []nodeGroupDesired
+		wantBuildMin  int64
+		wantOnDemand  int64
+		wantSystemMin int64
 	}{
 		{name: "name is lowercased", vars: map[string]string{"name": "Rack"}, wantCluster: "rack"},
 		{name: "name falls back to the rack name", vars: map[string]string{}, wantCluster: "fallback"},
@@ -444,6 +475,18 @@ func TestTargetsFromVars(t *testing.T) {
 		{name: "abc on-demand minimum", vars: map[string]string{"name": "rack", "node_capacity_type": "mixed", "min_on_demand_count": "abc"}, wantCluster: "rack"},
 		{name: "zero on-demand minimum", vars: map[string]string{"name": "rack", "node_capacity_type": "mixed", "min_on_demand_count": "0"}, wantCluster: "rack"},
 		{name: "build and on-demand minimums together", vars: map[string]string{"name": "rack", "node_capacity_type": "mixed", "min_on_demand_count": "2", "build_node_enabled": "true", "build_node_min_count": "1"}, wantCluster: "rack", wantBuildMin: 1, wantOnDemand: 2},
+		{name: "karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "3"}, wantCluster: "rack", wantSystemMin: 3},
+		{name: "karpenter system minimum above the old Karpenter ceiling", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "11"}, wantCluster: "rack", wantSystemMin: 11},
+		{name: "karpenter system minimum at the ceiling", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "100"}, wantCluster: "rack", wantSystemMin: 100},
+		{name: "karpenter system minimum above the ceiling", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "101"}, wantCluster: "rack"},
+		{name: "blank karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": ""}, wantCluster: "rack"},
+		{name: "abc karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "abc"}, wantCluster: "rack"},
+		{name: "zero karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "0"}, wantCluster: "rack"},
+		{name: "negative karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "-1"}, wantCluster: "rack"},
+		{name: "absent karpenter system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "true"}, wantCluster: "rack"},
+		{name: "karpenter false ignores the system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "false", "karpenter_system_node_min_count_per_az": "3"}, wantCluster: "rack"},
+		{name: "no karpenter_enabled ignores the system minimum", vars: map[string]string{"name": "rack", "karpenter_system_node_min_count_per_az": "3"}, wantCluster: "rack"},
+		{name: "karpenter True ignores the system minimum", vars: map[string]string{"name": "rack", "karpenter_enabled": "True", "karpenter_system_node_min_count_per_az": "3"}, wantCluster: "rack"},
 	}
 
 	for _, tc := range cases {
@@ -457,6 +500,53 @@ func TestTargetsFromVars(t *testing.T) {
 			}
 			assert.Equal(t, tc.wantBuildMin, got.buildMin)
 			assert.Equal(t, tc.wantOnDemand, got.onDemandMin)
+			assert.Equal(t, tc.wantSystemMin, got.systemMin)
 		})
 	}
+}
+
+func TestMatchSystemNodeGroups(t *testing.T) {
+	const hex = "e5c51b34954fb0fd"
+
+	names := []*string{
+		aws.String("rack-us-east-1a-0" + hex),
+		aws.String("rack-us-east-1b-1" + hex),
+		aws.String("rack-us-east-1c-2" + hex),
+		aws.String("rack-build-us-east-1a-0" + hex),
+		aws.String("rack-additional-0-63f68b7908e2d00a"),
+		aws.String("rack-additional-101-63f68b7908e2d00a"),
+		aws.String("rack-build-additional-1-63f68b7908e2d00a"),
+	}
+
+	assert.Equal(t, []string{
+		"rack-us-east-1a-0" + hex,
+		"rack-us-east-1b-1" + hex,
+		"rack-us-east-1c-2" + hex,
+	}, matchSystemNodeGroups(names, "rack"))
+
+	assert.Equal(t, []string{"rack-us-east-1a-0" + hex}, matchOnDemandNodeGroups(names, "rack"))
+
+	dashed := []*string{
+		aws.String("my-rack-us-west-2-lax-1a-0" + hex),
+		aws.String("my-rack-us-west-2-lax-1a-1" + hex),
+		aws.String("my-rack-additional-2-63f68b7908e2d00a"),
+	}
+	assert.Equal(t, []string{
+		"my-rack-us-west-2-lax-1a-0" + hex,
+		"my-rack-us-west-2-lax-1a-1" + hex,
+	}, matchSystemNodeGroups(dashed, "my-rack"))
+
+	both := []*string{
+		aws.String("rack-us-east-1a-0" + hex),
+		aws.String("rack-us-east-1a-0a1b2c3d4e5f6789a"),
+	}
+	assert.Len(t, matchSystemNodeGroups(both, "rack"), 2)
+}
+
+func TestNodeGroupTargetsEmpty(t *testing.T) {
+	assert.True(t, nodeGroupTargets{cluster: "rack"}.empty())
+	assert.False(t, nodeGroupTargets{cluster: "rack", systemMin: 2}.empty())
+	assert.False(t, nodeGroupTargets{cluster: "rack", buildMin: 2}.empty())
+	assert.False(t, nodeGroupTargets{cluster: "rack", onDemandMin: 2}.empty())
+	assert.False(t, nodeGroupTargets{cluster: "rack", groups: []nodeGroupDesired{{Id: intp(0)}}}.empty())
 }

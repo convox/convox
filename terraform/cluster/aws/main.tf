@@ -191,12 +191,12 @@ resource "aws_eks_node_group" "cluster" {
   # Karpenter provisions workload nodes separately across all AZs.
   scaling_config {
     desired_size = var.karpenter_enabled ? (
-      count.index <= 2 ? 1 : 0
+      count.index <= 2 ? var.karpenter_system_node_min_count_per_az : 0
       ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     min_size = var.karpenter_enabled ? (
-      count.index <= 2 ? 1 : 0
+      count.index <= 2 ? var.karpenter_system_node_min_count_per_az : 0
       ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
