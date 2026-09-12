@@ -16,6 +16,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -1273,6 +1275,7 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 
 func terraformTemplateHelpers() template.FuncMap {
 	return template.FuncMap{
+		"hcl": hclEscape,
 		"keys": func(h map[string]string) []string {
 			ks := []string{}
 			for k := range h {
@@ -1282,6 +1285,42 @@ func terraformTemplateHelpers() template.FuncMap {
 			return ks
 		},
 	}
+}
+
+// hclEscape renders s as the body of an HCL quoted string, without the quotes.
+func hclEscape(s string) string {
+	buf := make([]byte, 0, len(s))
+
+	for i, r := range s {
+		switch r {
+		case '\n':
+			buf = append(buf, '\\', 'n')
+		case '\r':
+			buf = append(buf, '\\', 'r')
+		case '\t':
+			buf = append(buf, '\\', 't')
+		case '"':
+			buf = append(buf, '\\', '"')
+		case '\\':
+			buf = append(buf, '\\', '\\')
+		case '$', '%':
+			buf = utf8.AppendRune(buf, r)
+			// only ${ and %{ introduce a template, so only those are doubled
+			if i+1 < len(s) && s[i+1] == '{' {
+				buf = utf8.AppendRune(buf, r)
+			}
+		default:
+			if unicode.IsPrint(r) {
+				buf = utf8.AppendRune(buf, r)
+			} else if r < 0x10000 {
+				buf = append(buf, fmt.Sprintf("\\u%04x", r)...)
+			} else {
+				buf = append(buf, fmt.Sprintf("\\U%08x", r)...)
+			}
+		}
+	}
+
+	return string(buf)
 }
 
 func terraformWriteBackend(filename, backend string) error {
@@ -1302,12 +1341,12 @@ func terraformWriteBackend(filename, backend string) error {
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		terraform {
 			backend "http" {
-				address        = "{{.Address}}/state"
-				username       = "{{.Username}}"
-				password       = "{{.Password}}"
-				lock_address   = "{{.Address}}/lock"
+				address        = "{{hcl .Address}}/state"
+				username       = "{{hcl .Username}}"
+				password       = "{{hcl .Password}}"
+				lock_address   = "{{hcl .Address}}/lock"
 				lock_method    = "POST"
-				unlock_address = "{{.Address}}/lock"
+				unlock_address = "{{hcl .Address}}/lock"
 				unlock_method  = "DELETE"
 				skip_cert_verification = {{.SkipVerify}}
 			}
@@ -1341,10 +1380,10 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
-			source = "{{.Source}}"
+			source = "{{hcl .Source}}"
 
 			{{- range (keys .Vars) }}
-			{{.}} = "{{index $.Vars .}}"
+			{{.}} = "{{hcl (index $.Vars .)}}"
 			{{- end }}
 		}
 
@@ -1354,11 +1393,11 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 		}
 
 		output "provider" {
-			value = "{{.Provider}}"
+			value = "{{hcl .Provider}}"
 		}
 
 		output "release" {
-			value = "{{index .Vars "release"}}"
+			value = "{{hcl (index .Vars "release")}}"
 		}`,
 	)
 	if err != nil {
