@@ -340,6 +340,7 @@ module "rack" {
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   app_cloudwatch_disable                    = var.app_cloudwatch_disable
   cloudwatch_disable                        = var.cloudwatch_disable
+  cloudwatch_retention_in_days              = var.cloudwatch_retention_in_days
   ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
   vpc_id                                    = module.cluster.vpc
   vpa_enable                                = var.vpa_enable

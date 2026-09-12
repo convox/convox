@@ -43,6 +43,7 @@ var awsKnownParams = map[string]bool{
 	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
 	"cert_duration": true, "cidr": true, "cloudwatch_disable": true,
+	"cloudwatch_retention_in_days":   true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
 	"coredns_version": true, "cost_tracking_enable": true, "custom_provided_bucket": true,
 	"deploy_crash_restart_limit": true, "deploy_extra_nlb": true,
@@ -551,6 +552,7 @@ var paramGroups = map[string]map[string]bool{
 		"access_log_retention_in_days":    true,
 		"app_cloudwatch_disable":          true,
 		"cloudwatch_disable":              true,
+		"cloudwatch_retention_in_days":    true,
 		"cost_tracking_enable":            true,
 		"eks_log_types":                   true,
 		"fluentd_disable":                 true,
@@ -2026,6 +2028,13 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if v, has := params["access_log_retention_in_days"]; has && v != "" {
 		if _, err := strconv.Atoi(v); err != nil {
 			return fmt.Errorf("param 'access_log_retention_in_days' must be an integer")
+		}
+	}
+
+	if v, has := params["cloudwatch_retention_in_days"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be a non-negative integer")
 		}
 	}
 

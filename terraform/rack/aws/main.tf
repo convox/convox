@@ -46,6 +46,7 @@ module "api" {
   ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
   app_cloudwatch_disable                    = var.app_cloudwatch_disable
   cloudwatch_disable                        = var.cloudwatch_disable
+  cloudwatch_retention_in_days              = var.cloudwatch_retention_in_days
   ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
   efs_csi_driver_enable                     = var.efs_csi_driver_enable
   efs_file_system_id                        = var.efs_file_system_id

@@ -304,6 +304,31 @@ func TestValidateAndMutateParams_AccessLogRetention(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_CloudwatchRetention(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"0 valid", "0", false},
+		{"30 valid", "30", false},
+		{"junk rejected", "abc", true},
+		{"negative rejected", "-5", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{"cloudwatch_retention_in_days": tt.value}
+			err := validateAndMutateParams(params, "aws", map[string]string{}, false)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestValidateAndMutateParams_KarpenterNodeVolumeType(t *testing.T) {
 	tests := []struct {
 		name    string

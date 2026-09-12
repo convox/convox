@@ -20,6 +20,7 @@ locals {
     cert_duration                             = var.cert_duration
     cidr                                      = var.cidr
     cloudwatch_disable                        = var.cloudwatch_disable
+    cloudwatch_retention_in_days              = var.cloudwatch_retention_in_days
     contour_cpu_request                       = var.contour_cpu_request
     contour_internal_tls                      = var.contour_internal_tls
     contour_memory_request                    = var.contour_memory_request
@@ -182,6 +183,7 @@ locals {
     cert_duration                             = "2160h"
     cidr                                      = "10.1.0.0/16"
     cloudwatch_disable                        = "false"
+    cloudwatch_retention_in_days              = "0"
     contour_cpu_request                       = "100m"
     contour_internal_tls                      = "true"
     contour_memory_request                    = "128Mi"
