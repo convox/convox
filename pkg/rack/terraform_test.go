@@ -884,3 +884,146 @@ func TestReconcile_RemovesGrafanaDashboardVarApp(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(mainTfData), "grafana_dashboard_var_app", "main.tf must not reference removed variable")
 }
+
+// TestVarsAfterModuleReconcile_DropsStrippedParam pins the downgrade half of the
+// Karpenter system node minimum: reconcileVarsWithModule removes a parameter the
+// target module does not declare, and the node group reconcile must not still see
+// it in the caller's map and raise desired on the version that dropped it.
+func TestVarsAfterModuleReconcile_DropsStrippedParam(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release", "karpenter_enabled"},
+		vars: map[string]string{
+			"name":                                   "test-rack",
+			"release":                                "3.25.6",
+			"karpenter_enabled":                      "true",
+			"karpenter_system_node_min_count_per_az": "8",
+		},
+	}
+	f.setup(t, settings)
+
+	caller := map[string]string{
+		"name":                                   "test-rack",
+		"release":                                "3.25.6",
+		"karpenter_enabled":                      "true",
+		"karpenter_system_node_min_count_per_az": "8",
+	}
+
+	withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.25.6"))
+
+		got := tf.varsAfterModuleReconcile(caller)
+		_, has := got["karpenter_system_node_min_count_per_az"]
+		assert.False(t, has, "a stripped parameter must not reach the node group reconcile")
+		assert.Equal(t, "true", got["karpenter_enabled"], "a declared parameter must survive")
+
+		_, ok := tf.reconcileTargets(got)
+		assert.False(t, ok, "no reconcile is owed once the parameter is stripped")
+
+		_, stillOK := tf.reconcileTargets(caller)
+		assert.True(t, stillOK, "the pre-strip map would still have raised desired")
+	})
+}
+
+// TestVarsAfterModuleReconcile_KeepsDeclaredParam is the mirror: on a version that
+// declares the parameter, the re-read carries it through.
+func TestVarsAfterModuleReconcile_KeepsDeclaredParam(t *testing.T) {
+	settings := t.TempDir()
+	f := reconcileFixture{
+		rackName:   "test-rack",
+		moduleVars: []string{"name", "release", "karpenter_enabled", "karpenter_system_node_min_count_per_az"},
+		vars: map[string]string{
+			"name":                                   "test-rack",
+			"release":                                "3.25.7",
+			"karpenter_enabled":                      "true",
+			"karpenter_system_node_min_count_per_az": "2",
+		},
+	}
+	f.setup(t, settings)
+
+	withTerraform(t, settings, f.rackName, func(t *testing.T, tf Terraform) {
+		require.NoError(t, tf.reconcileVarsWithModule("3.25.7"))
+
+		got := tf.varsAfterModuleReconcile(map[string]string{"name": "test-rack"})
+		assert.Equal(t, "2", got["karpenter_system_node_min_count_per_az"])
+
+		targets, ok := tf.reconcileTargets(got)
+		assert.True(t, ok, "a Karpenter rack with the parameter set is owed a reconcile")
+		assert.Equal(t, int64(2), targets.systemMin)
+	})
+}
+
+// TestVarsAfterModuleReconcile_FallsBack asserts an unreadable or absent
+// vars.json leaves the caller's map in place rather than silently blanking every
+// reconcile target. A missing vars.json is not an error: t.vars() returns an
+// empty map and a nil error, so the length check is what covers it.
+func TestVarsAfterModuleReconcile_FallsBack(t *testing.T) {
+	fallback := map[string]string{"name": "test-rack", "karpenter_enabled": "true"}
+
+	t.Run("rack directory absent", func(t *testing.T) {
+		withTerraform(t, t.TempDir(), "missing-rack", func(t *testing.T, tf Terraform) {
+			assert.Equal(t, fallback, tf.varsAfterModuleReconcile(fallback))
+		})
+	})
+
+	t.Run("vars.json absent", func(t *testing.T) {
+		settings := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(settings, "racks", "test-rack"), 0700))
+
+		withTerraform(t, settings, "test-rack", func(t *testing.T, tf Terraform) {
+			current, err := tf.vars()
+			require.NoError(t, err, "an absent vars.json is not an error")
+			require.Empty(t, current)
+
+			assert.Equal(t, fallback, tf.varsAfterModuleReconcile(fallback))
+		})
+	})
+}
+
+// TestReconcileTargets_DefaultKarpenterRack pins the guard inside
+// reconcileEKSNodeGroupDesired. A Karpenter rack with no additional node groups
+// has no build or on-demand minimum by construction, so only the system minimum
+// keeps the reconcile alive; without it in the guard the parameter is inert on
+// the rack shape it exists for.
+func TestReconcileTargets_DefaultKarpenterRack(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		vars     map[string]string
+		want     bool
+	}{
+		{
+			name:     "karpenter rack with no additional node groups",
+			provider: "aws",
+			vars:     map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "2"},
+			want:     true,
+		},
+		{
+			name:     "karpenter rack at the default",
+			provider: "aws",
+			vars:     map[string]string{"name": "rack", "karpenter_enabled": "true"},
+			want:     false,
+		},
+		{
+			name:     "karpenter off",
+			provider: "aws",
+			vars:     map[string]string{"name": "rack", "karpenter_system_node_min_count_per_az": "2"},
+			want:     false,
+		},
+		{
+			name:     "not aws",
+			provider: "gcp",
+			vars:     map[string]string{"name": "rack", "karpenter_enabled": "true", "karpenter_system_node_min_count_per_az": "2"},
+			want:     false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tf := Terraform{name: "rack", provider: tc.provider}
+			_, ok := tf.reconcileTargets(tc.vars)
+			assert.Equal(t, tc.want, ok)
+		})
+	}
+}
