@@ -297,6 +297,11 @@ variable "karpenter_enabled" {
   default = "false"
 }
 
+variable "karpenter_system_node_min_count_per_az" {
+  type    = number
+  default = 1
+}
+
 variable "karpenter_arch" {
   type    = string
   default = ""

@@ -138,6 +138,11 @@ variable "karpenter_enabled" {
   default = false
 }
 
+variable "karpenter_system_node_min_count_per_az" {
+  type    = number
+  default = 1
+}
+
 variable "karpenter_version" {
   type    = string
   default = "1.13.1"

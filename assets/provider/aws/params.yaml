@@ -539,6 +539,18 @@ Groups:
           NodePools for workload scheduling. System nodes remain as managed
           node groups. &l Bidirectional — can be toggled on and off safely.
           &l &l Requires &i karpenter_auth_mode=true &i.
+      - name: karpenter_system_node_min_count_per_az
+        default: "1"
+        type: integer
+        description: |
+          Minimum number of system nodes in each availability zone while
+          Karpenter is enabled. &l A high availability rack runs this many
+          system nodes in every zone, so the rack total is three times the
+          value. &l Raising it adds nodes. Lowering it does not remove them.
+          &l &l Above 10, a downgrade below 3.25.7 is rejected until the node
+          counts come down.
+        allowedMinValue: 1
+        allowedMaxValue: 100
       - name: karpenter_instance_families
         optional: true
         default: "null"

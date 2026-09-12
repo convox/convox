@@ -2802,3 +2802,61 @@ func TestValidateAndMutateParams_KarpenterDisruptionWindow(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_SystemNodeMinCountPerAZ(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{"valid 1", "1", false},
+		{"valid 2", "2", false},
+		{"above the old Karpenter ceiling", "11", false},
+		{"at the ceiling", "100", false},
+		{"above the ceiling", "101", true},
+		{"far above the ceiling", "500", true},
+		{"zero", "0", true},
+		{"negative", "-1", true},
+		{"not a number", "abc", true},
+		{"decimal", "1.5", true},
+		{"empty string", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			params := map[string]string{
+				"karpenter_enabled":                      "true",
+				"karpenter_system_node_min_count_per_az": tt.value,
+			}
+			err := validateAndMutateParams(params, "aws", map[string]string{"karpenter_auth_mode": "true"}, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("karpenter_system_node_min_count_per_az=%q: got err=%v, wantErr=%v", tt.value, err, tt.wantErr)
+			}
+		})
+	}
+
+	t.Run("stale out-of-range value is caught on re-enable", func(t *testing.T) {
+		params := map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"}
+		current := map[string]string{
+			"karpenter_auth_mode":                    "true",
+			"karpenter_system_node_min_count_per_az": "500",
+		}
+		err := validateAndMutateParams(params, "aws", current, false)
+		if err == nil || !strings.Contains(err.Error(), "karpenter_system_node_min_count_per_az must be an integer from 1 to 100") {
+			t.Errorf("a stored value above the ceiling should be rejected on re-enable, got %v", err)
+		}
+	})
+
+	t.Run("a valid stored value is not forwarded on re-enable", func(t *testing.T) {
+		params := map[string]string{"karpenter_enabled": "true", "karpenter_auth_mode": "true"}
+		current := map[string]string{
+			"karpenter_auth_mode":                    "true",
+			"karpenter_system_node_min_count_per_az": "3",
+		}
+		if err := validateAndMutateParams(params, "aws", current, false); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if _, ok := params["karpenter_system_node_min_count_per_az"]; ok {
+			t.Error("the injected key should be removed before UpdateParams")
+		}
+	})
+}

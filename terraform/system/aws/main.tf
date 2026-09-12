@@ -156,6 +156,7 @@ module "cluster" {
   karpenter_ami_alias                     = var.karpenter_ami_alias
   karpenter_auth_mode                     = var.karpenter_auth_mode == "true"
   karpenter_enabled                       = var.karpenter_enabled == "true"
+  karpenter_system_node_min_count_per_az  = var.karpenter_system_node_min_count_per_az
   karpenter_instance_families             = var.karpenter_instance_families
   karpenter_instance_sizes                = var.karpenter_instance_sizes
   karpenter_capacity_types                = var.karpenter_capacity_types

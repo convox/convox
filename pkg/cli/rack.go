@@ -84,7 +84,8 @@ var awsKnownParams = map[string]bool{
 	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
 	"karpenter_disruption_block_duration": true, "karpenter_disruption_block_schedule": true,
 	"karpenter_disruption_budget_nodes": true, "karpenter_enabled": true,
-	"karpenter_instance_families": true, "karpenter_instance_sizes": true,
+	"karpenter_system_node_min_count_per_az": true,
+	"karpenter_instance_families":            true, "karpenter_instance_sizes": true,
 	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
 	"karpenter_node_expiry": true, "karpenter_node_labels": true,
 	"karpenter_node_os": true, "karpenter_node_overlays_config": true,
@@ -295,6 +296,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_node_overlays_config":          true,
 		"karpenter_node_taints":                   true,
 		"karpenter_node_volume_type":              true,
+		"karpenter_system_node_min_count_per_az":  true,
 		"keda_enable":                             true,
 	},
 	"gpu": {
@@ -423,6 +425,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_disruption_block_schedule":     true, // dual-listed in karpenter
 		"karpenter_disruption_budget_nodes":       true,
 		"karpenter_enabled":                       true,
+		"karpenter_system_node_min_count_per_az":  true,
 		"keda_enable":                             true,
 		"max_on_demand_count":                     true,
 		"min_on_demand_count":                     true,
@@ -2157,7 +2160,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
 			"karpenter_node_labels", "karpenter_build_node_labels",
 			"karpenter_build_imds_tokens", "karpenter_build_imds_hop_limit",
-			"karpenter_ami_alias",
+			"karpenter_ami_alias", "karpenter_system_node_min_count_per_az",
 		}
 		for _, rk := range karpenterRevalidateKeys {
 			if _, inCall := params[rk]; !inCall {
@@ -2238,6 +2241,13 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		n, err := strconv.Atoi(v)
 		if err != nil || n <= 0 {
 			return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_system_node_min_count_per_az"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > rack.KarpenterSystemNodeMaxPerAZ {
+			return fmt.Errorf("karpenter_system_node_min_count_per_az must be an integer from 1 to %d", rack.KarpenterSystemNodeMaxPerAZ)
 		}
 	}
 

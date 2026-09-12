@@ -105,6 +105,7 @@ locals {
     karpenter_node_overlays_config            = var.karpenter_node_overlays_config
     karpenter_node_taints                     = var.karpenter_node_taints
     karpenter_node_volume_type                = var.karpenter_node_volume_type
+    karpenter_system_node_min_count_per_az    = var.karpenter_system_node_min_count_per_az
     keda_enable                               = var.keda_enable
     key_pair_name                             = var.key_pair_name
     kube_proxy_version                        = var.kube_proxy_version
@@ -267,6 +268,7 @@ locals {
     karpenter_node_overlays_config            = ""
     karpenter_node_taints                     = ""
     karpenter_node_volume_type                = "gp3"
+    karpenter_system_node_min_count_per_az    = "1"
     keda_enable                               = "false"
     key_pair_name                             = ""
     kube_proxy_version                        = "v1.35.3-eksbuild.13"
