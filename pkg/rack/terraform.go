@@ -61,6 +61,7 @@ var preserveEmpty = map[string]bool{
 	"ssl_ciphers":                         true,
 	"ssl_protocols":                       true,
 	"nlb_security_group":                  true,
+	"cloudwatch_retention_in_days":        true,
 	"build_node_type":                     true,
 	"key_pair_name":                       true,
 	"nginx_additional_config":             true,

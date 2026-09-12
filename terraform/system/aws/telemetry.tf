@@ -189,7 +189,7 @@ locals {
     cert_duration                             = "2160h"
     cidr                                      = "10.1.0.0/16"
     cloudwatch_disable                        = "false"
-    cloudwatch_retention_in_days              = "0"
+    cloudwatch_retention_in_days              = ""
     contour_cpu_request                       = "100m"
     contour_internal_tls                      = "true"
     contour_memory_request                    = "128Mi"

@@ -40,6 +40,7 @@ type Provider struct {
 	CloudwatchDisable         bool
 	AppCloudwatchDisable      bool
 	CloudwatchRetentionInDays int
+	CloudwatchRetentionNever  bool
 
 	Ec2 *ec2.EC2
 
@@ -68,6 +69,8 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	retentionDays, retentionNever := normalizeRetention(os.Getenv("CLOUDWATCH_RETENTION_IN_DAYS"))
+
 	p := &Provider{
 		Provider:                k,
 		Bucket:                  os.Getenv("BUCKET"),
@@ -78,7 +81,8 @@ func FromEnv() (*Provider, error) {
 		CloudwatchDisable:       os.Getenv("CLOUDWATCH_DISABLE") == "true",
 		AppCloudwatchDisable:    os.Getenv("APP_CLOUDWATCH_DISABLE") == "true",
 
-		CloudwatchRetentionInDays: normalizeRetention(os.Getenv("CLOUDWATCH_RETENTION_IN_DAYS")),
+		CloudwatchRetentionInDays: retentionDays,
+		CloudwatchRetentionNever:  retentionNever,
 	}
 
 	k.Engine = p

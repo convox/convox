@@ -133,7 +133,7 @@ variable "cloudwatch_disable" {
 }
 
 variable "cloudwatch_retention_in_days" {
-  default = "0"
+  default = ""
 }
 
 variable "fluentd_disable" {

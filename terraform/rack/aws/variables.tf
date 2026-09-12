@@ -109,7 +109,7 @@ variable "cloudwatch_disable" {
 }
 
 variable "cloudwatch_retention_in_days" {
-  default = "0"
+  default = ""
 }
 
 variable "ecr_docker_hub_cache_prefix" {
