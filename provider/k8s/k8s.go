@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +45,7 @@ import (
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
 	informerappsv1 "k8s.io/client-go/informers/apps/v1"
 	informerv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -53,8 +55,8 @@ import (
 )
 
 const (
-	CURRENT_CM_VERSION     = "v1.10.3"
-	MAX_RETRIES_UPDATE_CM  = 10
+	CERT_MANAGER_IMAGE     = "quay.io/jetstack/cert-manager-controller:v1.21.1"
+	CERT_MANAGER_MIN_MINOR = 30
 	CERT_MANAGER_NAMESPACE = "cert-manager"
 )
 
@@ -508,19 +510,6 @@ func (p *Provider) applySystemTemplate(name string, params map[string]interface{
 	return nil
 }
 
-func (p *Provider) deleteSystemTemplate(name string, params map[string]interface{}) error {
-	data, err := p.RenderTemplate(fmt.Sprintf("system/%s", name), params)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if err := Delete(data); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
 func (p *Provider) heartbeat() error {
 	as, err := p.AppList()
 	if err != nil {
@@ -594,61 +583,74 @@ func (p *Provider) initializeTemplates() {
 		return
 	}
 
-	d, _ := p.Cluster.AppsV1().Deployments(CERT_MANAGER_NAMESPACE).Get(context.TODO(), "cert-manager", am.GetOptions{})
-	if d == nil {
-		if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role":             p.CertManagerRoleArn,
-			"KarpenterEnabled": p.IsKarpenterEnabled,
-		}); err != nil {
-			panic(errors.WithStack(err))
-		}
-		return
+	params := map[string]interface{}{
+		"Role":             p.CertManagerRoleArn,
+		"KarpenterEnabled": p.IsKarpenterEnabled,
 	}
 
-	if d.Spec.Template.Labels["app.kubernetes.io/version"] != CURRENT_CM_VERSION {
+	d, err := p.Cluster.AppsV1().Deployments(CERT_MANAGER_NAMESPACE).Get(context.TODO(), "cert-manager", am.GetOptions{})
+	switch {
+	case ae.IsNotFound(err):
+		if !p.certManagerSupported() {
+			fmt.Printf("cert-manager needs kubernetes 1.%d or newer, skipping install\n", CERT_MANAGER_MIN_MINOR)
+			return
+		}
+
+		if err := p.applySystemTemplate("cert-manager", params); err != nil {
+			panic(errors.WithStack(err))
+		}
+	case err != nil:
+		fmt.Printf("could not read the cert-manager deployment: %v\n", err)
+	case !certManagerCurrent(d.Spec.Template.Spec.Containers):
+		if !p.certManagerSupported() {
+			fmt.Printf("cert-manager needs kubernetes 1.%d or newer, leaving the running version in place\n", CERT_MANAGER_MIN_MINOR)
+			break
+		}
+
 		fmt.Println("Updating cert-manager")
-		p.deleteSystemTemplate("cert-manager", map[string]interface{}{
-			"Role":             p.CertManagerRoleArn,
-			"KarpenterEnabled": p.IsKarpenterEnabled,
-		})
-
-		currentRetry := 0
-		for {
-			_, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), CERT_MANAGER_NAMESPACE, am.GetOptions{})
-			if ae.IsNotFound(err) {
-				fmt.Println("Uninstalled old cert-manager")
-				break
-			}
-
-			if currentRetry == MAX_RETRIES_UPDATE_CM {
-				panic("Unable to install new cert-manager version, the old version was not uninstalled")
-			}
-			currentRetry++
-			time.Sleep(time.Second * 10)
+		if err := p.applySystemTemplate("cert-manager", params); err != nil {
+			fmt.Printf("cert-manager update failed: %v\n", err)
 		}
-
-		fmt.Println("Installing new cert-manager version")
-		err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-			"Role":             p.CertManagerRoleArn,
-			"KarpenterEnabled": p.IsKarpenterEnabled,
-		})
-		if err != nil {
-			panic(errors.WithStack(fmt.Errorf("could not update cert-manager: %+v", err)))
-		}
-	} else {
+	default:
 		_, hasSystemNode := d.Spec.Template.Spec.NodeSelector["convox.io/system-node"]
 		if p.IsKarpenterEnabled != hasSystemNode {
 			fmt.Println("Reconciling cert-manager node scheduling")
-			if err := p.applySystemTemplate("cert-manager", map[string]interface{}{
-				"Role":             p.CertManagerRoleArn,
-				"KarpenterEnabled": p.IsKarpenterEnabled,
-			}); err != nil {
+			if err := p.applySystemTemplate("cert-manager", params); err != nil {
 				fmt.Printf("cert-manager scheduling reconcile failed: %v\n", err)
 			}
 		}
 	}
 
 	go p.installCertManagerConfig()
+}
+
+func (p *Provider) certManagerSupported() bool {
+	v, err := p.DiscoveryClient.ServerVersion()
+	if err != nil {
+		return true
+	}
+
+	return kubernetesAtLeast(v, 1, CERT_MANAGER_MIN_MINOR)
+}
+
+func kubernetesAtLeast(v *version.Info, major, minor int) bool {
+	ma, maErr := strconv.Atoi(strings.TrimRight(v.Major, "+"))
+	mi, miErr := strconv.Atoi(strings.TrimRight(v.Minor, "+"))
+	if maErr != nil || miErr != nil {
+		return true
+	}
+
+	return ma > major || (ma == major && mi >= minor)
+}
+
+func certManagerCurrent(cs []corev1.Container) bool {
+	for i := range cs {
+		if cs[i].Image == CERT_MANAGER_IMAGE {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (p *Provider) installCertManagerConfig() {

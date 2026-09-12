@@ -1286,3 +1286,56 @@ func TestRenderTemplateServiceSpreadAcrossZones(t *testing.T) {
 	require.NoError(t, err)
 	require.NotContains(t, string(data), "topologySpreadConstraints:")
 }
+
+const controllerPodLabels = `      labels:
+        app: cert-manager
+        app.kubernetes.io/component: controller
+        app.kubernetes.io/instance: cert-manager
+        app.kubernetes.io/name: cert-manager
+        app.kubernetes.io/version: v1.10.3
+`
+
+func TestRenderTemplateCertManager(t *testing.T) {
+	p := Provider{}
+	p.templater = templater.New(template.TemplatesFS)
+
+	role := "arn:aws:iam::123456789012:role/my-rack-cert-manager"
+
+	for _, c := range []struct {
+		name      string
+		role      string
+		karpenter bool
+		sysNodes  int
+		roleArns  int
+	}{
+		{"plain", "", false, 0, 0},
+		{"irsa", role, false, 0, 1},
+		{"karpenter", "", true, 3, 0},
+		{"irsa and karpenter", role, true, 3, 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			data, err := p.RenderTemplate("system/cert-manager", map[string]interface{}{
+				"Role":             c.role,
+				"KarpenterEnabled": c.karpenter,
+			})
+			require.NoError(t, err)
+
+			out := string(data)
+
+			require.Equal(t, 46, strings.Count(out, "\n---\n"))
+
+			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-cainjector:v1.21.1"))
+			require.Equal(t, 1, strings.Count(out, "image: "+CERT_MANAGER_IMAGE), "certManagerCurrent compares this image, so the constant and the template must agree")
+			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-webhook:v1.21.1"))
+
+			require.Equal(t, 1, strings.Count(out, "--certificate-request-minimum-backoff-duration=5m"))
+
+			require.Equal(t, 1, strings.Count(out, controllerPodLabels), "racks before 3.25.7 delete cert-manager and its CRDs unless the controller pod template reads v1.10.3")
+			require.Equal(t, 3, strings.Count(out, "\n        name: cert-manager\n"), "racks before 3.25.7 apply the 1.10 manifest, which merges containers by name")
+
+			require.Equal(t, c.sysNodes, strings.Count(out, `convox.io/system-node: "true"`))
+			require.Equal(t, c.sysNodes, strings.Count(out, "key: convox.io/system-node"), "the system node group is tainted, so the nodeSelector needs its toleration")
+			require.Equal(t, c.roleArns, strings.Count(out, "eks.amazonaws.com/role-arn: "+role))
+		})
+	}
+}
