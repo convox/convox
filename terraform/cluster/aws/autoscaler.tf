@@ -82,6 +82,7 @@ locals {
   cas_tail_args = [
     "--skip-nodes-with-system-pods=false",
     "--max-pod-eviction-time=5m",
+    "--emit-per-nodegroup-metrics",
   ]
 
   # Mode-specific discovery/targeting flag
@@ -93,6 +94,8 @@ locals {
     [
       "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
       "--balance-similar-node-groups",
+      "--balancing-ignore-label=eks.amazonaws.com/nodegroup-image",
+      "--balancing-ignore-label=eks.amazonaws.com/sourceLaunchTemplateVersion",
     ]
   )
 
@@ -396,8 +399,8 @@ resource "kubernetes_deployment" "autoscaler" {
 
           resources {
             limits = {
-              cpu    = "100m"
-              memory = "300Mi"
+              cpu    = "500m"
+              memory = "600Mi"
             }
 
             requests = {
