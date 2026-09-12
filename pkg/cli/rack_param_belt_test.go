@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/convox/convox/pkg/rack"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // TestWhitespaceNormalizationOnClearableParams verifies that whitespace-only
@@ -628,5 +630,81 @@ func TestNodePoolTemplateArgsComplete(t *testing.T) {
 				t.Errorf("templatefile call for %s in %s does not supply %v", tplName, npPath, missing)
 			}
 		})
+	}
+}
+
+// TestKarpenterNodeGroupMaxSize asserts enabling Karpenter does not lower the
+// system or build node group maximum. EKS rejects an update whose max is below
+// the node group's desired size, and CI runs terraform validate with continue-on-error.
+func TestKarpenterNodeGroupMaxSize(t *testing.T) {
+	const path = "../../terraform/cluster/aws/main.tf"
+
+	parser := hclparse.NewParser()
+	f, diags := parser.ParseHCLFile(path)
+	if diags.HasErrors() {
+		t.Fatalf("hclparse %s: %v", path, diags)
+	}
+	body, ok := f.Body.(*hclsyntax.Body)
+	if !ok {
+		t.Fatalf("hclparse: failed to coerce body for %s", path)
+	}
+
+	maxSize := map[string]hclsyntax.Expression{}
+	for _, block := range body.Blocks {
+		if block.Type != "resource" || len(block.Labels) != 2 || block.Labels[0] != "aws_eks_node_group" {
+			continue
+		}
+		for _, inner := range block.Body.Blocks {
+			if inner.Type != "scaling_config" {
+				continue
+			}
+			if attr, ok := inner.Body.Attributes["max_size"]; ok {
+				maxSize[block.Labels[1]] = attr.Expr
+			}
+		}
+	}
+
+	// The Karpenter case pairs MIXED with a max_on_demand_count of 1, which is the
+	// strictest: it fails if that branch is lowered back to 10 or 1, and if it is
+	// deleted so the expression falls through to the on-demand ceiling.
+	cases := []struct {
+		name      string
+		karpenter cty.Value
+		capacity  string
+	}{
+		{"karpenter", cty.True, "MIXED"},
+		{"default", cty.False, "ON_DEMAND"},
+	}
+
+	for _, tc := range cases {
+		ctx := &hcl.EvalContext{
+			Variables: map[string]cty.Value{
+				"var": cty.ObjectVal(map[string]cty.Value{
+					"build_node_min_count": cty.NumberIntVal(0),
+					"karpenter_enabled":    tc.karpenter,
+					"max_on_demand_count":  cty.NumberIntVal(1),
+					"node_capacity_type":   cty.StringVal(tc.capacity),
+				}),
+			},
+		}
+
+		for _, name := range []string{"cluster", "cluster-build"} {
+			expr, ok := maxSize[name]
+			if !ok {
+				t.Fatalf("no scaling_config max_size on aws_eks_node_group.%s in %s", name, path)
+			}
+
+			for _, index := range []int64{0, 2} {
+				ctx.Variables["count"] = cty.ObjectVal(map[string]cty.Value{"index": cty.NumberIntVal(index)})
+
+				v, diags := expr.Value(ctx)
+				if diags.HasErrors() {
+					t.Fatalf("evaluate aws_eks_node_group.%s max_size at index %d: %v", name, index, diags)
+				}
+				if !v.Equals(cty.NumberIntVal(100)).True() {
+					t.Errorf("%s: aws_eks_node_group.%s max_size at index %d is %s; want 100", tc.name, name, index, v.GoString())
+				}
+			}
+		}
 	}
 }
