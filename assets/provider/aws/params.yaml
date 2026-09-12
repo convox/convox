@@ -518,6 +518,13 @@ Groups:
         description: "How many days CloudWatch keeps your Nginx access logs. Use a value AWS allows for log retention, such as 1, 3, 7, 14, 30, up to 365."
         sideNote: "How these logs are collected can change with other settings, such as the router type."
         allowedMinValue: 1
+      - name: cloudwatch_retention_in_days
+        default: "0"
+        sideNote: Not applied by default
+        optional: true
+        type: integer
+        description: "How many days CloudWatch keeps the rack's log groups, covering the rack's own group, one group per app, and the EKS control plane group. &l Values are rounded up to the nearest one AWS allows, such as 1, 3, 7, 14, 30, 90, 365. Leave it at 0 to change nothing. &l &l An app that sets &i cwRetention &i or &i disableRetention &i in its convox.yml keeps its own value. &l &l &b Warning: &b CloudWatch deletes log data older than the window as soon as the policy applies, so lowering this removes logs you already have. &l"
+        allowedMinValue: 0
       - name: syslog
         default: "null"
         sideNote: Not forwarded by default

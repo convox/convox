@@ -29,25 +29,6 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 	}
 
-	if m.AppSettings.AwsLogs != nil {
-		retentionDays := m.AppSettings.AwsLogs.CwRetention
-
-		if !m.AppSettings.AwsLogs.RetentionDisable {
-			//sets the retention time to user given input
-			err := p.UpdateOrDisableLogGroupRetention(app, retentionDays, false)
-			if err != nil {
-				return err
-			}
-		} else {
-			//disable the retention policy on Log group
-			//sets the retention to maximum possible of 10years
-			err := p.UpdateOrDisableLogGroupRetention(app, 0, true)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	for i := range m.Timers {
 		service, ok := servicesMap[m.Timers[i].Service]
 		if ok {
@@ -58,7 +39,11 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 	}
 
-	return p.Provider.ReleasePromote(app, id, opts)
+	if err := p.Provider.ReleasePromote(app, id, opts); err != nil {
+		return err
+	}
+
+	return p.applyAppLogRetention(app, m)
 }
 
 func (p *Provider) processAccessControl(app, service string, opts manifest.AccessControlOptions) error {

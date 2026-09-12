@@ -35,10 +35,11 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
-	EcrScanOnPushEnable     bool
-	EcrImmutableTagsEnabled bool
-	CloudwatchDisable       bool
-	AppCloudwatchDisable    bool
+	EcrScanOnPushEnable       bool
+	EcrImmutableTagsEnabled   bool
+	CloudwatchDisable         bool
+	AppCloudwatchDisable      bool
+	CloudwatchRetentionInDays int
 
 	Ec2 *ec2.EC2
 
@@ -76,6 +77,8 @@ func FromEnv() (*Provider, error) {
 		EcrImmutableTagsEnabled: ecrImmutableTagsEnabled,
 		CloudwatchDisable:       os.Getenv("CLOUDWATCH_DISABLE") == "true",
 		AppCloudwatchDisable:    os.Getenv("APP_CLOUDWATCH_DISABLE") == "true",
+
+		CloudwatchRetentionInDays: normalizeRetention(os.Getenv("CLOUDWATCH_RETENTION_IN_DAYS")),
 	}
 
 	k.Engine = p
@@ -97,6 +100,8 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
+
+	go p.runLogRetentionReconciler(p.Context())
 
 	return nil
 }
