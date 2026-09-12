@@ -310,10 +310,15 @@ func TestValidateAndMutateParams_CloudwatchRetention(t *testing.T) {
 		value   string
 		wantErr bool
 	}{
-		{"0 valid", "0", false},
 		{"30 valid", "30", false},
+		{"3653 valid", "3653", false},
+		{"Never valid", "Never", false},
+		{"empty is a clear", "", false},
 		{"junk rejected", "abc", true},
 		{"negative rejected", "-5", true},
+		{"zero rejected", "0", true},
+		{"unallowed period rejected", "31", true},
+		{"lowercase never rejected", "never", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

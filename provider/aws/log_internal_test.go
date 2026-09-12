@@ -403,6 +403,11 @@ func appRelease(namespace, id, body string) *ca.Release {
 
 func retentionProvider(t *testing.T, m *mocks.CloudWatchLogsAPI, days int, objs []runtime.Object, cobjs []runtime.Object) *Provider {
 	t.Helper()
+	return retentionProviderNever(t, m, days, false, objs, cobjs)
+}
+
+func retentionProviderNever(t *testing.T, m *mocks.CloudWatchLogsAPI, days int, never bool, objs []runtime.Object, cobjs []runtime.Object) *Provider {
+	t.Helper()
 	t.Setenv("TEST", "true")
 	fastRetentionPut(t)
 
@@ -419,7 +424,7 @@ func retentionProvider(t *testing.T, m *mocks.CloudWatchLogsAPI, days int, objs 
 	}
 	require.NoError(t, k.Initialize(structs.ProviderOptions{}))
 
-	p := &Provider{Provider: k, CloudWatchLogs: m, CloudwatchRetentionInDays: days}
+	p := &Provider{Provider: k, CloudWatchLogs: m, CloudwatchRetentionInDays: days, CloudwatchRetentionNever: never}
 	k.Engine = p
 
 	return p
@@ -524,27 +529,79 @@ func TestCreateLogGroupRetention(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		param int
+		never bool
 		want  int64
 	}{
-		{"unset", 0, 7},
-		{"set", 30, 30},
+		{"unset", 0, false, 7},
+		{"set", 30, false, 30},
+		{"never", 0, true, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			m := &mocks.CloudWatchLogsAPI{}
 			m.On("CreateLogGroup", mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil)
 			m.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil)
 
-			p := &Provider{Provider: &k8s.Provider{Name: "rack"}, CloudWatchLogs: m, CloudwatchRetentionInDays: tc.param}
+			p := &Provider{
+				Provider:                  &k8s.Provider{Name: "rack"},
+				CloudWatchLogs:            m,
+				CloudwatchRetentionInDays: tc.param,
+				CloudwatchRetentionNever:  tc.never,
+			}
 
 			if err := p.createLogGroup("app1"); err != nil {
 				t.Fatalf("expected nil, got %v", err)
 			}
 
+			// A group created with no retention policy is what CloudWatch shows
+			// as Never expire.
 			if got := retentionPuts(m)["/convox/rack/app1"]; got != tc.want {
 				t.Errorf("retention: got %d, want %d", got, tc.want)
 			}
+			m.AssertNumberOfCalls(t, "CreateLogGroup", 1)
 		})
 	}
+}
+
+func TestReconcileLogRetentionNever(t *testing.T) {
+	m := &mocks.CloudWatchLogsAPI{}
+	m.On("DeleteRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.DeleteRetentionPolicyOutput{}, nil)
+	m.On("PutRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.PutRetentionPolicyOutput{}, nil)
+	m.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{
+		LogGroups: []*cloudwatchlogs.LogGroup{logGroup("/aws/eks/rack/cluster", 30)},
+	}, nil)
+	pageLogGroups(m, []*cloudwatchlogs.LogGroup{
+		logGroup("/convox/rack/system", 7),
+		logGroup("/convox/rack/already", 0),
+		logGroup("/convox/rack/keep", 365),
+	})
+
+	objs := []runtime.Object{appNamespace("keep", "RABCDEFGHIJ", "")}
+	cobjs := []runtime.Object{appRelease("rack-keep", "rabcdefghij", "appSettings:\n  awsLogs:\n    cwRetention: 365\n")}
+
+	p := retentionProviderNever(t, m, 0, true, objs, cobjs)
+
+	if err := p.reconcileLogRetention(context.Background()); err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+
+	var deleted []string
+	for i := range m.Calls {
+		c := &m.Calls[i]
+		if c.Method != "DeleteRetentionPolicy" {
+			continue
+		}
+		in, ok := c.Arguments.Get(0).(*cloudwatchlogs.DeleteRetentionPolicyInput)
+		if ok {
+			deleted = append(deleted, aws.StringValue(in.LogGroupName))
+		}
+	}
+
+	want := []string{"/convox/rack/system", "/aws/eks/rack/cluster"}
+	if !reflect.DeepEqual(deleted, want) {
+		t.Errorf("deleted: got %v, want %v", deleted, want)
+	}
+
+	m.AssertNumberOfCalls(t, "PutRetentionPolicy", 0)
 }
 
 func TestReconcileLogRetentionOff(t *testing.T) {
@@ -762,22 +819,27 @@ func TestPutLogGroupRetentionMissingGroup(t *testing.T) {
 
 func TestNormalizeRetention(t *testing.T) {
 	for _, tc := range []struct {
-		value string
-		want  int
+		value     string
+		wantDays  int
+		wantNever bool
 	}{
-		{"", 0},
-		{"abc", 0},
-		{"0", 0},
-		{"-5", 0},
-		{"1", 1},
-		{"13", 14},
-		{"45", 60},
-		{"4000", 3653},
-		{"99999999999999999999", 3653},
+		{"", 0, false},
+		{"abc", 0, false},
+		{"0", 0, false},
+		{"-5", 0, false},
+		{"1", 1, false},
+		{"13", 14, false},
+		{"45", 60, false},
+		{"4000", 3653, false},
+		{"99999999999999999999", 3653, false},
+		{"Never", 0, true},
+		{"never", 0, true},
+		{" Never ", 0, true},
 	} {
 		t.Run(tc.value, func(t *testing.T) {
-			if got := normalizeRetention(tc.value); got != tc.want {
-				t.Errorf("got %d, want %d", got, tc.want)
+			days, never := normalizeRetention(tc.value)
+			if days != tc.wantDays || never != tc.wantNever {
+				t.Errorf("got (%d, %v), want (%d, %v)", days, never, tc.wantDays, tc.wantNever)
 			}
 		})
 	}
@@ -861,6 +923,41 @@ func TestReconcileLogRetentionSafeSurvivesPanic(t *testing.T) {
 	})
 
 	require.NotPanics(t, func() { p.reconcileLogRetentionSafe(context.Background()) })
+}
+
+// Never has to survive the reconciler's own off switch, or the setting reads as
+// applied and nothing runs.
+func TestRunLogRetentionReconcilerRunsForNever(t *testing.T) {
+	prev := logRetentionInterval
+	t.Cleanup(func() { logRetentionInterval = prev })
+	logRetentionInterval = time.Hour
+
+	m := &mocks.CloudWatchLogsAPI{}
+	m.On("DeleteRetentionPolicy", mock.Anything).Return(&cloudwatchlogs.DeleteRetentionPolicyOutput{}, nil)
+	m.On("DescribeLogGroups", mock.Anything).Return(&cloudwatchlogs.DescribeLogGroupsOutput{}, nil)
+	pageLogGroups(m, []*cloudwatchlogs.LogGroup{logGroup("/convox/rack/app1", 7)})
+
+	p := retentionProviderNever(t, m, 0, true, nil, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		p.runLogRetentionReconciler(ctx)
+		close(done)
+	}()
+
+	require.Eventually(t, func() bool {
+		return len(m.Calls) > 0 && m.AssertNumberOfCalls(new(testing.T), "DeleteRetentionPolicy", 1)
+	}, 5*time.Second, 5*time.Millisecond, "Never must reach the sweep")
+
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("reconciler did not return after the context was cancelled")
+	}
 }
 
 func TestRunLogRetentionReconcilerSweepsThenStops(t *testing.T) {
