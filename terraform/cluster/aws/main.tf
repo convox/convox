@@ -201,7 +201,7 @@ resource "aws_eks_node_group" "cluster" {
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
     )
     max_size = var.karpenter_enabled ? (
-      count.index <= 2 ? 10 : 0
+      count.index <= 2 ? 100 : 0
       ) : (
       var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
     )
@@ -270,7 +270,7 @@ resource "aws_eks_node_group" "cluster-build" {
   scaling_config {
     desired_size = var.karpenter_enabled ? 0 : var.build_node_min_count
     min_size     = var.karpenter_enabled ? 0 : var.build_node_min_count
-    max_size     = var.karpenter_enabled ? 1 : 100
+    max_size     = 100
   }
 
   timeouts {
