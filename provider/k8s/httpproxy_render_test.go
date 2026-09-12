@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -103,6 +104,18 @@ func TestRenderTemplateCertificateIssuer(t *testing.T) {
 	dflt, err := p.RenderTemplate("app/certificate", base)
 	require.NoError(t, err)
 	require.Contains(t, string(dflt), "name: letsencrypt")
+	require.Equal(t, 1, strings.Count(string(dflt), "rotationPolicy: Never"), "cert-manager defaults this to Always from v1.18")
+
+	withDomains := map[string]interface{}{}
+	for k, v := range base {
+		withDomains[k] = v
+	}
+	withDomains["HasDomains"] = true
+	withDomains["Service"] = manifest.Service{Name: "web", Domains: manifest.ServiceDomains{"custom.example.com"}}
+
+	dom, err := p.RenderTemplate("app/certificate", withDomains)
+	require.NoError(t, err)
+	require.Equal(t, 2, strings.Count(string(dom), "rotationPolicy: Never"), "cert-manager defaults this to Always from v1.18")
 
 	base["CertIssuer"] = "self-signed"
 	ss, err := p.RenderTemplate("app/certificate", base)
