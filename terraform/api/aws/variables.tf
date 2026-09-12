@@ -118,6 +118,10 @@ variable "cloudwatch_disable" {
   default = false
 }
 
+variable "cloudwatch_retention_in_days" {
+  default = "0"
+}
+
 variable "efs_file_system_id" {
   type = string
 }

@@ -70,6 +70,7 @@ module "k8s" {
     ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
     APP_CLOUDWATCH_DISABLE                    = var.app_cloudwatch_disable
     CLOUDWATCH_DISABLE                        = var.cloudwatch_disable
+    CLOUDWATCH_RETENTION_IN_DAYS              = var.cloudwatch_retention_in_days
     SUBNET_IDS                                = join(",", var.subnets)
     VPC_ID                                    = var.vpc_id
     RELEASES_TO_RETAIN_AFTER_ACTIVE           = var.releases_to_retain_after_active
