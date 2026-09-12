@@ -297,6 +297,17 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 			{"g-2vcpu-8gb", true},
 			{"so1_5-2vcpu-16gb", true},
 		},
+		"aws/cloudwatch_retention_in_days": {
+			{"1", true},
+			{"30", true},
+			{"3653", true},
+			{"Never", true},
+			{"0", false},
+			{"31", false}, // AWS accepts only discrete periods
+			{"never", false},
+			{"365d", false},
+			{"", false},
+		},
 		"do/region": {
 			{"nyc3", true},
 			{"sfo3", true},

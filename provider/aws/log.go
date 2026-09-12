@@ -119,6 +119,10 @@ func (p *Provider) createLogGroup(app string) error {
 		return err
 	}
 
+	if p.CloudwatchRetentionNever {
+		return nil
+	}
+
 	retention := int64(7)
 
 	if p.CloudwatchRetentionInDays > 0 {
@@ -195,14 +199,42 @@ func appLogRetention(m *manifest.Manifest) (int, bool, bool) {
 	}
 }
 
-func normalizeRetention(v string) int {
+// normalizeRetention reports the rack-wide target. Zero days with never false
+// means Convox does not manage retention at all.
+func normalizeRetention(v string) (int, bool) {
+	v = strings.TrimSpace(v)
+
+	if strings.EqualFold(v, "never") {
+		return 0, true
+	}
+
 	n, _ := strconv.Atoi(v)
 
 	if n < 1 {
-		return 0
+		return 0, false
 	}
 
-	return roundUpToNearestAllowedRetention(n)
+	return roundUpToNearestAllowedRetention(n), false
+}
+
+func (p *Provider) logRetentionManaged() bool {
+	return p.CloudwatchRetentionNever || p.CloudwatchRetentionInDays > 0
+}
+
+func (p *Provider) setLogGroupRetention(group string, current *int64) error {
+	if p.CloudwatchRetentionNever {
+		if current == nil {
+			return nil
+		}
+
+		return p.deleteLogGroupRetention(group)
+	}
+
+	if aws.Int64Value(current) == int64(p.CloudwatchRetentionInDays) {
+		return nil
+	}
+
+	return p.putLogGroupRetention(group, int64(p.CloudwatchRetentionInDays))
 }
 
 func (p *Provider) applyAppLogRetention(app string, m *manifest.Manifest) error {
@@ -215,7 +247,7 @@ func (p *Provider) applyAppLogRetention(app string, m *manifest.Manifest) error 
 }
 
 func (p *Provider) runLogRetentionReconciler(ctx context.Context) {
-	if p.CloudwatchRetentionInDays < 1 {
+	if !p.logRetentionManaged() {
 		return
 	}
 
@@ -247,8 +279,6 @@ func (p *Provider) reconcileLogRetentionSafe(ctx context.Context) {
 }
 
 func (p *Provider) reconcileLogRetention(ctx context.Context) error {
-	days := int64(p.CloudwatchRetentionInDays)
-
 	skip, err := p.logRetentionOverrides()
 	if err != nil {
 		return err
@@ -268,11 +298,11 @@ func (p *Provider) reconcileLogRetention(ctx context.Context) error {
 
 			group := aws.StringValue(g.LogGroupName)
 
-			if group == "" || skip[group] || aws.Int64Value(g.RetentionInDays) == days {
+			if group == "" || skip[group] {
 				continue
 			}
 
-			if err := p.putLogGroupRetention(group, days); err != nil {
+			if err := p.setLogGroupRetention(group, g.RetentionInDays); err != nil {
 				rerr = fmt.Errorf("%s: %s", group, err)
 			}
 		}
@@ -283,7 +313,7 @@ func (p *Provider) reconcileLogRetention(ctx context.Context) error {
 		return err
 	}
 
-	if err := p.reconcileEksLogRetention(days); err != nil {
+	if err := p.reconcileEksLogRetention(); err != nil {
 		rerr = err
 	}
 
@@ -350,7 +380,7 @@ func (p *Provider) logRetentionOverrides() (map[string]bool, error) {
 	return skip, nil
 }
 
-func (p *Provider) reconcileEksLogRetention(days int64) error {
+func (p *Provider) reconcileEksLogRetention() error {
 	group := fmt.Sprintf("/aws/eks/%s/cluster", p.Name)
 
 	res, err := p.CloudWatchLogs.DescribeLogGroups(&cloudwatchlogs.DescribeLogGroupsInput{
@@ -365,14 +395,23 @@ func (p *Provider) reconcileEksLogRetention(days int64) error {
 			continue
 		}
 
-		if aws.Int64Value(g.RetentionInDays) == days {
-			return nil
-		}
-
-		return p.putLogGroupRetention(group, days)
+		return p.setLogGroupRetention(group, g.RetentionInDays)
 	}
 
 	return nil
+}
+
+func (p *Provider) deleteLogGroupRetention(group string) error {
+	time.Sleep(logRetentionPutInterval)
+
+	_, err := p.CloudWatchLogs.DeleteRetentionPolicy(&cloudwatchlogs.DeleteRetentionPolicyInput{
+		LogGroupName: aws.String(group),
+	})
+	if awsErrorCode(err) == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		return nil
+	}
+
+	return err
 }
 
 func (p *Provider) putLogGroupRetention(group string, days int64) error {

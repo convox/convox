@@ -673,6 +673,22 @@ var groupDescriptions = map[string]string{
 
 // clearableParams lists params that accept empty strings to clear their value.
 // Keep in sync with preserveEmpty in pkg/rack/terraform.go (TestClearableMatchesPreserveEmpty asserts).
+// cloudwatchRetentionDays is the set CloudWatch accepts. Keep in sync with
+// roundUpToNearestAllowedRetention in provider/aws/log.go and with the regex in
+// assets/provider/aws/params.yaml.
+var cloudwatchRetentionDays = []string{
+	"1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180",
+	"365", "400", "545", "731", "1096", "1827", "2192", "2557", "2922", "3288", "3653",
+}
+
+var cloudwatchRetentionValues = func() map[string]bool {
+	m := map[string]bool{"Never": true}
+	for _, d := range cloudwatchRetentionDays {
+		m[d] = true
+	}
+	return m
+}()
+
 var clearableParams = map[string]bool{
 	// Labels/taints — clear means "remove all"
 	"karpenter_node_labels":       true,
@@ -696,6 +712,8 @@ var clearableParams = map[string]bool{
 	"ssl_protocols": true,
 	// Router security group — clear means "use the rack-managed group"
 	"nlb_security_group": true,
+	// Log retention — clear means "Convox stops managing retention"
+	"cloudwatch_retention_in_days": true,
 	// Optional overrides — clear means "use auto/default"
 	"karpenter_ami_alias":         true,
 	"build_node_type":             true,
@@ -2032,9 +2050,8 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	if v, has := params["cloudwatch_retention_in_days"]; has && v != "" {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 0 {
-			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be a non-negative integer")
+		if !cloudwatchRetentionValues[v] {
+			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be Never or one of the periods AWS allows: %s", strings.Join(cloudwatchRetentionDays, ", "))
 		}
 	}
 

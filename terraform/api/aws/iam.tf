@@ -92,6 +92,7 @@ data "aws_iam_policy_document" "logs" {
   statement {
     actions = [
       "logs:PutRetentionPolicy",
+      "logs:DeleteRetentionPolicy",
     ]
     resources = [
       "arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/eks/${var.name}/cluster*",
