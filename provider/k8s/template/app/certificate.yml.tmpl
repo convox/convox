@@ -10,6 +10,8 @@ metadata:
     type: service
 spec:
   secretName: cert-{{.Service.Name}}
+  privateKey:
+    rotationPolicy: Never
   secretTemplate:
     labels:
       system: convox
@@ -40,6 +42,8 @@ metadata:
     type: service
 spec:
   secretName: cert-{{.Service.Name}}-domains
+  privateKey:
+    rotationPolicy: Never
   secretTemplate:
     labels:
       system: convox

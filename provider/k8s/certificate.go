@@ -150,6 +150,9 @@ func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs
 			},
 			DNSNames:   domains,
 			SecretName: certId,
+			PrivateKey: &cmapi.CertificatePrivateKey{
+				RotationPolicy: cmapi.RotationPolicyNever,
+			},
 			Duration: &am.Duration{
 				Duration: duration,
 			},
