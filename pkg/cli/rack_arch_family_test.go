@@ -169,3 +169,72 @@ func TestValidateAndMutateParamsArchFamilyConflict(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestValidateInstanceTypeList(t *testing.T) {
+	cases := []struct {
+		name    string
+		value   string
+		wantErr string
+	}{
+		{"single", "m5.large", ""},
+		{"empty", "", ""},
+		{"same family", "m5.large,m5.xlarge", ""},
+		{"same arch across families", "m5a.2xlarge,m5.2xlarge,m6a.2xlarge,m6i.2xlarge", ""},
+		{"all arm", "m6g.large,c6g.large,t4g.large", ""},
+		{"all gpu", "g5.xlarge,g4dn.xlarge", ""},
+		{"whitespace and trailing comma", "m5.large, m5a.large,", ""},
+		{"unknown family alongside known", "m5.large,mac2-m2.metal", ""},
+		{"unknown family does not weaken the check", "c7i-flex.large,c7g.large,m5.large", "architecture"},
+		{"arm mixed with amd", "m5.large,m6g.large", "architecture"},
+		{"amd mixed with arm first", "c6g.large,c5.large", "architecture"},
+		{"gpu mixed with cpu", "m5.large,g5.xlarge", "GPU"},
+		{"cpu mixed with gpu first", "p3.2xlarge,m5.large", "GPU"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateInstanceTypeList("node_type", c.value)
+			if c.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q, got nil", c.wantErr)
+			}
+			if !strings.Contains(err.Error(), c.wantErr) {
+				t.Errorf("expected error containing %q, got: %v", c.wantErr, err)
+			}
+			if !strings.Contains(err.Error(), "node_type") {
+				t.Errorf("expected error to name the parameter, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParamsRejectsMixedArchNodeType(t *testing.T) {
+	err := validateAndMutateParams(map[string]string{"node_type": "m5.large,m6g.large"}, "aws", map[string]string{"node_type": "m5.large"}, false)
+	if err == nil {
+		t.Fatalf("expected mixed architecture error, got nil")
+	}
+	if !strings.Contains(err.Error(), "node_type") {
+		t.Errorf("expected error to name node_type, got: %v", err)
+	}
+
+	if err := validateAndMutateParams(map[string]string{"node_type": "m5a.2xlarge,m5.2xlarge"}, "aws", map[string]string{"node_type": "m5.large"}, false); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	err = validateAndMutateParams(map[string]string{"build_node_type": "m5.large,m5a.large"}, "aws", map[string]string{"node_type": "m5.large"}, false)
+	if err == nil {
+		t.Fatalf("expected build_node_type list rejection, got nil")
+	}
+	if !strings.Contains(err.Error(), "build_node_type takes a single instance type") {
+		t.Errorf("expected single instance type error, got: %v", err)
+	}
+
+	if err := validateAndMutateParams(map[string]string{"node_type": "s-2vcpu-4gb,g-2vcpu-8gb"}, "do", map[string]string{"node_type": "s-2vcpu-4gb"}, true); err != nil {
+		t.Errorf("aws-only check must not fire for other providers: %v", err)
+	}
+}

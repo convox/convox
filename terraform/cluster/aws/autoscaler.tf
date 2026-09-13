@@ -96,6 +96,8 @@ locals {
       "--balance-similar-node-groups",
       "--balancing-ignore-label=eks.amazonaws.com/nodegroup-image",
       "--balancing-ignore-label=eks.amazonaws.com/sourceLaunchTemplateVersion",
+      "--balancing-ignore-label=node.kubernetes.io/instance-type",
+      "--balancing-ignore-label=beta.kubernetes.io/instance-type",
     ]
   )
 
