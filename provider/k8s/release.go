@@ -124,7 +124,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return errors.WithStack(err)
 	}
 
-	a, err := p.AppGet(app)
+	a, err := p.appGetLive(app)
 	if err != nil {
 		return errors.WithStack(err)
 	}
