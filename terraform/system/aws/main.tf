@@ -77,7 +77,7 @@ locals {
 
   // var.node_type can be assigned a comma separated list of instance types
   node_type       = split(",", var.node_type)[0]
-  build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
+  build_node_type = var.build_node_type != "" ? split(",", var.build_node_type)[0] : local.node_type
   arm_type        = module.node_arch.is_arm
   build_arm_type  = module.build_node_arch.is_arm
   current         = jsondecode(data.http.releases.response_body).tag_name

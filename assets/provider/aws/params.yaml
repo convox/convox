@@ -267,7 +267,7 @@ Groups:
         type: string
         regex: ^[a-z][a-z0-9-]*\.[a-z0-9]+(,[a-z][a-z0-9-]*\.[a-z0-9]+)*$
         description: "The AWS EC2 (instance type)[https://aws.amazon.com/ec2/instance-types/] used for your cluster's nodes."
-        sideNote: "How it is used can change with other settings, such as enabling Karpenter or turning on a build node group."
+        sideNote: "How it is used can change with other settings, such as enabling Karpenter or turning on a build node group. A comma separated list is accepted, so a node group can still launch when the first type has no capacity; on-demand node groups try the types in the order given, spot node groups pick by available capacity. List types with the same vCPU and memory."
       - name: build_node_enabled
         default: "false"
         type: boolean

@@ -93,6 +93,8 @@ locals {
     [
       "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
       "--balance-similar-node-groups",
+      "--balancing-ignore-label=node.kubernetes.io/instance-type",
+      "--balancing-ignore-label=beta.kubernetes.io/instance-type",
     ]
   )
 

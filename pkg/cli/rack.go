@@ -1444,6 +1444,43 @@ func instanceArch(instanceType string) string {
 	return familyArch(strings.Split(first, ".")[0])
 }
 
+func validateInstanceTypeList(param, value string) error {
+	types := []string{}
+	for _, t := range strings.Split(value, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			types = append(types, t)
+		}
+	}
+	if len(types) < 2 {
+		return nil
+	}
+
+	arch, archOf := "", ""
+	for _, t := range types {
+		a := instanceArch(t)
+		if a == "" {
+			continue
+		}
+		if arch == "" {
+			arch, archOf = a, t
+			continue
+		}
+		if a != arch {
+			return fmt.Errorf("%s mixes CPU architectures: %s is %s, %s is %s; all entries must share one architecture, since the node AMI is selected from the first entry", param, archOf, arch, t, a)
+		}
+	}
+
+	isGPU := func(t string) bool { return strings.HasPrefix(t, "g") || strings.HasPrefix(t, "p") }
+	gpu := isGPU(types[0])
+	for _, t := range types[1:] {
+		if isGPU(t) != gpu {
+			return fmt.Errorf("%s mixes GPU and non-GPU instance types: %s, %s; all entries must match, since the node AMI is selected from the first entry", param, types[0], t)
+		}
+	}
+
+	return nil
+}
+
 func checkArchFamilies(param, families string, archs []string, archSource string) error {
 	if families == "" || len(archs) == 0 {
 		return nil
@@ -2174,6 +2211,17 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			if arch != "amd64" && arch != "arm64" {
 				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
 			}
+		}
+	}
+
+	if provider == "aws" {
+		if v, ok := params["node_type"]; ok {
+			if err := validateInstanceTypeList("node_type", v); err != nil {
+				return err
+			}
+		}
+		if v, ok := params["build_node_type"]; ok && strings.Contains(v, ",") {
+			return errors.New("build_node_type takes a single instance type; use node_type for a list")
 		}
 	}
 
