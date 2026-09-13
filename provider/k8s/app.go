@@ -154,7 +154,7 @@ func (p *Provider) AppConfigSet(app, name, valueBase64 string) error {
 }
 
 func (p *Provider) AppDelete(name string) error {
-	a, err := p.AppGet(name)
+	a, err := p.appGetLive(name)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -189,6 +189,24 @@ func (p *Provider) AppDelete(name string) error {
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
 	ns, err := p.GetNamespaceFromInformer(p.AppNamespace(name))
+	if ae.IsNotFound(err) {
+		return nil, errors.WithStack(structs.ErrNotFound("app not found: %s", name))
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	a, err := p.appFromNamespace(*ns)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return a, nil
+}
+
+// appGetLive skips the namespace informer, so a read right after a write sees it.
+func (p *Provider) appGetLive(name string) (*structs.App, error) {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(name), am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return nil, errors.WithStack(structs.ErrNotFound("app not found: %s", name))
 	}
@@ -468,7 +486,7 @@ func (p *Provider) AppParameters() map[string]string {
 }
 
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
-	a, err := p.AppGet(name)
+	a, err := p.appGetLive(name)
 	if err != nil {
 		return errors.WithStack(err)
 	}

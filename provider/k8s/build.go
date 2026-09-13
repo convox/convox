@@ -43,7 +43,7 @@ func (*Provider) buildPrivileged(provider string) bool {
 }
 
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
-	appObj, err := p.AppGet(app)
+	appObj, err := p.appGetLive(app)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
