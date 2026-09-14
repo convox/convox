@@ -2,7 +2,8 @@ package metal
 
 func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, error) {
 	ans := map[string]string{
-		"cert-manager.io/cluster-issuer": "self-signed",
+		"cert-manager.io/cluster-issuer":              "self-signed",
+		"cert-manager.io/private-key-rotation-policy": "Never",
 	}
 
 	if certDuration != "" {

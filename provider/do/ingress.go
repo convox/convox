@@ -2,7 +2,8 @@ package do
 
 func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, error) {
 	ans := map[string]string{
-		"cert-manager.io/cluster-issuer": "letsencrypt",
+		"cert-manager.io/cluster-issuer":              "letsencrypt",
+		"cert-manager.io/private-key-rotation-policy": "Never",
 	}
 
 	if certDuration != "" {
