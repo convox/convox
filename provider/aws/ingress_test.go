@@ -53,16 +53,20 @@ func TestIngressAnnotations(t *testing.T) {
 		Annotations map[string]string
 	}{
 		{
-			Name:        "Not passing duration",
-			Duration:    "",
-			Annotations: map[string]string{"cert-manager.io/cluster-issuer": "letsencrypt"},
+			Name:     "Not passing duration",
+			Duration: "",
+			Annotations: map[string]string{
+				"cert-manager.io/cluster-issuer":              "letsencrypt",
+				"cert-manager.io/private-key-rotation-policy": "Never",
+			},
 		},
 		{
 			Name:     "Passing duration",
 			Duration: "720h",
 			Annotations: map[string]string{
-				"cert-manager.io/cluster-issuer": "letsencrypt",
-				"cert-manager.io/duration":       "720h",
+				"cert-manager.io/cluster-issuer":              "letsencrypt",
+				"cert-manager.io/duration":                    "720h",
+				"cert-manager.io/private-key-rotation-policy": "Never",
 			},
 		},
 	}
