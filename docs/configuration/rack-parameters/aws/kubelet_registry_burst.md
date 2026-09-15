@@ -11,7 +11,7 @@ url: /configuration/rack-parameters/aws/kubelet_registry_burst
 
 The `kubelet_registry_burst` parameter defines the maximum number of image pull requests that can be made in a burst, exceeding the `registry_pull_qps` limit for a short duration. This parameter allows for short-lived spikes in image pull traffic.
 
-The limiter does not queue. A pull that arrives once the burst allowance is spent fails immediately and enters a backoff of roughly 10 to 300 seconds, which the pod reports as `ErrImagePull`. Raising this value raises the number of concurrent cold-start pulls that succeed rather than queueing the rest.
+The limiter does not queue. A pull that arrives once the burst allowance is spent fails immediately and enters a backoff of roughly 10 to 300 seconds, which the pod reports as `ErrImagePull`. Raising this value raises the number of concurrent cold-start pulls that succeed rather than queueing the rest. The limit counts pulls, not bytes: it decides how many pulls may start in a burst and has no effect on how fast any one of them transfers. For a single large image, raise [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) instead, and see [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable).
 
 ## Default Value
 
@@ -66,4 +66,5 @@ This parameter is available on AWS Racks only and requires Rack version `3.25.6`
 - [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) for the companion steady-state QPS limit that pairs with this burst rate
 - [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) for eliminating Docker Hub pulls entirely by caching upstream images through ECR
 - [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) for authenticating Docker Hub pulls to raise the rate limit
+- [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) for the root volume bandwidth a single large image pull is bound by
 

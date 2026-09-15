@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/aws/imds_http_hop_limit
 # imds_http_hop_limit
 
 ## Description
-The `imds_http_hop_limit` parameter sets the EC2 Instance Metadata Service (IMDS) PUT response hop limit (`httpPutResponseHopLimit`) on the EC2 instances the Rack launches. It applies to the launch templates for the system node group, the build node group, and any additional node groups, and to the `metadataOptions` of the Karpenter `EC2NodeClass` resources for workload, build, and additional NodePools.
+The `imds_http_hop_limit` parameter sets the EC2 Instance Metadata Service (IMDS) PUT response hop limit (`httpPutResponseHopLimit`) on the EC2 instances the Rack launches. It applies to the launch templates for the system node group, the build node group, and any additional node groups or additional build node groups, and to the `metadataOptions` of the Karpenter `EC2NodeClass` resources for workload, build, and additional NodePools.
 
 The hop limit controls how many network hops an IMDSv2 token response can travel from the instance. A value of `1` keeps token responses on the node itself, so processes inside containers (which sit behind an extra network hop) cannot complete IMDSv2 token acquisition. Values of `2` or higher allow containerized processes, including pods, to obtain IMDSv2 tokens and read instance metadata.
 

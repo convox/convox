@@ -38,13 +38,13 @@ Once enabled, the Metrics Agent installs into your rack and begins collecting pe
 When monitoring is enabled, the Rack Settings → Dashboard Settings panel shows a **Switch Plan** button alongside the existing toggle. Switching between Free and Paid:
 
 - Uninstalls the current plan's chart, then installs the new plan's chart. Total ~5-15 minutes.
-- During the switch, `convox ps` GPU enrichment fields show a dash (`—`) until the new chart is installed and `prometheus_url` is set (see below).
+- During the switch, the GPU columns in the Console service detail pod list show a dash until the new chart is installed and `prometheus_url` is set (see below).
 - Free → Paid requires a payment method on file. The Console surfaces a card-on-file gate before the switch begins.
 - Paid → Free preserves the underlying Stripe subscription (metering stops; no auto-cancellation).
 
-### Setting `prometheus_url` for `convox ps` GPU enrichment
+### Setting `prometheus_url` for GPU telemetry
 
-Post-3.24.6, the rack does not auto-resolve a Prometheus URL. To populate GPU fields in `convox ps` after enabling monitoring, set [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) on your rack.
+Post-3.24.6, the rack does not auto-resolve a Prometheus URL. GPU telemetry rides on the process-list response the rack API returns, and the Convox Console renders it as the GPU columns in the [Service detail](/console/service-detail) pod list. To populate those columns after enabling monitoring, set [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) on your rack.
 
 > **Note:** the free-plan Prometheus chart depends on the Convox Console monitoring-redesign deploy. If your Convox Console version does not yet show the **Free** vs **Paid** plan picker in Rack Settings → Dashboard Settings, the free-plan service URL below will not resolve (no chart deployed). Use the paid-plan URL or wait until the redesign rolls out to your Convox Console.
 
@@ -58,7 +58,7 @@ convox rack params set prometheus_url=http://convox-kube-prometheus-sta-promethe
 convox rack params set prometheus_url=http://prometheus-gpu-metrics-server.kube-system.svc.cluster.local:80
 ```
 
-Until `prometheus_url` is set, `convox ps` GPU fields show a dash (`—`) even after monitoring is enabled in the Console.
+Until `prometheus_url` is set, the GPU columns show a dash even after monitoring is enabled in the Console.
 
 ## Default Dashboards
 
@@ -223,10 +223,10 @@ convox logs -a myapp
 ## Known Limitations
 
 - **Rack-only users (no Convox Console connection)** do not have access to GPU-observability Prometheus charts. The DCGM exporter still installs via `gpu_observability_enable=true`, but no Prometheus chart scrapes it. Connect to Convox Console and enable monitoring to restore full functionality.
-- **GPU observability on GCP.** GCP racks also support the DCGM exporter via [`gpu_observability_enable`](/configuration/rack-parameters/gcp/gpu_observability_enable) (GKE manages the NVIDIA device plugin, so no separate device-plugin parameter is required). The exporter exposes metrics on port 9400 through a `dcgm-exporter` ClusterIP Service in `kube-system` and through `prometheus.io/*` pod annotations. `serviceMonitor` is disabled on the chart, so a Prometheus Operator setup needs its own `ServiceMonitor` or annotation-based discovery. Google Managed Prometheus does not read `prometheus.io/*` annotations at all: it collects through a `PodMonitoring` resource that you create yourself, and Convox does not create one. GCP racks do not deploy a Convox-managed Prometheus and do not wire `prometheus_url`, so `convox ps` GPU enrichment and the Console GPU dashboards are AWS-only for now; on GCP, point your own Prometheus and Grafana at the exporter.
+- **GPU observability on GCP.** GCP racks also support the DCGM exporter via [`gpu_observability_enable`](/configuration/rack-parameters/gcp/gpu_observability_enable) (GKE manages the NVIDIA device plugin, so no separate device-plugin parameter is required). The exporter exposes metrics on port 9400 through a `dcgm-exporter` ClusterIP Service in `kube-system` and through `prometheus.io/*` pod annotations. `serviceMonitor` is disabled on the chart, so a Prometheus Operator setup needs its own `ServiceMonitor` or annotation-based discovery. Google Managed Prometheus does not read `prometheus.io/*` annotations at all: it collects through a `PodMonitoring` resource that you create yourself, and Convox does not create one. GCP racks do not deploy a Convox-managed Prometheus and do not wire `prometheus_url`, so the Console GPU columns and the Console GPU dashboards are AWS-only for now; on GCP, point your own Prometheus and Grafana at the exporter.
 - **`monitoring_metrics_provisioned` has been replaced.** Monitoring is now configured in the Convox Console (Rack Settings → Dashboard Settings → Enable Metrics Agent) rather than via rack parameters.
 - **Chart-version overrides require a Disable→Enable cycle to take effect.** Setting [`prometheus_gpu_metrics_chart_version`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) or [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) on a rack with monitoring enabled does not immediately re-deploy. The new value applies on the next Disable→Enable cycle from the Console.
-- **`convox ps` GPU fields require `prometheus_url` to be set.** Even with monitoring enabled in the Console, the rack does not auto-resolve a Prometheus URL. See "Setting `prometheus_url`" above.
+- **The Console GPU columns require `prometheus_url` to be set.** Even with monitoring enabled in the Console, the rack does not auto-resolve a Prometheus URL. See "Setting `prometheus_url`" above.
 - **DCGM without monitoring**: setting `gpu_observability_enable=true` on the rack without enabling monitoring in the Console results in DCGM running with no scraper. Dashboards remain empty until monitoring is enabled in the Console.
 - **Prometheus-backed autoscaling requires explicit `prometheus_url`.** Users with `scale.autoscale.gpuUtilization` or `scale.autoscale.queueDepth` triggers (without an explicit per-trigger `prometheusUrl`) must set `prometheus_url`. CPU-, memory-, and `scale.keda.triggers`-based autoscale (e.g. `aws-sqs-queue`, `kafka`, `cron`) continue to work without a Prometheus URL.
 - **Plan-switch requires rack version 3.24.6+.** Users on earlier rack versions cannot switch between free and paid plans via the Console. Upgrade to 3.24.6+ to use plan-switch.
@@ -237,5 +237,5 @@ convox logs -a myapp
 
 - [Logging](/configuration/logging) for configuring log collection
 - [Datadog Integration](/integrations/monitoring) for detailed Datadog setup instructions
-- [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) for `convox ps` GPU enrichment migration
+- [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url) for the Prometheus endpoint behind the GPU columns
 - [`gpu_observability_enable`](/configuration/rack-parameters/aws/gpu_observability_enable) for the DCGM exporter rack parameter

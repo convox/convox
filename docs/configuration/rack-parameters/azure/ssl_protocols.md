@@ -21,9 +21,9 @@ The default value is an empty string (`""`), which uses the nginx default protoc
 ## Setting Parameters
 To set the `ssl_protocols` parameter, use the following command:
 ```bash
-$ convox rack params set ssl_protocols=TLSv1.2+TLSv1.3 -r rackName
+$ convox rack params set ssl_protocols='TLSv1.2 TLSv1.3' -r rackName
 Updating parameters... OK
 ```
 
 ## Additional Information
-The value is passed directly to the nginx `ssl-protocols` configuration directive. Common values include `TLSv1.2`, `TLSv1.3`, or `TLSv1.2 TLSv1.3`. Use `+` to separate multiple protocols (they are converted to spaces internally).
+The value is passed directly to the nginx `ssl-protocols` configuration directive. Common values include `TLSv1.2`, `TLSv1.3`, or `TLSv1.2 TLSv1.3`. They must be separated by spaces.

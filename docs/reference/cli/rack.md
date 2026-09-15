@@ -393,7 +393,7 @@ Set rack parameters
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--force` | `-f` | Override the unknown-key, managed-parameter, and destructive-removal guards |
+| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, and fast-image-pull throughput guards |
 
 ### Examples
 ```bash
@@ -421,8 +421,24 @@ The CLI validates parameters before sending them to the Rack. This catches commo
          Their nodes are drained and deleted. Services pinned to convox.io/nodepool=batch or convox.io/nodepool=gpu become unschedulable.
          Re-run with --force to proceed
   ```
+- **Router whitelist lockout** is rejected as of 3.25.6. A `whitelist` that does not include `0.0.0.0/0` blocks every client outside those ranges, including Convox Console:
+  ```text
+  ERROR: param 'whitelist' does not include 0.0.0.0/0
+         The rack router serves the rack API, so this blocks every client outside
+         these ranges, including Convox Console. A Console-managed rack that blocks
+         Console cannot be updated through Convox again without editing the load
+         balancer rules in your cloud provider.
+         Re-run with --force to proceed
+  ```
+- **Image pull throughput** is checked as of 3.25.7. Setting [`fast_image_pull_enable`](/configuration/rack-parameters/aws/fast_image_pull_enable) to `true` is refused while a node volume that would receive the feature is below 600 MiB/s, and so is lowering [`node_volume_throughput`](/configuration/rack-parameters/aws/node_volume_throughput) or a Karpenter volume parameter back under that while the feature is on:
+  ```text
+  ERROR: fast_image_pull_enable requires at least 600 MiB/s of node volume throughput.
+         AWS documents image pulls getting SLOWER below that with this feature on.
+         Currently: node_volume_throughput=125
+         Raise node_volume_throughput to 600 or higher in the same call, or re-run with --force to proceed
+  ```
 
-Use `--force` to bypass the unknown-key, managed-parameter, and destructive-removal guards. Install-only, empty-value, and type validators cannot be overridden.
+Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, and fast-image-pull throughput guards. Install-only, empty-value, and type validators cannot be overridden.
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
 

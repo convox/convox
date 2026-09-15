@@ -11,7 +11,9 @@ url: /configuration/rack-parameters/aws/cloudwatch_disable
 
 The `cloudwatch_disable` parameter stops the Rack from creating, writing, and reading its own CloudWatch log groups. Those are the per-App group `/convox/<rack>/<app>` and the Rack system group `/convox/<rack>/system`.
 
-While the parameter is on, the Rack does not create either group, does not write Kubernetes events, deploy state transitions, or AWS resource provisioning messages into them, does not read from them, and does not apply retention policies to them.
+While the parameter is on, the Rack does not create either group, does not write Kubernetes events, deploy state transitions, or AWS resource provisioning messages into them, does not read from them, and does not apply the per-App `awsLogs` retention policy to them.
+
+From Rack version `3.25.7`, [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) still applies to both groups while this parameter is on. This parameter stops the Rack writing to and reading from the groups. It does not stop them existing or filling, because Fluentd can still create them.
 
 The parameter changes Rack behavior only. It does not stop Fluentd, which writes to the same group names. See the interaction table below.
 
@@ -85,7 +87,7 @@ No warning blocks the change; the parameters are applied either way.
 
 ## Existing Log Groups
 
-Turning the parameter on deletes nothing. Groups that already exist keep their contents, and they keep whatever retention policy was last applied to them. The Rack stops calling the CloudWatch retention APIs, so retention is frozen at that value until the parameter is turned off again.
+Turning the parameter on deletes nothing. Groups that already exist keep their contents. The Rack stops applying the per-App `awsLogs` retention policy on promote, so a group whose retention came from an App's `convox.yml` is frozen at its last value until the parameter is turned off again. From Rack version `3.25.7`, [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) keeps applying to both groups regardless of this parameter.
 
 Rack lines produced while the parameter is on are dropped rather than buffered. They are not replayed when you turn the parameter off. Turning it off restores reads immediately, including anything Fluentd wrote to the groups while the parameter was on.
 
@@ -99,14 +101,14 @@ This parameter is available on AWS Racks only and requires Rack version `3.25.3`
 - The `awsLogs` App setting (`cwRetention` and `disableRetention`) is a no-op while this parameter is on. Promoting a Release does not apply the retention policy, and existing groups keep the retention they already had. See [App Settings](/configuration/app-settings).
 - The `--filter` flag on `convox logs` is applied by CloudWatch, so it applies to the whole-App view only. It is not applied on the `--service` path.
 - [eks_log_types](/configuration/rack-parameters/aws/eks_log_types) controls EKS control plane logging, which uses a separate log group and is unrelated to this parameter.
-- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) sets the retention Fluentd applies to the Nginx access log stream. Fluentd applies it independently of this parameter.
+- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) is passed to Fluentd but sets no retention on any log group. Use [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) instead.
 
 ## See Also
 
 - [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) to stop the per-App log groups outright while keeping `convox rack logs`
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) to stop Fluentd shipping container output to CloudWatch
 - [syslog](/configuration/rack-parameters/aws/syslog) for forwarding logs to an external syslog endpoint
-- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) for Nginx access log retention
+- [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for how long CloudWatch keeps the Rack, App, and EKS control plane log groups
 - [eks_log_types](/configuration/rack-parameters/aws/eks_log_types) for EKS control plane logging
 - [Logging](/configuration/logging) for an overview of Convox logging
 - [App Settings](/configuration/app-settings) for the per-App `awsLogs` retention settings

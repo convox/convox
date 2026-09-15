@@ -38,6 +38,12 @@ When [Karpenter](/configuration/scaling/karpenter) is enabled or being enabled, 
 
 These guards prevent scheduling deadlocks during node group transitions. See [Karpenter Enablement Validation Guards](/configuration/scaling/karpenter#enablement-validation-guards) for details.
 
+## Instance Type Lists
+
+When [`node_type`](/configuration/rack-parameters/aws/node_type) names more than one instance type, the capacity type decides how EKS picks from the list. An On-Demand node group tries the types in the order listed. A Spot node group chooses by available capacity and price and ignores the order, so on `spot`, and on the Spot groups of a `mixed` Rack, listing more types widens the capacity pool rather than setting a preference.
+
+With `mixed`, the Cluster Autoscaler does not treat the On-Demand group and the Spot groups as interchangeable, so a scale-up splits across the two Spot groups rather than all three. See [How the Autoscaler Picks a Group](/configuration/scaling/autoscaling#how-the-autoscaler-picks-a-group).
+
 ## Additional Information
 When using the `mixed` capacity type, it is important to configure the [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) and [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameters to ensure that your cluster maintains the desired balance of cost and reliability.
 

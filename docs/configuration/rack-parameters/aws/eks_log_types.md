@@ -60,12 +60,12 @@ Updating parameters... OK
 ## Additional Information
 - Log types are validated by the AWS API at apply time. Invalid values (e.g., `Audit` with a capital A, or `controller_manager` with an underscore) are rejected with an `InvalidParameterException`.
 - CloudWatch Logs pricing applies: $0.50/GB ingested, $0.03/GB/month stored. The `api` log type on a busy cluster can generate significant volume, so consider enabling only `audit` if cost is a concern.
-- **CloudWatch log group lifecycle**: When logging is enabled, AWS automatically creates a log group at `/aws/eks/<cluster-name>/cluster`. When logging is disabled (parameter cleared or rack downgraded), EKS stops writing to the log group but AWS does **not** delete it. Historical logs and the log group persist until manually deleted. This is standard AWS behavior, not a Terraform artifact.
+- **CloudWatch log group lifecycle**: When logging is enabled, AWS automatically creates a log group at `/aws/eks/<cluster-name>/cluster`. When logging is disabled (parameter cleared or rack downgraded), EKS stops writing to the log group but AWS does **not** delete it. Historical logs and the log group persist until manually deleted. This is standard AWS behavior, not a Terraform artifact. AWS creates the group with no retention policy, so it never expires. From Rack version `3.25.7`, set [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) to give it an expiry; the same value covers the Rack and App log groups.
 - Downgrade safety: removing this parameter (or downgrading to a rack version that does not support it) disables logging. The EKS cluster is updated in-place; no destructive changes occur.
 - This parameter prevents the common issue where a user enables EKS audit logging manually through the AWS console, and Convox's next Terraform apply silently disables it because the `aws_eks_cluster` resource had no `enabled_cluster_log_types` attribute.
 
 ## Related Parameters
-- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days): Controls Nginx access log retention in CloudWatch (application-level logging, not cluster-level).
+- [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days): Sets how long CloudWatch keeps the control plane log group, along with the Rack and App log groups.
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable): Controls the Fluentd log collector for application logs.
 - [syslog](/configuration/rack-parameters/aws/syslog): Forwards application logs to an external syslog endpoint.
 

@@ -287,9 +287,9 @@ configurable var names.
 
 ## Provider scope
 
-The DCGM exporter is available on AWS Racks and, from rack version `3.25.3`, on GCP Racks. The Convox-managed Prometheus, the `prometheus_url` wiring, `convox ps` GPU enrichment, and the Console GPU dashboards remain AWS-only.
+The DCGM exporter is available on AWS Racks and, from rack version `3.25.3`, on GCP Racks. The Convox-managed Prometheus, the `prometheus_url` wiring, the Console GPU columns, and the Console GPU dashboards remain AWS-only.
 
-| Provider | DCGM exporter | Convox-managed Prometheus, `convox ps` GPU fields, Console dashboards |
+| Provider | DCGM exporter | Convox-managed Prometheus, Console GPU columns, Console dashboards |
 |:---------|:--------------|:----------------------------------------------------------------------|
 | AWS | Installed by `gpu_observability_enable` | Available |
 | GCP | Installed by `gpu_observability_enable`, rack `3.25.3` or later | Not available. Point your own Prometheus and Grafana at the exporter |
@@ -319,7 +319,7 @@ The parameters below are AWS unless noted. For the GCP set, see [gpu_observabili
 - [`prometheus_gpu_metrics_retention`](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention):
   Retention window for the free in-cluster Prometheus chart.
 - [`prometheus_url`](/configuration/rack-parameters/aws/prometheus_url):
-  Override the Prometheus endpoint used by `convox ps` GPU enrichment
+  Override the Prometheus endpoint behind the Console GPU columns
   and KEDA Prometheus-backed autoscale triggers.
 - [`grafana_dashboard_var_app`](/configuration/rack-parameters/aws/grafana_dashboard_var_app),
   [`_namespace`](/configuration/rack-parameters/aws/grafana_dashboard_var_namespace),

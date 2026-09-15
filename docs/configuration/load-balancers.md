@@ -169,7 +169,7 @@ services:
       - 3001/udp
 ```
 
-> **Note:** While explicitly declaring TCP like this using `ports` with the protocol is valid, the simpler syntax is recommended for TCP configurations:
+> **Note:** A TCP port can be declared with `protocol: TCP`, but the short `5000: 5001` form does the same thing.
 
 ### Custom Balancer Protocols
 
@@ -210,7 +210,7 @@ services:
     build: .
 ```
 
-A balancer serving both protocols on one port number has to be created that way, and its ports cannot be changed afterwards. See [A Balancer Serving Both Protocols on One Port](#a-balancer-serving-both-protocols-on-one-port).
+From Rack version `3.25.7` the ports of a balancer serving both protocols on one port number can be changed like any other balancer's. On Rack version `3.25.6` the balancer has to be created with those ports and they cannot be changed afterwards. See [A Balancer Serving Both Protocols on One Port](#a-balancer-serving-both-protocols-on-one-port).
 
 One manifest entry renders as two Kubernetes ports at the same number, so `convox api get /apps/myapp/balancers` reports two entries for it.
 
@@ -277,24 +277,37 @@ A balancer that never received an address, such as one whose mixed TCP and UDP p
 2. Move whatever points at the old endpoint over to the new one.
 3. Remove the old balancer entry and deploy. Its load balancer, target groups and node security group rules are cleaned up.
 
+### Removing the Attribute
+
+Dropping `awsLoadBalancerController: true` from a balancer that has a `TCP_UDP` port fails at build, because `protocol: TCP_UDP` requires the attribute:
+
+```text
+balancer dns port 53 uses protocol TCP_UDP, which requires awsLoadBalancerController: true
+```
+
+Dropping the attribute and changing the port back to plain `TCP` in one deploy is accepted from Rack version `3.25.7`, and hands the balancer back to the in-cluster Kubernetes cloud provider:
+
+- The AWS Load Balancer Controller deletes the load balancer it owned and the in-cluster cloud provider creates a new one, so the balancer gets a new address. Nothing is left running in your AWS account.
+- Targets are registered by node port again instead of by Pod IP. Anything that depends on Pod IP targets, such as security group rules written against Pod CIDRs, behaves differently afterwards.
+- `convox balancers` reports an empty endpoint for the balancer until the next deploy, while the new load balancer serves normally. See [A Balancer With No Endpoint](#a-balancer-with-no-endpoint).
+
 ### A Balancer Serving Both Protocols on One Port
 
-A balancer serving both protocols on one port number has to be created that way. On `3.25.6` a `TCP_UDP` port cannot be added to a balancer that already exists, and once a balancer has a `TCP_UDP` port its ports cannot be changed: adding a port, removing a port, changing a target port, changing a protocol, removing `awsLoadBalancerController: true`, and reordering the entries under `ports:` are all refused. Convox refuses these because it cannot apply the change safely, not because AWS or the controller rejects them.
+From Rack version `3.25.7` a balancer that serves both protocols on one port number takes port changes like any other balancer. Adding a port, removing a port, changing a target port, changing a protocol, putting `protocol: TCP_UDP` on a port an existing balancer already serves as plain `TCP`, and reordering the entries under `ports:` all deploy. The balancer must already carry `awsLoadBalancerController: true`, because `protocol: TCP_UDP` requires it and the attribute cannot be added to a balancer that already has a load balancer.
 
-This is a separate rule from the ownership check above, with a different trigger and no exemption for a balancer that has no address yet. It fires only when a same-port TCP and UDP pair exists either in `convox.yml` or on the live balancer. An `awsLoadBalancerController: true` balancer with no `TCP_UDP` port keeps full port mutability, reordering included.
+On Rack version `3.25.6` all of those edits are refused:
 
 ```text
 balancer dns: TCP and UDP on one port number can only be set up on a new balancer, and its ports cannot be changed afterwards. It is currently serving 53/TCP->5300, 53/UDP->5300. Restore this balancer's previous ports in convox.yml to deploy it again, or replace it: add a second balancer with the ports you want and move traffic to it, or remove this one, deploy, then add it back. Replacing it gives a new address
 ```
 
-The ports the message lists are the live Service's ports in their live order, which is what to restore.
+The ports the message lists are the live Service's ports in their live order, which is what to restore. The refusal fails that deploy and nothing else, so the App's current Release is unaffected and `convox apps params set`, `convox apps update` and a promote of the current Release all keep working. On `3.25.6` a rollback to a Release that has the balancer at different ports is refused the same way. Upgrading the Rack to `3.25.7` lifts the refusal, and the next deploy carries the new ports.
 
-- The refusal fails that deploy and nothing else. The App's current Release is unaffected, so `convox apps params set`, `convox apps update` and a promote of the current Release all keep working.
-- **Adding UDP to a port a balancer already serves as plain TCP is refused.** Putting `protocol: TCP_UDP` on an existing DNS-over-TCP balancer is this case, and the message lists only the one live port, so it reads shorter than expected.
-- **Removing the balancer's block from `convox.yml` always works.** It deletes the balancer and its load balancer, and it is never refused, because the rule only looks at balancers the manifest still declares. Removing a balancer and adding it back under the same name is two deploys, not one.
-- **A rollback ends two different ways.** A rollback to a Release that has the balancer at different ports is refused with the same message. A rollback to a Release from before the balancer existed succeeds and deletes the balancer and its load balancer, because the balancer is absent from that manifest.
-- Removing `awsLoadBalancerController: true` while a `TCP_UDP` pair is live is refused with the same message. Reverting the commit that gave an App its `TCP_UDP` balancer is that edit.
-- Renaming a balancer is not refused and deletes its load balancer, which is true of every balancer.
+Three edits work on both versions. Removing the balancer's block from `convox.yml` deletes the balancer and its load balancer, and adding it back under the same name is a second deploy. Rolling back to a Release from before the balancer existed deletes the balancer and its load balancer, because the balancer is absent from that manifest. Renaming a balancer deletes its load balancer and creates a new one, which is true of every balancer. A balancer with no `TCP_UDP` port has always taken port changes, reordering included.
+
+Changing a port between `TCP` and `TCP_UDP` changes the protocol of its AWS target group, and AWS cannot change that in place. The AWS Load Balancer Controller creates a new target group and moves the listener onto it. The load balancer itself is reused and its DNS name does not change. The new target group has a new ARN, so an alarm or a dashboard that names the old ARN stops matching.
+
+Downgrading a Rack to `3.25.6` leaves a balancer whose ports were changed on `3.25.7` serving on those ports, and the `3.25.6` Rack refuses further port edits with the message above. On a Rack earlier than `3.25.6` the balancer keeps serving and its Kubernetes object is unchanged, but every deploy of the App is rejected until the `TCP_UDP` port is removed from `convox.yml`. See [Custom Balancer Protocols](#custom-balancer-protocols).
 
 ### What Changes
 
@@ -322,6 +335,8 @@ Client IP preservation on UDP targets means a Pod that reaches its own balancer'
 ### A Balancer With No Endpoint
 
 If a balancer never gets an address and `convox balancers` shows it empty, the most common cause is an annotation that stops the controller from claiming the Service, in particular overriding `service.beta.kubernetes.io/aws-load-balancer-nlb-target-type`. The controller declines with no event on the Service, so nothing in Convox reports the cause.
+
+A balancer that had an address and reports an empty one right after `awsLoadBalancerController: true` was removed is a different case. Its load balancer is serving. The AWS Load Balancer Controller clears the Service's address as it tears down the load balancer it owned, after the in-cluster cloud provider has written the new one's. The next `convox deploy` restores the reported endpoint. Promoting the same Release again does not, because that is the one deploy that changes nothing on the Service.
 
 ## See Also
 

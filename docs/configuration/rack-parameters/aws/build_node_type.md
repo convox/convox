@@ -25,6 +25,17 @@ Updating parameters... OK
 ```
 This command sets the build node type to `c5.large`.
 
+## Single Instance Type
+
+`build_node_type` takes one instance type. A comma separated list is rejected by the parameter pattern and by `convox rack params set`:
+
+```bash
+$ convox rack params set build_node_type=m5.large,m5a.large -r rackName
+ERROR: build_node_type takes a single instance type; use node_type for a list
+```
+
+Leaving `build_node_type` unset gives the build node group the whole [`node_type`](/configuration/rack-parameters/aws/node_type) value, list included, so the build node group falls back through the same instance types as the primary node groups. Set `build_node_type` and the build node group runs that one type whatever `node_type` holds.
+
 ## Architecture Compatibility
 
 On a single-architecture Rack, the `build_node_type` must use the same CPU architecture as the [node_type](/configuration/rack-parameters/aws/node_type) parameter. If your Rack uses x86 instances (e.g. `t3`, `c5`, `m5`), the build node must also be x86. If your Rack uses ARM/Graviton instances (e.g. `t4g`, `c6g`, `m6g`), the build node must also be ARM.

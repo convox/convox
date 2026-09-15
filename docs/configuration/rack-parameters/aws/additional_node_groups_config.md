@@ -27,7 +27,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node group c
 | Field | Required | Description | Default |
 |-------|----------|-------------|---------|
 | `type` | Yes | The EC2 instance type to use for the node group |  |
-| `disk` | No | The disk size in GB for the nodes | Same as main node disk |
+| `disk` | No | The disk size in GiB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances. Accepts `ON_DEMAND` or `SPOT` only, matched exactly. The Azure aliases `Regular` and `Spot` are rejected | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes | 1 |
 | `max_size` | No | Maximum number of nodes | 100 |
@@ -173,7 +173,7 @@ Raising `min_size` above the number of nodes a group is currently running used t
 This handling has limits:
 
 - It covers AWS Racks only.
-- `additional_node_groups_config` is covered from `3.25.3`. The build node group ([`build_node_min_count`](/configuration/rack-parameters/aws/build_node_min_count)) and, on a Rack with `node_capacity_type=mixed`, the on-demand system node group ([`min_on_demand_count`](/configuration/rack-parameters/aws/min_on_demand_count)) are covered from `3.25.6`. Those two are skipped when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`; additional node groups are still covered. [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) does not have the underlying problem and does not need it.
+- `additional_node_groups_config` is covered from `3.25.3`. The build node group ([`build_node_min_count`](/configuration/rack-parameters/aws/build_node_min_count)) and, on a Rack with `node_capacity_type=mixed`, the on-demand system node group ([`min_on_demand_count`](/configuration/rack-parameters/aws/min_on_demand_count)) are covered from `3.25.6`. Those two are skipped when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`; additional node groups are still covered. The system node groups on a Karpenter Rack ([`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az)) are covered from `3.25.7`. [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) does not have the underlying problem and does not need it.
 - It only raises a group's desired size. It never lowers one.
 - It runs in the convox binary rather than in the Rack's Terraform modules, so it arrives with a newer convox CLI, or with a Console rebuilt against one, and not with a Rack version upgrade.
 

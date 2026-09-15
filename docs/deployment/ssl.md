@@ -41,6 +41,8 @@ $ convox certs delete cert-xxxxxxxxxxxxxx
 Deleting certificate cert-xxxxxxxxxxxxxx... OK
 ```
 
+For a certificate generated with `--issuer letsencrypt`, this deletes the certificate's Secret. The Rack continues to renew that certificate and reissues the Secret, so the certificate reappears in `convox certs --generated`. Imported certificates and self-signed generated certificates are Secrets only, so deleting them removes them.
+
 ## Advanced SSL Configuration: Let's Encrypt DNS-01 Challenge with Route53 (AWS)
 
 > This configuration is currently available for AWS racks using Route53 for DNS management.
@@ -168,6 +170,14 @@ Certificates generated with `convox certs generate --issuer letsencrypt` live in
 
 Starting with rack version 3.25.1, the Rack also propagates each renewal to those copies as soon as it is observed, so running services always serve the current certificate without requiring a new deploy. Each renewal updates only the copies of that same certificate, and certificates issued per-service from the `domain:` attribute are managed in place and need no propagation.
 
+## Private Key Reuse on Renewal
+
+Convox reuses a Service's TLS private key when its certificate renews rather than generating a new key pair. This matters to clients that pin the certificate's public key.
+
+Rack version `3.25.7` upgrades cert-manager to v1.21.1, whose own default changed to generating a new key pair on every renewal. The Rack sets the reuse policy explicitly to keep the behavior earlier Rack versions had, and that policy is written into a Service's certificate when the App deploys. Until an App is deployed on Rack version `3.25.7` or later, its certificate carries no policy and takes a new private key on every renewal, not only the first. Deploy each App once after the upgrade to make its key stable again.
+
+A certificate created by `convox certs generate --issuer letsencrypt` on Rack version `3.25.7` or later carries the policy from the moment it is generated. One generated on an earlier Rack version does not, and no later command adds it, so regenerate it if its key must stay stable.
+
 ## Summary
 
 Convox integrates Let's Encrypt for both standard HTTP-01 validation and more advanced DNS-01 challenges. The DNS-01 challenge is currently supported on AWS racks using Route53.
@@ -176,3 +186,4 @@ Convox integrates Let's Encrypt for both standard HTTP-01 validation and more ad
 
 - [Custom Domains](/deployment/custom-domains) for routing custom domains to your services
 - [Load Balancers](/configuration/load-balancers) for load balancer configuration
+- [Troubleshooting](/help/troubleshooting#ssl-certificate-issues) for certificates that do not issue

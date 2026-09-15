@@ -234,7 +234,7 @@ For workloads that require GPU acceleration, Convox supports requesting GPU reso
 Before using GPU scaling:
 
 1. Your rack must be running on GPU-capable instances:
-   - **AWS**: EC2 p3, p4, g4, or g5 instance families
+   - **AWS**: EC2 instance families beginning with `g` or `p`, for example g5, g6, p4, or p5
    - **Azure**: NC, ND, or NV series virtual machines
 2. The NVIDIA device plugin must be enabled on your rack:
 ```bash
@@ -359,13 +359,13 @@ On AWS Racks, the Kubernetes Cluster Autoscaler adds nodes by raising the desire
 
 ### Node Group Layout
 
-Convox creates one EKS managed node group per availability zone for primary nodes, three of them with the default [`high_availability=true`](/configuration/rack-parameters/aws/high_availability). They share one instance type and one launch template, and each group is pinned to a single subnet. The group name carries its zone, followed by an index and a 16-character random suffix with no separator between them:
+Convox creates three EKS managed node groups for primary nodes with the default [`high_availability=true`](/configuration/rack-parameters/aws/high_availability), one per availability zone. With `high_availability=false` the Rack spans two availability zones and has a single primary node group. The groups share one launch template, and each is pinned to a single subnet. They also share one instance type, or the same list of instance types when [`node_type`](/configuration/rack-parameters/aws/node_type) names more than one, which requires Rack version `3.25.7` or later. The group name carries its zone, followed by an index and a 16-character random suffix with no separator between them:
 
 ```text
 rackName-us-east-1a-04f7b2c9a1e6d3805
 ```
 
-Treat that name as illustrative. The index comes from subnet ordering rather than from the zone list, so index `0` is not guaranteed to be the first zone alphabetically. The [dedicated build node group](/configuration/rack-parameters/aws/build_node_enabled) is not per-zone: there is one group whatever the zone count, always pinned to the first subnet. Its name carries that subnet's zone the same way (`rackName-build-us-east-1a-0...`).
+Treat that name as illustrative. The index comes from subnet ordering rather than from the zone list, so index `0` is not guaranteed to be the first zone alphabetically. When `node_type` names more than one instance type, an `m` follows the zone (`rackName-us-east-1am-04f7b2c9a1e6d3805`). The [dedicated build node group](/configuration/rack-parameters/aws/build_node_enabled) is not per-zone: there is one group whatever the zone count, always pinned to the first subnet. Its name carries that subnet's zone the same way (`rackName-build-us-east-1a-0...`).
 
 [Additional node groups](/configuration/rack-parameters/aws/additional_node_groups_config) are not per-zone either. One group spans every subnet, and its name (`rackName-additional-<id>-<suffix>`) carries no zone, so you cannot read a zone out of the activity history of an additional group.
 
@@ -375,6 +375,10 @@ The autoscaler runs with `--expander=least-waste`, so among the groups that can 
 
 When Karpenter is disabled it also runs with `--balance-similar-node-groups`. That splits each scale-up across the per-zone primary groups, smallest group first, so consecutive scale-ups keep the zones within one node of each other. A group joins the split only if every pod in the batch that fits the main group also fits it. Pods that can only run in one zone, for example a pod bound to an EBS volume that already exists there or a pod carrying a zone node selector, pin their batch to that zone.
 
+Groups are compared by their nodes' resources rather than by their names: the same CPU count, pod capacity and ephemeral storage, and effectively the same memory. From Rack version `3.25.7` a group stays in the split when only the way EKS built its nodes differs, so a group replaced onto a newer AMI keeps its place, and so does a Rack whose [`node_type`](/configuration/rack-parameters/aws/node_type) lists several instance types of the same size. On earlier Racks a group whose AMI or instance type differed from the others dropped out of the split and its zone stopped growing.
+
+Capacity type is compared either way. On a [`node_capacity_type`](/configuration/rack-parameters/aws/node_capacity_type) of `mixed`, the On-Demand group and the two Spot groups do not compare equal, so a scale-up splits across two groups rather than three.
+
 On a Karpenter Rack the discovery arguments are replaced wholesale and `--balance-similar-node-groups` is not passed, so no scale-up is ever split.
 
 ### Capacity Errors in One Zone
@@ -383,7 +387,7 @@ When EC2 cannot satisfy a launch in one zone, the Auto Scaling group retries on 
 
 The first backoff lasts 5 minutes. Each subsequent failure doubles it, up to a 30-minute maximum, and the ladder resets after 3 hours with no failure. The doubling only happens once a backoff window has already expired, so several scale-ups failing inside one window keep the same duration.
 
-Each primary node group carries a single instance type, so there is no instance type fallback from the managed node groups. [Karpenter](/configuration/scaling/karpenter) selects from a set of instance types and zones on each launch.
+A primary node group falls back to another instance type when [`node_type`](/configuration/rack-parameters/aws/node_type) names a comma separated list, which requires Rack version `3.25.7` or later. Each group is then created with every listed type. An On-Demand group tries them in the order listed, so the first entry is what normally launches and a later entry launches only when EC2 has no capacity for the earlier ones in that zone. Nothing is rebuilt when that happens: one instance launches on a different type and the next launch tries the first entry again. With a single `node_type` there is no instance type fallback. There is no zone fallback in either case, because each group is pinned to one subnet. [Karpenter](/configuration/scaling/karpenter) selects from a set of instance types and zones on each launch.
 
 ### The Scale-Up Metric Carries No Zone
 
@@ -392,6 +396,28 @@ Each primary node group carries a single instance type, so there is no instance 
 Any `availability-zone`, `host`, or `instance-type` tag on an autoscaler series is added by whatever scrapes the metrics and belongs to the node running the single autoscaler pod, not to the nodes that were added. Grouping the scale-up counter by zone graphs where the autoscaler pod has lived. The same holds for every other autoscaler series: per-host or per-zone grouping of any of them describes the pod's host.
 
 The autoscaler exposes its metrics on the pod through `prometheus.io/scrape` annotations rather than through a Service, so there is no scrape Service to look for.
+
+For series that do carry a node group, see [Per-Node-Group Gauges](#per-node-group-gauges).
+
+### Per-Node-Group Gauges
+
+From Rack version `3.25.7`, the autoscaler emits five per-node-group gauges on the same pod endpoint, port 8085, one series per node group it has discovered. On a default Rack that is three, one per primary node group, plus one for the [build node group](/configuration/rack-parameters/aws/build_node_enabled) and one for each [additional node group](/configuration/rack-parameters/aws/additional_node_groups_config) on a Rack that has them. On a Karpenter Rack the series cover only the additional node groups the autoscaler manages, and a Karpenter Rack with none runs the autoscaler at zero replicas and emits nothing.
+
+| Metric | Labels | Reports |
+|--------|--------|---------|
+| `cluster_autoscaler_node_group_min_count` | `node_group` | The group's minimum size |
+| `cluster_autoscaler_node_group_max_count` | `node_group` | The group's maximum size |
+| `cluster_autoscaler_node_group_target_count` | `node_group` | The size the autoscaler is currently asking the group for |
+| `cluster_autoscaler_node_group_healthiness` | `node_group` | Whether the autoscaler considers the group healthy |
+| `cluster_autoscaler_node_group_backoff_status` | `node_group`, `reason` | Whether the group is backed off, and why |
+
+These report node group sizing and health, not scale-up events. `cluster_autoscaler_node_group_target_count` is a target size, not a count of nodes added, and `cluster_autoscaler_scaled_up_nodes_total` stays unlabeled.
+
+Nothing collects the gauges for you. The Datadog Cluster Autoscaler integration does not collect the per-node-group series without configuration, and a Prometheus scrape config has to name them. Map the metric names in your own collector before building a dashboard on them.
+
+A node group that has been replaced keeps its series until the autoscaler pod restarts, so filter dashboards on the node group names that currently exist.
+
+A Rack below `3.25.7` does not emit the gauges. Downgrading below `3.25.7` stops them and any dashboard built on them goes empty, with nothing else to change and nothing to clean up.
 
 ### Finding Where Nodes Were Added
 
@@ -437,3 +463,4 @@ The [`spreadAcrossZones`](/reference/primitives/app/service#spreadacrosszones) S
 - [Datadog Metrics](/configuration/scaling/datadog-metrics) for Datadog-based autoscaling
 - [Karpenter](/configuration/scaling/karpenter) for pod-level node provisioning as an alternative to Cluster Autoscaler (AWS only)
 - [Console Autoscale Triggers](/console/autoscale-triggers)
+- [node_type](/configuration/rack-parameters/aws/node_type) for listing more than one instance type on the primary node groups (AWS only)

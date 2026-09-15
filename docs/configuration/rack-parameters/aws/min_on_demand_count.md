@@ -32,7 +32,7 @@ Adjusting the `min_on_demand_count` helps you ensure that there are always a suf
 
 Additionally, consider configuring the [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameter to limit the maximum number of on-demand nodes and optimize resource allocation.
 
-This parameter has no effect when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`, because Karpenter holds every system node group at one node. Enabling Karpenter also requires `node_capacity_type=ON_DEMAND`, so a Karpenter Rack is not a `mixed` Rack and the two settings do not normally meet. See [Karpenter](/configuration/scaling/karpenter#enablement-validation-guards).
+This parameter has no effect when [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) is `true`, because Karpenter mode sizes every system node group from [`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az), which defaults to `1`. Enabling Karpenter also requires `node_capacity_type=ON_DEMAND`, so a Karpenter Rack is not a `mixed` Rack and the two settings do not normally meet. See [Karpenter](/configuration/scaling/karpenter#enablement-validation-guards).
 
 On AWS Racks, raising `min_on_demand_count` above the number of nodes the on-demand node group is currently running requires a `convox` CLI at `3.25.6` or newer performing the apply. Earlier versions fail the apply with an EKS validation error and roll the value back. Setting the value at install and lowering it work on any version.
 

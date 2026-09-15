@@ -36,10 +36,10 @@ $ convox rack params set nvidia_device_time_slicing_replicas=5 -r rackName
 Updating parameters... OK
 ```
 
-To disable GPU time slicing:
+To disable GPU time slicing, set the replica count to `0`:
 ```bash
-$ convox rack params unset nvidia_device_time_slicing_replicas -r rackName
-Unsetting nvidia_device_time_slicing_replicas... OK
+$ convox rack params set nvidia_device_time_slicing_replicas=0 -r rackName
+Updating parameters... OK
 ```
 
 ## Understanding Replicas

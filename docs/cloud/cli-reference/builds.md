@@ -1,6 +1,6 @@
 ---
 title: "Build Commands"
-description: "The convox cloud build commands create, list, export, import, and inspect builds for an application and view their build logs."
+description: "The convox cloud build commands create, list, cancel, export, import, and inspect builds for an application and view their build logs."
 slug: builds
 url: /cloud/cli-reference/builds
 ---
@@ -52,6 +52,22 @@ ID           STATUS    RELEASE      STARTED       ELAPSED  DESCRIPTION
 BABCDEFGHI   complete  RABCDEFGHI   1 hour ago    2m       Feature update
 BBCDEFGHIJ   complete  RBCDEFGHIJ   2 hours ago   3m
 ```
+
+### builds cancel
+
+Cancel a Build that is still running.
+
+```bash
+$ convox cloud builds cancel <build> -a <app> -i <machine>
+```
+
+**Example:**
+```bash
+$ convox cloud builds cancel BABCDEFGHI -a myapp -i production
+Cancelling build BABCDEFGHI... OK
+```
+
+Cancelling deletes the Build's pod and sets the Build to `failed`; `convox cloud builds info` then shows a `Reason` of `cancelled by <actor>`. Only a Build the machine is running in a build pod can be cancelled, and any other Build returns `ERROR: build <build> is not running`. Requires machine version 3.25.7 or later. See [builds](/reference/cli/builds#builds-cancel) for the full reference.
 
 ### builds export
 

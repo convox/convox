@@ -32,8 +32,13 @@ Cancel an app update
 ### Examples
 ```bash
     $ convox apps cancel
-    Cancelling deployment of myapp... OK
+    Cancelling deployment of myapp...
+    Rewriting last active release...
+    OK
 ```
+
+`convox apps cancel` cancels a deploy that is in progress, and returns `app is not updating` when no deploy is running. Cancelling recreates the last active Release. It does not affect Builds. To cancel a Build the Rack is still running, use [`convox builds cancel`](/reference/cli/builds#builds-cancel).
+
 ## apps create
 
 Create an app
@@ -146,10 +151,11 @@ Display app parameters
 ### Examples
 ```bash
     $ convox apps params -a myapp
-    BuildCpu     0
-    BuildLabels
-    BuildMem     0
+    BuildCpu     1000
+    BuildMem     4096
 ```
+
+Only parameters that are set are listed. A parameter you have not set does not appear.
 
 ## apps params set
 

@@ -80,7 +80,10 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [karpenter_node_os](/configuration/rack-parameters/aws/karpenter_node_os)           | Node OS (al2023 or bottlerocket) for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_overlays_config](/configuration/rack-parameters/aws/karpenter_node_overlays_config) | Creates Karpenter NodeOverlays that advertise extended resources or adjust pricing for selected instance types. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_taints](/configuration/rack-parameters/aws/karpenter_node_taints)   | Custom taints for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_iops](/configuration/rack-parameters/aws/karpenter_node_volume_iops) | Provisioned IOPS for Karpenter node root volumes, inheriting `node_volume_iops` when `0`. gp3 only. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_throughput](/configuration/rack-parameters/aws/karpenter_node_volume_throughput) | Provisioned throughput in MiB/s for Karpenter node root volumes, inheriting `node_volume_throughput` when `0`. gp3 only. See [Karpenter](/configuration/scaling/karpenter). |
 | [karpenter_node_volume_type](/configuration/rack-parameters/aws/karpenter_node_volume_type) | EBS volume type for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_system_node_min_count_per_az](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) | Minimum system nodes per availability zone while Karpenter is enabled. See [Karpenter](/configuration/scaling/karpenter). |
 
 ### Nodes and Scaling
 
@@ -90,13 +93,16 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
 | [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a Service rollout may go without progress before it is failed. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
+| [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable) | Pulls and unpacks image layers in parallel through the SOCI snapshotter on AL2023 nodes. |
 | [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
 | [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count)       | Sets the maximum number of on-demand nodes when using the mixed capacity type. |
 | [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count)       | Sets the minimum number of on-demand nodes when using the mixed capacity type. |
 | [node_capacity_type](/configuration/rack-parameters/aws/node_capacity_type)         | Specifies the node capacity type: on-demand, spot, or mixed.             |
 | [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) | Controls the maximum percentage of nodes unavailable during node group updates. |
-| [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GB.                                      |
-| [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type.                                        |
+| [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GiB.                                     |
+| [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type, or a comma separated list of types the node groups fall back through. |
+| [node_volume_iops](/configuration/rack-parameters/aws/node_volume_iops)             | Sets provisioned IOPS on each node's root volume, capped at 500 per GiB of `node_disk`. |
+| [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) | Sets provisioned throughput in MiB/s on each node's root volume, capped at a quarter of the provisioned IOPS. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
@@ -126,9 +132,10 @@ Parameters are grouped by category below. Every parameter links to its own refer
 
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
-| [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) | Specifies the retention period for Nginx access logs stored in CloudWatch Logs. |
+| [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) | Passed to Fluentd for the Nginx access log output. Sets no retention on any log group; use `cloudwatch_retention_in_days` for that. |
 | [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) | Stops the per-App CloudWatch log groups while keeping the Rack system group. |
 | [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable)         | Stops the Rack from creating, writing, and reading its own CloudWatch log groups. |
+| [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) | Sets how long CloudWatch keeps the Rack, App, and EKS control plane log groups, or stops them expiring. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
 | [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |
@@ -148,7 +155,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas) | Configures GPU time slicing by setting the number of virtual replicas per physical GPU. |
 | [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) | Helm chart version pin for the free-plan Prometheus chart deployed via the Convox Console. |
 | [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Retention window for the free-plan Prometheus chart deployed via the Convox Console. |
-| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and `convox ps` GPU enrichment. Must be set explicitly post-3.24.6 (no auto-resolution). |
+| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and the Console GPU columns. Must be set explicitly post-3.24.6 (no auto-resolution). |
 | [syslog](/configuration/rack-parameters/aws/syslog)                                 | Specifies the endpoint to forward logs to a syslog server.               |
 
 ### TLS and Security

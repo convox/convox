@@ -53,7 +53,7 @@ This blocks the downgrade, it does not wedge the Rack. The cluster keeps running
 - GKE manages the NVIDIA device plugin and drivers for GPU node pools, so there is no `nvidia_device_plugin_enable` parameter on GCP.
 - The DCGM exporter pod schedules only on nodes carrying the `convox.io/gpu-vendor=nvidia` label, which the rack controller applies at runtime when a node's machine type is a GPU family (`g2-`, `a2-`, `a3-`, `a4-`, `a4x-`, `g4-`). If you have no GPU nodes, the exporter is created but no pods are scheduled.
 - The dashboard ConfigMaps do nothing on their own. A Grafana you run yourself picks them up only if its dashboard sidecar watches `kube-system` for the `grafana_dashboard=1` label.
-- `convox ps` GPU enrichment and the Console GPU dashboards are AWS-only for now. GCP racks do not deploy a Convox-managed Prometheus and do not wire `prometheus_url`; point your own Prometheus and Grafana at the exporter instead.
+- The Console GPU columns and the Console GPU dashboards are AWS-only for now. GCP racks do not deploy a Convox-managed Prometheus and do not wire `prometheus_url`; point your own Prometheus and Grafana at the exporter instead.
 
 > **N1 machine types are not auto-detected.** GPU nodes are identified by machine family (`g2-`, `a2-`, `a3-`, `a4-`, `a4x-`, `g4-`). N1 machines with attached GPUs cannot be detected by machine type alone and will not receive the `convox.io/gpu-vendor=nvidia` label, so the DCGM exporter will not schedule onto them. Prefer the dedicated GPU families, or label such nodes manually.
 
