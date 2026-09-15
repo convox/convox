@@ -25,7 +25,7 @@ The cloud commands are organized into the following groups. Select a group to se
 
 - [Machine Management](/cloud/cli-reference/machines) - List machines in your organization.
 - [Application Commands](/cloud/cli-reference/apps) - List, create, delete, export, import, and inspect apps and their parameters.
-- [Build Commands](/cloud/cli-reference/builds) - Create, list, export, import, inspect builds and view build logs.
+- [Build Commands](/cloud/cli-reference/builds) - Create, list, cancel, export, import, inspect builds and view build logs.
 - [Deployment Commands](/cloud/cli-reference/deploy) - Build and promote in a single command.
 - [Environment Commands](/cloud/cli-reference/env) - List, edit, get, set, and unset environment variables.
 - [Process Management](/cloud/cli-reference/processes) - Exec into, list, stop, and run one-off processes.

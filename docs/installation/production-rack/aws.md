@@ -47,7 +47,7 @@ The table below lists common install-time parameters; the complete reference is 
 
 | Name                     | Default                | Description                                                                                                    |
 | -------------------------|------------------------|----------------------------------------------------------------------------------------------------------------|
-| **access_log_retention_in_days**   |         7          | Specify nginx access log retention period in cloudwatch logs. The log group name will be `/convox/<rack-name>/system` and stream name `/nginx-access-logs` |
+| **access_log_retention_in_days**   |         7          | Passed to Fluentd for the nginx access log output, which goes to log group `/convox/<rack-name>/system`, stream `/nginx-access-logs`. It sets no retention on that log group; use [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for that |
 | **availability_zones**   |                        | Specify a list of AZ names (minimum 3) to override the random automatic selection from AWS                     |
 | **build_node_enabled**   |     false              | Enable a dedicated build node |
 | **build_node_type**      | same as **node_type**  | Node type for the build node |
@@ -68,7 +68,7 @@ The table below lists common install-time parameters; the complete reference is 
 | **max_on_demand_count**  | **100**                | When used with `mixed` node capacity type, can set the maximum required number of on demand nodes              |
 | **nlb_security_group**  |                | The ID of an existing security group to attach to the rack's internet-facing router load balancer. Leave it blank and the rack creates and manages one. See [nlb_security_group](/configuration/rack-parameters/aws/nlb_security_group) |
 | **node_capacity_type**   | **on_demand**          | Can be either "on_demand", "spot" or "mixed". Spot will use AWS spot instances for the cluster nodes. Mixed will create one node group with on demand instances, and the other 2 with spot instances. Use mixed with the min_on_demand_count and max_on_demand_count parameters to control the minimum acceptable service availability should all spot instances become unavailable.  |
-| **node_disk**            | **20**                 | Node disk size in GB                                                                                           |
+| **node_disk**            | **20**                 | Node disk size in GiB                                                                                          |
 | **node_type**            | **t3.small**           | Node instance type.|
 | **node_max_unavailable_percentage**            |           | Node max unavailable percentage during node update. Value must be between 1 to 100.|
 | **pod_identity_agent_enable** | **false**           | Enable AWS pod identity|

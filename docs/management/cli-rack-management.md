@@ -67,7 +67,7 @@ Convox runs a set of checks immediately before every `terraform apply`, whether 
 
 **Stranded Helm release clearing.** Starting with `3.25.3`, an apply that was killed while Helm was mid-operation no longer blocks every later apply. Convox deletes the pending revision of the affected Convox-owned release so the next apply can proceed. It runs on AWS Racks only, and a Rack whose Kubernetes API is reached through a private endpoint host is covered from `3.25.5`. See [Troubleshooting](/help/troubleshooting) for the releases it covers, the age threshold it applies, and the messages it prints.
 
-**Node group desired size.** Starting with `3.25.3`, raising `min_size` on an entry in `additional_node_groups_config` no longer fails when the pool has autoscaled below the new floor. Convox raises the pool's desired size to the new minimum and waits for the scale-up before the apply runs, which makes the update take longer when the increase is large. From `3.25.6` the same handling covers the build node group (`build_node_min_count`) and, on a Rack with `node_capacity_type=mixed`, the on-demand system node group (`min_on_demand_count`); those two are skipped when `karpenter_enabled` is `true`, while additional node groups are still covered. This runs on AWS Racks only.
+**Node group desired size.** Starting with `3.25.3`, raising `min_size` on an entry in `additional_node_groups_config` no longer fails when the pool has autoscaled below the new floor. Convox raises the pool's desired size to the new minimum and waits for the scale-up before the apply runs, which makes the update take longer when the increase is large. From `3.25.6` the same handling covers the build node group (`build_node_min_count`) and, on a Rack with `node_capacity_type=mixed`, the on-demand system node group (`min_on_demand_count`); those two are skipped when `karpenter_enabled` is `true`, while additional node groups are still covered. From `3.25.7` a Karpenter Rack's per-zone system node groups are covered as well, keyed on [karpenter_system_node_min_count_per_az](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az). This runs on AWS Racks only.
 
 **Which version matters.** These checks run in the `convox` CLI, not in the Rack's Terraform modules, so the version that counts is the CLI performing the update: your locally installed `convox` for a self-managed Rack, or the CLI bundled in the Convox Console for a Console-managed Rack. Updating the Rack to a newer version does not deliver them on its own.
 
@@ -113,6 +113,8 @@ Rack parameters control infrastructure-level settings like node sizes, disk allo
     $ convox rack params set node_disk=30 node_type=c5.large
     Updating parameters... OK
 ```
+
+Convox stores a parameter value as you type it. A backslash sequence such as `\n`, and a `${...}` sequence, are part of the value. Setting a value that contains a double quote, a line break or a backslash requires a `convox` CLI at `3.25.7` or newer performing the apply; earlier versions accept the command and then fail the Rack update. This applies on every provider. See [A Rack update fails with a Terraform error after setting a parameter](/help/troubleshooting#a-rack-update-fails-with-a-terraform-error-after-setting-a-parameter).
 
 After running `convox rack params set`, the rack enters an `updating` state while the infrastructure changes are applied. Monitor progress the same way as a version update:
 

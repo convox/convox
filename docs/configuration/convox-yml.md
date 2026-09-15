@@ -18,7 +18,7 @@ configs:
   - id: app-config
 appSettings:
   awsLogs:
-    cwRetention: 31
+    cwRetention: 30
     disableRetention: false
 resources:
   database:
@@ -97,7 +97,7 @@ The `appSettings` section defines settings that apply exclusively to a particula
 ```yaml
 appSettings:
   awsLogs:
-    cwRetention: 31
+    cwRetention: 30
     disableRetention: false
 ```
 See [App Settings](/configuration/app-settings) for configuration options.

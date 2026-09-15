@@ -55,14 +55,14 @@ To pin an App's image to ARM:
 
 ```bash
 $ convox apps params set BuildArch=arm64 -a my-app
-Setting BuildArch... OK
+Updating parameters... OK
 ```
 
 To pin an App's image to x86:
 
 ```bash
 $ convox apps params set BuildArch=amd64 -a my-app
-Setting BuildArch... OK
+Updating parameters... OK
 ```
 
 Setting an app parameter promotes the App's current Release as a side effect, which redeploys the App's Services. The new value applies to the next Build.
@@ -71,7 +71,7 @@ To clear the pin and return the App to the Rack's build architecture, set an emp
 
 ```bash
 $ convox apps params set BuildArch= -a my-app
-Setting BuildArch... OK
+Updating parameters... OK
 ```
 
 ## Viewing Current Configuration
@@ -79,11 +79,12 @@ To view the current `BuildArch` setting:
 
 ```bash
 $ convox apps params -a my-app
-NAME         VALUE
 BuildArch    arm64
 BuildCpu     500
 BuildMem     1024
 ```
+
+Only parameters that are set are listed. A parameter you have not set does not appear.
 
 ## Narrowing a Multi-Architecture Rack to One Platform
 When a Build targets explicit architectures, either from the Rack or from `BuildArch`, and a base image referenced in the Dockerfile is not published for all of them, the Build fails with:
@@ -137,7 +138,7 @@ The build pod runs on an ARM build node because `build_node_enabled=true` and `B
 
 - **Requires Rack 3.25.3 or Later**: On earlier Racks the value is accepted by the CLI and discarded by the Rack, with no effect on Builds and no entry in `convox apps params`.
 - **Per-App, Not Per-Service**: `BuildArch` applies to the entire App. If an App has Services targeting different architectures, split them into separate Apps.
-- **Build Node Behavior Depends on `build_node_enabled`**: With `build_node_enabled=true`, the Rack must have build nodes of the specified architecture or build pods stay Pending. With `build_node_enabled=false`, the default, no placement constraint is applied and the Build proceeds under emulation when the node architecture differs.
+- **Build Node Behavior Depends on `build_node_enabled`**: With `build_node_enabled=true`, the Rack must have build nodes of the specified architecture or build pods stay Pending. A Build whose pod stays Pending stays `running` until you clear it with [`convox builds cancel`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later. With `build_node_enabled=false`, the default, no placement constraint is applied and the Build proceeds under emulation when the node architecture differs.
 - **Development Builds Ignore the Pin**: `convox build --development` and `convox deploy --development` do not receive the target platform, so a development Build is always native to the node it runs on.
 - **External Builds Ignore the Pin**: `convox build --external` and `convox deploy --external` build the image on your own machine with the local Docker engine, which does not receive the target platform, so the image is native to that machine's architecture.
 - **Provider Coverage**: The image platform pin is implemented in provider-agnostic Rack code and applies on every provider. The build node placement effect depends on `build_node_enabled`, which is an AWS Rack parameter.
@@ -150,5 +151,6 @@ The build pod runs on an ARM build node because `build_node_enabled=true` and `B
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for adding node groups with different instance types
 - [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) for adding dedicated build node groups
 - [BuildLabels](/configuration/app-parameters/aws/BuildLabels) for directing Builds to specific labeled node groups
+- [builds](/reference/cli/builds#builds-cancel) for cancelling a Build whose pod cannot be scheduled
 - [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks) for Karpenter architecture behavior
 - [Workload Placement](/configuration/scaling/workload-placement) for placement strategies

@@ -90,7 +90,7 @@ Enabling or disabling this parameter re-renders the Fluentd configuration, so th
 
 ## Existing Log Groups
 
-Turning the parameter on deletes nothing. Groups that already exist keep their contents, and they keep whatever retention policy was last applied to them. The Rack stops calling the CloudWatch retention APIs for App groups, so retention is frozen at that value until the parameter is turned off again.
+Turning the parameter on deletes nothing. Groups that already exist keep their contents. The Rack stops applying the per-App `awsLogs` retention policy on promote, so a group whose retention came from an App's `convox.yml` is frozen at its last value until the parameter is turned off again. From Rack version `3.25.7`, [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) keeps applying to the App groups regardless of this parameter, because the groups still exist.
 
 App lines produced while the parameter is on are dropped rather than buffered. They are not replayed when you turn the parameter off. Turning it off restores both writers and both reads immediately, and each App group is recreated on the next write to it.
 
@@ -98,7 +98,7 @@ App lines produced while the parameter is on are dropped rather than buffered. T
 
 This parameter is available on AWS Racks only and requires Rack version `3.25.5` or later. Setting it also requires a `convox` CLI at `3.25.5` or newer; an older CLI rejects the name as an unknown parameter, so run [`sudo convox update`](/reference/cli/update) first.
 
-Downgrading below `3.25.5` removes the parameter. Parameter reconciliation deletes it from the stored values before the apply runs and prints `NOTICE: removing parameters not supported by version <version>: app_cloudwatch_disable` on stderr. Both writers resume and each App group is recreated on the next write. Lines dropped while the parameter was on are not replayed. Upgrading back to `3.25.5` or later does not restore the value, because the downgrade deleted it, so set it again after the upgrade.
+Downgrading below `3.25.5` removes the parameter. Parameter reconciliation deletes it from the stored values before the apply runs and prints `NOTICE: removing parameters not supported by version <version>: app_cloudwatch_disable` on stderr. Both writers resume and each App group is recreated on the next write. Lines dropped while the parameter was on are not replayed. On a Rack managed through the Console the value stays in the Console's stored parameters and is applied again when you upgrade back to `3.25.5` or later. On a self-managed Rack the downgrade deleted it, so set it again after the upgrade.
 
 - **Validation:** must be `true` or `false`. Any other value is rejected.
 - The parameter is not clearable. Passing an empty value is rejected with `param 'app_cloudwatch_disable' requires an explicit value (omit to keep current)`. Set it to `false` to turn it off.
@@ -106,7 +106,7 @@ Downgrading below `3.25.5` removes the parameter. Parameter reconciliation delet
 - The parameter belongs to the `logging` parameter group, so `convox rack params -g logging` surfaces it once it is set.
 - The `awsLogs` App setting (`cwRetention` and `disableRetention`) is a no-op while this parameter is on. Promoting a Release does not apply the retention policy, and existing groups keep the retention they already had. See [App Settings](/configuration/app-settings).
 - The `--filter` flag on `convox logs` is applied by CloudWatch, so it has nothing to match on the whole-App view while this parameter is on. It is not applied on the `--service` path.
-- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) sets the retention Fluentd applies to the Nginx access log stream, which lives in the Rack system group and is unaffected by this parameter.
+- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) is passed to Fluentd but sets no retention on any log group. [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) covers the Rack system group and is unaffected by this parameter.
 - [eks_log_types](/configuration/rack-parameters/aws/eks_log_types) controls EKS control plane logging, which uses a separate log group and is unrelated to this parameter.
 
 ## See Also
@@ -114,6 +114,6 @@ Downgrading below `3.25.5` removes the parameter. Parameter reconciliation delet
 - [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) to stop the Rack's own CloudWatch writes and reads across both groups
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) to stop Fluentd shipping container output to CloudWatch
 - [syslog](/configuration/rack-parameters/aws/syslog) for forwarding logs to an external syslog endpoint
-- [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) for Nginx access log retention
+- [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for how long CloudWatch keeps the Rack, App, and EKS control plane log groups
 - [Logging](/configuration/logging) for an overview of Convox logging
 - [App Settings](/configuration/app-settings) for the per-App `awsLogs` retention settings

@@ -641,7 +641,7 @@ Custom balancers defined in `convox.yml`.
 
 -   **K8s Resource**: `Service` of type `LoadBalancer`.
 -   **Naming Pattern**: `balancer-<balancer-name>`
--   **Port Names**: the balancer port number. A port with `protocol: TCP_UDP` renders as two `ServicePort` entries at the same number, named `<port>-tcp` and `<port>-udp`.
+-   **Port Names**: the balancer port number. A port with `protocol: TCP_UDP` renders as two `ServicePort` entries at the same number, named `<port>-tcp` and `<port>-udp`. Changing a port between `TCP` and `TCP_UDP` renames its entries, from `5000` to `5000-tcp` and back. An allocated node port follows the port number and protocol rather than the name, so it survives the rename and is released only when that number and protocol leave the Service. A balancer with `awsLoadBalancerController: true` registers targets by Pod IP, so no traffic uses the node port.
 -   **YAML Snippet (`Service`)**:
     ```yaml
     apiVersion: v1

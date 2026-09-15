@@ -105,6 +105,7 @@ This parameter is available on AWS Racks only and requires Rack version `3.25.6`
 - **Validation:** must be `al2023@latest` or `al2023@vYYYYMMDD`, matching the regex `^al2023@(latest|v[0-9]{8})$`. The match is case-sensitive, so `AL2023@Latest` is rejected.
 - **Clearable:** setting an empty value returns every pool to `al2023@latest`.
 - The parameter applies to AL2023 pools. A Bottlerocket workload pool pins through [`karpenter_config`](/configuration/rack-parameters/aws/karpenter_config).
+- **A pin below `al2023@v20250821` makes [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable) inert.** The AL2023 AMI gained the `FastImagePull` feature gate in `v20250821`. An older pinned release accepts the node configuration and ignores the gate, so nodes boot normally and pull images at the pre-feature rate. Advance the pin before enabling the gate.
 - **Parameter groups:** listed under the `karpenter` group (`convox rack params -g karpenter -r rackName`).
 
 ## See Also
@@ -117,3 +118,4 @@ This parameter is available on AWS Racks only and requires Rack version `3.25.6`
 - [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) for a window that holds the roll a new pin starts
 - [karpenter_disruption_block_duration](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) for how long that window stays open
 - [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for building your own AL2023 AMI
+- [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable), which a pin below `al2023@v20250821` ignores

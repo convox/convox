@@ -25,7 +25,7 @@ For a quick overview of some commonly used commands, you may find this [blog pos
 | [budget reset](/reference/cli/budget-reset) | Acknowledge a cap breach and re-enable deploys; restores replicas after `:fired`.    |
 | [budget dismiss-recovery](/reference/cli/budget-dismiss-recovery) | Dismiss the sticky recovery banner shown after auto-shutdown restoration. |
 | [build](/reference/cli/build)    | Create a build.                                                                                 |
-| [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as importing or exporting builds.         |
+| [builds](/reference/cli/builds)  | List builds and manage build-specific operations such as cancelling, importing, or exporting builds. |
 | [certs](/reference/cli/certs)    | List, generate, import, and manage SSL certificates.                                            |
 | [cost](/reference/cli/cost)      | Inspect per-app spend, service breakdowns, and forecasted month-end totals.                     |
 | [cp](/reference/cli/cp)          | Copy files to and from a running process.                                                       |

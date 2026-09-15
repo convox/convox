@@ -52,13 +52,15 @@ services:
 
 ```bash
     $ convox builds info BABCDEFGHI -a myapp
-    ID           BABCDEFGHI
+    Id           BABCDEFGHI
     Status       complete
     Release      RBCDEFGHIJ
     Description
     Started      1 minute ago
     Elapsed      25s
 ```
+
+A Build that failed or was cancelled also prints a `Reason` row.
 
 ### Getting logs for a Build
 
@@ -68,6 +70,17 @@ services:
     Step 1/34 : FROM golang AS development
     ...
 ```
+
+### Cancelling a Build
+
+```bash
+    $ convox builds cancel BABCDEFGHI -a myapp
+    Cancelling build BABCDEFGHI... OK
+```
+
+> Cancelling a Build requires rack version 3.25.7 or later.
+
+Cancelling deletes the build pod and sets the Build to `failed`; `convox builds info` then carries a `Reason` of `cancelled by <actor>`. Only a Build the Rack is running in a build pod can be cancelled. A cancelled Build has no logs, because a Build uploads its logs when it finishes. See [builds](/reference/cli/builds#builds-cancel).
 
 ### Exporting a Build
 
@@ -205,3 +218,4 @@ This will list the current parameters for the rack, including the Docker credent
 
 - Basic build functionality: All versions
 - Convox-managed build arguments: Version 3.22.0+
+- `convox builds cancel`: Version 3.25.7+

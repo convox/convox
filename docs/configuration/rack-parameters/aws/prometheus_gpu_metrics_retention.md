@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/aws/prometheus_gpu_metrics_retention
 # prometheus_gpu_metrics_retention
 
 ## Description
-The `prometheus_gpu_metrics_retention` parameter sets the retention window for the free-plan Prometheus chart deployed via the Convox Console. Applies on next Disable→Enable cycle from the Convox Console. The free Prometheus is scoped to scraping the NVIDIA DCGM exporter only and serves the rack-API's GPU metric enrichment for `convox ps` and Console GPU dashboards.
+The `prometheus_gpu_metrics_retention` parameter sets the retention window for the free-plan Prometheus chart deployed via the Convox Console. Applies on next Disable→Enable cycle from the Convox Console. The free Prometheus is scoped to scraping the NVIDIA DCGM exporter only and serves the rack-API's GPU metric enrichment for the Console GPU dashboards and the service detail pod list.
 
 Accepts Prometheus duration syntax, for example `24h`, `7d`, `2h30m`, or `54s321ms`. Storage is `emptyDir`; longer retention requires more memory.
 

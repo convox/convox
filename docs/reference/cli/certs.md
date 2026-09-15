@@ -57,6 +57,8 @@ To generate one or more certificates
     $ convox certs generate mydomain.com --duration 4200h --issuer letsencrypt
 ```
 
+Certificates generated on Rack version `3.25.7` and later reuse their private key across renewals. See [Private Key Reuse on Renewal](/deployment/ssl#private-key-reuse-on-renewal).
+
 To list generated certificates:
 ```bash
     convox certs --generated
@@ -76,6 +78,8 @@ Delete a certificate.
     $ convox certs delete cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d
     Deleting certificate cert-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d... OK
 ```
+
+For a certificate generated with `--issuer letsencrypt`, this deletes the certificate's Secret. The Rack continues to renew that certificate and reissues the Secret, so the certificate reappears in `convox certs --generated`. Imported certificates and self-signed generated certificates are Secrets only, so deleting them removes them.
 
 ## certs import
 
@@ -104,7 +108,7 @@ Import a certificate.
 
 ## certs renew
 
-Renew a certificate for an app.
+Trigger re-issuance of the certificates covering an App's custom domains. Certificates for Convox-generated hostnames are not affected.
 
 ### Usage
 ```bash

@@ -58,6 +58,7 @@ See [Enablement Validation Guards](/configuration/scaling/karpenter#enablement-v
 - **Requires `karpenter_auth_mode=true`.** If `karpenter_auth_mode` is not already enabled, include it in the same call.
 - **Additional node groups constraint.** All existing [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entries must have `dedicated=true` when Karpenter is enabled.
 - **What it deploys:** Karpenter controller, workload NodePool + EC2NodeClass, build NodePool (if `build_node_enabled=true`), IAM roles, SQS interruption queue, and EventBridge rules.
+- **Node group maximums.** From Rack version `3.25.7`, enabling Karpenter leaves the existing system and build node group maximums at 100. Earlier versions lowered them to 10 and 1, which failed the apply on a Rack running more nodes than that. The same limits apply in reverse: a Karpenter Rack above those counts cannot apply a version before `3.25.7`. See [Enablement Validation Guards](/configuration/scaling/karpenter#enablement-validation-guards).
 
 ## See Also
 

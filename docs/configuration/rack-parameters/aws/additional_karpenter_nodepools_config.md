@@ -22,9 +22,11 @@ The default value is empty (no custom NodePools).
 **Using a JSON string:**
 
 ```bash
-$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200}]' -r rackName
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200,"volume_iops":4000,"volume_throughput":600}]' -r rackName
 Updating parameters... OK
 ```
+
+`volume_iops` and `volume_throughput` need Rack version `3.25.7`. Omit them to inherit the Rack-wide Karpenter values.
 
 Target Services to the GPU pool using `nodeSelectorLabels` and `scale.gpu` in `convox.yml`:
 
@@ -76,6 +78,11 @@ This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraf
 - **Pool name validation:** Lowercase alphanumeric with dashes, max 63 chars. Reserved names: `workload`, `build`, `default`, `system`. Duplicate names are rejected.
 - **Custom AMIs:** Set `"ami_id": "ami-..."` on a pool to run its nodes on your own AL2023-based AMI, which a GPU pool needs to run an NVIDIA driver newer than the one AWS ships. See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes).
 - **CLI version for `ami_id`:** Editing this pool list needs `convox` CLI `3.25.5` or newer once the field is in use. An older CLI rewrites the parameter without it.
+- **Per-pool volume performance:** from Rack version `3.25.7`, `"volume_iops"` and `"volume_throughput"` set provisioned IOPS and MiB/s on that pool's root volume, overriding [`karpenter_node_volume_iops`](/configuration/rack-parameters/aws/karpenter_node_volume_iops) and [`karpenter_node_volume_throughput`](/configuration/rack-parameters/aws/karpenter_node_volume_throughput). A pool that sets neither inherits the Rack-wide values. Both keys are gp3 only, and a pool is judged against its own `volume_type`, which defaults to `gp3`. A pool whose `volume_type` is `gp2`, `io1` or `io2` is rejected:
+  ```text
+  ERROR: karpenter nodepool 'gpu': volume_iops requires volume_type gp3 (currently io2)
+  ```
+- **CLI version for `volume_iops` and `volume_throughput`:** as with `ami_id`, editing this pool list needs a `convox` CLI at `3.25.7` or newer once either field is in use. An older CLI decodes the list into its own structure, re-encodes it, and writes back a parameter with the fields it does not know dropped. This is not a Rack version requirement, so run [`sudo convox update`](/reference/cli/update) before editing the list.
 - **Pool isolation:** Set `"dedicated": true` on a pool entry to automatically add a `dedicated-node={name}:NoSchedule` taint. Convox auto-injects the matching toleration for Services targeting the pool via `nodeSelectorLabels`. This is the simplest way to isolate a pool without manual taint configuration.
 - For pools with custom taints beyond `dedicated`, see [Using Taints to Protect Nodes](/configuration/scaling/karpenter#using-taints-to-protect-nodes) for how tolerations are handled (GPU taints are auto-tolerated via `scale.gpu`; `convox.yml` does not have a `tolerations` field).
 - **Node expiry:** from Rack version `3.25.6`, a pool with no `node_expiry` field inherits the Rack's [`karpenter_node_expiry`](/configuration/rack-parameters/aws/karpenter_node_expiry) instead of a fixed `720h`. A per-pool `node_expiry` still overrides it.
@@ -89,3 +96,4 @@ This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraf
 - [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for custom EKS managed node groups
 - [Workload Placement](/configuration/scaling/workload-placement) for node targeting with `nodeSelectorLabels`
 - [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for the `ami_id` field and the NVIDIA driver it carries
+- [karpenter_node_volume_iops](/configuration/rack-parameters/aws/karpenter_node_volume_iops) and [karpenter_node_volume_throughput](/configuration/rack-parameters/aws/karpenter_node_volume_throughput) for the Rack-wide values a pool inherits

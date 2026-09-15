@@ -42,7 +42,7 @@ Updating parameters... OK
 - Trailing slashes in the URL are stripped client-side before constructing the deep link, so `https://grafana.example.com`, `https://grafana.example.com/`, and `https://grafana.example.com//` all resolve identically.
 
 ## Related Parameters
-- [prometheus_url](/configuration/rack-parameters/aws/prometheus_url): The query-side Prometheus endpoint the rack uses for `convox ps` GPU enrichment. Independent of `grafana_url`; both can be set.
+- [prometheus_url](/configuration/rack-parameters/aws/prometheus_url): The query-side Prometheus endpoint the rack uses to add GPU telemetry to the process-list response the Console renders. Independent of `grafana_url`; both can be set.
 - [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable): Installs the DCGM exporter that emits the metrics the Grafana dashboards consume.
 
 ## Version Requirements

@@ -19,7 +19,7 @@ The default value is an empty string (`""`), which means no additional tags are 
 - **Compliance**: Apply mandatory organizational tags required by governance policies.
 
 ## Setting Parameters
-The value should be a comma-separated list of `key=value` pairs. It can be provided as plain text or base64-encoded:
+The value is a comma-separated list of `key=value` pairs. Each pair must contain an `=`, keys and values cannot contain a comma or a space, and a key cannot contain an `=`. A value that contains an `=` passes validation, and everything from that `=` onward is dropped when the tag is applied:
 ```bash
 $ convox rack params set tags=env=production,team=platform -r rackName
 Updating parameters... OK

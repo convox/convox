@@ -26,7 +26,7 @@ To set build node selector labels for an application:
 
 ```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app-name>
-Setting BuildLabels... OK
+Updating parameters... OK
 ```
 
 This configuration directs build pods for the specified application to nodes with the label `convox.io/label: app-build`.
@@ -36,7 +36,7 @@ You can specify multiple labels using a comma-separated list:
 
 ```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build,build-type=large -a <app>
-Setting BuildLabels... OK
+Updating parameters... OK
 ```
 
 ## Viewing Current Configuration
@@ -44,16 +44,15 @@ To view the current build labels for an application:
 
 ```bash
 $ convox apps params -a <app>
-NAME         VALUE
 BuildLabels  convox.io/label=app-build
 ```
 
 ## Removing Build Labels
-To remove build labels:
+To remove build labels, set an empty value:
 
 ```bash
-$ convox apps params unset BuildLabels -a <app>
-Unsetting BuildLabels... OK
+$ convox apps params set BuildLabels= -a <app>
+Updating parameters... OK
 ```
 
 ## Related Parameters
@@ -63,7 +62,7 @@ Sets the CPU request for build pods in millicores:
 
 ```bash
 $ convox apps params set BuildCpu=500 -a <app>
-Setting BuildCpu... OK
+Updating parameters... OK
 ```
 
 This allocates 500 millicores (0.5 vCPU) to build pods.
@@ -73,7 +72,7 @@ Sets the memory request for build pods in megabytes:
 
 ```bash
 $ convox apps params set BuildMem=2048 -a <app>
-Setting BuildMem... OK
+Updating parameters... OK
 ```
 
 This allocates 2048MB (2GB) of memory to build pods.
@@ -86,6 +85,6 @@ For this to be effective, you need to:
 1. Configure node groups with appropriate labels using rack parameters like [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config).
 2. Set `BuildLabels` to match those node labels.
 
-Specifying incorrect labels that don't match any existing nodes in your cluster can cause build failures, as Kubernetes won't be able to schedule the build pods. Always verify that the labels you specify match labels that exist on your cluster nodes.
+A `BuildLabels` value that matches no node in the cluster does not fail the Build. The build pod stays `Pending` and the Build stays `running` until it is cancelled, because nothing on the Rack moves a Build out of that state. Clear it with [`convox builds cancel <build>`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later, and set `BuildLabels` to labels your nodes carry before the next Build.
 
 For more information on node selection and workload placement strategies, see the [Workload Placement](/configuration/scaling/workload-placement) guide.

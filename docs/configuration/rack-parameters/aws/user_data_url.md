@@ -45,6 +45,7 @@ Updating parameters... OK
 - Consider using HTTPS URLs to ensure secure transmission of your script content.
 - For public repositories, you can use raw content URLs such as those from GitHub, GitLab, or other public repositories.
 - The script will be executed with root privileges, so ensure it contains appropriate security measures.
+- On a Rack with [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) set to `true`, the downloaded script runs on the nodes in the Rack's EKS managed node groups only. Karpenter provisions its nodes from an `EC2NodeClass` whose `userData` carries the Convox-managed node configuration and not this script.
 - To debug your user data scripts, you can SSH into an instance and examine the cloud-init logs at `/var/log/cloud-init-output.log`.
 - You can extract and view the execution of your custom user data script with the following command:
   ```bash

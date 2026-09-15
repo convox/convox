@@ -121,9 +121,16 @@ Updating a Rack to `3.25.5` sends those lines to the App's own group, and `convo
 
 ## Log Retention
 
-Convox streams logs in real-time and does not retain historical logs indefinitely. For long-term log storage and analysis, you should forward logs to an external service using the syslog integration described above, or use the built-in [Monitoring and Alerting](/configuration/monitoring) features.
+On an AWS Rack, how long logs survive is a property of each CloudWatch log group. A log group Convox creates starts at 7 days while `cloudwatch_retention_in_days` is unset, and follows that parameter once it is set. A log group Fluentd creates has no retention policy, so it never expires, and neither does the EKS control plane log group.
+
+[cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) sets a single retention period across the Rack system log group, every App log group, and the EKS control plane log group, or `Never` to stop them expiring. Left unset, Convox does not manage retention and every group keeps the value it already has. It requires Rack version `3.25.7` or later. An App overrides it for its own log group with [appSettings.awsLogs](/configuration/app-settings).
+
+Setting `cloudwatch_retention_in_days`, or lowering it, deletes log data. CloudWatch applies the retention window to the data already in a group, so everything older than it is gone within hours, and raising the value later does not bring it back. A group that never expired until now, which is every group Fluentd created and the EKS control plane group, loses everything older than the window the first time you set a period.
+
+For long-term storage and analysis beyond CloudWatch, forward logs to an external service with the syslog integration described above, or use [Monitoring and Alerting](/configuration/monitoring).
 
 ## See Also
 
 - [Monitoring and Alerting](/configuration/monitoring) for setting up monitoring
 - [Datadog Integration](/integrations/monitoring) for forwarding logs to Datadog
+- [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for Rack-wide CloudWatch log retention
