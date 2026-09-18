@@ -36,6 +36,7 @@ module "api" {
   project_id                = var.project_id
   region                    = var.region
   release                   = var.release
+  private_api               = var.private_api
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   syslog                    = var.syslog

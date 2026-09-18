@@ -37,6 +37,7 @@ var telemetryBenign = map[string]bool{
 	"imds_http_tokens":            true,
 	"private_subnets_ids":         true,
 	"karpenter_build_imds_tokens": true,
+	"private_api":                 true,
 }
 
 func main() {

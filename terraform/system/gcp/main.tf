@@ -68,6 +68,7 @@ module "rack" {
   network                 = module.cluster.network
   nodes_account           = module.cluster.nodes_account
   nginx_additional_config = var.nginx_additional_config
+  private_api             = var.private_api
   project_id              = module.project.id
   region                  = var.region
   release                 = local.release

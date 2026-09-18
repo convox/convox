@@ -9,6 +9,7 @@ locals {
     fluentd_memory      = var.fluentd_memory
     image               = var.image
     name                = var.name
+    private_api         = var.private_api
     rack_name           = var.rack_name
     registry_disk       = var.registry_disk
     release             = var.release
@@ -24,6 +25,7 @@ locals {
     fluentd_memory      = "200Mi"
     image               = "convox/convox"
     name                = ""
+    private_api         = "false"
     rack_name           = ""
     registry_disk       = "50Gi"
     release             = ""

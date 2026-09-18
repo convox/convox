@@ -29,6 +29,7 @@ module "api" {
   rack_name                 = var.rack_name
   namespace                 = module.k8s.namespace
   release                   = var.release
+  private_api               = var.private_api
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   secret                    = random_string.secret.result

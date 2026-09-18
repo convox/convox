@@ -37,6 +37,7 @@ module "api" {
   pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
   region                               = var.region
   release                              = var.release
+  private_api                          = var.private_api
   resolver                             = module.resolver.endpoint
   resource_group                       = var.resource_group
   resource_group_name                  = var.resource_group_name

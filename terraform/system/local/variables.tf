@@ -41,3 +41,8 @@ variable "webhook_signing_key" {
   default     = ""
   description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}
