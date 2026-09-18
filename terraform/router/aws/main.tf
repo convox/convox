@@ -10,6 +10,11 @@ locals {
     split("=", item)[0] => split("=", item)[1]
   } : {}
 
+  nlb_security_group = trimspace(var.nlb_security_group)
+  nlb_security_group_annotation = local.nlb_security_group == "" ? {} : {
+    "service.beta.kubernetes.io/aws-load-balancer-security-groups" = local.nlb_security_group
+  }
+
   envoy_selector = {
     "app.kubernetes.io/component" = "envoy"
     "app.kubernetes.io/instance"  = "contour"
@@ -124,17 +129,16 @@ resource "kubernetes_service" "router_extra" {
     namespace = var.namespace
     name      = "router-extra"
 
-    annotations = {
+    annotations = merge({
       "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-extra-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
-      "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
       "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
-    }
+    }, local.nlb_security_group_annotation)
   }
 
   spec {
@@ -175,17 +179,16 @@ resource "kubernetes_service" "router" {
     namespace = var.namespace
     name      = "router"
 
-    annotations = {
+    annotations = merge({
       "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
       "service.beta.kubernetes.io/aws-load-balancer-scheme"                              = "internet-facing"
-      "service.beta.kubernetes.io/aws-load-balancer-security-groups"                     = var.nlb_security_group
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
       "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
-    }
+    }, local.nlb_security_group_annotation)
   }
 
   spec {
