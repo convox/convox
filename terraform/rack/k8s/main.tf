@@ -17,6 +17,12 @@ resource "kubernetes_namespace" "system" {
   timeouts {
     delete = "30m"
   }
+
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["convox.io/last-release-build-cleanup"]
+    ]
+  }
 }
 
 resource "kubernetes_config_map" "rack" {

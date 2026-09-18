@@ -23,6 +23,10 @@ resource "aws_iam_role" "fluentd" {
   assume_role_policy = data.aws_iam_policy_document.assume_fluentd.json
   path               = "/convox/"
   tags               = local.tags
+
+  lifecycle {
+    ignore_changes = [assume_role_policy]
+  }
 }
 
 data "aws_iam_policy_document" "fluentd" {
@@ -52,4 +56,8 @@ resource "aws_iam_role_policy" "fluentd" {
   name   = "fluentd"
   role   = aws_iam_role.fluentd.name
   policy = data.aws_iam_policy_document.fluentd.json
+
+  lifecycle {
+    ignore_changes = [policy]
+  }
 }

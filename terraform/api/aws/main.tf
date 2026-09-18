@@ -1,6 +1,10 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+resource "terraform_data" "release_sentinel" {
+  input = var.release
+}
+
 locals {
   tags = {
     System = "convox"
