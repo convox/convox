@@ -16,6 +16,7 @@ A production Rack runs on a cloud provider and hosts your applications in a real
 - [Digital Ocean](/installation/production-rack/do)
 - [Google Cloud](/installation/production-rack/gcp)
 - [Microsoft Azure](/installation/production-rack/azure)
+- [Oracle Cloud](/installation/production-rack/oci)
 
 ## See Also
 

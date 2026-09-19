@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-config-inspect/tfconfig"
 )
 
-var providers = []string{"aws", "azure", "do", "gcp", "local", "metal"}
+var providers = []string{"aws", "azure", "do", "gcp", "local", "metal", "oci"}
 
 // telemetryOmit are params the generator drops from both emitted maps.
 var telemetryOmit = map[string]bool{
@@ -22,6 +22,8 @@ var telemetryOmit = map[string]bool{
 	"token":            true,
 	"private_eks_host": true,
 	"private_eks_user": true,
+	"private_key":      true,
+	"fingerprint":      true,
 }
 
 // telemetryRedact are params kept in the maps and covered by both redaction layers.

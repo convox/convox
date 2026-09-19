@@ -91,5 +91,6 @@ This command sets the specified parameter to the given value.
 - [Google Cloud Platform (GCP)](/configuration/rack-parameters/gcp)
 - [Microsoft Azure](/configuration/rack-parameters/azure)
 - [Digital Ocean](/configuration/rack-parameters/do)
+- [Oracle Cloud (OCI)](/configuration/rack-parameters/oci)
 
 Select your cloud provider to view the available parameters and their configurations.

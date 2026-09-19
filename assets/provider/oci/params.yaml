@@ -1,0 +1,111 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
+      - name: region
+        default: us-ashburn-1
+        type: string
+        regex: ^[a-z]+-[a-z]+-\d+$
+        description: OCI region where the rack will be deployed. See
+          (OCI regions)[https://docs.oracle.com/en-us/iaas/Content/General/Concepts/regions.htm]
+          for available options.
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: Certificate renewal period. The default is 90 days (2160h).
+      - name: compartment_ocid
+        default: "null"
+        sideNote: Defaults to the tenancy root
+        optional: true
+        type: string
+        regex: ^ocid1\.(tenancy|compartment)\.oc1\.[a-z0-9-]*\.[a-zA-Z0-9]+$
+        description: OCI compartment where rack resources are created. Leave unset
+          to use the tenancy root compartment.
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: node_type
+        default: VM.Standard.E4.Flex
+        type: string
+        regex: ^(VM|BM)\.[A-Za-z0-9]+(\.[A-Za-z0-9]+){1,3}$
+        description: OCI (compute shape)[https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm]
+          used for cluster nodes. Flex shapes let you size &i node_ocpus &i and
+          &i node_memory &i independently.
+      - name: node_ocpus
+        default: "2"
+        type: integer
+        description: Number of OCPUs per node. Only takes effect when &i node_type &i
+          is a Flex shape.
+        allowedMinValue: 1
+      - name: node_memory
+        default: "16"
+        type: integer
+        description: Memory per node in GB. Only takes effect when &i node_type &i
+          is a Flex shape.
+        allowedMinValue: 1
+      - name: node_disk
+        default: "100"
+        type: integer
+        description: Node boot volume size in GB.
+        allowedMinValue: 1
+      - name: node_count
+        default: "2"
+        type: integer
+        description: Number of nodes in the rack's node pool.
+        allowedMinValue: 1
+      - name: gpu_node_type
+        default: "null"
+        sideNote: No GPU node pool by default
+        optional: true
+        type: string
+        regex: ^(VM|BM)\.GPU[A-Za-z0-9]*\.[A-Za-z0-9]+(\.[A-Za-z0-9]+)?$
+        description: OCI GPU (compute shape)[https://docs.oracle.com/en-us/iaas/Content/Compute/References/computeshapes.htm]
+          for an optional tainted GPU node pool, &i e.g. &i - VM.GPU.A10.1. Leave
+          unset to skip creating a GPU pool. &l GPU shapes usually need an OCI
+          service limit increase before nodes will launch. &l
+      - name: gpu_node_count
+        default: "1"
+        type: integer
+        description: Number of nodes in the optional GPU node pool. Only takes
+          effect when &i gpu_node_type &i is set.
+        allowedMinValue: 1
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: syslog
+        default: "null"
+        sideNote: Not forwarded by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^\d+(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills.
