@@ -654,7 +654,7 @@ func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest
 		dst := fmt.Sprintf("%s:%s.%s", repo, svc.Name, b.Id)
 
 		args := []string{"copy", "--authfile", authPath}
-		if len(common.BuildArchs(os.Getenv("BUILD_ARCHS"))) > 1 {
+		if len(common.BuildArchs(os.Getenv("BUILD_ARCHS"))) > 0 {
 			args = append(args, "--all")
 		}
 		args = append(args, "--", fmt.Sprintf("docker://%s", src), fmt.Sprintf("docker://%s", dst))

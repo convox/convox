@@ -417,6 +417,178 @@ func TestBuildMultiArchDevelopment(t *testing.T) {
 	})
 }
 
+func TestBuildSingleArchNoMatchError(t *testing.T) {
+	opts := build.Options{
+		App:      "app1",
+		Auth:     "{}",
+		Cache:    true,
+		Id:       "build1",
+		Rack:     "rack1",
+		Source:   "object://app1/object.tgz",
+		Push:     "registry.test.com",
+		Manifest: "convox2.yml",
+	}
+
+	t.Setenv("PROVIDER", "do")
+	t.Setenv("BUILD_ARCHS", "arm64")
+	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+		bdata, err := os.ReadFile("testdata/httpd.tgz")
+		require.NoError(t, err)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+
+		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+
+		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		e.On(
+			"Run",
+			mock.Anything,
+			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag), "--opt", "platform=linux/arm64",
+			"--export-cache", "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--opt", "build-arg:FOO=bar",
+		).Return(fmt.Errorf("exit status 1")).Run(func(args mock.Arguments) {
+			w, ok := args.Get(0).(io.Writer)
+			require.True(t, ok)
+			fmt.Fprintf(w, "error: failed to solve: httpd: no match for platform in manifest: not found\n")
+		})
+
+		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
+			r, ok := args.Get(2).(io.Reader)
+			require.True(t, ok)
+			_, err := io.ReadAll(r)
+			require.NoError(t, err)
+		})
+		p.On("EventSend", "build:create", mock.Anything).Return(nil)
+
+		err = b.Execute()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "not published for the requested build architecture (arm64): use an image published for arm64 or a multi-arch image")
+		require.NotContains(t, err.Error(), "BuildArch")
+	})
+}
+
+func TestBuildSingleArchDevelopmentNoMatchError(t *testing.T) {
+	opts := build.Options{
+		App:         "app1",
+		Auth:        "{}",
+		Cache:       true,
+		Development: true,
+		Id:          "build1",
+		Rack:        "rack1",
+		Source:      "object://app1/object.tgz",
+		Push:        "registry.test.com",
+	}
+
+	t.Setenv("PROVIDER", "do")
+	t.Setenv("BUILD_ARCHS", "arm64")
+	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+		bdata, err := os.ReadFile("testdata/httpd-dev.tgz")
+		require.NoError(t, err)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+
+		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+
+		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		e.On(
+			"Run",
+			mock.Anything,
+			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag), "--opt", "platform=linux/arm64",
+			"--export-cache", "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--opt", "target=development",
+		).Return(fmt.Errorf("exit status 1")).Run(func(args mock.Arguments) {
+			w, ok := args.Get(0).(io.Writer)
+			require.True(t, ok)
+			fmt.Fprintf(w, "error: failed to solve: httpd: no match for platform in manifest: not found\n")
+		})
+
+		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
+			r, ok := args.Get(2).(io.Reader)
+			require.True(t, ok)
+			_, err := io.ReadAll(r)
+			require.NoError(t, err)
+		})
+		p.On("EventSend", "build:create", mock.Anything).Return(nil)
+
+		err = b.Execute()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "not published for the requested build architecture (arm64): use an image published for arm64 or a multi-arch image")
+		require.NotContains(t, err.Error(), "BuildArch")
+	})
+}
+
+func TestBuildSingleArchDevelopment(t *testing.T) {
+	opts := build.Options{
+		App:         "app1",
+		Auth:        "{}",
+		Cache:       true,
+		Development: true,
+		Id:          "build1",
+		Rack:        "rack1",
+		Source:      "object://app1/object.tgz",
+		Push:        "registry.test.com",
+	}
+
+	t.Setenv("PROVIDER", "do")
+	t.Setenv("BUILD_ARCHS", "arm64")
+	testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+		bdata, err := os.ReadFile("testdata/httpd-dev.tgz")
+		require.NoError(t, err)
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+
+		p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+
+		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		e.On(
+			"Run",
+			mock.Anything,
+			"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+			"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag), "--opt", "platform=linux/arm64",
+			"--export-cache", "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=registry.test.com:web.buildcache",
+			"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
+			"--opt", "target=development",
+		).Return(nil).Run(func(args mock.Arguments) {
+			w, ok := args.Get(0).(io.Writer)
+			require.True(t, ok)
+			fmt.Fprintf(w, "build1\nbuild2\n")
+		})
+
+		e.On(
+			"Execute",
+			"skopeo",
+			"inspect",
+			"--config",
+			"docker://registry.test.com:web.build1",
+		).Return(fxSkopeoInspect(), nil)
+
+		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
+			r, ok := args.Get(2).(io.Reader)
+			require.True(t, ok)
+			_, err := io.ReadAll(r)
+			require.NoError(t, err)
+		})
+		p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
+		p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
+
+		err = b.Execute()
+		require.NoError(t, err)
+	})
+}
+
 func TestBuildOptions(t *testing.T) {
 	opts := build.Options{
 		App:      "app1",
