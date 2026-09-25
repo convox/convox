@@ -221,7 +221,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	args = append(args, "--output", outputOpt) // skipcq
 
 	archs := common.BuildArchs(os.Getenv("BUILD_ARCHS"))
-	platformed := len(archs) > 0 && !bb.Development
+	platformed := len(archs) > 0 && (!bb.Development || len(archs) == 1)
 
 	if platformed {
 		platforms := make([]string, len(archs))
@@ -287,6 +287,9 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 	} else {
 		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
 			if platformed && strings.Contains(bb.logs.String(), "no match for platform") {
+				if len(archs) == 1 {
+					return fmt.Errorf("an image in this build is not published for the requested build architecture (%s): use an image published for %s or a multi-arch image", archs[0], archs[0])
+				}
 				return fmt.Errorf("an image in this build is not published for the requested build architectures (%s): set the BuildArch app parameter to an architecture the image supports (convox apps params set BuildArch=amd64 -a %s) or use multi-arch images", strings.Join(archs, ","), bb.App)
 			}
 			return err

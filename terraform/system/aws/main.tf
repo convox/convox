@@ -101,7 +101,12 @@ locals {
     split(",", local.karpenter_arch_effective),
     [for np in local.additional_karpenter_nodepools : split(",", lookup(np, "arch", "amd64"))],
   ]) : trimspace(a)]))
-  build_archs = var.karpenter_enabled == "true" && length(local.karpenter_arch_all) > 1 ? join(",", sort(local.karpenter_arch_all)) : ""
+  node_archs = distinct(concat(
+    local.karpenter_arch_all,
+    [local.arm_type ? "arm64" : "amd64"],
+    var.build_node_enabled ? [local.build_arm_type ? "arm64" : "amd64"] : [],
+  ))
+  build_archs = var.karpenter_enabled == "true" && length(local.node_archs) > 1 ? join(",", sort(local.karpenter_arch_all)) : ""
 
   public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
   private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
