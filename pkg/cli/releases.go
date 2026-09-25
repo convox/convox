@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -223,11 +224,21 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 		c.Startf("Waiting for app to be ready")
 
 		if err := common.WaitForAppRunning(rack, app); err != nil {
+			if errors.Is(err, common.ErrRolloutFailed) {
+				return fmt.Errorf("release %s for %s was not promoted, another rollout failed while it waited\n  convox deploy-debug -a %s", id, app, app)
+			}
 			return err
 		}
 
 		c.OK()
+
+		a, err = rack.AppGet(app)
+		if err != nil {
+			return err
+		}
 	}
+
+	previous := a.Release
 
 	c.Startf("Promoting <release>%s</release>", id)
 	c.Writef("\n")
@@ -254,11 +265,22 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 		return err
 	}
 
-	if a.Release != id {
-		return common.RolloutFailedError(app)
+	if err := promoteResult(app, id, previous, a.Release); err != nil {
+		return err
 	}
 
 	return c.OK()
+}
+
+func promoteResult(app, id, previous, current string) error {
+	switch current {
+	case id:
+		return nil
+	case previous, "":
+		return common.RolloutFailedError(app)
+	default:
+		return fmt.Errorf("release %s for %s was superseded by %s\n  convox releases info %s -a %s", id, app, current, current, app)
+	}
 }
 
 func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
@@ -290,6 +312,13 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Promoting <release>%s</release>", rn.Id)
 
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
+
+	previous := a.Release
+
 	force := c.Bool("force")
 	if err := rack.ReleasePromote(app(c), rn.Id, structs.ReleasePromoteOptions{
 		Force: &force,
@@ -303,13 +332,13 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	a, err := rack.AppGet(app(c))
+	a, err = rack.AppGet(app(c))
 	if err != nil {
 		return err
 	}
 
-	if a.Release != rn.Id {
-		return common.RolloutFailedError(app(c))
+	if err := promoteResult(app(c), rn.Id, previous, a.Release); err != nil {
+		return err
 	}
 
 	if c.Bool("id") {
