@@ -274,10 +274,13 @@ func WaitForAppRunningContext(ctx context.Context, p structs.Provider, app strin
 	return err
 }
 
+// ErrRolloutFailed is wrapped by every RolloutFailedError.
+var ErrRolloutFailed = errors.New("rollout failed")
+
 // RolloutFailedError names the app and where to look, rather than the bare
 // "rollback" every failure path used to print.
 func RolloutFailedError(app string) error {
-	return fmt.Errorf("rollout failed for %s, the previous release was restored\n  convox deploy-debug -a %s", app, app)
+	return fmt.Errorf("%w for %s, the previous release was restored\n  convox deploy-debug -a %s", ErrRolloutFailed, app, app)
 }
 
 func WaitForAppWithLogs(p structs.Provider, w io.Writer, app string) error {
