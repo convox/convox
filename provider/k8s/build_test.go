@@ -479,7 +479,30 @@ func TestBuildImportImage(t *testing.T) {
 		})
 	})
 
-	t.Run("SingleArchRackRelayUnchanged", func(t *testing.T) {
+	t.Run("PinnedSingleArchRackRelaysAllPlatforms", func(t *testing.T) {
+		t.Setenv("BUILD_ARCHS", "arm64")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build10", "basic"))
+
+			var capturedArgs []string
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				capturedArgs = append([]string(nil), args...)
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build10", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.NoError(t, err)
+
+			waitForBuildStatus(t, p, "app1", "build10", "complete")
+			assertArgsShape(t, capturedArgs)
+			assert.Contains(t, capturedArgs, "--all")
+		})
+	})
+
+	t.Run("UnpinnedRackRelayUnchanged", func(t *testing.T) {
 		t.Setenv("BUILD_ARCHS", "")
 		testProvider(t, func(p *k8s.Provider) {
 			kk, ok := p.Cluster.(*fake.Clientset)
