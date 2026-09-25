@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -28,19 +27,6 @@ func (f *framesReader) Read(p []byte) (int, error) {
 	n := copy(p, f.frames[f.i])
 	f.i++
 	return n, nil
-}
-
-type dataWithEOFReader struct {
-	data string
-	done bool
-}
-
-func (r *dataWithEOFReader) Read(p []byte) (int, error) {
-	if r.done {
-		return 0, io.EOF
-	}
-	r.done = true
-	return copy(p, r.data), io.EOF
 }
 
 func stubPlugin(t *testing.T) (*int, *ecsExecSession) {
@@ -244,105 +230,13 @@ func TestWebsocketExitStreamNoMarker(t *testing.T) {
 	require.Equal(t, "hello world", out.String())
 }
 
-func TestExecBodyHoldsEOFUntilClose(t *testing.T) {
-	// stdsdk sends an empty binary frame when the request body ends, and a
-	// Console-proxied rack reads that as a closed stream and kills the command.
-	b := newExecBody(strings.NewReader(""), true)
-	p := make([]byte, 8)
-
-	blocked := make(chan error, 1)
-	go func() {
-		_, rerr := b.Read(p)
-		blocked <- rerr
-	}()
-
-	select {
-	case <-blocked:
-		require.Fail(t, "the body reported EOF before the exec finished")
-	case <-time.After(100 * time.Millisecond):
-	}
-
-	b.close()
-	require.Equal(t, io.EOF, <-blocked)
-}
-
-func TestExecBodyForwardsEOFAfterInput(t *testing.T) {
-	// A v2 rack half-closes the command's own stdin on that frame, so a caller
-	// that piped something in still needs it.
-	b := newExecBody(strings.NewReader("in"), true)
-	p := make([]byte, 8)
-
-	n, err := b.Read(p)
-	require.NoError(t, err)
-	require.Equal(t, "in", string(p[:n]))
-
-	done := make(chan error, 1)
-	go func() {
-		_, rerr := b.Read(p)
-		done <- rerr
-	}()
-
-	select {
-	case rerr := <-done:
-		require.Equal(t, io.EOF, rerr)
-	case <-time.After(time.Second):
-		require.Fail(t, "input was sent, so the body must report EOF without waiting")
-	}
-}
-
-func TestExecBodyForwardsEOFWithoutProxy(t *testing.T) {
-	// A rack reached directly is not torn down by the frame, and a v2 rack needs
-	// it to half-close the command's own stdin.
-	b := newExecBody(strings.NewReader(""), false)
-	p := make([]byte, 8)
-
-	done := make(chan error, 1)
-	go func() {
-		_, rerr := b.Read(p)
-		done <- rerr
-	}()
-
-	select {
-	case rerr := <-done:
-		require.Equal(t, io.EOF, rerr)
-	case <-time.After(time.Second):
-		require.Fail(t, "an unproxied client must report EOF without waiting")
-	}
-}
-
-func TestProxied(t *testing.T) {
-	// A cloud machine reaches its target through the same Console relay but carries
-	// no rack name, so keying only on Rack would leave it uncovered.
-	require.False(t, (&Client{}).proxied())
-	require.True(t, (&Client{Rack: "rack1"}).proxied())
-	require.True(t, (&Client{MachineID: "m1"}).proxied())
-}
-
-func TestExecBodyReturnsDataWithEOF(t *testing.T) {
-	// A reader is allowed to return its last bytes together with io.EOF; those
-	// bytes must not wait on the exec.
-	b := newExecBody(&dataWithEOFReader{data: "in"}, true)
-	p := make([]byte, 8)
-
-	n, err := b.Read(p)
-	require.NoError(t, err)
-	require.Equal(t, "in", string(p[:n]))
-
-	n, err = b.Read(p)
-	require.Equal(t, io.EOF, err)
-	require.Equal(t, 0, n)
-}
-
 // methods.go is generated; ProcessExec is hand-maintained to relay the ECS Exec
-// protocol via execStream and to hold the request body open via newExecBody. A
-// regen would revert it to a plain WebsocketExit call and silently break ECS Exec
-// (the unused linter would not notice, because these tests reference execStream
-// directly). This guard fails loudly if that happens.
+// protocol via execStream. A regen would revert it to a plain WebsocketExit call
+// and silently break ECS Exec (the unused linter would not notice, because these
+// tests reference execStream directly). This guard fails loudly if that happens.
 func TestProcessExecWiredToExecStream(t *testing.T) {
 	src, err := os.ReadFile("methods.go")
 	require.NoError(t, err)
 	require.Contains(t, string(src), "return execStream(ws, rw)",
 		"sdk/methods.go ProcessExec must relay via execStream; if methods.go was regenerated, reapply the ECS Exec wrapper")
-	require.Contains(t, string(src), "newExecBody(rw, c.proxied())",
-		"sdk/methods.go ProcessExec must wrap the request body with newExecBody; if methods.go was regenerated, reapply it")
 }
