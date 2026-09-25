@@ -21,7 +21,11 @@ func Balancers(rack sdk.Interface, c *stdcli.Context) error {
 	t := c.Table("BALANCER", "SERVICE", "ENDPOINT")
 
 	for _, b := range bs {
-		t.AddRow(b.Name, b.Service, b.Endpoint)
+		endpoint := b.Endpoint
+		if endpoint == "" && IsTerminalFn(c) {
+			endpoint = "(pending)"
+		}
+		t.AddRow(b.Name, b.Service, endpoint)
 	}
 
 	return t.Print()
