@@ -430,50 +430,6 @@ func statusCodeFromMarker(marker []byte) (int, bool) {
 	return code, true
 }
 
-type execBody struct {
-	r    io.Reader
-	hold bool
-	sent bool
-	done chan struct{}
-}
-
-// newExecBody optionally holds the EOF of a caller that never sends anything: the
-// empty binary frame stdsdk emits there reads as a closed stream at a Console
-// proxy, which kills the command. Held only for a proxied client and only until
-// the first byte, since a rack reached directly uses that frame to half-close the
-// command's own stdin.
-func newExecBody(r io.Reader, hold bool) *execBody {
-	return &execBody{r: r, hold: hold, done: make(chan struct{})}
-}
-
-func (b *execBody) Read(p []byte) (int, error) {
-	n, err := b.r.Read(p)
-
-	if n > 0 {
-		b.sent = true
-
-		if err == io.EOF {
-			return n, nil
-		}
-	}
-
-	if err == io.EOF && b.hold && !b.sent {
-		<-b.done
-	}
-
-	return n, err
-}
-
-func (b *execBody) close() {
-	close(b.done)
-}
-
-// proxied reports whether this client reaches its target through the Console,
-// which is where an end-of-input frame is read as the end of the whole session.
-func (c *Client) proxied() bool {
-	return c.Rack != "" || c.MachineID != ""
-}
-
 func (c *Client) WithContext(ctx context.Context) structs.Provider {
 	cc := *c
 	cc.Client = cc.Client.WithContext(ctx)
