@@ -71,6 +71,13 @@ func fxAppUpdating() *structs.App {
 	}
 }
 
+func fxAppAt(release, status string) *structs.App {
+	a := fxApp()
+	a.Release = release
+	a.Status = status
+	return a
+}
+
 func fxBuild() *structs.Build {
 	return &structs.Build{
 		App:         "app1",
