@@ -255,7 +255,8 @@ func printPromotingInProgress(ctx context.Context, cliCtx *stdcli.Context) {
 // of pkg/cli must not take a dependency on this var — it may be renamed
 // or removed without a deprecation cycle.
 //
-// Callers: pkg/cli/env.go (Env), pkg/cli/rack.go (RackParams).
+// Callers: pkg/cli/env.go (Env), pkg/cli/rack.go (RackParams),
+// pkg/cli/balancers.go (Balancers).
 //
 // CONCURRENCY: this var is mutable package state. Tests that override it
 // MUST restore via t.Cleanup AND MUST NOT call t.Parallel anywhere in
