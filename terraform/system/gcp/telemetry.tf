@@ -6,6 +6,7 @@ locals {
     additional_node_groups_config   = var.additional_node_groups_config
     buildkit_enabled                = var.buildkit_enabled
     cert_duration                   = var.cert_duration
+    cost_tracking_enable            = var.cost_tracking_enable
     dcgm_scrape_interval            = var.dcgm_scrape_interval
     docker_hub_password             = var.docker_hub_password
     docker_hub_username             = var.docker_hub_username
@@ -34,6 +35,7 @@ locals {
     additional_node_groups_config   = ""
     buildkit_enabled                = "false"
     cert_duration                   = "2160h"
+    cost_tracking_enable            = "false"
     dcgm_scrape_interval            = "15s"
     docker_hub_password             = ""
     docker_hub_username             = ""

@@ -871,7 +871,12 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 		price, ok := billing.PriceForInstanceOn(p.Provider, instanceType)
 		if !ok {
 			warnings++
+			logUnpricedOnce("unpriced", p.Provider, instanceType)
 			continue
+		}
+		if price.GpuCount == 0 && nodeHasAccelerator(node) {
+			warnings++
+			logUnpricedOnce("unpriced_accelerator", p.Provider, instanceType)
 		}
 
 		capacityType := nodeCapacityType(node)
@@ -949,7 +954,30 @@ func nodeCapacityType(n *v1.Node) string {
 	if strings.EqualFold(n.Labels["kubernetes.azure.com/scalesetpriority"], "spot") {
 		return "spot"
 	}
+	if n.Labels["cloud.google.com/gke-spot"] == "true" || n.Labels["cloud.google.com/gke-preemptible"] == "true" {
+		return "spot"
+	}
+	if _, ok := n.Labels["cloud.google.com/gke-nodepool"]; ok {
+		return "on-demand"
+	}
 	return ""
+}
+
+func nodeHasAccelerator(n *v1.Node) bool {
+	for key := range gpuKeyToVendor {
+		if q, ok := n.Status.Allocatable[v1.ResourceName(key)]; ok && q.Value() > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+var unpricedLogged sync.Map
+
+func logUnpricedOnce(at, provider, instanceType string) {
+	if _, seen := unpricedLogged.LoadOrStore(at+":"+instanceType, true); !seen {
+		fmt.Printf("ns=budget_accumulator at=%s provider=%s instance_type=%q\n", at, provider, instanceType)
+	}
 }
 
 func dominantInstanceTypeFromVariants(variants map[string]float64) string {

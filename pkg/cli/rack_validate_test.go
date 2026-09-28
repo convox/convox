@@ -573,7 +573,7 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 	}
 }
 
-func TestValidateAndMutateParams_CostTrackingEnable_AzureCoverage(t *testing.T) {
+func TestValidateAndMutateParams_CostTrackingEnable_ProviderCoverage(t *testing.T) {
 	params := map[string]string{"cost_tracking_enable": "true"}
 	if err := validateAndMutateParams(params, "azure", map[string]string{}, false); err != nil {
 		t.Errorf("cost_tracking_enable=true should pass for azure, got: %v", err)
@@ -587,8 +587,12 @@ func TestValidateAndMutateParams_CostTrackingEnable_AzureCoverage(t *testing.T) 
 		t.Errorf("cost_tracking_enable should stay unknown for do provider")
 	}
 	params4 := map[string]string{"cost_tracking_enable": "true"}
-	if err := validateAndMutateParams(params4, "gcp", map[string]string{}, false); err == nil {
-		t.Errorf("cost_tracking_enable should stay unknown for gcp provider")
+	if err := validateAndMutateParams(params4, "gcp", map[string]string{}, false); err != nil {
+		t.Errorf("cost_tracking_enable=true should pass for gcp, got: %v", err)
+	}
+	params5 := map[string]string{"cost_tracking_enable": "garbage"}
+	if err := validateAndMutateParams(params5, "gcp", map[string]string{}, false); err == nil {
+		t.Errorf("cost_tracking_enable=garbage should be rejected for gcp")
 	}
 }
 
