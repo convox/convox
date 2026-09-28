@@ -284,6 +284,26 @@ func TestNodeCapacityType_DualSignal(t *testing.T) {
 				}, nil),
 			expected: "on-demand",
 		},
+		{
+			name:     "GKE_spot",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"cloud.google.com/gke-nodepool": "pool1", "cloud.google.com/gke-spot": "true"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "GKE_preemptible_maps_to_spot",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"cloud.google.com/gke-nodepool": "pool1", "cloud.google.com/gke-preemptible": "true"}, nil),
+			expected: "spot",
+		},
+		{
+			name:     "GKE_nodepool_without_spot_labels_is_on_demand",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"cloud.google.com/gke-nodepool": "pool1"}, nil),
+			expected: "on-demand",
+		},
+		{
+			name:     "GKE_spot_false_is_on_demand",
+			node:     nodeWithLabelsAndAnnotations(map[string]string{"cloud.google.com/gke-nodepool": "pool1", "cloud.google.com/gke-spot": "false"}, nil),
+			expected: "on-demand",
+		},
 	}
 
 	for _, c := range cases {

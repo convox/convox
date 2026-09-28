@@ -128,8 +128,8 @@ var awsKnownParams = map[string]bool{
 
 var gcpKnownParams = map[string]bool{
 	"additional_node_groups_config": true,
-	"buildkit_enabled":              true, "cert_duration": true, "dcgm_scrape_interval": true,
-	"docker_hub_password": true,
+	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true,
+	"dcgm_scrape_interval": true, "docker_hub_password": true,
 	"docker_hub_username": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,

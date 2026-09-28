@@ -25,6 +25,7 @@ module "api" {
 
   buildkit_enabled          = var.buildkit_enabled
   cluster                   = var.cluster
+  cost_tracking_enable      = var.cost_tracking_enable
   docker_hub_authentication = module.k8s.docker_hub_authentication
   fluentd_memory            = var.fluentd_memory
   domain                    = module.router.endpoint
