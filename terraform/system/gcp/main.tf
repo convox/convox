@@ -59,6 +59,7 @@ module "rack" {
 
   buildkit_enabled        = var.buildkit_enabled
   cluster                 = module.cluster.id
+  cost_tracking_enable    = var.cost_tracking_enable
   docker_hub_username     = var.docker_hub_username
   docker_hub_password     = var.docker_hub_password
   fluentd_memory          = var.fluentd_memory

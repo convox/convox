@@ -12,6 +12,11 @@ variable "cert_duration" {
   type    = string
 }
 
+variable "cost_tracking_enable" {
+  default = false
+  type    = bool
+}
+
 variable "docker_hub_username" {
   default = ""
 }

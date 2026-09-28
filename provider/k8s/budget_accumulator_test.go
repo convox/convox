@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/billing"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
@@ -994,6 +995,196 @@ func TestBudgetAccumulator_AzureProviderWarnsOnUnknownSku(t *testing.T) {
 		require.NotNil(t, state)
 		assert.Equal(t, 0.0, state.CurrentMonthSpendUsd)
 		assert.Equal(t, 1, state.WarningCount)
+	})
+}
+
+func TestBudgetAccumulator_GcpPreemptibleNodeChargesSpotRate(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.Provider = "gcp"
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name: "node1",
+				Labels: map[string]string{
+					"node.kubernetes.io/instance-type": "n1-standard-2",
+					"cloud.google.com/gke-nodepool":    "default",
+					"cloud.google.com/gke-preemptible": "true",
+				},
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+					ac.ResourceMemory: *resource.NewQuantity(7<<30, resource.BinarySI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec: ac.PodSpec{
+				NodeName: "node1",
+				Containers: []ac.Container{{
+					Name: "web",
+					Resources: ac.ResourceRequirements{
+						Requests: ac.ResourceList{ac.ResourceCPU: *resource.NewMilliQuantity(2000, resource.DecimalSI)},
+					},
+				}},
+			},
+			Status: ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		price, ok := billing.PriceForInstanceOn("gcp", "n1-standard-2")
+		require.True(t, ok)
+		require.Greater(t, price.SpotUsdPerHourFactor, 0.0)
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.InDelta(t, price.OnDemandUsdPerHour*price.SpotUsdPerHourFactor, state.CurrentMonthSpendUsd, 1e-9)
+		assert.Equal(t, 0, state.WarningCount)
+	})
+}
+
+// A GPU attached to a host whose table entry carries no GPU leaves the price
+// incomplete, so the pod is charged the host rate and flagged.
+func TestBudgetAccumulator_AttachedGpuOnCpuOnlyEntryWarns(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.Provider = "gcp"
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name: "node1",
+				Labels: map[string]string{
+					"node.kubernetes.io/instance-type": "n1-standard-4",
+					"cloud.google.com/gke-nodepool":    "gpu",
+					"cloud.google.com/gke-accelerator": "nvidia-tesla-t4",
+				},
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:                    *resource.NewMilliQuantity(4000, resource.DecimalSI),
+					ac.ResourceMemory:                 *resource.NewQuantity(15<<30, resource.BinarySI),
+					ac.ResourceName("nvidia.com/gpu"): *resource.NewQuantity(1, resource.DecimalSI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec: ac.PodSpec{
+				NodeName: "node1",
+				Containers: []ac.Container{{
+					Name: "worker",
+					Resources: ac.ResourceRequirements{
+						Requests: ac.ResourceList{
+							ac.ResourceCPU:                    *resource.NewMilliQuantity(1000, resource.DecimalSI),
+							ac.ResourceName("nvidia.com/gpu"): *resource.NewQuantity(1, resource.DecimalSI),
+						},
+					},
+				}},
+			},
+			Status: ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		price, ok := billing.PriceForInstanceOn("gcp", "n1-standard-4")
+		require.True(t, ok)
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.InDelta(t, price.OnDemandUsdPerHour*0.25, state.CurrentMonthSpendUsd, 1e-9)
+		assert.Equal(t, 1, state.WarningCount)
+	})
+}
+
+func TestBudgetAccumulator_GpuOnGpuEntryDoesNotWarn(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.Provider = "aws"
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+		})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{
+				Name:   "node1",
+				Labels: map[string]string{"node.kubernetes.io/instance-type": "g5.2xlarge"},
+			},
+			Status: ac.NodeStatus{
+				Allocatable: ac.ResourceList{
+					ac.ResourceCPU:                    *resource.NewMilliQuantity(8000, resource.DecimalSI),
+					ac.ResourceMemory:                 *resource.NewQuantity(32<<30, resource.BinarySI),
+					ac.ResourceName("nvidia.com/gpu"): *resource.NewQuantity(1, resource.DecimalSI),
+				},
+			},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec: ac.PodSpec{
+				NodeName: "node1",
+				Containers: []ac.Container{{
+					Name: "worker",
+					Resources: ac.ResourceRequirements{
+						Requests: ac.ResourceList{ac.ResourceName("nvidia.com/gpu"): *resource.NewQuantity(1, resource.DecimalSI)},
+					},
+				}},
+			},
+			Status: ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		price, ok := billing.PriceForInstanceOn("aws", "g5.2xlarge")
+		require.True(t, ok)
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.InDelta(t, price.OnDemandUsdPerHour, state.CurrentMonthSpendUsd, 1e-9)
+		assert.Equal(t, 0, state.WarningCount)
 	})
 }
 

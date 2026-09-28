@@ -40,6 +40,7 @@ module "k8s" {
   }
 
   buildkit_enabled          = var.buildkit_enabled
+  cost_tracking_enable      = var.cost_tracking_enable
   docker_hub_authentication = var.docker_hub_authentication
   domain                    = var.domain
   image                     = var.image
