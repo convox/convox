@@ -194,6 +194,7 @@ When using `capacity_type: "SPOT"`:
 
 - GCP Spot VMs can be preempted at any time when GCP needs the capacity back
 - Spot VMs are best suited for fault-tolerant, stateless workloads
+- With [`cost_tracking_enable`](/configuration/rack-parameters/gcp/cost_tracking_enable) on, cost tracking prices Spot pools at their machine type's spot rate. See that page for how GPU and Cloud TPU pools are priced
 
 ## Using Node Pools with Services
 To target specific services to run on particular node pools, use the `nodeSelectorLabels` field in your `convox.yml` file:

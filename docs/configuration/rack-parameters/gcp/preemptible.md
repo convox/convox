@@ -27,3 +27,5 @@ This command sets the `preemptible` parameter to the specified value.
 
 ## Additional Information
 Preemptible instances offer significant cost savings but can be terminated by Google Cloud at any time if resources are needed elsewhere. Ensure your applications can handle interruptions gracefully if you choose to use preemptible instances. For more information, refer to the [GCP documentation on preemptible instances](https://cloud.google.com/compute/docs/instances/preemptible).
+
+With [`cost_tracking_enable`](/configuration/rack-parameters/gcp/cost_tracking_enable) on, cost tracking prices preemptible nodes at their machine type's spot rate.

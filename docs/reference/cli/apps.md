@@ -37,7 +37,7 @@ Cancel an app update
     OK
 ```
 
-`convox apps cancel` cancels a deploy that is in progress, and returns `app is not updating` when no deploy is running. Cancelling recreates the last active Release. It does not affect Builds. To cancel a Build the Rack is still running, use [`convox builds cancel`](/reference/cli/builds#builds-cancel).
+`convox apps cancel` cancels a deploy that is in progress and rolls the App back to the Release it was running before. It returns `app is not updating` when no deploy is running, including while a failed deploy is already rolling back. After the cancel, the CLI creates a new Release with the same build, environment and description as the App's most recent Release, without promoting it. It does not affect Builds. To cancel a Build the Rack is still running, use [`convox builds cancel`](/reference/cli/builds#builds-cancel).
 
 ## apps create
 
@@ -63,6 +63,7 @@ Delete an app
 ### Examples
 ```bash
     $ convox apps delete myapp
+    Deleting myapp... OK
 ```
 ## apps export
 
@@ -163,13 +164,17 @@ Set app parameters
 
 ### Usage
 ```bash
-    convox apps params set <key=value> [key=value]... [app]
+    convox apps params set <Key=Value> [Key=Value]...
 ```
 ### Examples
 ```bash
     $ convox apps params set BuildCpu=1000 BuildMem=4096 -a myapp
-    Updating parameters... OK
+    Updating parameters...
+    ...
+    OK
 ```
+
+The App is selected with `-a`. Setting a parameter re-promotes the App's current Release, so the command streams that rollout and prints `OK` once the App is running again.
 
 ## apps unlock
 

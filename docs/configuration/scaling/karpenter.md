@@ -148,16 +148,37 @@ On a Rack with `karpenter_enabled=true`, `karpenter_arch` also determines what a
 
 | `karpenter_arch` | Build output |
 |------------------|--------------|
-| _(unset)_ | One image, native to the build node. |
-| A single value (`amd64` or `arm64`) | One image, native to the node the build pod runs on. With [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled) that is a build node, whose architecture follows [`build_node_type`](/configuration/rack-parameters/aws/build_node_type), falling back to [`node_type`](/configuration/rack-parameters/aws/node_type), and does not follow `karpenter_arch`. With the default `build_node_enabled=false` there is no build NodePool, so the build pod runs on a workload node and the image follows `karpenter_arch`. |
+| _(unset)_ | One image for the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type), which is also the workload architecture. |
+| A single value (`amd64` or `arm64`) | One image for that architecture, for Builds on the workload and build pools. |
 | `amd64,arm64` | A multi-architecture image index that runs on either architecture. |
 
-Two things to watch for:
+From Rack version `3.25.9` the Rack pins Builds to `karpenter_arch` when `node_type`, or [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled), is the other architecture. A pinned Build that runs on a node of the other architecture is built under emulation, which is slower than a native Build. Node groups added with [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) or [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) are not counted: when they are a Rack's only nodes of the other architecture, Builds are not pinned, and a Build that runs on one of them produces an image for that node's architecture.
 
-- On a Rack with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled), setting `karpenter_arch=arm64` by hand on a Rack whose `node_type` is x86 moves the workload pool to arm64 but leaves the build pool on amd64, because the two derive from different parameters. Set [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) to a Graviton type in the same change, or every new Build produces an image the workload pool cannot run and Processes fail with an exec format error. This only arises when you override one side of the derivation; a Rack that inherits both from `node_type` is always consistent. With the default `build_node_enabled=false` there is no build pool, build pods run on workload nodes, and `build_node_type` has no effect.
-- An entry in [`additional_karpenter_nodepools_config`](#additional_karpenter_nodepools_config-custom-nodepools) whose `arch` differs from the workload architecture also switches the whole Rack into multi-architecture Builds. On an arm64 Rack, a pool that omits `arch` defaults to `amd64` and does this silently.
+With `build_node_enabled=true` the build pod runs in the build pool, whose architecture follows `build_node_type`, falling back to `node_type`, and does not follow `karpenter_arch`. Setting `karpenter_arch=arm64` by hand on a Rack whose `node_type` is x86 therefore moves the workload pool to arm64 and leaves the build pool on amd64. From Rack version `3.25.9` those Builds are pinned and still produce arm64 images, under emulation. Set `build_node_type` to a Graviton type in the same change to keep Builds native. Before `3.25.9` every new Build on such a Rack produced an image the workload pool could not run, and Processes failed with an exec format error. A Rack that inherits both from `node_type` is always consistent. With the default `build_node_enabled=false` there is no build pool, build pods run on workload nodes, and `build_node_type` has no effect.
 
-Multi-architecture Builds require `karpenter_enabled=true`. Builds run with `--development`, and Builds run with `--external` (which build on your own machine), never receive a platform pin and always produce a single image. Containerized [Resources](/reference/primitives/app/resource) are not architecture-aware and several of the default images have no arm64 variant, so an arm64-capable Rack is not a good fit for them yet.
+[`convox builds import-image`](/reference/cli/builds-import-image) copies the image from the Rack API, which runs on system nodes that follow `node_type`. From `3.25.9`, whenever the Rack pins Builds, an import copies every platform the source image publishes, so the image runs on the workload pool whatever `node_type` is. A source image published for a single platform is copied as it is. Before `3.25.9` an import copied only the `node_type` architecture unless the Rack was building multi-architecture images.
+
+An entry in [`additional_karpenter_nodepools_config`](#additional_karpenter_nodepools_config-custom-nodepools) whose `arch` differs from the workload architecture switches the whole Rack into multi-architecture Builds. On an arm64 Rack, a pool that omits `arch` defaults to `amd64` and does this silently.
+
+From `3.25.9`, on a Rack that pins Builds, these configurations build for `karpenter_arch` where they used to get another architecture:
+
+| Configuration | From `3.25.9` | What to do |
+|---------------|---------------|------------|
+| A Service placed on an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) group of the build node's architecture, on a Rack whose build node differs from `karpenter_arch` | Its Builds target `karpenter_arch`, not the node group's architecture | Set [`BuildArch`](/configuration/app-parameters/aws/BuildArch) on the App to the node group's architecture |
+| A Build routed with [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels), or to an [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) node of the other architecture | Built for `karpenter_arch` | Set `BuildArch` on an App that needs another architecture |
+| A [`karpenter_config`](#karpenter_config-workload-nodepool-override) override of the NodePool `requirements` | The override is not read when choosing the build architecture | Set `karpenter_arch` to the architecture the override selects |
+
+Imported images carry every platform on a Rack that pins Builds, so none of the three affects `convox builds import-image`. Existing images are not rebuilt: an App picks up the change on its next Build or import. Downgrading below `3.25.9` restores the earlier behavior, and images built on `3.25.9` keep running.
+
+A Build whose base image is published as a multi-architecture index without the target architecture fails. With one target architecture, from `3.25.9`, the error is:
+
+```
+an image in this build is not published for the requested build architecture (arm64): use an image published for arm64 or a multi-arch image
+```
+
+With both architectures targeted, the error names the pair and suggests narrowing the App with `BuildArch`. See [BuildArch](/configuration/app-parameters/aws/BuildArch#narrowing-a-multi-architecture-rack-to-one-platform). A base image published for one architecture with no index is not checked against the target: the Build succeeds, and Processes fail with an exec format error when that architecture is not the one targeted.
+
+Multi-architecture Builds require `karpenter_enabled=true`. From `3.25.9` a development Build (`convox build --development`, `convox deploy --development`, `convox start`) builds for the target architecture when exactly one is targeted, and with both it builds for the build node's own architecture. Builds run with `--external` build on your own machine and never receive a platform pin. Containerized [Resources](/reference/primitives/app/resource) are not architecture-aware and several of the default images have no arm64 variant, so an arm64-capable Rack is not a good fit for them yet.
 
 Scheduling on a mixed-architecture pool follows standard Kubernetes behavior: service pods carry no architecture constraint by default, so a pod can land on a node of either architecture. A multi-architecture image runs on either. A single-architecture image scheduled onto a node of the other architecture fails with an exec format error. Convox system images are multi-arch, and services that reference an external multi-arch image with `image:` can schedule onto either architecture freely.
 

@@ -289,7 +289,9 @@ Dropping the attribute and changing the port back to plain `TCP` in one deploy i
 
 - The AWS Load Balancer Controller deletes the load balancer it owned and the in-cluster cloud provider creates a new one, so the balancer gets a new address. Nothing is left running in your AWS account.
 - Targets are registered by node port again instead of by Pod IP. Anything that depends on Pod IP targets, such as security group rules written against Pod CIDRs, behaves differently afterwards.
-- `convox balancers` reports an empty endpoint for the balancer until the next deploy, while the new load balancer serves normally. See [A Balancer With No Endpoint](#a-balancer-with-no-endpoint).
+- `convox balancers` shows `(pending)` for the balancer until the next deploy, while the new load balancer serves normally. See [A Balancer With No Endpoint](#a-balancer-with-no-endpoint).
+
+> Removing the attribute replaces the load balancer, so the balancer's DNS name changes and traffic to the old name stops when the old load balancer is deleted. Move any CNAME or Route 53 alias to the new name, which `convox balancers` reports after the next deploy. Service domains routed through the Rack router are unaffected.
 
 ### A Balancer Serving Both Protocols on One Port
 
@@ -334,9 +336,13 @@ Client IP preservation on UDP targets means a Pod that reaches its own balancer'
 
 ### A Balancer With No Endpoint
 
-If a balancer never gets an address and `convox balancers` shows it empty, the most common cause is an annotation that stops the controller from claiming the Service, in particular overriding `service.beta.kubernetes.io/aws-load-balancer-nlb-target-type`. The controller declines with no event on the Service, so nothing in Convox reports the cause.
+`convox balancers` shows `(pending)` in the ENDPOINT column for a balancer whose Service has no load balancer address. The marker requires CLI version `3.25.9` or later and appears only in a terminal. Piped or redirected output keeps the empty cell, so scripts see no change, and `convox api get /apps/<app>/balancers` returns `"endpoint": ""`. An earlier CLI prints the empty cell in a terminal too.
 
-A balancer that had an address and reports an empty one right after `awsLoadBalancerController: true` was removed is a different case. Its load balancer is serving. The AWS Load Balancer Controller clears the Service's address as it tears down the load balancer it owned, after the in-cluster cloud provider has written the new one's. The next `convox deploy` restores the reported endpoint. Promoting the same Release again does not, because that is the one deploy that changes nothing on the Service.
+`(pending)` means only that the Service has no address yet: its load balancer is still being provisioned, no controller has claimed the Service, or the handover described below is in progress.
+
+If a balancer never gets an address, check for an annotation that leaves the Service unclaimed. With `awsLoadBalancerController: true`, Convox sets `service.beta.kubernetes.io/aws-load-balancer-type: external` and `service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip`, and a balancer's own `annotations` can override either. The AWS Load Balancer Controller claims an `external` Service only when the target type is `ip` or `instance`, and the in-cluster cloud provider leaves `external` Services to the controller, so any other target type value, such as `IP`, leaves the Service with no load balancer. The controller declines with no event on the Service, so nothing in Convox reports the cause. A target type of `instance` is claimed: the controller creates a load balancer that registers targets by node port.
+
+A balancer that had an address and shows `(pending)` right after `awsLoadBalancerController: true` was removed is a different case. Its load balancer is serving. The AWS Load Balancer Controller clears the Service's address as it tears down the load balancer it owned, after the in-cluster cloud provider has written the new one's. The next `convox deploy` restores the reported endpoint. Promoting the same Release again does not, because that is the one deploy that changes nothing on the Service.
 
 ## See Also
 

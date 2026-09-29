@@ -1,6 +1,6 @@
 ---
 title: "gpu_observability_enable"
-description: "The gpu_observability_enable GCP rack parameter installs the NVIDIA DCGM exporter to export GPU metrics like utilization, memory, and temperature on GKE GPU nodes."
+description: "The gpu_observability_enable GCP rack parameter installs the NVIDIA DCGM exporter to export GPU utilization, memory, and temperature metrics on GKE GPU nodes."
 slug: gpu_observability_enable
 url: /configuration/rack-parameters/gcp/gpu_observability_enable
 ---
@@ -24,7 +24,7 @@ The default value for `gpu_observability_enable` is `false`.
 ## Use Cases
 - **GPU job throughput monitoring**: Track per-pod and per-service GPU utilization so you can size your fleet to actual demand.
 - **VRAM saturation alerting**: Set Prometheus alerts on `DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE + DCGM_FI_DEV_FB_RESERVED)` to catch out-of-memory crashes before they happen.
-- **GPU cost / utilization reporting**: Combine GPU utilization metrics with cost data to surface dollars-per-GPU-hour vs dollars-per-actual-utilization.
+- **GPU cost versus utilization**: [`cost_tracking_enable`](/configuration/rack-parameters/gcp/cost_tracking_enable) charges a pod for the GPUs it requests, whether it uses them or not. Compare that spend with DCGM utilization to find GPUs that are allocated but idle.
 
 ## Setting Parameters
 To enable the DCGM exporter:

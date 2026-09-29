@@ -10,10 +10,10 @@ The Console provides per-App budget configuration and organization-wide cost vis
 
 ## Prerequisites
 
-- Rack version **3.24.6** or later
+- A Rack on AWS at Rack version **3.24.6** or later, on Azure at **3.25.1** or later, or on GCP at **3.25.9** or later. The Console does not offer cost tracking or budgets on other providers.
 - The `cost_tracking_enable` Rack parameter set to `true` (enable via Rack Settings or `convox rack params set cost_tracking_enable=true`)
 
-Without cost tracking enabled, budgets can be configured but will not accumulate spend or trigger actions.
+While cost tracking is off, saving a budget fails: the Rack rejects a cap, alert threshold or at-cap action, and the Console shows its error, which points at `cost_tracking_enable`.
 
 ## Cost Overview (Organization)
 
@@ -31,8 +31,8 @@ Click any row to navigate to that App's Budget tab.
 Informational banners surface when:
 
 - One or more Racks are unresponsive (stale data)
-- Apps run on pre-3.24.6 Racks (cost not tracked)
-- Racks have `cost_tracking_enable` set to `false` (Apps show $0)
+- Apps run on Racks that do not support cost tracking (cost not tracked)
+- Racks have `cost_tracking_enable` set to `false` (spend is not updated)
 - Apps have Services on unpriced instance types (displayed spend under-counts actual cloud bill)
 
 ## Per-App Budget Configuration
@@ -63,15 +63,15 @@ The pricing adjustment accounts for Enterprise Discount Programs, Savings Plans,
 | Action | Behavior |
 |---|---|
 | Alert Only | Send notifications (Slack, Discord) when cap is reached. No enforcement. |
-| Block New Deploys | Reject `release promote` with a 409 error until the budget resets or rolls over to the next month. |
-| Auto-Shutdown | Scale all eligible Services to 0 replicas after a 30-minute grace period. Services listed in the `budget.neverAutoShutdown` array in convox.yml are excluded. See [Budget Caps](/management/budget-caps) for shutdown ordering and eligibility. |
+| Block New Deploys | Reject `release promote`, scaling and `convox run` with a 409 error until the cap is raised above current spend or the month rolls over. A budget reset lifts the block only until the next accumulator tick if spend is still at or above the cap. |
+| Auto-Shutdown | Scale all eligible Services to 0 replicas after a countdown set by `budget.notifyBeforeMinutes` in convox.yml, 30 minutes by default. Services listed in the `budget.neverAutoShutdown` array in convox.yml are excluded, and so are agent and stateful Services. See [Budget Caps](/management/budget-caps) for shutdown ordering and eligibility. |
 
 All changes are audit-logged with the acting user's email.
 
 ### Saving and Clearing
 
 - **Save** persists the budget configuration. Changes apply immediately.
-- **Clear** removes the budget entirely, including all enforcement rules.
+- **Clear** removes the budget entirely, including all enforcement rules. It also deletes the App's stored spend, so month-to-date spend starts again from zero.
 
 Both actions take effect immediately and revert automatically if the save fails.
 
@@ -84,11 +84,11 @@ When the at-cap action is set to Auto-Shutdown, the system follows a state machi
 Budget cap reached. A banner displays a countdown timer (default 30 minutes). During this window:
 
 - **Raise Cap:** Opens a dialog to increase the monthly cap above current spend, which cancels the shutdown.
-- **Cancel Shutdown:** Resets the budget state without changing the cap.
+- **Cancel Shutdown:** Resets the budget state without changing the cap. If spend is still at or above the cap, the next accumulator tick, within 10 minutes, arms a new countdown.
 
 ### Active
 
-Grace period expired. All eligible Services have been scaled to 0 replicas. The banner shows how many Services were affected and when shutdown occurred.
+Countdown expired. All eligible Services have been scaled to 0 replicas. The banner shows how many Services were affected and when shutdown occurred.
 
 - **Restore Now:** Immediately restores all Services to their original replica counts and applies a 24-hour cooldown before auto-shutdown can re-arm.
 
@@ -111,7 +111,7 @@ Available during the Armed state or from the Budget configuration:
 
 - Displays current cap and current spend with percentage
 - New cap must exceed both current cap and current spend
-- Pre-fills with a suggested value (current cap x 1.5, rounded to nearest $50)
+- Pre-fills with a suggested value (current cap x 1.5, rounded up to a multiple of $50)
 - If auto-shutdown is armed, raising above current spend cancels the scheduled shutdown
 
 ### Budget Reset
@@ -121,7 +121,8 @@ Resets the budget enforcement state:
 - Re-enables normal operations and new deploys
 - For Active (shutdown) state: restores Services to original replica counts with 24-hour cooldown
 - For Armed state: cancels the scheduled shutdown
-- Force-clear cooldown available via CLI only: `convox budget reset --force-clear-cooldown <app>` (Administrator role required)
+- If spend is still at or above the cap, the next accumulator tick, within 10 minutes, blocks deploys again or arms a new countdown. After a restore, the 24-hour cooldown holds off a new shutdown.
+- The Budget Reset dialog leaves the 24-hour cooldown in place. To clear it, run `convox budget reset --force-clear-cooldown <app>` (Administrator role required), or use **Reset Period** in the Cost Breakdown section below, which also zeroes spend.
 
 ## Per-App Cost Breakdown
 
@@ -131,7 +132,7 @@ Below the budget configuration, the Cost Breakdown section displays per-Service 
 - **Date range filtering** and Service name filtering
 - **Aggregate toggle** to group by Service or show individual breakdowns
 - **Warning banner** when pods run on unpriced instance types
-- **Reset Period** (Administrators only) to zero accumulated spend and restart the billing period
+- **Reset Period** (organization Administrators only) to zero the App's month-to-date spend and start the period at the current time. It also does everything Budget Reset does and clears the 24-hour cooldown: it clears the breaker and restores Services that auto-shutdown scaled to zero. The period still rolls over on the 1st.
 
 ## See Also
 

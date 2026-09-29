@@ -16,6 +16,7 @@ The following parameters are available for configuring your Convox rack on Googl
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) | Configures additional customized node pools for the cluster, including GPU pools and single-host Cloud TPU pools. |
 | [cert_duration](/configuration/rack-parameters/gcp/cert_duration)         | Certificate renewal period.                                               |
+| [cost_tracking_enable](/configuration/rack-parameters/gcp/cost_tracking_enable) | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/gcp/dcgm_scrape_interval) | Prometheus scrape interval hint annotated on the DCGM exporter for GPU metrics. |
 | [docker_hub_password](/configuration/rack-parameters/gcp/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/gcp/docker_hub_username) | Docker Hub username for authenticated image pulls. |

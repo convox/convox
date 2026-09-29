@@ -24,7 +24,7 @@ Create and promote a build
 | `--development` | | bool | Build in development mode |
 | `--external` | | bool | Use external build |
 | `--force` | | bool | Promote without waiting for the app to be ready; also reduces the environment drop guard message to a one-line notice and bypasses the guard when `CONVOX_ENV_DROP_GUARD=strict` |
-| `--id` | | bool | Output only the build/release ID |
+| `--id` | | bool | Print only the Release ID on stdout; progress goes to stderr |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
 | `--no-cache` | | bool | Build without using the Docker cache |
 | `--wildcard-domain` | | bool | Use wildcard domain for the build |
@@ -100,6 +100,24 @@ When a rollout fails, `convox deploy` names the App and the command to run next:
     ERROR: rollout failed for myapp, the previous release was restored
       convox deploy-debug -a myapp
 ```
+
+If another deploy or promote of the same App replaces this Release before the command finishes waiting, the command names the Release the App is running instead:
+
+```text
+    ERROR: release RABCDEFGHI for myapp was superseded by RBCDEFGHIJ
+      convox releases info RBCDEFGHIJ -a myapp
+```
+
+A concurrent deploy or promote won, and the App is running the named Release. The superseded Release did not necessarily fail: it may have been live for a few seconds before it was replaced.
+
+If the command was at `Waiting for app to be ready` behind another rollout and that rollout failed, its own Release never started rolling out:
+
+```text
+    ERROR: release RABCDEFGHI for myapp was not promoted, another rollout failed while it waited
+      convox deploy-debug -a myapp
+```
+
+Both exit non-zero, so a CI job still fails, and the command exits `0` only when the App is running the Release it promoted. Deploys are not queued: without `--force` a deploy waits for an in-flight rollout to finish before it promotes. These two messages require CLI version `3.25.9` or later; an earlier CLI prints the rollout-failed message in both cases. `convox releases promote`, `convox releases create-from --promote`, and `convox env set`, `convox env unset` and `convox env edit` with `--promote` print the same messages. `convox releases rollback` does not wait behind another rollout, so it can print only the superseded message.
 
 If the command reaches its own 35-minute ceiling while the Rack is still rolling out, it reports that instead. The Rack continues past the CLI ceiling, so the Release still finishes or still rolls back without the command watching.
 

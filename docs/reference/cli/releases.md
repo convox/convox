@@ -51,7 +51,7 @@ The `Env` field respects the per-app mask list managed by `convox env mask`. On 
 
 ## releases create-from
 
-Create a new release using a build from one release and env from another. This is useful for combining specific builds and environments, cross-app deployments, and build-once-deploy-many workflows.
+Create a new release using a build from one release and env from another. This is useful for pairing a known-good build with a newer environment, or the reverse. Both source Releases must belong to the App the command targets.
 
 ### Usage
 ```bash
@@ -68,35 +68,46 @@ Create a new release using a build from one release and env from another. This i
 | `--use-active-release-env` | Use the currently active release's environment |
 | `--promote` | Automatically promote the new release after creation |
 
+Pass exactly one of `--build-from` and `--use-active-release-build`, and exactly one of `--env-from` and `--use-active-release-env`.
+
 ### Examples
 
 Create a new release using build from one release and environment from another:
 ```bash
     $ convox releases create-from --build-from=RXXXXXXXXXXX --env-from=RYYYYYYYYYY -a myapp
-    Creating release... OK
-    Release: RNEWRELEASE
+    Using build from release: RXXXXXXXXXXX
+    Using env from release: RYYYYYYYYYY
+    Created release: RNEWRELEASE
+    OK
 ```
 
-Create and automatically promote the new release:
+Create and automatically promote the new release. The promote streams the rollout the same way [`convox releases promote`](#releases-promote) does:
 ```bash
     $ convox releases create-from --build-from=RXXXXXXXXXXX --env-from=RYYYYYYYYYY -a myapp --promote
-    Creating release... OK
-    Release: RNEWRELEASE
-    Promoting RNEWRELEASE... OK
+    Using build from release: RXXXXXXXXXXX
+    Using env from release: RYYYYYYYYYY
+    Created release: RNEWRELEASE
+    Promoting RNEWRELEASE...
+    ...
+    OK
 ```
 
 Use the currently active release's build with environment from a specific release:
 ```bash
     $ convox releases create-from --use-active-release-build --env-from=RYYYYYYYYYY -a myapp
-    Creating release... OK
-    Release: RNEWRELEASE
+    Using build from release: RABCDEFGHIJ
+    Using env from release: RYYYYYYYYYY
+    Created release: RNEWRELEASE
+    OK
 ```
 
 Use the currently active release's environment with build from a specific release:
 ```bash
     $ convox releases create-from --build-from=RXXXXXXXXXXX --use-active-release-env -a myapp
-    Creating release... OK
-    Release: RNEWRELEASE
+    Using build from release: RXXXXXXXXXXX
+    Using env from release: RABCDEFGHIJ
+    Created release: RNEWRELEASE
+    OK
 ```
 
 ## releases manifest
@@ -130,7 +141,7 @@ Promote a release. If no release ID is specified, the most recent release is pro
 
 | Flag | Description |
 |------|-------------|
-| `--force` | Force promotion even if the release is already active |
+| `--force` | Promote without waiting for an in-flight rollout of the App to finish. The Rack then accepts the promote while the App is updating |
 
 ### Examples
 ```bash
@@ -149,6 +160,9 @@ Promote a release. If no release ID is specified, the most recent release is pro
     2026-03-18T20:55:59Z system/k8s/atom/service/web Status: Running => Pending
     OK
 ```
+
+Without `--force` the command waits for an in-flight rollout of the App to finish before it promotes. The Rack refuses a Release created before the active one with `can not promote an older release, try rollback`; use [`convox releases rollback`](#releases-rollback) for that. See [deploy: Failure Messages](/reference/cli/deploy#failure-messages) for the messages a promote prints when its rollout fails, when another promote replaces its Release, and when the rollout it waited behind fails.
+
 ## releases rollback
 
 Copy an old release forward and promote it. This creates a new release with the same build and environment as the target release, then promotes it.
@@ -162,7 +176,8 @@ Copy an old release forward and promote it. This creates a new release with the 
 
 | Flag | Description |
 |------|-------------|
-| `--force` | Force the rollback even if the release is already active |
+| `--force` | Promote the new Release while the App is updating. Without it, a rollback during a rollout fails with `app is currently updating` |
+| `--id` | Print only the new Release ID on stdout; progress goes to stderr |
 
 ### Examples
 ```bash
@@ -184,6 +199,8 @@ Copy an old release forward and promote it. This creates a new release with the 
     2026-03-18T20:58:34Z system/k8s/atom/service/web Status: Updating => Running
     OK
 ```
+
+See [deploy: Failure Messages](/reference/cli/deploy#failure-messages) for the messages a rollback prints when its rollout fails or another promote replaces its Release.
 
 ## See Also
 

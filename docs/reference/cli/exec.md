@@ -57,7 +57,7 @@ Both streams arrive over one connection, so lines from the two can interleave. D
 
 ### Racks reached through the Console
 
-On a Rack reached through the Console, or on a Convox Cloud machine, a command that reads standard input until end of input with nothing piped in never sees that end, and the session eventually times out with the command still waiting in the container. Pipe at least one byte to release it, or start the command with [`convox run --detach --wait`](/reference/cli/run#detached-runs) instead.
+On a Rack reached through the Console, or on a Convox Cloud machine, a command that reads standard input with nothing piped in receives end of input and finishes, as it does on a Rack reached directly. This requires CLI version `3.25.9` or later and, on a V3 Rack, Rack version `3.25.5` or later. With CLI versions `3.25.5` to `3.25.8` the command keeps waiting for input.
 
 ## Losing the Connection
 
@@ -84,7 +84,7 @@ Interrupting an interactive session is not this case. The CLI puts the terminal 
 `convox exec` exits with the command's exit code. When the command's output stream ends without one, the CLI prints an error and exits `1`:
 
 ```text
-the rack did not report an exit status for this command, so it may not have finished.
+ERROR: the rack did not report an exit status for this command, so it may not have finished.
        Check the output above for a reason. The command may still be running in the target process, so retrying could run it twice.
        A command that must gate a deploy should write its own success marker to the output for the caller to check
 ```
@@ -97,6 +97,7 @@ A stream lost in transit is caught by the CLI on its own and needs no Rack upgra
 
 - Basic `convox exec` functionality: All versions
 - End of input signaled to a command reading piped input: Requires rack version >= 3.25.5. The change is on the rack, so it applies to any CLI version
+- End of input signaled to a command with nothing piped in, on a Rack reached through the Console or a Cloud machine: Requires CLI version >= 3.25.9 and, on a V3 Rack, rack version >= 3.25.5
 - Error output returned from a command run without a terminal: Requires rack version >= 3.25.5. The change is on the rack, so it applies to any CLI version
 - Failing on a missing exit status: The CLI catches a stream lost in transit on its own; an error the rack raises before the command starts requires rack version >= 3.25.5
 
