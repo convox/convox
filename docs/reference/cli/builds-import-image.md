@@ -10,6 +10,8 @@ Import a prebuilt container image into a new Build. The Rack pulls the image fro
 
 This command requires a `convox.yml` manifest to define the App's Services. By default it reads `convox.yml` from the current directory.
 
+When the source image is a multi-architecture index, the Rack copies the image for the architecture of the node running the Rack API. It copies every platform the index publishes on an AWS Rack with Karpenter enabled that builds multi-architecture images, and from Rack version `3.25.9` on an AWS Karpenter Rack whose `node_type`, or `build_node_type` with `build_node_enabled=true`, is a different architecture from `karpenter_arch`. A source image published for a single platform is copied as it is. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
+
 ### Usage
 ```bash
     convox builds import-image <source-image>
@@ -27,7 +29,7 @@ This command requires a `convox.yml` manifest to define the App's Services. By d
 | `--src-creds-pass-env` | | Read source registry password from the named environment variable |
 | `--src-creds-pass-stdin` | | Read source registry password from stdin (single line) |
 
-Only one of `--src-creds-pass`, `--src-creds-pass-env`, or `--src-creds-pass-stdin` may be specified. The `--src-creds-pass` flag is deprecated and will be rejected in 3.25.0 because it exposes credentials in process listings.
+Only one of `--src-creds-pass`, `--src-creds-pass-env`, or `--src-creds-pass-stdin` may be specified. The `--src-creds-pass` flag is deprecated because it exposes credentials in process listings. It still works and prints a warning; use `--src-creds-pass-env` or `--src-creds-pass-stdin` instead.
 
 ### Examples
 

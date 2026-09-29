@@ -6,14 +6,9 @@ url: /reference/cli/budget-cap-raise
 ---
 # budget cap raise
 
-Raise the monthly cap on an app's budget. Atomic with breaker-clear when the
-new cap is above current spend. Alias for `convox budget set --monthly-cap N`
-(both `--monthly-cap` and `--monthly-cap-usd` are accepted forms; `--monthly-cap-usd`
-is the canonical name on this command).
+Raise the monthly cap on an app's budget. Atomic with breaker-clear when the new cap is above current spend. Alias for `convox budget set --monthly-cap N` (both `--monthly-cap` and `--monthly-cap-usd` are accepted forms; `--monthly-cap-usd` is the canonical name on this command).
 
-> **Requires admin role on the rack.** A non-admin caller (`rw` role)
-> receives `403 AppBudgetSet: admin role required to set budget cap`.
-> Basic-auth (rack-password) callers automatically pass the admin check.
+> **Requires admin role on the rack.** A non-admin caller (`rw` role) receives `403 AppBudgetSet: admin role required to set budget cap`. Basic-auth (rack-password) callers automatically pass the admin check.
 
 ### Usage
 ```bash
@@ -29,19 +24,17 @@ Raise from 250 USD to 500 USD on myapp; breaker clears:
     Raising monthly cap for myapp... OK
 ```
 
-Raise rejected when the new cap is below current spend:
+A new cap below current spend is saved with a warning, and blocked deploys stay blocked because the cap trips again on the next accumulator tick:
 
 ```bash
     $ convox budget cap raise myapp --monthly-cap-usd 100
-    error: new cap 100.00 USD is below current spend 134.65 USD
+    WARNING: --monthly-cap-usd=$100.00 is below current month-to-date spend $134.65. Cap will trip immediately on next accumulator tick.
+    Raising monthly cap for myapp... OK
 ```
 
-When the new cap is above current spend, raising it clears the breaker in the
-same operation, so there is no window where the cap is raised but deploys are
-still blocked.
+When the new cap is above current spend, raising it clears the breaker in the same operation, so there is no window where the cap is raised but deploys are still blocked.
 
-After an auto-shutdown, cap-raise clears the breaker but does NOT restart
-already-shutdown services. Run `convox budget reset myapp` to restart them.
+Raising the cap does not restart services that auto-shutdown scaled to zero. Run `convox budget reset myapp` right after the raise to restore them.
 
 For the full cap-raise lifecycle see [Cap raise](/management/budget-caps#raising-or-recovering-a-cap).
 

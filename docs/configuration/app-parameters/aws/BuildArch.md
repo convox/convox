@@ -14,7 +14,7 @@ The `BuildArch` app parameter pins an App's built image to a single CPU architec
 
 | Effect | Applies when |
 |:-------|:-------------|
-| The image is built for `linux/<arch>` | Every provider, on any Build the Rack runs. Not applied to `--development` Builds, or to `--external` Builds, which run on your own machine |
+| The image is built for `linux/<arch>` | Every provider, on any Build the Rack runs, including `--development` Builds from Rack version `3.25.9`. Not applied to `--external` Builds, which run on your own machine |
 | The build pod is restricted to a build node of that architecture | Only when the Rack has `build_node_enabled=true` |
 
 `BuildArch` takes effect on Racks running 3.25.3 or later. On earlier Racks the CLI accepts the value and the Rack discards it: the parameter is not stored, `convox apps params` does not list it, and Builds are unaffected.
@@ -29,8 +29,10 @@ The `BuildArch` app parameter pins an App's built image to a single CPU architec
 
 The two are not mutually exclusive, and the parameter behaves the same way in both. Only the reason for setting it differs.
 
+From Rack version `3.25.9`, on an AWS Karpenter Rack whose `node_type`, or `build_node_type` with `build_node_enabled=true`, is a different architecture from `karpenter_arch`, Builds without a `BuildArch` pin target `karpenter_arch` wherever the build pod runs. An App whose Services run on a managed node group of the other architecture then needs `BuildArch` set to that architecture. See [Build Output](/configuration/scaling/karpenter#build-output).
+
 ## Default Value
-By default, `BuildArch` is not set. The App inherits the Rack's build architecture. On a single-architecture Rack that produces an image native to the node the build pod ran on. On an AWS Karpenter Rack whose workload NodePool permits more than one architecture, Builds produce a multi-architecture image index. See [karpenter_arch](/configuration/rack-parameters/aws/karpenter_arch) for the Rack-level setting.
+By default, `BuildArch` is not set. The App inherits the Rack's build architecture. On a Rack without Karpenter that produces an image native to the node the build pod ran on. On an AWS Rack with Karpenter enabled, Builds on the workload and build pools produce an image for the workload architecture set by [karpenter_arch](/configuration/rack-parameters/aws/karpenter_arch), or a multi-architecture image index when the workload architectures span both `amd64` and `arm64`. Before Rack version `3.25.9` a single-architecture Karpenter Rack produced an image native to the node the build pod ran on.
 
 ## Supported Values
 
@@ -95,6 +97,14 @@ an image in this build is not published for the requested build architectures (a
 
 There are two remedies. Switch the Dockerfile to a base image tag published as a multi-architecture index, or set `BuildArch` on the affected App to an architecture the image supports. Setting `BuildArch` narrows that one App's Builds to a single platform and leaves every other App on the Rack building for all architectures.
 
+When one architecture is targeted, by `BuildArch` or by the Rack, the error names that architecture instead, from Rack version `3.25.9`:
+
+```
+an image in this build is not published for the requested build architecture (arm64): use an image published for arm64 or a multi-arch image
+```
+
+Earlier Racks print the multi-architecture text for a `BuildArch` pin, with one architecture in the list. Either way the check covers base images published as a multi-architecture index. A base image published for one architecture with no index is not checked: the Build succeeds, and Processes fail with an exec format error when that architecture is not the one targeted.
+
 ## Example: Mixed-Architecture Rack Setup
 
 This walkthrough sets up a Rack with x86 primary nodes and adds ARM workers and ARM build nodes.
@@ -139,7 +149,7 @@ The build pod runs on an ARM build node because `build_node_enabled=true` and `B
 - **Requires Rack 3.25.3 or Later**: On earlier Racks the value is accepted by the CLI and discarded by the Rack, with no effect on Builds and no entry in `convox apps params`.
 - **Per-App, Not Per-Service**: `BuildArch` applies to the entire App. If an App has Services targeting different architectures, split them into separate Apps.
 - **Build Node Behavior Depends on `build_node_enabled`**: With `build_node_enabled=true`, the Rack must have build nodes of the specified architecture or build pods stay Pending. A Build whose pod stays Pending stays `running` until you clear it with [`convox builds cancel`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later. With `build_node_enabled=false`, the default, no placement constraint is applied and the Build proceeds under emulation when the node architecture differs.
-- **Development Builds Ignore the Pin**: `convox build --development` and `convox deploy --development` do not receive the target platform, so a development Build is always native to the node it runs on.
+- **Development Builds Honor the Pin**: from Rack version `3.25.9`, `convox build --development`, `convox deploy --development` and `convox start` build for the pinned architecture. On earlier Racks a development Build does not receive the target platform and is native to the node it runs on.
 - **External Builds Ignore the Pin**: `convox build --external` and `convox deploy --external` build the image on your own machine with the local Docker engine, which does not receive the target platform, so the image is native to that machine's architecture.
 - **Provider Coverage**: The image platform pin is implemented in provider-agnostic Rack code and applies on every provider. The build node placement effect depends on `build_node_enabled`, which is an AWS Rack parameter.
 - **Fluentd**: Convox system images, including Fluentd, are multi-architecture manifests and run natively on both architectures with no additional configuration.

@@ -32,7 +32,7 @@ The Cost Tracking card shows whether per-App spend accumulation is enabled on th
 $ convox rack params set cost_tracking_enable=true -r <rack-name>
 ```
 
-Cost tracking requires Rack version 3.24.6 or later. The card displays a version gate message on older Racks.
+Cost tracking requires Rack version 3.24.6 or later on AWS, 3.25.1 or later on Azure, and 3.25.9 or later on GCP. The card displays a version gate message on older Racks.
 
 See [Cost Tracking](/management/cost-tracking) for setup and usage details.
 

@@ -1,145 +1,105 @@
 ---
 title: "Cost Tracking"
-description: "Cost Tracking aggregates per-app spend from cloud pricing data and in-cluster usage telemetry, feeding budget caps and the convox cost CLI."
+description: "Cost Tracking estimates per-app spend from built-in cloud price tables and pod resource requests, feeding budget caps and the convox cost CLI."
 slug: cost-tracking
 url: /management/cost-tracking
 ---
 # Cost Tracking
 
-Convox aggregates per-app spend from cloud-provider pricing data plus the rack's
-in-cluster usage telemetry. Spend is the input to budget caps (see [Budget
-Caps](/management/budget-caps)) and surfaces in the Console and the `convox cost`
-CLI.
+Convox estimates each App's compute spend from built-in cloud-provider price tables and the resource requests of the App's running pods. Spend is the input to budget caps (see [Budget Caps](/management/budget-caps)) and surfaces in the Console and the `convox cost` CLI.
 
 ## Enabling cost tracking
 
-Cost tracking is gated by the rack parameter `cost_tracking_enable`, default
-`false`. Without it, the cost accumulator does not run, so no spend is
-computed and budget enforcement (caps, alerts, auto-shutdown) cannot fire
-even with a `budget:` block in `convox.yml`.
+Cost tracking is gated by the rack parameter `cost_tracking_enable`, default `false`. Without it, the cost accumulator does not run, so no spend is computed and budget enforcement (caps, alerts, auto-shutdown) cannot fire.
 
-Read paths still return successfully: `convox cost` against a rack with
-`cost_tracking_enable=false` returns a zero spend total and an empty
-breakdown (HTTP 200), so dashboards and scripts that poll the endpoint do
-not break; they see "no data yet." Write paths, on the other hand,
-reject loud: `convox budget set` and `convox deploy` against a manifest
-with an enforcement-bearing `budget:` block return HTTP 422 with an
-actionable message pointing at the enable command. Recovery operations
-(`convox budget clear`, `convox budget reset`) remain available regardless
-of cost-tracking state.
+Reads still succeed while tracking is off. `convox cost` returns HTTP 200 with the last spend snapshot the Rack stored, so dashboards and scripts that poll the endpoint do not break. The snapshot is empty on a Rack that never tracked and can be non-zero on one that tracked earlier in the month. The CLI prints this notice above its output:
 
-Enable on AWS (3.24.6+) or Azure (3.25.1+) racks:
+```text
+Cost tracking is disabled on this rack. Values shown are the most-recent persisted snapshot and may be empty or stale. To enable: convox rack params set cost_tracking_enable=true
+```
+
+In `convox cost --format json` output, `tracking-enabled` is `true` while tracking runs and absent while it is off.
+
+Writes that need the accumulator are rejected with HTTP 422 and a message pointing at the enable command: `convox budget cap raise`, `convox budget set` when it sets a cap, alert threshold or at-cap action, and every promote of an App whose `convox.yml` `budget:` block sets `monthlyCapUsd`, `alertThresholdPercent` or `atCapAction`, including the re-promote that `convox apps params set`, `convox apps lock` and `convox apps unlock` run. Recovery operations (`convox budget clear`, `convox budget reset`) remain available regardless of cost-tracking state.
+
+Enable on AWS (3.24.6+), Azure (3.25.1+) or GCP (3.25.9+) Racks:
 
 ```bash
 $ convox rack params set cost_tracking_enable=true
 ```
 
-Wait ~3 minutes for the rack apply to complete, then deploy or set budgets.
-The first accumulator tick after the apply (default tick interval is 10
-minutes) starts populating spend. The Console budget panel and `convox cost`
-become populated from that tick onward.
+`convox rack params set` returns before the change is applied. Budget writes and promotes are accepted once the Rack update finishes, which rolls the Rack API. The accumulator ticks as soon as the new Rack API starts and then every 10 minutes. The first tick records a starting point, so an App's spend first appears on the second tick, about 10 minutes after the update completes. The Console budget panel and `convox cost` show spend from that tick onward.
 
-Cost tracking is supported on AWS racks (version 3.24.6 or later) and Azure racks (version 3.25.1 or later). Other providers (GCP, DigitalOcean, Equinix Metal, Local) cannot enable cost tracking; their pricing tables and instance-type introspection paths are not wired yet. Spend is priced from built-in list-price tables: us-east-1 Linux list prices on AWS and eastus Linux list prices on Azure. Spot capacity is modeled from node capacity-type labels (Karpenter and EKS spot node groups on AWS; AKS spot node pools on Azure) and discounted automatically. Budget caps and enforcement (alerts, block-new-deploys, auto-shutdown) behave identically on both providers.
+Cost tracking is supported on these providers, priced from built-in list-price tables:
+
+| Provider | Rack version | Price basis | Spot and preemptible nodes | Spot rate |
+|---|---|---|---|---|
+| [AWS](/configuration/rack-parameters/aws/cost_tracking_enable) | `3.24.6` or later | us-east-1 Linux on-demand list prices | `karpenter.sh/capacity-type=spot` (Karpenter) or `eks.amazonaws.com/capacityType=SPOT` (EKS spot node groups) | `0.30` of the on-demand rate for every instance type |
+| [Azure](/configuration/rack-parameters/azure/cost_tracking_enable) | `3.25.1` or later | eastus Linux pay-as-you-go list prices | `kubernetes.azure.com/priority=spot` or `kubernetes.azure.com/scalesetpriority=spot` (AKS spot node pools) | `0.30` of the pay-as-you-go rate, except 19 GPU sizes with their own factor |
+| [GCP](/configuration/rack-parameters/gcp/cost_tracking_enable) | `3.25.9` or later | us-central1 Linux list prices; us-east1, the default GCP Rack region, has the same prices | `cloud.google.com/gke-spot=true` or `cloud.google.com/gke-preemptible=true` | A factor per machine type, from a snapshot of Google's spot prices |
+
+On GCP, [`preemptible`](/configuration/rack-parameters/gcp/preemptible) defaults to `true`, so a Rack on its default node pool is priced at the spot rate. Any other GKE node carries `cloud.google.com/gke-nodepool` and is priced on-demand.
+
+DigitalOcean, Equinix Metal and Local Racks cannot enable cost tracking. Budget caps and enforcement (alerts, block-new-deploys, auto-shutdown) behave identically on every supported provider.
 
 ## How spend is computed
 
-The rack samples each running pod's CPU, memory, and (where applicable) GPU
-allocations on every accumulator tick (default 10 minutes). Each sample is
-priced against the instance type the pod runs on, using a built-in price table
-keyed by cloud provider and instance family. The per-tick samples are summed
-across the month into the app's `CurrentMonthSpendUsd` field, surfaced through
-`convox budget show` and the Console budget panel.
+The accumulator ticks every 10 minutes. On each tick, a running pod is charged for the time since the previous tick at its node's hourly rate, times the larger of its CPU and memory requests as a share of the node's allocatable capacity. A pod that requests GPUs on an instance type with GPUs is charged its share of the node's GPUs instead. The rate comes from a built-in price table keyed by the exact instance type name, such as `m5.large`, `Standard_D4s_v5` or `n2-standard-4`, so a size missing from the table is not priced even when its family is. The per-tick charges are summed across the month into the App's month-to-date spend (`current-month-spend-usd` in `convox budget show`), which also surfaces in the Console budget panel.
 
-Pricing adjustment (`pricingAdjustment` in `convox.yml`) is applied
-multiplicatively at sample time. A pricingAdjustment of `1.10` produces 10% more
-recorded spend than the raw price would; `0.95` produces 5% less. Use this to
-align Convox's internal pricing with the contract pricing your finance team
-sees, or to add a buffer for cap headroom.
+The App's pricing adjustment, set with `convox budget set --pricing-adjustment` or in the Console, multiplies every tick's charge. A value of `1.10` records 10% more spend than the table price would; `0.95` records 5% less. Use it to align Convox's estimate with the contract pricing your finance team sees, or to add a buffer for cap headroom. The `pricingAdjustment` key in `convox.yml` is not read.
 
 ## Per-variant cost breakdown
 
-Spend is attributed to each `(instance-type, capacity-type)` variant a service
-runs on across the month. A service that started the month on `g4dn.xlarge`
-on-demand and was Karpenter-replaced to `g4dn.xlarge` spot mid-month produces
-two rows in `convox cost --app myapp`: one on-demand row with the early-month
-replicas count, one spot row with the later-month replicas count. Rows are
-sorted by descending spend.
+Spend is attributed to each `(instance-type, capacity-type)` variant a service runs on across the month. A service that started the month on `g4dn.xlarge` on-demand and was Karpenter-replaced to `g4dn.xlarge` spot mid-month produces two rows in `convox cost --app myapp`: an on-demand row with the spend from before the move and no active replicas, and a spot row with the spend since the move and the current pod count. Rows are sorted by descending spend.
 
-A row showing `0` active replicas indicates pods previously ran on that variant
-but have since migrated or been removed; the accumulated spend for the variant
-is preserved through the rest of the month so the rollup reflects the actual
-cloud bill.
+Active replicas are the pod count at the most recent tick, not a count over the month. A row with no active replicas, shown as a dash in the table, means pods previously ran on that variant but have since migrated or been removed; the accumulated spend for the variant is preserved through the rest of the month so the rollup reflects the actual cloud bill.
 
-Spot capacity-type rows are automatically discounted by the pricing table's
-spot factor (default `0.30` of the on-demand rate). Per-instance overrides are
-configurable via the `SpotUsdPerHourFactor` field on the rack-side pricing
-table.
+Spot rows are priced at the table entry's spot factor times its on-demand rate. The table is compiled into the Rack and cannot be edited. No AWS entry has its own factor, so AWS spot uses the `0.30` default; 19 Azure GPU sizes and every GCP machine type carry their own factor.
 
-The pricing-adjustment multiplier (`pricingAdjustment` in `convox.yml`) applies
-multiplicatively to the variant rates. A value of `0.7` models a 30% AWS
-Enterprise Discount Program / Savings Plan / Reserved Instance discount on top
-of the canonical pricing, so Convox-reported spend tracks your contract
-pricing rather than the raw on-demand rate. A value of `1.10` adds 10% buffer
-for cap headroom.
+The pricing adjustment applies to the variant rows too. A value of `0.7` models a 30% discount from an AWS Enterprise Discount Program, Savings Plans or Reserved Instances, so Convox-reported spend tracks your contract pricing rather than the list rate. A value of `1.10` adds a 10% buffer for cap headroom.
 
 ## Unpriced instance types
 
-The built-in price table covers the common instance families on each provider.
-When a pod runs on an instance the table does not know about (a brand-new AWS
-family, a Karpenter-spawned instance from a custom NodePool, or a custom GPU SKU
-on metal), the rack records `0` for that sample. The pod still runs; only the
-cost-tracking column is blank.
+The built-in price table covers the common instance families on each provider. When a pod runs on an instance type the table does not list (a brand-new AWS family, an instance type from a custom Karpenter NodePool, or a GCP custom machine type), the Rack adds no spend for it and counts the pod in `warning-count`. The pod still runs; only its cost is missing.
+
+A node whose instance type the table prices without GPUs, but which has GPUs attached, is charged for CPU and memory only, and its pods are counted in `warning-count`. GCP node pools that attach GPUs to N1 machine types are priced this way, so their GPU cost is missing.
 
 Symptoms:
-- `convox cost --app myapp` shows `?` or `0.00` for some services.
-- `app:budget:threshold` and `app:budget:cap` events do not fire even though
-  cloud bills indicate the app should have crossed.
+- `convox cost --app myapp` shows less spend than expected, or no row, for some services.
+- `warning-count` is above zero in `convox cost --app myapp --format json` and `convox budget show myapp`, and the Console cost views show an unpriced instance type warning.
+- `app:budget:threshold` and `app:budget:cap` events do not fire even though cloud bills indicate the app should have crossed.
 
 To diagnose:
 - `convox ps --app myapp` shows the running pods.
-- `kubectl get pod -n <rack>-<app> -o jsonpath='{.items[*].spec.nodeName}'` plus
-  `kubectl get nodes -L node.kubernetes.io/instance-type` resolves each pod to
-  its instance type.
+- `kubectl get pod -n <rack>-<app> -o jsonpath='{.items[*].spec.nodeName}'` plus `kubectl get nodes -L node.kubernetes.io/instance-type` resolves each pod to its instance type.
 - File the unrecognized type as an issue at the [convox/convox repo](https://github.com/convox/convox/issues).
 
-To work around in the meantime, set a higher `pricingAdjustment` to compensate
-for the under-counted instances, or move the impacted services to a node group
-that uses a recognized instance family.
+To work around in the meantime, set a higher pricing adjustment with `convox budget set --pricing-adjustment` to compensate for the under-counted instances, or move the impacted services to a node group that uses a recognized instance family.
 
 ## Cost breakdown CLI
 
-`convox cost` returns one row per service plus the reserved `_build` and
-`_unattributed` buckets, sorted descending by `SPEND-USD` with alphabetical
-secondary tiebreak:
+`convox cost` returns one row per service, instance type and capacity type, plus the reserved `_build` and `_unattributed` buckets, sorted descending by `SPEND-USD` with alphabetical secondary tiebreak:
 
 ```bash
 $ convox cost --app myapp
-SERVICE        GPU-HOURS  CPU-HOURS  MEM-GB-HOURS  INSTANCE     SPEND-USD
-vllm           0.00       0.00       0.00          g4dn.xlarge  $0.30
-api            0.00       0.00       0.00          t3.medium    $0.08
-worker         0.00       0.00       0.00          t3.small     $0.04
-_build         0.00       0.00       0.00          c5.large     $0.02
-_unattributed  0.00       0.00       0.00          t3.medium    $0.01
+SERVICE        INSTANCE     CAPACITY   ACTIVE-REPLICAS  SPEND-USD
+vllm           g4dn.xlarge  on-demand  3                $0.30
+api            t3.medium    spot       2                $0.08
+worker         t3.small     spot       1                $0.04
+_build         c5.large     on-demand  —                $0.02
+_unattributed  t3.medium    on-demand  —                $0.01
+TOTAL: $0.45
+Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.
+Spot pricing applies a discount automatically when nodes are provisioned via Karpenter, an EKS spot ASG, an AKS spot node pool, or a GKE Spot or preemptible node pool. Capacity "unknown" means the node carried no capacity label.
 ```
 
-The `SPEND-USD` column is populated from the accumulator's per-service totals.
-The `GPU-HOURS` / `CPU-HOURS` / `MEM-GB-HOURS` columns are reserved for a
-future per-resource pricing model; in 3.24.6 they always render `0.00`. App
-totals are surfaced via `convox cost --aggregate` (a single-row table:
-`APP | SPEND-USD | AS-OF | PRICING-SOURCE`). See the
-[cost CLI reference](/reference/cli/cost) for the full flag set.
+The `SPEND-USD` column is the accumulated spend for each variant. A Rack that has not recorded any spend yet returns no per-variant rows, and the CLI then prints a legacy table with `GPU-HOURS`, `CPU-HOURS` and `MEM-GB-HOURS` columns that always render `0.00`. App totals are surfaced via `convox cost --aggregate` (a single-row table: `APP | SPEND-USD | AS-OF | PRICING-SOURCE`). See the [cost CLI reference](/reference/cli/cost) for the full flag set.
 
-Service-level numbers help identify which workload is driving spend. Use the
-output to refine `monthlyCapUsd`, decide whether to opt a service out of
-`atCapAction: auto-shutdown` via `neverAutoShutdown`, or scale the workload
-down before cap fire.
+Service-level numbers help identify which workload is driving spend. Use the output to refine the monthly cap, decide whether to opt a service out of auto-shutdown via `neverAutoShutdown`, or scale the workload down before cap fire.
 
 ## Per-month rollover
 
-Spend resets to zero at the first of each month, UTC. Caps that were tripped in
-the previous month are cleared as part of the rollover. Recovery banners and
-flap-suppress carry-overs are cleared by the stale-annotation GC tick after one
-poll interval (10 min default).
+Spend resets to zero at the first of each month, UTC, and caps that tripped in the previous month are cleared with it. The rollover does not restore Services that auto-shutdown scaled to zero. With `recoveryMode: auto-on-reset` they stay at zero until `convox budget reset`; with `manual`, scale them back up yourself. The 24-hour flap-suppression cooldown is not tied to the month: it ends 24 hours after the restore that started it.
 
 ## See Also
 

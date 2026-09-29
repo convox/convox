@@ -43,14 +43,14 @@ WARNING: nlb_security_group is set but is not being applied to this rack's prima
 
 The router load balancer on a Rack in this state predates `3.18.0` and cannot take a security group, as described under Version Requirements. Replacing it with a load balancer that can changes its DNS name and requires a coordinated cutover, so contact Convox support to plan that change.
 
-Clear the parameter so the Rack no longer stores a value that is not in force:
+Clear the parameter on such a Rack. While it holds a value, the router Service carries the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation, which on Kubernetes 1.35 and 1.36 stops this load balancer from registering nodes:
 
 ```bash
 $ convox rack params set nlb_security_group= -r rackName
 Updating parameters... OK
 ```
 
-Clearing is accepted at any time and returns the router load balancer to the Rack-managed security group.
+Clearing is accepted at any time. From Rack version `3.25.8`, clearing also removes the annotation from the router Service; earlier versions left it in place with an empty value. On a Rack whose router load balancer the AWS Load Balancer Controller manages, clearing returns it to the Rack-managed security group.
 
 ### The check could not run
 
@@ -71,6 +71,6 @@ Neither message fails the apply, and neither reports whether the parameter is ap
 - [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol): Also changes the router load balancer configuration.
 
 ## Version Requirements
-This parameter takes effect only on load balancers created by the AWS Load Balancer Controller, which the Rack has used since `3.18.0`. AWS does not allow a security group to be attached to an NLB that was created without one, so a Rack whose router load balancer was created before `3.18.0` cannot use this parameter, and setting it has no effect.
+This parameter takes effect only on load balancers created by the AWS Load Balancer Controller, which the Rack has used since `3.18.0`. AWS does not allow a security group to be attached to an NLB that was created without one, so a Rack whose router load balancer was created before `3.18.0` cannot use this parameter. Leave it unset on such a Rack: on Kubernetes 1.35 and 1.36 a value in this parameter stops that load balancer from registering nodes.
 
 Upgrading an older Rack does not replace its load balancer, so the Rack keeps the one it was installed with.

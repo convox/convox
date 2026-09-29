@@ -30,7 +30,7 @@ hello
 
 Output the command writes to standard error comes back with its standard output over the same connection, so lines from the two can interleave.
 
-A Cloud machine is reached through the Console, so a command that reads standard input until end of input with nothing piped in never sees that end, and the session eventually times out with the command still waiting in the container. Pipe at least one byte to release it, or start the command with `convox cloud run --detach --wait` instead. Both behaviors require machine version 3.25.5 or later.
+Piped input and error output require machine version 3.25.5 or later. A Cloud machine is reached through the Console, and a command that reads standard input with nothing piped in receives end of input and finishes with CLI version 3.25.9 or later. With CLI versions 3.25.5 to 3.25.8 it keeps waiting for input.
 
 ### ps
 
@@ -43,7 +43,7 @@ $ convox cloud ps -a <app> -i <machine>
 **Options:**
 - `--release`: Specific release
 - `--service`: Filter by service
-- `--watch`: Watch for updates
+- `--watch`: Rerun the command every given number of seconds
 
 **Example:**
 ```bash
@@ -89,17 +89,18 @@ $ convox cloud run <service> <command> -a <app> -i <machine>
 - `--cpu`: CPU allocation (millicores)
 - `--memory`: Memory allocation (MB)
 - `--detach`: Run in background
-- `--entrypoint`: Override entrypoint
+- `--entrypoint`: Set to `false` to run the command without the image's entrypoint (default `true`)
 - `--id`: With `--detach`, put the process id alone on stdout and all other output on stderr
 - `--release`: Specific release
 - `--retain`: With `--detach`, seconds to keep the finished process readable by `ps info`
 - `--timeout`: Seconds before an attached run is abandoned, or before `--wait` gives up (default `3600`)
 - `--wait`: With `--detach`, wait for the process to finish and exit with its status
 
+An attached run streams the command's own output and exits with its status.
+
 **Example:**
 ```bash
 $ convox cloud run web "rake db:migrate" -a myapp -i production
-Running... OK
 
 $ convox cloud run web bash -a myapp -i production
 /app #
