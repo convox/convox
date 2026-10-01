@@ -403,7 +403,11 @@ resource "kubernetes_deployment" "ingress-nginx" {
   }
 
   lifecycle {
-    ignore_changes = [spec[0].replicas]
+    ignore_changes = [
+      spec[0].replicas,
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 
@@ -602,7 +606,11 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
   }
 
   lifecycle {
-    ignore_changes = [spec[0].replicas]
+    ignore_changes = [
+      spec[0].replicas,
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 
