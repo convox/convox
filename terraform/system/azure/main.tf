@@ -11,7 +11,12 @@ provider "kubernetes" {
 }
 
 data "http" "releases" {
+  count = var.release == "" ? 1 : 0
+
   url = "https://api.github.com/repos/${var.image}/releases/latest"
+  request_headers = {
+    User-Agent = "convox"
+  }
 }
 
 locals {
