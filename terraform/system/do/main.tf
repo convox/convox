@@ -64,4 +64,5 @@ module "rack" {
   telemetry_default_map = local.telemetry_default_map
   webhook_signing_key   = var.webhook_signing_key
   whitelist             = split(",", var.whitelist)
+  private_api           = var.private_api
 }

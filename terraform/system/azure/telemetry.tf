@@ -25,6 +25,7 @@ locals {
     nvidia_device_plugin_enable          = var.nvidia_device_plugin_enable
     nvidia_device_time_slicing_replicas  = var.nvidia_device_time_slicing_replicas
     pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
+    private_api                          = var.private_api
     rack_name                            = var.rack_name
     region                               = var.region
     release                              = var.release
@@ -62,6 +63,7 @@ locals {
     nvidia_device_plugin_enable          = "false"
     nvidia_device_time_slicing_replicas  = "0"
     pdb_default_min_available_percentage = "50"
+    private_api                          = "false"
     rack_name                            = ""
     region                               = "eastus"
     release                              = ""

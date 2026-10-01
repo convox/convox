@@ -57,6 +57,7 @@ module "k8s" {
   rack                      = var.name
   rack_name                 = var.rack_name
   release                   = var.release
+  private_api               = var.private_api
   replicas                  = var.high_availability ? 2 : 1
   resolver                  = var.resolver
   webhook_signing_key       = var.webhook_signing_key

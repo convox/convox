@@ -288,3 +288,8 @@ variable "network_policy_enable" {
 variable "contour_internal_tls" {
   default = true
 }
+
+variable "private_api" {
+  type    = bool
+  default = false
+}
