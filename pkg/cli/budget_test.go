@@ -58,13 +58,13 @@ func TestBudgetShowNoBudget(t *testing.T) {
 	})
 }
 
-func TestBudgetSetDefaults(t *testing.T) {
+func TestBudgetSet_MonthlyCapOnly_KeepsThresholdAndAction(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
-				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
-				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
+				opts.AlertThresholdPercent == nil &&
+				opts.AtCapAction == nil &&
 				opts.PricingAdjustment == nil
 		}), mock.AnythingOfType("string")).Return(nil)
 
@@ -72,6 +72,38 @@ func TestBudgetSetDefaults(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.Contains(t, res.Stdout, "OK")
+		require.NotContains(t, res.Stderr, "auto-shutdown")
+	})
+}
+
+func TestBudgetSet_ActionOnlyKeepsThreshold(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
+				opts.AtCapAction != nil && *opts.AtCapAction == "auto-shutdown" &&
+				opts.AlertThresholdPercent == nil
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --monthly-cap 500 --at-cap-action auto-shutdown", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+	})
+}
+
+func TestBudgetSet_ThresholdOnlyKeepsAction(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
+		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
+			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
+				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 90 &&
+				opts.AtCapAction == nil
+		}), mock.AnythingOfType("string")).Return(nil)
+
+		res, err := testExecute(e, "budget set app1 --monthly-cap 500 --alert-at 90", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.NotContains(t, res.Stderr, "auto-shutdown")
 	})
 }
 
@@ -824,8 +856,8 @@ func TestBudgetSet_MonthlyCapOnly_Accepted(t *testing.T) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
-				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
-				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
+				opts.AlertThresholdPercent == nil &&
+				opts.AtCapAction == nil &&
 				opts.PricingAdjustment == nil
 		}), mock.AnythingOfType("string")).Return(nil)
 
@@ -862,8 +894,8 @@ func TestBudgetSet_CapAndPricingAdjustment_Accepted(t *testing.T) {
 		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1", SpendUsd: 0.0}, nil)
 		i.On("AppBudgetSet", "app1", mock.MatchedBy(func(opts structs.AppBudgetOptions) bool {
 			return opts.MonthlyCapUsd != nil && *opts.MonthlyCapUsd == "500" &&
-				opts.AlertThresholdPercent != nil && *opts.AlertThresholdPercent == 80 &&
-				opts.AtCapAction != nil && *opts.AtCapAction == "alert-only" &&
+				opts.AlertThresholdPercent == nil &&
+				opts.AtCapAction == nil &&
 				opts.PricingAdjustment != nil && *opts.PricingAdjustment == "0.7"
 		}), mock.AnythingOfType("string")).Return(nil)
 
