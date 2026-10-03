@@ -88,6 +88,7 @@ func TestCancel(t *testing.T) {
 		require.NoError(t, atomCreate(fac, "ns1", "atom1", "Updating", "atom1", aa.AtomSpec{}))
 		require.NoError(t, atomCreate(fac, "ns1", "atom2", "Rollback", "atom2", aa.AtomSpec{}))
 		require.NoError(t, atomCreate(fac, "ns1", "atom3", "Other", "atom3", aa.AtomSpec{}))
+		require.NoError(t, atomCreate(fac, "ns1", "atom4", "Pending", "atom4", aa.AtomSpec{Dependencies: []string{"dep1"}}))
 
 		require.NoError(t, ac.Cancel("ns1", "atom1"))
 		a, err := fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom1", am.GetOptions{})
@@ -101,6 +102,11 @@ func TestCancel(t *testing.T) {
 
 		err = ac.Cancel("ns1", "atom3")
 		require.EqualError(t, err, "not currently updating")
+
+		require.NoError(t, ac.Cancel("ns1", "atom4"))
+		a, err = fac.AtomV1().Atoms("ns1").Get(context.Background(), "atom4", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, aa.AtomStatus("Cancelled"), a.Status)
 	})
 }
 
@@ -137,6 +143,32 @@ func TestApply(t *testing.T) {
 
 			t.Run(test.Name, fn)
 		}
+	})
+}
+
+func TestApplyPreviousVersion(t *testing.T) {
+	testClient(t, func(ac *Client) {
+		fac, ok := ac.Atom.(*afake.Clientset)
+		require.True(t, ok)
+
+		get := func() *aa.Atom {
+			a, err := fac.AtomV1().Atoms("ns1").Get(context.Background(), "app", am.GetOptions{})
+			require.NoError(t, err)
+			return a
+		}
+
+		require.NoError(t, ac.Apply("ns1", "app", &ApplyConfig{Release: "R1"}))
+		a := get()
+		applied := a.Spec.CurrentVersion
+		a.Status = "Running"
+		_, err := fac.AtomV1().Atoms("ns1").Update(context.Background(), a, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, ac.Apply("ns1", "app", &ApplyConfig{Release: "R2"}))
+		require.Equal(t, applied, get().Spec.PreviousVersion)
+
+		require.NoError(t, ac.Apply("ns1", "app", &ApplyConfig{Release: "R3"}))
+		require.Equal(t, applied, get().Spec.PreviousVersion)
 	})
 }
 
