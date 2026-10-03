@@ -115,7 +115,7 @@ func (c *Client) Apply(ns, name string, cfg *ApplyConfig) error {
 		}
 	case err != nil:
 		return errors.WithStack(err)
-	default:
+	case a.Status != "Pending":
 		a.Spec.PreviousVersion = a.Spec.CurrentVersion
 	}
 
@@ -142,7 +142,7 @@ func (c *Client) Cancel(ns, name string) error {
 	switch a.Status {
 	case "Rollback":
 		a.Status = "Failure"
-	case "Updating":
+	case "Pending", "Updating":
 		a.Status = "Cancelled"
 	default:
 		return errors.WithStack(fmt.Errorf("not currently updating"))

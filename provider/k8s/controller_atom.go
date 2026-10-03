@@ -2,8 +2,6 @@ package k8s
 
 import (
 	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -21,10 +19,10 @@ import (
 	"github.com/convox/logger"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
@@ -83,6 +81,8 @@ func (c *AtomController) Run() {
 
 	go c.runReleaseBuildCleanup()
 
+	go common.Tick(time.Minute, c.syncAll)
+
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
 	}
@@ -134,37 +134,45 @@ func (a *AtomController) syncAtom(obj *atomv1.Atom) error {
 
 	go a.updateNamespace(obj)
 
-	// obj.Name is fixed, so obj.Namespace will be unique per app
-	if _, ok := a.dependencyProcessor.Load(obj.Namespace); !ok && len(obj.Spec.Dependencies) > 0 {
-		a.dependencyProcessor.Store(obj.Namespace, true)
-		go a.processDependency(obj)
-	}
+	a.startDependency(obj)
 
 	return nil
 }
 
 func (a *AtomController) syncAll() error {
-	a.logger.Logf("syncing pending atoms...")
+	if !a.controller.IsLeader.Load() {
+		return nil
+	}
+
 	listResp, err := a.atom.AtomV1().Atoms(v1.NamespaceAll).List(a.provider.ctx, v1.ListOptions{})
 	if err != nil {
-		a.logger.Logf("failed to synce atom: %s", err)
-		return err
+		return errors.WithStack(err)
 	}
 
 	for i := range listResp.Items {
-		obj := &listResp.Items[i]
-		// obj.Name is fixed, so obj.Namespace will be unique per app
-		if _, ok := a.dependencyProcessor.Load(obj.Namespace); !ok && len(obj.Spec.Dependencies) > 0 {
-			a.dependencyProcessor.Store(obj.Namespace, true)
-			go a.processDependency(&listResp.Items[i])
-		}
+		a.startDependency(&listResp.Items[i])
 	}
+
 	return nil
+}
+
+func (a *AtomController) startDependency(obj *atomv1.Atom) {
+	if obj.Status != "Pending" || len(obj.Spec.Dependencies) == 0 {
+		return
+	}
+
+	if _, running := a.dependencyProcessor.LoadOrStore(dependencyKey(obj), true); !running {
+		go a.processDependency(obj)
+	}
+}
+
+func dependencyKey(obj *atomv1.Atom) string {
+	return obj.Namespace + "/" + obj.Spec.CurrentVersion
 }
 
 func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	a.logger.Logf("start processing dependency for: %s", obj.Namespace)
-	defer a.dependencyProcessor.Delete(obj.Namespace)
+	defer a.dependencyProcessor.Delete(dependencyKey(obj))
 	for _, dep := range obj.Spec.Dependencies {
 		rs := parseResourceSubstitutionId(dep)
 
@@ -184,11 +192,7 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 			}
 		}
 	}
-	_, err := a.PatchAtom(a.provider.ctx, obj, func(atm *atomv1.Atom) *atomv1.Atom {
-		atm.Spec.Dependencies = nil
-		return atm
-	}, v1.PatchOptions{})
-	if err != nil {
+	if err := a.clearDependencies(obj); err != nil {
 		a.logger.Logf("%s", err.Error())
 		if len(obj.Spec.Dependencies) > 0 {
 			rs := parseResourceSubstitutionId(obj.Spec.Dependencies[0])
@@ -257,30 +261,23 @@ func (a *AtomController) resolveDependencyInAtomVersion(obj *atomv1.Atom, dep st
 	return err
 }
 
-func (a *AtomController) PatchAtom(ctx context.Context, cur *atomv1.Atom, transform func(*atomv1.Atom) *atomv1.Atom, opts am.PatchOptions) (*atomv1.Atom, error) {
-	return a.PatchAtomObject(ctx, cur, transform(cur.DeepCopy()), opts)
-}
+func (a *AtomController) clearDependencies(obj *atomv1.Atom) error {
+	for {
+		live, err := a.atom.AtomV1().Atoms(obj.Namespace).Get(a.provider.ctx, obj.Name, v1.GetOptions{})
+		if err != nil {
+			return err
+		}
 
-func (a *AtomController) PatchAtomObject(ctx context.Context, cur, mod *atomv1.Atom, opts am.PatchOptions) (*atomv1.Atom, error) {
-	curJson, err := json.Marshal(cur)
-	if err != nil {
-		return nil, err
-	}
+		if live.Status != "Pending" || live.Spec.CurrentVersion != obj.Spec.CurrentVersion {
+			return nil
+		}
 
-	modJson, err := json.Marshal(mod)
-	if err != nil {
-		return nil, err
-	}
+		live.Spec.Dependencies = nil
 
-	patch, err := strategicpatch.CreateTwoWayMergePatch(curJson, modJson, atomv1.Atom{})
-	if err != nil {
-		return nil, err
+		if _, err := a.atom.AtomV1().Atoms(obj.Namespace).Update(a.provider.ctx, live, v1.UpdateOptions{}); !ae.IsConflict(err) {
+			return err
+		}
 	}
-	if len(patch) == 0 || string(patch) == "{}" {
-		return cur, nil
-	}
-	a.logger.Logf("Patching Atom %s/%s with %s.", cur.Namespace, cur.Name, string(patch))
-	return a.atom.AtomV1().Atoms(cur.Namespace).Patch(ctx, cur.Name, types.MergePatchType, patch, opts)
 }
 
 func (a *AtomController) updateNamespace(obj *atomv1.Atom) {
