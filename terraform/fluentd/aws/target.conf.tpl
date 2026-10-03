@@ -17,6 +17,12 @@
         pattern  /^\{/
         tag $${tag}.access
       </rule>
+      <rule>
+        key log
+        pattern  /^\{/
+        invert true
+        tag $${tag}.other
+      </rule>
     </match>
 
     <match rack.*.app.system.service.ingress-nginx.access>
