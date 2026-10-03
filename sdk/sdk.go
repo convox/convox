@@ -237,6 +237,8 @@ func websocketExitStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 	}
 }
 
+var ecsExecSessionPrefix = append([]byte{ecsExecSessionByte}, `{"sessionId":`...)
+
 type ecsExecSession struct {
 	SessionID  string `json:"sessionId"`
 	StreamURL  string `json:"streamUrl"`
@@ -284,8 +286,8 @@ var runSessionManagerPlugin = func(session ecsExecSession) (int, error) {
 }
 
 // execStream relays an exec websocket. A v2 rack with ECSExec enabled signals an
-// ECS Exec session by prefixing the FIRST payload with ecsExecSessionByte and a
-// JSON session blob (handed to session-manager-plugin); any other rack streams
+// ECS Exec session by starting the stream with ecsExecSessionPrefix, which opens
+// a JSON session blob (handed to session-manager-plugin); any other rack streams
 // the process output and the exit-code marker, which we strip. The marker can
 // straddle a read, so the scan window carries the tail of what was already
 // written and the code accumulates until its newline.
@@ -293,8 +295,8 @@ func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 	buf := make([]byte, 10*1024)
 	code := 0
 	sawExit := false
-	first := true
-	var ecsSessionData []byte
+	deciding := true
+	var head, ecsSessionData []byte
 	var tail, marker []byte
 
 	for {
@@ -302,6 +304,11 @@ func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 		if err == io.EOF {
 			if ecsSessionData != nil {
 				return -1, fmt.Errorf("ECS Exec session ended before it was established; please retry")
+			}
+			if len(head) > 0 {
+				if _, err := rw.Write(head); err != nil {
+					return 0, err
+				}
 			}
 			if c, ok := statusCodeFromMarker(marker); ok {
 				return c, nil
@@ -324,19 +331,24 @@ func execStream(ws io.Reader, rw io.ReadWriter) (int, error) {
 			return runSessionManagerPlugin(session)
 		}
 
-		if first {
-			first = false
-			if n > 0 && buf[0] == ecsExecSessionByte {
-				ecsSessionData = append([]byte{}, buf[1:n]...)
+		chunk := buf[0:n]
+
+		if deciding {
+			head = append(head, chunk...)
+			if len(head) < len(ecsExecSessionPrefix) && bytes.HasPrefix(ecsExecSessionPrefix, head) {
+				continue
+			}
+			deciding = false
+			if bytes.HasPrefix(head, ecsExecSessionPrefix) {
+				ecsSessionData, head = head[1:], nil
 				var session ecsExecSession
 				if err := json.Unmarshal(ecsSessionData, &session); err != nil {
 					continue
 				}
 				return runSessionManagerPlugin(session)
 			}
+			chunk, head = head, nil
 		}
-
-		chunk := buf[0:n]
 
 		for len(chunk) > 0 {
 			if marker != nil {
