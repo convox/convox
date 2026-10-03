@@ -95,6 +95,14 @@ type AppCost struct {
 	PricingAdjustment   float64                  `json:"pricing-adjustment"`
 	WarningCount        int                      `json:"warning-count,omitempty"`
 	TrackingEnabled     bool                     `json:"tracking-enabled,omitempty"`
+	RangeStart          string                   `json:"range-start,omitempty"`
+	RangeEnd            string                   `json:"range-end,omitempty"`
+	HistoryStart        string                   `json:"history-start,omitempty"`
+}
+
+type AppCostOptions struct {
+	Start *string `query:"start"`
+	End   *string `query:"end"`
 }
 
 type ServiceCostLine struct {

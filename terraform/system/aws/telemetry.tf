@@ -28,6 +28,7 @@ locals {
     convox_rack_domain                        = var.convox_rack_domain
     coredns_version                           = var.coredns_version
     cost_tracking_enable                      = var.cost_tracking_enable
+    cost_tracking_history_days                = var.cost_tracking_history_days
     custom_provided_bucket                    = var.custom_provided_bucket
     dcgm_scrape_interval                      = var.dcgm_scrape_interval
     deploy_crash_restart_limit                = var.deploy_crash_restart_limit
@@ -197,6 +198,7 @@ locals {
     convox_rack_domain                        = ""
     coredns_version                           = "v1.14.3-eksbuild.3"
     cost_tracking_enable                      = "false"
+    cost_tracking_history_days                = "62"
     custom_provided_bucket                    = ""
     dcgm_scrape_interval                      = "15s"
     deploy_crash_restart_limit                = "0"

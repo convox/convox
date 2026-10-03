@@ -74,6 +74,11 @@ variable "cost_tracking_enable" {
   default = false
 }
 
+variable "cost_tracking_history_days" {
+  type    = number
+  default = 62
+}
+
 variable "seccomp_default_enabled" {
   type    = bool
   default = false

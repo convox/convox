@@ -19,8 +19,8 @@ func init() {
 			flagApp,
 			flagRack,
 			stdcli.BoolFlag("aggregate", "", "show app-level total instead of per-service breakdown"),
-			stdcli.StringFlag("start", "", "include only spend from this date onward (YYYY-MM-DD)"),
-			stdcli.StringFlag("end", "", "include only spend up to this date (YYYY-MM-DD)"),
+			stdcli.StringFlag("start", "", "first UTC day to include (YYYY-MM-DD)"),
+			stdcli.StringFlag("end", "", "last UTC day to include (YYYY-MM-DD)"),
 			stdcli.StringFlag("format", "", `output format: "table" (default) or "json"`),
 		},
 		Validate: stdcli.Args(0),
@@ -43,7 +43,21 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf(`--format must be "table" or "json"`)
 	}
 
-	cost, err := rack.AppCost(appName)
+	var opts structs.AppCostOptions
+	if v := c.String("start"); v != "" {
+		opts.Start = &v
+	}
+	if v := c.String("end"); v != "" {
+		opts.End = &v
+	}
+	ranged := opts.Start != nil || opts.End != nil
+
+	var cost *structs.AppCost
+	if ranged {
+		cost, err = rack.AppCostWithOptions(appName, opts)
+	} else {
+		cost, err = rack.AppCost(appName)
+	}
 	if err != nil {
 		if isRackVersionGated(err) {
 			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
@@ -55,13 +69,18 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("no cost data returned for app %s", appName)
 	}
 
-	// client-side filter — API does not accept date range yet
-	if !start.IsZero() || !end.IsZero() {
+	if ranged && cost.RangeStart == "" {
+		if format != "json" {
+			fmt.Fprintln(c.Writer(), costRangeUnsupportedNotice)
+		}
 		cost = filterCostRange(cost, start, end)
 	}
 
 	if format == "json" {
 		return printCostJSON(c, cost)
+	}
+	if cost.RangeStart != "" {
+		return printCostRange(c, appName, cost)
 	}
 	if c.Bool("aggregate") {
 		return printCostAggregate(c, appName, cost)
@@ -98,17 +117,16 @@ func filterCostRange(cost *structs.AppCost, start, end time.Time) *structs.AppCo
 	if cost.AsOf.IsZero() {
 		return cost
 	}
-	if !start.IsZero() && cost.AsOf.Before(start) {
-		out := *cost
-		out.Breakdown = []structs.ServiceCostLine{}
-		out.SpendUsd = 0
-		return &out
-	}
 	// --end is inclusive of the calendar day
-	if !end.IsZero() && cost.AsOf.After(end.Add(24*time.Hour)) {
+	if (!start.IsZero() && cost.AsOf.Before(start)) || (!end.IsZero() && cost.AsOf.After(end.Add(24*time.Hour))) {
 		out := *cost
 		out.Breakdown = []structs.ServiceCostLine{}
 		out.SpendUsd = 0
+		out.VariantBreakdown = make([]structs.ServiceVariantCostLine, len(cost.VariantBreakdown))
+		for i, line := range cost.VariantBreakdown {
+			line.SpendUsd = 0
+			out.VariantBreakdown[i] = line
+		}
 		return &out
 	}
 	return cost
@@ -127,6 +145,8 @@ func formatRateUsdPerHour(rate float64) (string, bool) {
 const spotLegend = `Spot pricing applies a discount automatically when nodes are provisioned via Karpenter, an EKS spot ASG, an AKS spot node pool, or a GKE Spot or preemptible node pool. Capacity "unknown" means the node carried no capacity label.`
 
 const accumulationNote = `Cost accumulates per (instance-type, capacity-type) combination across the month. A row may show 0 active replicas if pods previously ran on that variant but have since migrated or been removed.`
+
+const costRangeUnsupportedNotice = "Date ranges need rack version 3.25.10 or later; showing the month-to-date snapshot"
 
 const trackingDisabledNotice = `Cost tracking is disabled on this rack. Values shown are the most-recent persisted snapshot and may be empty or stale. To enable: convox rack params set cost_tracking_enable=true`
 
@@ -199,10 +219,48 @@ func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	return nil
 }
 
+func printCostRange(c *stdcli.Context, appName string, cost *structs.AppCost) error {
+	if !cost.TrackingEnabled {
+		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
+	}
+	fmt.Fprintf(c.Writer(), "Range: %s to %s (UTC)\n", cost.RangeStart, cost.RangeEnd)
+	switch {
+	case cost.HistoryStart == "":
+		fmt.Fprintln(c.Writer(), "No cost history stored for this app yet")
+	case cost.HistoryStart > cost.RangeStart:
+		fmt.Fprintf(c.Writer(), "Cost history for this app starts %s\n", cost.HistoryStart)
+	}
+	if c.Bool("aggregate") {
+		return printCostAggregateTable(c, appName, cost)
+	}
+
+	t := c.Table("SERVICE", "INSTANCE", "SPEND-USD")
+	sawEmDash := false
+	for _, line := range cost.Breakdown {
+		spend, dashed := formatRateUsdPerHour(line.SpendUsd)
+		if dashed {
+			sawEmDash = true
+		}
+		t.AddRow(line.Service, line.InstanceType, spend)
+	}
+	if err := t.Print(); err != nil {
+		return err
+	}
+	fmt.Fprintf(c.Writer(), "TOTAL: $%.2f\n", cost.SpendUsd)
+	if sawEmDash {
+		fmt.Fprintln(c.Writer(), lowSpendFootnote)
+	}
+	return nil
+}
+
 func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost) error {
 	if !cost.TrackingEnabled {
 		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
 	}
+	return printCostAggregateTable(c, appName, cost)
+}
+
+func printCostAggregateTable(c *stdcli.Context, appName string, cost *structs.AppCost) error {
 	t := c.Table("APP", "SPEND-USD", "AS-OF", "PRICING-SOURCE")
 	t.AddRow(
 		appName,

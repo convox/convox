@@ -7,6 +7,7 @@ locals {
     buildkit_enabled                = var.buildkit_enabled
     cert_duration                   = var.cert_duration
     cost_tracking_enable            = var.cost_tracking_enable
+    cost_tracking_history_days      = var.cost_tracking_history_days
     dcgm_scrape_interval            = var.dcgm_scrape_interval
     docker_hub_password             = var.docker_hub_password
     docker_hub_username             = var.docker_hub_username
@@ -36,6 +37,7 @@ locals {
     buildkit_enabled                = "false"
     cert_duration                   = "2160h"
     cost_tracking_enable            = "false"
+    cost_tracking_history_days      = "62"
     dcgm_scrape_interval            = "15s"
     docker_hub_password             = ""
     docker_hub_username             = ""

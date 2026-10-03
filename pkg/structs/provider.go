@@ -36,6 +36,7 @@ type Provider interface {
 	AppBudgetDismissRecovery(app string, ackBy string) error
 	AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error)
 	AppCost(app string) (*AppCost, error)
+	AppCostWithOptions(app string, opts AppCostOptions) (*AppCost, error)
 
 	BalancerList(app string) (Balancers, error)
 

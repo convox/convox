@@ -290,6 +290,29 @@ func (_m *Interface) AppCost(app string) (*structs.AppCost, error) {
 	return r0, r1
 }
 
+// AppCostWithOptions provides a mock function with given fields: app, opts
+func (_m *Interface) AppCostWithOptions(app string, opts structs.AppCostOptions) (*structs.AppCost, error) {
+	ret := _m.Called(app, opts)
+
+	var r0 *structs.AppCost
+	if rf, ok := ret.Get(0).(func(string, structs.AppCostOptions) *structs.AppCost); ok {
+		r0 = rf(app, opts)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.AppCost)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, structs.AppCostOptions) error); ok {
+		r1 = rf(app, opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AppCreate provides a mock function with given fields: name, opts
 func (_m *Interface) AppCreate(name string, opts structs.AppCreateOptions) (*structs.App, error) {
 	ret := _m.Called(name, opts)

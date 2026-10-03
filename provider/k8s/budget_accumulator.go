@@ -681,7 +681,8 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		if cfg != nil && cfg.PricingAdjustment > 0 {
 			adjustment = cfg.PricingAdjustment
 		}
-		delta, perSvc, perSvcInst, perSvcVariant, perSvcVariantPods, warnings, err := p.computeBudgetDelta(ctx, app, state.CurrentMonthSpendAsOf, now, adjustment)
+		lastTick := state.CurrentMonthSpendAsOf
+		delta, perSvc, perSvcInst, perSvcVariant, perSvcVariantPods, warnings, err := p.computeBudgetDelta(ctx, app, lastTick, now, adjustment)
 		if err != nil {
 			return err
 		}
@@ -810,6 +811,8 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 		}
 
 		_ = p.runStaleAnnotationGC(ctx, app, budgetDefaultPollInterval)
+
+		p.recordCostHistory(ctx, app, lastTick, now, delta, perSvc)
 
 		return nil
 	}

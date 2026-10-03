@@ -9,6 +9,7 @@ import (
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/require"
 )
@@ -218,22 +219,118 @@ func TestCost_DateRangeDefaultsToMonthStart(t *testing.T) {
 	})
 }
 
-// TestCost_DateRangeExplicit_PassesThrough exercises --start / --end
-// parsing. The AppCost API does not yet accept date-range parameters, so
-// the CLI applies a client-side filter on AsOf. With AsOf inside the
-// requested window, the breakdown should render unchanged.
+// TestCost_DateRangeExplicit_PassesThrough: a rack that does not echo the
+// range gets the notice and the client-side AsOf filter. AsOf 2026-04-24 is
+// inside the window, so the breakdown is unchanged.
 func TestCost_DateRangeExplicit_PassesThrough(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("AppCost", "app1").Return(fxAppCost(), nil)
+		opts := structs.AppCostOptions{Start: options.String("2026-04-01"), End: options.String("2026-04-30")}
+		i.On("AppCostWithOptions", "app1", opts).Return(fxAppCost(), nil)
 
 		res, err := testExecute(e, "cost -a app1 --start 2026-04-01 --end 2026-04-30", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
-		// AsOf 2026-04-24 falls inside [2026-04-01, 2026-04-30+24h], so the
-		// breakdown is preserved.
+		require.True(t, strings.HasPrefix(res.Stdout, "Date ranges need rack version 3.25.10 or later; showing the month-to-date snapshot\n"), res.Stdout)
 		require.Contains(t, res.Stdout, "web")
 		require.Contains(t, res.Stdout, "trainer")
 	})
+}
+
+func fxAppCostRange() *structs.AppCost {
+	c := fxAppCost()
+	c.RangeStart = "2026-04-01"
+	c.RangeEnd = "2026-04-30"
+	c.HistoryStart = "2026-03-15"
+	return c
+}
+
+func TestCost_Range_RackApplied(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		opts := structs.AppCostOptions{Start: options.String("2026-04-01"), End: options.String("2026-04-30")}
+		i.On("AppCostWithOptions", "app1", opts).Return(fxAppCostRange(), nil)
+
+		res, err := testExecute(e, "cost -a app1 --start 2026-04-01 --end 2026-04-30", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
+		require.Equal(t, []string{
+			"Range: 2026-04-01 to 2026-04-30 (UTC)",
+			"SERVICE  INSTANCE    SPEND-USD",
+			"web      m5.large    $2.34",
+			"trainer  p3.2xlarge  $10.00",
+			"TOTAL: $12.34",
+		}, strings.Split(strings.TrimRight(res.Stdout, "\n"), "\n"))
+	})
+}
+
+func TestCost_Range_HistoryLines(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		empty := fxAppCostRange()
+		empty.HistoryStart = ""
+		i.On("AppCostWithOptions", "app1", structs.AppCostOptions{Start: options.String("2026-04-01")}).Return(empty, nil)
+
+		late := fxAppCostRange()
+		late.RangeStart = "2026-03-01"
+		late.RangeEnd = "2026-03-01"
+		late.Breakdown = []structs.ServiceCostLine{}
+		late.SpendUsd = 0
+		i.On("AppCostWithOptions", "app1", structs.AppCostOptions{End: options.String("2026-03-01")}).Return(late, nil)
+
+		res, err := testExecute(e, "cost -a app1 --start 2026-04-01", nil)
+		require.NoError(t, err)
+		require.Contains(t, res.Stdout, "Range: 2026-04-01 to 2026-04-30 (UTC)\nNo cost history stored for this app yet\n")
+
+		res, err = testExecute(e, "cost -a app1 --end 2026-03-01", nil)
+		require.NoError(t, err)
+		require.Contains(t, res.Stdout, "Range: 2026-03-01 to 2026-03-01 (UTC)\nCost history for this app starts 2026-03-15\n")
+		require.Contains(t, res.Stdout, "TOTAL: $0.00")
+	})
+}
+
+func TestCost_Range_TrackingDisabledAndAggregate(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCostRange()
+		fx.TrackingEnabled = false
+		i.On("AppCostWithOptions", "app1", structs.AppCostOptions{Start: options.String("2026-04-01")}).Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1 --start 2026-04-01", nil)
+		require.NoError(t, err)
+		require.True(t, strings.HasPrefix(res.Stdout, "Cost tracking is disabled on this rack."), res.Stdout)
+
+		res, err = testExecute(e, "cost -a app1 --start 2026-04-01 --aggregate", nil)
+		require.NoError(t, err)
+		require.Contains(t, res.Stdout, "Range: 2026-04-01 to 2026-04-30 (UTC)\nAPP")
+		require.Contains(t, res.Stdout, "$12.34")
+		require.NotContains(t, res.Stdout, "TOTAL")
+		require.Equal(t, 1, strings.Count(res.Stdout, "Cost tracking is disabled"))
+	})
+}
+
+func TestCost_Range_OlderRackZeroesVariants(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		fx := fxAppCostWithVariants()
+		i.On("AppCostWithOptions", "app1", structs.AppCostOptions{End: options.String("2026-04-01")}).Return(fx, nil)
+
+		res, err := testExecute(e, "cost -a app1 --end 2026-04-01", nil)
+		require.NoError(t, err)
+		require.True(t, strings.HasPrefix(res.Stdout, "Date ranges need rack version 3.25.10 or later"), res.Stdout)
+		require.Equal(t, 3, strings.Count(res.Stdout, "  $0.00\n"), res.Stdout)
+		require.Contains(t, res.Stdout, "TOTAL: $0.00")
+		require.InDelta(t, 10.0, fx.VariantBreakdown[0].SpendUsd, 1e-9, "the caller's slice is not modified")
+	})
+}
+
+func TestCost_Range_JSONOnly(t *testing.T) {
+	for _, fx := range []*structs.AppCost{fxAppCostRange(), fxAppCost()} {
+		testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+			i.On("AppCostWithOptions", "app1", structs.AppCostOptions{Start: options.String("2026-04-01")}).Return(fx, nil)
+
+			res, err := testExecute(e, "cost -a app1 --start 2026-04-01 --format json", nil)
+			require.NoError(t, err)
+			var got structs.AppCost
+			require.NoError(t, json.Unmarshal([]byte(res.Stdout), &got), res.Stdout)
+			require.Equal(t, fx.RangeStart, got.RangeStart)
+		})
+	}
 }
 
 // TestCost_TableStyleMatchesReleases asserts that cost (default mode) and

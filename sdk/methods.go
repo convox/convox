@@ -284,7 +284,14 @@ func (c *Client) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*
 }
 
 func (c *Client) AppCost(app string) (*structs.AppCost, error) {
-	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	return c.AppCostWithOptions(app, structs.AppCostOptions{})
+}
+
+func (c *Client) AppCostWithOptions(app string, opts structs.AppCostOptions) (*structs.AppCost, error) {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
 
 	var v *structs.AppCost
 	if err := c.Get(fmt.Sprintf("/apps/%s/cost", app), ro, &v); err != nil {
