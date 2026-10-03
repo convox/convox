@@ -48,18 +48,19 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  cost_tracking_enable      = var.cost_tracking_enable
-  docker_hub_authentication = var.docker_hub_authentication
-  domain                    = var.domain
-  domain_internal           = var.domain_internal
-  image                     = var.image
-  namespace                 = var.namespace
-  rack                      = var.name
-  rack_name                 = var.rack_name
-  release                   = var.release
-  replicas                  = var.high_availability ? 2 : 1
-  resolver                  = var.resolver
-  webhook_signing_key       = var.webhook_signing_key
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_authentication  = var.docker_hub_authentication
+  domain                     = var.domain
+  domain_internal            = var.domain_internal
+  image                      = var.image
+  namespace                  = var.namespace
+  rack                       = var.name
+  rack_name                  = var.rack_name
+  release                    = var.release
+  replicas                   = var.high_availability ? 2 : 1
+  resolver                   = var.resolver
+  webhook_signing_key        = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"

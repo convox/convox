@@ -39,17 +39,18 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled          = var.buildkit_enabled
-  cost_tracking_enable      = var.cost_tracking_enable
-  docker_hub_authentication = var.docker_hub_authentication
-  domain                    = var.domain
-  image                     = var.image
-  namespace                 = var.namespace
-  rack                      = var.name
-  rack_name                 = var.rack_name
-  release                   = var.release
-  resolver                  = var.resolver
-  webhook_signing_key       = var.webhook_signing_key
+  buildkit_enabled           = var.buildkit_enabled
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_authentication  = var.docker_hub_authentication
+  domain                     = var.domain
+  image                      = var.image
+  namespace                  = var.namespace
+  rack                       = var.name
+  rack_name                  = var.rack_name
+  release                    = var.release
+  resolver                   = var.resolver
+  webhook_signing_key        = var.webhook_signing_key
 
 
   annotations = {

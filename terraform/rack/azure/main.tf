@@ -26,6 +26,7 @@ module "api" {
   cluster                              = var.cluster
   azure_files_enable                   = var.azure_files_enable
   cost_tracking_enable                 = var.cost_tracking_enable
+  cost_tracking_history_days           = var.cost_tracking_history_days
   docker_hub_authentication            = module.k8s.docker_hub_authentication
   fluentd_memory                       = var.fluentd_memory
   domain                               = module.router.endpoint

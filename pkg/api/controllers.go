@@ -630,7 +630,12 @@ func (s *Server) AppCost(c *stdapi.Context) error {
 
 	app := c.Var("app")
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).AppCost(app)
+	var opts structs.AppCostOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).AppCostWithOptions(app, opts)
 	if err != nil {
 		return err
 	}

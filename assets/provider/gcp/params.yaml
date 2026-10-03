@@ -99,3 +99,10 @@ Groups:
           Compute Engine spend to each app and enforces per-app monthly
           budget caps configured via &i convox budget set &i. &l &l Off by
           default, existing users see no change until opted in.
+      - name: cost_tracking_history_days
+        default: "62"
+        type: integer
+        description: "Days of daily per-app cost history the rack keeps for date-range queries in &i convox cost &i and the Console. Lowering it drops older days on the next write; raising it keeps more from then on."
+        sideNote: "Only used when cost_tracking_enable is true."
+        allowedMinValue: 31
+        allowedMaxValue: 400

@@ -45,7 +45,7 @@ var awsKnownParams = map[string]bool{
 	"cert_duration": true, "cidr": true, "cloudwatch_disable": true,
 	"cloudwatch_retention_in_days":   true,
 	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
-	"coredns_version": true, "cost_tracking_enable": true, "custom_provided_bucket": true,
+	"coredns_version": true, "cost_tracking_enable": true, "cost_tracking_history_days": true, "custom_provided_bucket": true,
 	"deploy_crash_restart_limit": true, "deploy_extra_nlb": true,
 	"deploy_progress_deadline": true, "disable_convox_resolver": true,
 	"disable_image_manifest_cache": true, "disable_public_access": true,
@@ -128,7 +128,7 @@ var awsKnownParams = map[string]bool{
 
 var gcpKnownParams = map[string]bool{
 	"additional_node_groups_config": true,
-	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true,
+	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"dcgm_scrape_interval": true, "docker_hub_password": true,
 	"docker_hub_username": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
@@ -142,7 +142,7 @@ var gcpKnownParams = map[string]bool{
 
 var azureKnownParams = map[string]bool{
 	"additional_build_groups_config": true, "additional_node_groups_config": true,
-	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true,
+	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"docker_hub_password": true, "docker_hub_username": true,
 	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
 	"image": true, "k8s_version": true, "max_on_demand_count": true,
@@ -263,6 +263,7 @@ var sensitiveParams = map[string]bool{
 var paramGroups = map[string]map[string]bool{
 	"cost": {
 		"cost_tracking_enable":            true,
+		"cost_tracking_history_days":      true,
 		"karpenter_capacity_types":        true, // dual-listed in karpenter
 		"karpenter_consolidate_after":     true, // dual-listed in karpenter
 		"karpenter_consolidation_enabled": true, // dual-listed in karpenter
@@ -2584,6 +2585,13 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 || n > rack.KarpenterSystemNodeMaxPerAZ {
 			return fmt.Errorf("karpenter_system_node_min_count_per_az must be an integer from 1 to %d", rack.KarpenterSystemNodeMaxPerAZ)
+		}
+	}
+
+	if v, ok := params["cost_tracking_history_days"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 31 || n > 400 {
+			return fmt.Errorf("cost_tracking_history_days must be an integer from 31 to 400")
 		}
 	}
 

@@ -57,25 +57,26 @@ module "rack" {
     google     = google
   }
 
-  buildkit_enabled        = var.buildkit_enabled
-  cluster                 = module.cluster.id
-  cost_tracking_enable    = var.cost_tracking_enable
-  docker_hub_username     = var.docker_hub_username
-  docker_hub_password     = var.docker_hub_password
-  fluentd_memory          = var.fluentd_memory
-  image                   = var.image
-  name                    = local.name
-  rack_name               = local.rack_name
-  network                 = module.cluster.network
-  nodes_account           = module.cluster.nodes_account
-  nginx_additional_config = var.nginx_additional_config
-  project_id              = module.project.id
-  region                  = var.region
-  release                 = local.release
-  syslog                  = var.syslog
-  telemetry               = var.telemetry
-  telemetry_map           = local.telemetry_map
-  telemetry_default_map   = local.telemetry_default_map
-  webhook_signing_key     = var.webhook_signing_key
-  whitelist               = split(",", var.whitelist)
+  buildkit_enabled           = var.buildkit_enabled
+  cluster                    = module.cluster.id
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_username        = var.docker_hub_username
+  docker_hub_password        = var.docker_hub_password
+  fluentd_memory             = var.fluentd_memory
+  image                      = var.image
+  name                       = local.name
+  rack_name                  = local.rack_name
+  network                    = module.cluster.network
+  nodes_account              = module.cluster.nodes_account
+  nginx_additional_config    = var.nginx_additional_config
+  project_id                 = module.project.id
+  region                     = var.region
+  release                    = local.release
+  syslog                     = var.syslog
+  telemetry                  = var.telemetry
+  telemetry_map              = local.telemetry_map
+  telemetry_default_map      = local.telemetry_default_map
+  webhook_signing_key        = var.webhook_signing_key
+  whitelist                  = split(",", var.whitelist)
 }
