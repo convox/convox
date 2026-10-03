@@ -149,6 +149,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILDKIT_ENABLED":                p.BuildkitEnabled,
 		"PROVIDER":                        os.Getenv("PROVIDER"),
 		"DISABLE_IMAGE_MANIFEST_CACHE":    os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
+		"ECR_IMMUTABLE_TAGS_ENABLED":      os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED"),
 		"BUILDKIT_HOST_PATH_CACHE_ENABLE": os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE"),
 		"BUILD_ARCHS":                     os.Getenv("BUILD_ARCHS"),
 		"RACK_URL":                        fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
