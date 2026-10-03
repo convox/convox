@@ -18,8 +18,11 @@ module "k8s" {
   fluentd_disable = var.fluentd_disable
   fluentd_memory  = var.fluentd_memory
 
-  cluster   = var.cluster
-  image     = "convox/fluentd:1.13-all"
+  cluster = var.cluster
+  # 1.19-all runs fluentd 1.19 with kubernetes_metadata_filter 3.8, which re-reads the
+  # service account token (1.13-all runs fluentd 1.7.4 with filter 2.3.0, which reads it
+  # once; EKS 1.34+ expires it after 24 hours and every app log line is then dropped).
+  image     = "convox/fluentd:1.19-all"
   namespace = var.namespace
   rack      = var.rack
 
