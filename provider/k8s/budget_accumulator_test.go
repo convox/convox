@@ -3342,3 +3342,174 @@ func TestBudgetAccumulator_AppCostConcurrentWithTick_NoRace(t *testing.T) {
 		wg.Wait()
 	})
 }
+
+func TestAppBudgetSet_CapRaiseCancelsArmedShutdownWithoutBreaker(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		events := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{events.server.URL})
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  110,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtThreshold: frozen,
+			AlertFiredAtCap:       frozen,
+		})
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", armedShutdownState(frozen.Add(-5*time.Minute), "tick-armed", "")))
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("500")}, "alice@example.com"))
+
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		assert.Nil(t, ss, "a raise above spend must drop the armed shutdown")
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.True(t, state.AlertFiredAtCap.IsZero())
+		assert.True(t, state.AlertFiredAtThreshold.IsZero())
+		assert.False(t, state.CircuitBreakerTripped)
+		assert.Empty(t, state.CircuitBreakerAckBy)
+
+		events.drain()
+		cancelled := events.findActions(":cancelled")
+		require.Len(t, cancelled, 1)
+		assert.Equal(t, "cap-raised", cancelled[0].Data["cancel_reason"])
+		assert.Equal(t, "alice@example.com", cancelled[0].Data["actor"])
+		assert.Equal(t, "100", cancelled[0].Data["prev_cap_usd"])
+		assert.Equal(t, "500", cancelled[0].Data["new_cap_usd"])
+		assert.NotEqual(t, "0001-01-01T00:00:00Z", cancelled[0].Data["cancelled_at"])
+		assert.Empty(t, events.findActions("app:budget:breaker-cleared"))
+	})
+}
+
+func TestAppBudgetSet_AlertOnlyCapRaiseAboveSpendClearsAlerts(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAlertOnly, PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  110,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtThreshold: frozen,
+			AlertFiredAtCap:       frozen,
+		})
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("105")}, "alice@example.com"))
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.False(t, state.AlertFiredAtCap.IsZero(), "a raise that stays below spend keeps the alerts")
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("500")}, "alice@example.com"))
+		_, state, err = p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.True(t, state.AlertFiredAtCap.IsZero())
+		assert.True(t, state.AlertFiredAtThreshold.IsZero())
+		assert.InDelta(t, 110, state.CurrentMonthSpendUsd, 0.001)
+	})
+}
+
+func TestAppBudgetSet_CapRaiseLeavesFiredShutdownForReset(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		installFakeDynamicClient(p)
+
+		events := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{events.server.URL})
+
+		grace := int64(30)
+		makeDeployment(t, kk, "rack1-app1", "web", 0, &grace)
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendUsd:  110,
+			CurrentMonthSpendAsOf: frozen,
+			AlertFiredAtCap:       frozen,
+		})
+		fired := armedShutdownState(frozen.Add(-40*time.Minute), "tick-fired", "")
+		shutAt := frozen.Add(-10 * time.Minute)
+		fired.ShutdownAt = &shutAt
+		fired.FiredNotificationFiredAt = &shutAt
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", fired))
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("500")}, "alice@example.com"))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.True(t, state.AlertFiredAtCap.IsZero())
+
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, ss, "a fired shutdown must stay for convox budget reset")
+		require.NotNil(t, ss.ShutdownAt)
+		assert.Nil(t, ss.RestoredAt)
+
+		events.drain()
+		assert.Empty(t, events.findActions(":cancelled"))
+
+		require.NoError(t, p.AppBudgetResetWithOptions("app1", "alice@example.com", structs.AppBudgetResetOptions{}))
+		dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.NotNil(t, dep.Spec.Replicas)
+		assert.Equal(t, int32(3), *dep.Spec.Replicas)
+	})
+}
+
+func TestBudgetAccumulator_ElapsedChargedAtMostOneHour(t *testing.T) {
+	charge := func(t *testing.T, gap time.Duration) *structs.AppBudgetState {
+		var out *structs.AppBudgetState
+		testProvider(t, func(p *k8s.Provider) {
+			kk, _ := p.Cluster.(*fake.Clientset)
+			require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+			writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+				MonthlyCapUsd: 1000, AlertThresholdPercent: 80, AtCapAction: "alert-only", PricingAdjustment: 1,
+			})
+			frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+			writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+				MonthStart:            startOfApril(),
+				CurrentMonthSpendAsOf: frozen.Add(-gap),
+			})
+			servicePodFixture(t, kk, "rack1-app1", "p1", "node1", "m5.large", map[string]string{"service": "web"})
+
+			require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+			_, state, err := p.AppBudgetGet("app1")
+			require.NoError(t, err)
+			require.NotNil(t, state)
+			out = state
+		})
+		return out
+	}
+
+	oneHour := charge(t, time.Hour)
+	threeHours := charge(t, 3*time.Hour)
+
+	assert.InDelta(t, 0.096, oneHour.CurrentMonthSpendUsd, 0.001)
+	assert.InDelta(t, oneHour.CurrentMonthSpendUsd, threeHours.CurrentMonthSpendUsd, 0.0001)
+	assert.InDelta(t, threeHours.CurrentMonthSpendUsd, threeHours.PerServiceSpendUsd["web"], 0.0001)
+	variants := 0.0
+	for _, v := range threeHours.PerServiceSpendByVariant["web"] {
+		variants += v
+	}
+	assert.InDelta(t, threeHours.PerServiceSpendUsd["web"], variants, 0.0001)
+}

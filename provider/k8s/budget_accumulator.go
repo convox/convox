@@ -61,19 +61,20 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 	var prev structs.AppBudget
 	var final structs.AppBudget
 	var breakerClearedFromCapRaise bool
-	var breakerClearedPrevSpend, breakerClearedPrevCap, breakerClearedNewCap float64
-	var breakerClearedAckAt time.Time
+	var capRaisePrevSpend, capRaisePrevCap, capRaiseNewCap float64
+	var capRaiseAt time.Time
 	var capRaiseArmedShutdownState *structs.AppBudgetShutdownState
 	var capRaiseShutdownStateBaseState *structs.AppBudgetState
 
 	for i := 0; i < budgetWriteConflictRetries; i++ {
 		breakerClearedFromCapRaise = false
-		breakerClearedPrevSpend = 0
-		breakerClearedPrevCap = 0
-		breakerClearedNewCap = 0
-		breakerClearedAckAt = time.Time{}
+		capRaisePrevSpend = 0
+		capRaisePrevCap = 0
+		capRaiseNewCap = 0
+		capRaiseAt = time.Time{}
 		capRaiseArmedShutdownState = nil
 		capRaiseShutdownStateBaseState = nil
+		stateChanged := false
 
 		ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), nsName, am.GetOptions{})
 		if err != nil {
@@ -100,21 +101,24 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		}
 		final = *cfg
 
-		// Clear breaker atomically on cap raise above current spend
+		// Clear alerts and breaker atomically on cap raise above current spend
 		state, _ := readBudgetStateAnnotation(ns.Annotations)
-		if state != nil && state.CircuitBreakerTripped &&
+		if state != nil &&
 			final.MonthlyCapUsd > prev.MonthlyCapUsd &&
 			final.MonthlyCapUsd > state.CurrentMonthSpendUsd {
-			breakerClearedPrevSpend = state.CurrentMonthSpendUsd
-			breakerClearedPrevCap = prev.MonthlyCapUsd
-			breakerClearedNewCap = final.MonthlyCapUsd
-			breakerClearedAckAt = time.Now().UTC()
-			state.CircuitBreakerTripped = false
+			capRaisePrevSpend = state.CurrentMonthSpendUsd
+			capRaisePrevCap = prev.MonthlyCapUsd
+			capRaiseNewCap = final.MonthlyCapUsd
+			capRaiseAt = time.Now().UTC()
+			stateChanged = state.CircuitBreakerTripped || !state.AlertFiredAtThreshold.IsZero() || !state.AlertFiredAtCap.IsZero()
 			state.AlertFiredAtThreshold = time.Time{}
 			state.AlertFiredAtCap = time.Time{}
-			state.CircuitBreakerAckBy = ackBy
-			state.CircuitBreakerAckAt = breakerClearedAckAt
-			breakerClearedFromCapRaise = true
+			if state.CircuitBreakerTripped {
+				state.CircuitBreakerTripped = false
+				state.CircuitBreakerAckBy = ackBy
+				state.CircuitBreakerAckAt = capRaiseAt
+				breakerClearedFromCapRaise = true
+			}
 
 			// GC armed shutdown annotation to avoid stale "ARMED" banner
 			if shutdownState, _ := readBudgetShutdownStateAnnotation(ns.Annotations); shutdownState != nil &&
@@ -136,7 +140,7 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		}
 		ns.Annotations[structs.BudgetConfigAnnotation] = string(data)
 
-		if breakerClearedFromCapRaise {
+		if stateChanged {
 			stateData, err := json.Marshal(state)
 			if err != nil {
 				return errors.WithStack(err)
@@ -170,20 +174,20 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 
 		if breakerClearedFromCapRaise {
 			fmt.Printf("ns=budget_accumulator at=alert kind=breaker_cleared app=%s ack_by=%q reason=cap-raised prev_spend_usd=%.2f prev_cap_usd=%.2f new_cap_usd=%.2f\n",
-				app, ackBy, breakerClearedPrevSpend, breakerClearedPrevCap, breakerClearedNewCap)
+				app, ackBy, capRaisePrevSpend, capRaisePrevCap, capRaiseNewCap)
 			_ = p.EventSend("app:budget:breaker-cleared", structs.EventSendOptions{Data: map[string]string{
 				"app":            app,
 				"ack_by":         ackBy,
 				"reason":         "cap-raised",
-				"prev_spend_usd": strconv.FormatFloat(breakerClearedPrevSpend, 'f', 2, 64),
-				"prev_cap_usd":   strconv.FormatFloat(breakerClearedPrevCap, 'f', 2, 64),
-				"new_cap_usd":    strconv.FormatFloat(breakerClearedNewCap, 'f', 2, 64),
-				"cleared_at":     breakerClearedAckAt.Format(time.RFC3339),
+				"prev_spend_usd": strconv.FormatFloat(capRaisePrevSpend, 'f', 2, 64),
+				"prev_cap_usd":   strconv.FormatFloat(capRaisePrevCap, 'f', 2, 64),
+				"new_cap_usd":    strconv.FormatFloat(capRaiseNewCap, 'f', 2, 64),
+				"cleared_at":     capRaiseAt.Format(time.RFC3339),
 			}})
+		}
 
-			if capRaiseArmedShutdownState != nil {
-				p.fireCancelledEvent(app, &final, capRaiseShutdownStateBaseState, capRaiseArmedShutdownState, ackBy, "cap-raised", breakerClearedPrevCap, breakerClearedNewCap, "", breakerClearedAckAt)
-			}
+		if capRaiseArmedShutdownState != nil {
+			p.fireCancelledEvent(app, &final, capRaiseShutdownStateBaseState, capRaiseArmedShutdownState, ackBy, "cap-raised", capRaisePrevCap, capRaiseNewCap, "", capRaiseAt)
 		}
 
 		return nil
@@ -828,6 +832,10 @@ func (p *Provider) computeBudgetDelta(ctx context.Context, app string, lastTick,
 	elapsed := now.Sub(lastTick).Hours()
 	if elapsed <= 0 {
 		return 0, nil, nil, nil, nil, 0, nil
+	}
+	if limit := budgetMaxPollInterval.Hours(); elapsed > limit {
+		fmt.Printf("ns=budget_accumulator at=elapsed_capped app=%s elapsed_hours=%.2f charged_hours=%.2f\n", app, elapsed, limit)
+		elapsed = limit
 	}
 	if adjustment <= 0 {
 		adjustment = 1.0

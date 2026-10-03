@@ -159,12 +159,12 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 
 	capStr := c.String("monthly-cap")
 	paStr := c.String("pricing-adjustment")
-	alertAtRaw := c.Int("alert-at")
-	actionRaw := c.String("at-cap-action")
+	alertAt, alertAtSet := c.Value("alert-at").(int)
+	action, actionSet := c.Value("at-cap-action").(string)
 
 	// pricing-adjustment alone is accepted without --monthly-cap (non-enforcement)
 	if capStr == "" {
-		if alertAtRaw != 0 || actionRaw != "" {
+		if alertAtSet || actionSet {
 			return fmt.Errorf("--alert-at and --at-cap-action require --monthly-cap")
 		}
 		if paStr == "" {
@@ -186,36 +186,32 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 
 	opts := structs.AppBudgetOptions{}
 
+	// omitted --alert-at and --at-cap-action keep the stored values; the rack defaults them on first set
 	if capStr != "" {
-		alertAt := alertAtRaw
-		if alertAt == 0 {
-			alertAt = int(structs.BudgetDefaultAlertThresholdPercent)
-		}
+		if actionSet {
+			switch action {
+			case structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown:
+			default:
+				return fmt.Errorf("--at-cap-action must be %q, %q, or %q",
+					structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown)
+			}
 
-		action := actionRaw
-		if action == "" {
-			action = structs.BudgetDefaultAtCapAction
-		}
-		switch action {
-		case structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown:
-		default:
-			return fmt.Errorf("--at-cap-action must be %q, %q, or %q",
-				structs.BudgetAtCapActionAlertOnly, structs.BudgetAtCapActionBlockNewDeploys, structs.BudgetAtCapActionAutoShutdown)
-		}
+			if action == structs.BudgetAtCapActionAutoShutdown {
+				fmt.Fprintln(c.Writer().Stderr,
+					"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
+						"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
+						"Run 'convox budget simulate-shutdown <app>' to validate the configuration.")
+				fmt.Fprintln(c.Writer().Stderr,
+					"NOTE: services with KEDA idleReplicaCount: 0 will return to KEDA-driven scaling at restore "+
+						"and may scale back to 0 if triggers are inactive. This is the user's KEDA config working as intended.")
+			}
 
-		if action == structs.BudgetAtCapActionAutoShutdown {
-			fmt.Fprintln(c.Writer().Stderr,
-				"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
-					"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
-					"Run 'convox budget simulate-shutdown <app>' to validate the configuration.")
-			fmt.Fprintln(c.Writer().Stderr,
-				"NOTE: services with KEDA idleReplicaCount: 0 will return to KEDA-driven scaling at restore "+
-					"and may scale back to 0 if triggers are inactive. This is the user's KEDA config working as intended.")
+			opts.AtCapAction = &action
 		}
-
+		if alertAtSet {
+			opts.AlertThresholdPercent = &alertAt
+		}
 		opts.MonthlyCapUsd = &capStr
-		opts.AlertThresholdPercent = &alertAt
-		opts.AtCapAction = &action
 	}
 
 	// omission preserves the prior persisted value (partial-merge)
