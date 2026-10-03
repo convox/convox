@@ -220,6 +220,16 @@ func (m *Manifest) validateServices() []error {
 			errs = append(errs, fmt.Errorf("service %s can not set spreadAcrossZones when agent is enabled", s.Name))
 		}
 
+		switch s.SpreadAcrossNodes {
+		case "", SpreadAcrossNodesBalanced, SpreadAcrossNodesOnePerNode:
+		default:
+			errs = append(errs, fmt.Errorf("service %s spreadAcrossNodes must be one of %q, %q; got %q", s.Name, SpreadAcrossNodesBalanced, SpreadAcrossNodesOnePerNode, s.SpreadAcrossNodes))
+		}
+
+		if s.Agent.Enabled && s.SpreadAcrossNodes != "" {
+			errs = append(errs, fmt.Errorf("service %s can not set spreadAcrossNodes when agent is enabled", s.Name))
+		}
+
 		for _, r := range s.ResourcesName() {
 			if _, err := m.Resource(r); err != nil {
 				if strings.HasPrefix(err.Error(), "no such resource") {
