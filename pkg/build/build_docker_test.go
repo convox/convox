@@ -42,7 +42,9 @@ func TestBuildGeneration2(t *testing.T) {
 		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
 		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
 		e.On("Run", mock.Anything, "docker", "build", "-t", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "-f", mock.MatchedBy(matchTempdirFile("Dockerfile")), "--network", "host", mock.MatchedBy(matchTempdir)).Return(nil).Run(func(args mock.Arguments) {
-			fmt.Fprintf(args.Get(0).(io.Writer), "build1\nbuild2\n")
+			w, ok := args.Get(0).(io.Writer)
+			require.True(t, ok)
+			fmt.Fprintf(w, "build1\r\nbuild2\n")
 		})
 		e.On("Execute", "docker", "inspect", "e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445", "--format", "{{json .Config.Entrypoint}}").Return([]byte("[]"), nil)
 		e.On("Execute", "docker", "pull", "httpd").Return([]byte("pulling\n"), nil)
@@ -74,7 +76,7 @@ func TestBuildGeneration2(t *testing.T) {
 		require.Equal(t,
 			[]string{
 				"Building: .",
-				"build1",
+				"build1\r",
 				"build2",
 				"Running: docker pull httpd",
 				"Running: docker tag e00bc968ebe3f5b4c934a1f3c00fcfba74384f944f6f9fa2ba819445 rack1/app1:web2.build1",
@@ -220,8 +222,9 @@ func TestBuildGeneration2Failure(t *testing.T) {
 	}
 
 	testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		err1 := fmt.Errorf("err1")
 		p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil)
-		p.On("ObjectFetch", "app1", "/object.tgz").Return(nil, fmt.Errorf("err1"))
+		p.On("ObjectFetch", "app1", "/object.tgz").Return(nil, err1)
 		p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil).Run(func(args mock.Arguments) {
 			data, err := io.ReadAll(args.Get(2).(io.Reader))
 			require.NoError(t, err)
@@ -240,6 +243,10 @@ func TestBuildGeneration2Failure(t *testing.T) {
 
 		err := b.Execute()
 		require.EqualError(t, err, "err1")
+		require.ErrorIs(t, err, err1)
+
+		var printed build.PrintedError
+		require.ErrorAs(t, err, &printed)
 
 		require.Equal(t,
 			[]string{
@@ -248,6 +255,58 @@ func TestBuildGeneration2Failure(t *testing.T) {
 			strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n"),
 		)
 	})
+}
+
+func TestBuildGeneration2FailureRecordError(t *testing.T) {
+	opts := build.Options{
+		App:    "app1",
+		Auth:   "{}",
+		Cache:  true,
+		Id:     "build1",
+		Rack:   "rack1",
+		Source: "object://app1/object.tgz",
+	}
+
+	tests := []struct {
+		name  string
+		setup func(p *structs.MockProvider)
+		err   string
+	}{
+		{
+			name: "object store",
+			setup: func(p *structs.MockProvider) {
+				p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(nil, fmt.Errorf("store1"))
+			},
+			err: "store1",
+		},
+		{
+			name: "build update",
+			setup: func(p *structs.MockProvider) {
+				p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil)
+				p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(nil, fmt.Errorf("update1"))
+			},
+			err: "update1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testBuild(t, opts, dockerEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil)
+				p.On("ObjectFetch", "app1", "/object.tgz").Return(nil, fmt.Errorf("err1"))
+				p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1"}, Error: options.String("err1")}).Return(nil)
+				tt.setup(p)
+
+				err := b.Execute()
+				require.EqualError(t, err, tt.err)
+
+				var printed build.PrintedError
+				require.NotErrorAs(t, err, &printed)
+
+				require.Equal(t, "ERROR: err1\n", out.String())
+			})
+		})
+	}
 }
 
 func TestBuildGeneration2Options(t *testing.T) {

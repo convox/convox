@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -55,7 +56,10 @@ func main() {
 	}
 
 	if err := execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		var printed build.PrintedError
+		if !errors.As(err, &printed) {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		}
 		os.Exit(1)
 	}
 }
