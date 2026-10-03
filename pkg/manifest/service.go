@@ -26,6 +26,11 @@ const (
 	PVCAccessModeReadWriteMany = "ReadWriteMany"
 )
 
+const (
+	SpreadAcrossNodesBalanced   = "balanced"
+	SpreadAcrossNodesOnePerNode = "one-per-node"
+)
+
 type Service struct {
 	Name string `yaml:"-"`
 
@@ -56,6 +61,7 @@ type Service struct {
 	NodeAffinityLabels Affinities               `yaml:"nodeAffinityLabels,omitempty"`
 	NodeSelectorLabels Labels                   `yaml:"nodeSelectorLabels,omitempty"`
 	SpreadAcrossZones  bool                     `yaml:"spreadAcrossZones,omitempty"`
+	SpreadAcrossNodes  string                   `yaml:"spreadAcrossNodes,omitempty"`
 	Lifecycle          ServiceLifecycle         `yaml:"lifecycle,omitempty"`
 	Port               ServicePortScheme        `yaml:"port,omitempty"`
 	Ports              []ServicePortProtocol    `yaml:"ports,omitempty"`
