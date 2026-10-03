@@ -667,6 +667,126 @@ func TestBuildOptions(t *testing.T) {
 	})
 }
 
+func TestBuildImageManifestCache(t *testing.T) {
+	export := "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=registry.test.com:web.buildcache"
+
+	tests := []struct {
+		Name      string
+		Immutable string
+		Builds    structs.Builds
+		ListErr   error
+		Exists    map[string]bool
+		Cache     []string
+	}{
+		{
+			Name:      "GateOff",
+			Immutable: "false",
+			Cache: []string{
+				"--export-cache", export,
+				"--import-cache", "type=registry,ignore-error=true,ref=registry.test.com:web.buildcache",
+			},
+		},
+		{
+			Name:      "PreviousBuild",
+			Immutable: "true",
+			Builds: structs.Builds{
+				{Id: "build1", Status: "running"},
+				{Id: "B2", Status: "failed"},
+				{Id: "B3", Status: "complete"},
+				{Id: "B4", Status: "complete"},
+			},
+			Exists: map[string]bool{"registry.test.com:web.buildcache.B3": true},
+			Cache: []string{
+				"--export-cache", export + ".build1",
+				"--import-cache", "type=registry,ignore-error=true,ref=registry.test.com:web.buildcache.B3",
+			},
+		},
+		{
+			Name:      "LegacyFallback",
+			Immutable: "true",
+			Builds:    structs.Builds{{Id: "B3", Status: "complete"}},
+			Exists: map[string]bool{
+				"registry.test.com:web.buildcache.B3": false,
+				"registry.test.com:web.buildcache":    true,
+			},
+			Cache: []string{
+				"--export-cache", export + ".build1",
+				"--import-cache", "type=registry,ignore-error=true,ref=registry.test.com:web.buildcache",
+			},
+		},
+		{
+			Name:      "NothingToImport",
+			Immutable: "true",
+			ListErr:   fmt.Errorf("list failed"),
+			Exists:    map[string]bool{"registry.test.com:web.buildcache": false},
+			Cache:     []string{"--export-cache", export + ".build1"},
+		},
+	}
+
+	opts := build.Options{
+		App:      "app1",
+		Auth:     "{}",
+		Cache:    true,
+		Id:       "build1",
+		Rack:     "rack1",
+		Source:   "object://app1/object.tgz",
+		Push:     "registry.test.com",
+		Manifest: "convox2.yml",
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			t.Setenv("PROVIDER", "aws")
+			t.Setenv("DISABLE_IMAGE_MANIFEST_CACHE", "false")
+			t.Setenv("ECR_IMMUTABLE_TAGS_ENABLED", test.Immutable)
+
+			testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+				bdata, err := os.ReadFile("testdata/httpd.tgz")
+				require.NoError(t, err)
+				p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+
+				p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+				p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+				p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+				if test.Immutable == "true" {
+					p.On("BuildList", "app1", structs.BuildListOptions{Limit: options.Int(50)}).Return(test.Builds, test.ListErr).Once()
+				}
+
+				for ref, ok := range test.Exists {
+					call := e.On("Execute", "skopeo", "--command-timeout", "30s", "inspect", "--raw", "docker://"+ref).Once()
+					if ok {
+						call.Return([]byte("{}"), nil)
+					} else {
+						call.Return([]byte(nil), fmt.Errorf("manifest unknown"))
+					}
+				}
+
+				args := []interface{}{
+					mock.Anything,
+					"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+					"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
+				}
+				for _, c := range test.Cache {
+					args = append(args, c)
+				}
+				args = append(args, "--opt", "build-arg:FOO=bar")
+				e.On("Run", args...).Return(nil).Once()
+
+				e.On("Execute", "skopeo", "inspect", "--config", "docker://registry.test.com:web.build1").Return(fxSkopeoInspect(), nil)
+
+				p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil)
+				p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
+				p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
+
+				require.NoError(t, b.Execute())
+			})
+		})
+	}
+}
+
 func TestLogin(t *testing.T) {
 	tmp, err := os.MkdirTemp(os.TempDir(), "convox-tests")
 	if err != nil {
