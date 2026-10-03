@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdapi"
 	"github.com/stretchr/testify/require"
 )
 
@@ -219,6 +222,105 @@ func TestExecStreamPrefixInOutput(t *testing.T) {
 	require.Equal(t, noise, out.String())
 }
 
+func TestExecStreamLeadingNulOutput(t *testing.T) {
+	calls, _ := stubPlugin(t)
+	zeros := make([]byte, 5000)
+
+	var frames [][]byte
+	for i := 0; i < len(zeros); i += 1024 {
+		frames = append(frames, zeros[i:min(i+1024, len(zeros))])
+	}
+	frames = append(frames, []byte(statusCodePrefix+"3\n"))
+	out := &bytes.Buffer{}
+
+	code, err := execStream(&framesReader{frames: frames}, out)
+	require.NoError(t, err)
+	require.Equal(t, 3, code)
+	require.Equal(t, zeros, out.Bytes())
+	require.Equal(t, 0, *calls)
+}
+
+func TestExecStreamLeadingNulShortStream(t *testing.T) {
+	cases := []struct {
+		name   string
+		frames [][]byte
+		out    string
+		code   int
+		err    string
+	}{
+		{"nul then marker", [][]byte{[]byte("\x00"), []byte(statusCodePrefix + "0\n")}, "\x00", 0, ""},
+		{"nul then end", [][]byte{[]byte("\x00")}, "\x00", 0, ErrExecIncomplete.Error()},
+		{"prefix without colon then end", [][]byte{[]byte("\x00" + `{"sessionId"`)}, "\x00" + `{"sessionId"`, 0, ErrExecIncomplete.Error()},
+		{"full prefix then end", [][]byte{[]byte("\x00" + `{"sessionId":`)}, "", -1, "ECS Exec session ended before it was established; please retry"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			calls, _ := stubPlugin(t)
+			out := &bytes.Buffer{}
+
+			code, err := execStream(&framesReader{frames: tc.frames}, out)
+			if tc.err == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.err)
+			}
+			require.Equal(t, tc.code, code)
+			require.Equal(t, tc.out, out.String())
+			require.Equal(t, 0, *calls)
+		})
+	}
+}
+
+func TestExecStreamPrefixDivergesAtEveryOffset(t *testing.T) {
+	marker := []byte(statusCodePrefix + "3\n")
+
+	for k := 1; k < len(ecsExecSessionPrefix); k++ {
+		want := string(ecsExecSessionPrefix[:k]) + "X"
+
+		for _, frames := range [][][]byte{
+			{[]byte(want + string(marker))},
+			{ecsExecSessionPrefix[:k], []byte("X"), marker},
+		} {
+			calls, _ := stubPlugin(t)
+			out := &bytes.Buffer{}
+
+			code, err := execStream(&framesReader{frames: frames}, out)
+			require.NoError(t, err, "k=%d frames=%d", k, len(frames))
+			require.Equal(t, 3, code, "k=%d frames=%d", k, len(frames))
+			require.Equal(t, want, out.String(), "k=%d frames=%d", k, len(frames))
+			require.Equal(t, 0, *calls, "k=%d frames=%d", k, len(frames))
+		}
+	}
+}
+
+func TestExecStreamECSSessionSplitAtEveryOffset(t *testing.T) {
+	blob := append([]byte{ecsExecSessionByte}, []byte(`{"sessionId":"sid-1","streamUrl":"wss://x/sid-1","tokenValue":"tok-1","region":"us-east-2"}`)...)
+
+	var splits [][][]byte
+	for i := 1; i <= len(ecsExecSessionPrefix); i++ {
+		splits = append(splits, [][]byte{blob[:i], blob[i:]})
+	}
+	var bytewise [][]byte
+	for i := range blob {
+		bytewise = append(bytewise, blob[i:i+1])
+	}
+	splits = append(splits, bytewise)
+
+	for _, frames := range splits {
+		calls, got := stubPlugin(t)
+		out := &bytes.Buffer{}
+
+		code, err := execStream(&framesReader{frames: frames}, out)
+		require.NoError(t, err, "first frame %q", frames[0])
+		require.Equal(t, 0, code, "first frame %q", frames[0])
+		require.Equal(t, 1, *calls, "first frame %q", frames[0])
+		require.Equal(t, "sid-1", got.SessionID)
+		require.Equal(t, "us-east-2", got.Region)
+		require.Empty(t, out.String(), "first frame %q", frames[0])
+	}
+}
+
 func TestWebsocketExitStreamNoMarker(t *testing.T) {
 	// Deliberately unchanged: the endpoints behind WebsocketExit are interactive
 	// shells, not deploy gates, and two of them have no readable server source.
@@ -239,4 +341,53 @@ func TestProcessExecWiredToExecStream(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, string(src), "return execStream(ws, rw)",
 		"sdk/methods.go ProcessExec must relay via execStream; if methods.go was regenerated, reapply the ECS Exec wrapper")
+}
+
+func TestProcessExecLeadingNulAndHandshake(t *testing.T) {
+	session := append([]byte{ecsExecSessionByte}, []byte(`{"sessionId":"sid-1","streamUrl":"wss://x/sid-1","tokenValue":"tok-1","region":"us-east-2"}`)...)
+
+	cases := []struct {
+		name  string
+		msgs  [][]byte
+		out   string
+		code  int
+		calls int
+	}{
+		{"leading nul", [][]byte{[]byte("\x00\x00\x00bin"), []byte(statusCodePrefix + "3\n")}, "\x00\x00\x00bin", 3, 0},
+		{"handshake", [][]byte{session, []byte(statusCodePrefix + "0\n")}, "", 0, 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			calls, _ := stubPlugin(t)
+
+			s := stdapi.New("api", "api")
+			s.Route("SOCKET", "/apps/app1/processes/pid1/exec", func(c *stdapi.Context) error {
+				for _, m := range tc.msgs {
+					if _, err := c.Write(m); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+
+			ts := httptest.NewServer(s)
+			defer ts.Close()
+
+			cl, err := New(ts.URL)
+			require.NoError(t, err)
+
+			out := &bytes.Buffer{}
+			rw := struct {
+				io.Reader
+				io.Writer
+			}{strings.NewReader(""), out}
+
+			code, err := cl.ProcessExec("app1", "pid1", "cmd", rw, structs.ProcessExecOptions{})
+			require.NoError(t, err)
+			require.Equal(t, tc.code, code)
+			require.Equal(t, tc.out, out.String())
+			require.Equal(t, tc.calls, *calls)
+		})
+	}
 }
