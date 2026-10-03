@@ -573,3 +573,91 @@ func TestAppsParamsSetClassic(t *testing.T) {
 		})
 	})
 }
+
+func TestAppsParamsSetTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     string
+		params   map[string]string
+		rack     string
+		version  string
+		readback map[string]string
+		code     int
+	}{
+		{
+			name:     "subset",
+			args:     "Tags=Team=web",
+			params:   map[string]string{"Tags": "Team=web"},
+			readback: map[string]string{"Tags": "CostCenter=abc,Team=web"},
+		},
+		{
+			name:     "rack equal",
+			args:     "Tags=CostCenter=R",
+			params:   map[string]string{"Tags": "CostCenter=R"},
+			rack:     "System=convox,Type=rack,CostCenter=R",
+			readback: map[string]string{},
+		},
+		{
+			name:     "wrong value",
+			args:     "Tags=A=1,B=2",
+			params:   map[string]string{"Tags": "A=1,B=2"},
+			readback: map[string]string{"Tags": "A=1,B=3"},
+			code:     1,
+		},
+		{
+			name:     "present but different with rack match",
+			args:     "Tags=CostCenter=R",
+			params:   map[string]string{"Tags": "CostCenter=R"},
+			rack:     "CostCenter=R",
+			readback: map[string]string{"Tags": "CostCenter=X"},
+			code:     1,
+		},
+		{
+			name:     "below floor",
+			args:     "Tags=CostCenter=R Foo=bar",
+			params:   map[string]string{"Tags": "CostCenter=R", "Foo": "bar"},
+			rack:     "CostCenter=R",
+			version:  "20260929232050",
+			readback: map[string]string{"Foo": "bar"},
+			code:     1,
+		},
+		{
+			name:     "other param differs",
+			args:     "Tags=A=1 Foo=bar",
+			params:   map[string]string{"Tags": "A=1", "Foo": "bar"},
+			readback: map[string]string{"Tags": "A=1", "Foo": "baz"},
+			code:     1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+				s := fxSystem()
+				s.Parameters["Tags"] = tt.rack
+				if tt.version != "" {
+					s.Version = tt.version
+				}
+
+				i.On("SystemGet").Return(s, nil)
+				i.On("AppUpdate", "app1", structs.AppUpdateOptions{Parameters: tt.params}).Return(nil)
+				i.On("AppGet", "app1").Return(fxAppUpdating(), nil).Twice()
+				i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Status: "running", Parameters: tt.readback}, nil)
+				i.On("AppLogs", "app1", mock.Anything).Return(testLogs(fxLogsSystem()), nil)
+
+				stdout := []string{"Updating parameters... ", "TIME system/aws/component log1", "TIME system/aws/component log2"}
+				stderr := "ERROR: failed to set params"
+				if tt.code == 0 {
+					stdout = append(stdout, "OK")
+					stderr = ""
+				}
+
+				res, err := testExecute(e, fmt.Sprintf("apps params set %s -a app1", tt.args), nil)
+				require.NoError(t, err)
+				require.Equal(t, tt.code, res.Code)
+				res.RequireStderr(t, []string{stderr})
+				res.RequireStdout(t, stdout)
+			})
+		})
+	}
+}
