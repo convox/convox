@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/sdk"
+	"github.com/convox/stdapi"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
 )
@@ -64,6 +67,19 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 	fn(e, i)
 
 	i.AssertExpectations(t)
+}
+
+func testRealRack(t *testing.T, routes func(*stdapi.Server)) {
+	s := stdapi.New("api", "api")
+	routes(s)
+
+	ts := httptest.NewServer(s)
+	t.Cleanup(ts.Close)
+
+	c, err := sdk.New(ts.URL)
+	require.NoError(t, err)
+
+	rack.TestClient = c
 }
 
 func testExecute(e *cli.Engine, cmd string, stdin io.Reader) (*result, error) {
