@@ -76,15 +76,20 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		builds = append(builds, b)
 	}
 
+	prev := ""
+	if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" && bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
+		prev = bk.previousBuild(bb)
+	}
+
 	for ix, build := range builds {
 		if build.Image != "" {
 			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0600)
 
-			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
+			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, prev, env); err != nil {
 				return err
 			}
 		} else {
-			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
+			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, prev, env); err != nil {
 				return err
 			}
 		}
@@ -141,6 +146,36 @@ func (*BuildKit) imageManifestCacheProvider(provider string) bool {
 		return false
 	}
 	return provider != "" && strings.Contains("aws", provider) // skipcq
+}
+
+func (*BuildKit) previousBuild(bb *Build) string {
+	bs, err := bb.Provider.BuildList(bb.App, structs.BuildListOptions{Limit: options.Int(50)})
+	if err != nil {
+		return ""
+	}
+
+	for i := range bs {
+		if bs[i].Status == "complete" {
+			return bs[i].Id
+		}
+	}
+
+	return ""
+}
+
+func (*BuildKit) cacheImportRef(bb *Build, reg, prev string) string {
+	refs := []string{reg}
+	if prev != "" {
+		refs = []string{fmt.Sprintf("%s.%s", reg, prev), reg}
+	}
+
+	for _, ref := range refs {
+		if _, err := bb.Exec.Execute("skopeo", "--command-timeout", "30s", "inspect", "--raw", fmt.Sprintf("docker://%s", ref)); err == nil {
+			return ref
+		}
+	}
+
+	return ""
 }
 
 func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
@@ -202,7 +237,7 @@ func (*BuildKit) entrypoint(bb *Build, tag string) []string {
 }
 
 // skipcq
-func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
+func (bk *BuildKit) build(bb *Build, path, dockerfile, tag, prev string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
@@ -259,8 +294,14 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		} else {
 			reg = fmt.Sprintf("%s:buildcache", reg)
 		}
-		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", reg))                                                                      // skipcq
+		export, imp := reg, reg
+		if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" {
+			export, imp = fmt.Sprintf("%s.%s", reg, bb.Id), bk.cacheImportRef(bb, reg, prev)
+		}
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", export)) // skipcq
+		if imp != "" {
+			args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", imp)) // skipcq
+		}
 	} else if !localCacheAdded {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq

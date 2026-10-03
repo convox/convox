@@ -40,10 +40,19 @@ func (p *Provider) RepositoryImagesBatchDelete(app string, tags []string) error 
 	}
 
 	repo := aws.String(fmt.Sprintf("%s%s", p.RepositoryPrefix(), app))
-	_, err := p.ECR.BatchDeleteImage(&ecrTypes.BatchDeleteImageInput{
-		RepositoryName: repo,
-		ImageIds:       imageIds,
-	})
 
-	return err
+	for len(imageIds) > 0 {
+		n := min(len(imageIds), 100)
+
+		if _, err := p.ECR.BatchDeleteImage(&ecrTypes.BatchDeleteImageInput{
+			RepositoryName: repo,
+			ImageIds:       imageIds[:n],
+		}); err != nil {
+			return err
+		}
+
+		imageIds = imageIds[n:]
+	}
+
+	return nil
 }
