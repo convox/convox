@@ -89,7 +89,7 @@ Fluentd performs the forwarding, so `syslog` has no effect on a Rack with [fluen
 
 ## Fluentd Memory Tuning
 
-Convox uses Fluentd as the log collector DaemonSet running on every node. The default memory allocation of `200Mi` is sufficient for most workloads, but racks with high log throughput may experience Fluentd OOM restarts and temporary log loss. You can tune the memory allocation with the `fluentd_memory` rack parameter:
+Convox uses Fluentd as the log collector DaemonSet running on every node. The default memory allocation (`300Mi` on AWS, `200Mi` on other providers) is sufficient for most workloads, but racks with high log throughput may experience Fluentd OOM restarts and temporary log loss. You can tune the memory allocation with the `fluentd_memory` rack parameter:
 
 ```bash
 $ convox rack params set fluentd_memory=512Mi -r rackName

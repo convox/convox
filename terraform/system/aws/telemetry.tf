@@ -224,7 +224,7 @@ locals {
     envoy_memory_request                      = "256Mi"
     fast_image_pull_enable                    = "false"
     fluentd_disable                           = "false"
-    fluentd_memory                            = "200Mi"
+    fluentd_memory                            = "300Mi"
     gpu_metrics_max_concurrent                = "10"
     gpu_metrics_max_pods                      = "100"
     gpu_observability_chart_version           = "4.8.1"

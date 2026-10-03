@@ -19,7 +19,7 @@ variable "fluentd_disable" {
 
 variable "fluentd_memory" {
   type    = string
-  default = "200Mi"
+  default = "300Mi"
 }
 
 // for eks addons dependency
