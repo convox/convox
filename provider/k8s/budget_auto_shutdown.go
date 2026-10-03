@@ -123,51 +123,44 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 		return
 	}
 
-	if shutdownState != nil && shutdownState.ManifestSha256 != "" && shutdownState.ManifestSha256 != plan.manifestSha {
-		armed := shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
-			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero())
-		if armed {
-			reason := "config-changed"
-			var prevCap, newCap float64
-			if cfg != nil {
-				newCap = cfg.MonthlyCapUsd
-			}
-			// spend is the floor estimate for prev cap (breaker wouldn't have armed below it)
-			if cfg != nil && baseState != nil &&
-				cfg.MonthlyCapUsd > baseState.CurrentMonthSpendUsd &&
-				baseState.CurrentMonthSpendUsd > 0 {
-				reason = "cap-raised"
-				prevCap = baseState.CurrentMonthSpendUsd
-			}
-			if shutdownState.CancelledNotificationFiredAt == nil {
-				shutdownState.CancelledNotificationFiredAt = ptrTimePackage(now)
-				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
-					newAction := ""
-					if reason == "config-changed" && cfg != nil {
-						newAction = cfg.AtCapAction
-					}
-					actor := "system"
-					if reason == "cap-raised" && cfg != nil && cfg.LastCapMutationBy != "" {
-						actor = cfg.LastCapMutationBy
-					}
-					p.fireCancelledEvent(app, cfg, baseState, shutdownState, actor, reason, prevCap, newCap, newAction, now)
-				}
-			}
-			_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
-			return
+	armed := shutdownState != nil && shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
+		(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero())
+	belowCap := cfg != nil && baseState != nil && baseState.CurrentMonthSpendUsd < cfg.MonthlyCapUsd
+	shaChanged := shutdownState != nil && shutdownState.ManifestSha256 != "" && shutdownState.ManifestSha256 != plan.manifestSha
+
+	if armed && (shaChanged || belowCap) {
+		reason := "config-changed"
+		var prevCap, newCap float64
+		if cfg != nil {
+			newCap = cfg.MonthlyCapUsd
 		}
-		if shutdownState.RestoredAt == nil {
-			shutdownState.RestoredAt = ptrTimePackage(now)
-			if shutdownState.RestoredNotificationFiredAt == nil {
-				shutdownState.RestoredNotificationFiredAt = ptrTimePackage(now)
-				if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
-					p.fireRestoredEvent(app, cfg, baseState, shutdownState, "config-changed", now)
-				}
-			} else {
-				_ = p.persistShutdownState(ctx, app, shutdownState)
-			}
-			return
+		// spend is the floor estimate for prev cap (breaker wouldn't have armed below it)
+		if cfg != nil && baseState != nil &&
+			cfg.MonthlyCapUsd > baseState.CurrentMonthSpendUsd &&
+			baseState.CurrentMonthSpendUsd > 0 {
+			reason = "cap-raised"
+			prevCap = baseState.CurrentMonthSpendUsd
 		}
+		if shutdownState.CancelledNotificationFiredAt == nil {
+			shutdownState.CancelledNotificationFiredAt = ptrTimePackage(now)
+			if perr := p.persistShutdownState(ctx, app, shutdownState); perr == nil {
+				newAction := ""
+				if reason == "config-changed" && cfg != nil {
+					newAction = cfg.AtCapAction
+				}
+				actor := "system"
+				if reason == "cap-raised" && cfg != nil && cfg.LastCapMutationBy != "" {
+					actor = cfg.LastCapMutationBy
+				}
+				p.fireCancelledEvent(app, cfg, baseState, shutdownState, actor, reason, prevCap, newCap, newAction, now)
+			}
+		}
+		_ = p.deleteBudgetShutdownStateAnnotation(ctx, app)
+		return
+	}
+
+	if shutdownState == nil && belowCap {
+		return
 	}
 
 	flap, _ := readFlapSuppressedUntilAnnotation(ns.Annotations)
@@ -241,20 +234,32 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 				KedaScaledObject:           kedaScaledObjectFromPlan(sp),
 			})
 		}
+		if !p.breachStillCurrent(ctx, app, "") {
+			return
+		}
 		if perr := p.persistShutdownState(ctx, app, newState); perr == nil {
 			p.fireArmedEvent(app, cfg, baseState, newState, plan, now)
 		}
 		return
 	}
 
-	if shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
-		(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero()) {
+	if armed {
 		notifyMin := plan.notifyBeforeMinutes
 		if notifyMin <= 0 {
 			notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
 		}
 		fireAt := shutdownState.ArmedAt.Add(time.Duration(notifyMin) * time.Minute)
+		// no tick ran while the countdown expired; restart it rather than fire with no warning
+		if now.Sub(fireAt) > budgetMaxPollInterval {
+			if derr := p.deleteBudgetShutdownStateAnnotation(ctx, app); derr == nil || ae.IsNotFound(derr) {
+				p.fireCancelledEvent(app, cfg, baseState, shutdownState, "system", "countdown-lapsed", 0, 0, "", now)
+			}
+			return
+		}
 		if !now.Before(fireAt) {
+			if !p.breachStillCurrent(ctx, app, shutdownState.ShutdownTickId) {
+				return
+			}
 			grace := plan.shutdownGracePeriod
 			if grace <= 0 {
 				if d, perr := time.ParseDuration(structs.BudgetDefaultShutdownGracePeriod); perr == nil {
@@ -307,6 +312,30 @@ func (p *Provider) reconcileAutoShutdownWithManifest(ctx context.Context, app st
 			return
 		}
 	}
+}
+
+// breachStillCurrent re-reads the Namespace so a cap raise or action change that
+// landed after this tick read its inputs, possibly on another API replica, stops the arm or fire.
+func (p *Provider) breachStillCurrent(ctx context.Context, app, armedTickID string) bool {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, p.AppNamespace(app), am.GetOptions{})
+	if err != nil {
+		return false
+	}
+	cfg, _ := readBudgetConfigAnnotation(ns.Annotations)
+	state, _ := readBudgetStateAnnotation(ns.Annotations)
+	if cfg == nil || cfg.AtCapAction != structs.BudgetAtCapActionAutoShutdown || state == nil ||
+		state.AlertFiredAtCap.IsZero() || state.CurrentMonthSpendUsd < cfg.MonthlyCapUsd {
+		return false
+	}
+	shutdownState, err := readBudgetShutdownStateAnnotation(ns.Annotations)
+	if err != nil {
+		return false
+	}
+	if armedTickID == "" {
+		return shutdownState == nil
+	}
+	return shutdownState != nil && shutdownState.ShutdownTickId == armedTickID &&
+		(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero())
 }
 
 func (p *Provider) allServicesScaledUp(ctx context.Context, app string, svcs []structs.AppBudgetShutdownStateService) bool {

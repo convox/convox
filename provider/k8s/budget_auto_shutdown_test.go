@@ -14,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
+	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -2083,3 +2084,254 @@ func TestResetDuringArmedDeleteFails_NoEmit(t *testing.T) {
 // configuration where every consumer is conditionally compiled out.
 var _ = appsv1.Deployment{}
 var _ = ac.Pod{}
+
+func seedAutoShutdownApp(t *testing.T, p *k8s.Provider, replicas int32, cfg *structs.AppBudget, state *structs.AppBudgetState) (*fake.Clientset, *eventCapture) {
+	t.Helper()
+	kk, _ := p.Cluster.(*fake.Clientset)
+	require.NoError(t, appCreate(kk, "rack1", "app1"))
+	installFakeDynamicClient(p)
+	events := newEventCapture(t)
+	k8s.SetWebhooksForTest(p, []string{events.server.URL})
+	grace := int64(30)
+	makeDeployment(t, kk, "rack1-app1", "web", replicas, &grace)
+	writeConfig(t, kk, "rack1-app1", cfg)
+	writeState(t, kk, "rack1-app1", state)
+	return kk, events
+}
+
+func webReplicas(t *testing.T, kk *fake.Clientset) int32 {
+	t.Helper()
+	dep, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, dep.Spec.Replicas)
+	return *dep.Spec.Replicas
+}
+
+func armedShutdownState(armedAt time.Time, tickID, sha string) *structs.AppBudgetShutdownState {
+	return &structs.AppBudgetShutdownState{
+		SchemaVersion:  1,
+		ArmedAt:        &armedAt,
+		RecoveryMode:   "auto-on-reset",
+		ShutdownOrder:  "largest-cost",
+		ShutdownTickId: tickID,
+		ManifestSha256: sha,
+		Services: []structs.AppBudgetShutdownStateService{
+			{Name: "web", OriginalScale: structs.AppBudgetShutdownStateOriginalScale{Count: 3, Replicas: 3}},
+		},
+		EligibleServiceCount:     1,
+		ArmedNotificationFiredAt: &armedAt,
+	}
+}
+
+func autoShutdownBudget(capUsd float64) *structs.AppBudget {
+	return &structs.AppBudget{
+		MonthlyCapUsd: capUsd, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAutoShutdown, PricingAdjustment: 1,
+	}
+}
+
+func TestReconcileAutoShutdown_FiredStateNotMarkedRestoredOnConfigChange(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		cfg := autoShutdownBudget(104)
+		state := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 105, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		kk, events := seedAutoShutdownApp(t, p, 0, cfg, state)
+
+		fired := armedShutdownState(t0.Add(-40*time.Minute), "tick-fired", "OLD_CAP_SHA")
+		shutAt := t0.Add(-10 * time.Minute)
+		fired.ShutdownAt = &shutAt
+		fired.FiredNotificationFiredAt = &shutAt
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", fired))
+
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, state, buildAutoShutdownManifest(30), t0)
+		events.drain()
+
+		assert.Empty(t, events.findActions(":restored"), "nothing was scaled up, so nothing may be reported restored")
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, ss, "the fired state must stay for convox budget reset")
+		assert.Nil(t, ss.RestoredAt)
+		assert.Equal(t, int32(0), webReplicas(t, kk))
+	})
+}
+
+func TestReconcileAutoShutdown_ArmedBelowCapCancelsInsteadOfFiring(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		cfg := autoShutdownBudget(200)
+		state := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 105, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		kk, events := seedAutoShutdownApp(t, p, 3, cfg, state)
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", armedShutdownState(t0.Add(-31*time.Minute), "tick-armed", "")))
+
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, state, buildAutoShutdownManifest(30), t0)
+		events.drain()
+
+		assert.Empty(t, events.findActions(":fired"))
+		cancelled := events.findActions(":cancelled")
+		require.Len(t, cancelled, 1)
+		assert.Equal(t, "cap-raised", cancelled[0].Data["cancel_reason"])
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		assert.Nil(t, ss)
+		assert.Equal(t, int32(3), webReplicas(t, kk))
+	})
+}
+
+func TestReconcileAutoShutdown_NoArmWhileSpendBelowCap(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		cfg := autoShutdownBudget(100)
+		stored := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		_, events := seedAutoShutdownApp(t, p, 3, cfg, stored)
+
+		passed := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 50, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, passed, buildAutoShutdownManifest(30), t0)
+		events.drain()
+
+		assert.Empty(t, events.findActions(":armed"))
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		assert.Nil(t, ss)
+	})
+}
+
+func TestReconcileAutoShutdown_OverdueCountdownRestartsInsteadOfFiring(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		cfg := autoShutdownBudget(100)
+		state := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		kk, events := seedAutoShutdownApp(t, p, 3, cfg, state)
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", armedShutdownState(t0.Add(-3*time.Hour-30*time.Minute), "tick-old", "")))
+		m := buildAutoShutdownManifest(30)
+
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, state, m, t0)
+		events.drain()
+
+		assert.Empty(t, events.findActions(":fired"))
+		cancelled := events.findActions(":cancelled")
+		require.Len(t, cancelled, 1)
+		assert.Equal(t, "countdown-lapsed", cancelled[0].Data["cancel_reason"])
+		assert.Equal(t, "tick-old", cancelled[0].Data["tick_id"])
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		assert.Nil(t, ss)
+		assert.Equal(t, int32(3), webReplicas(t, kk))
+
+		t1 := t0.Add(10 * time.Minute)
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", cfg, state, m, t1)
+		events.drain()
+
+		require.Len(t, events.findActions(":armed"), 1, "the next tick starts a fresh countdown")
+		ss, err = p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, ss)
+		require.NotNil(t, ss.ArmedAt)
+		assert.True(t, ss.ArmedAt.Equal(t1))
+		assert.NotEqual(t, "tick-old", ss.ShutdownTickId)
+		assert.Equal(t, int32(3), webReplicas(t, kk))
+	})
+}
+
+func TestReconcileAutoShutdown_StaleInputsDoNotArm(t *testing.T) {
+	t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+	staleCfg := autoShutdownBudget(100)
+	staleState := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+
+	cases := map[string]struct {
+		storedCfg   *structs.AppBudget
+		storedState *structs.AppBudgetState
+	}{
+		"cap raised above spend": {
+			storedCfg:   autoShutdownBudget(500),
+			storedState: &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0},
+		},
+		"action switched to alert-only": {
+			storedCfg:   &structs.AppBudget{MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAlertOnly, PricingAdjustment: 1},
+			storedState: staleState,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("COST_TRACKING_ENABLE", "true")
+			testProvider(t, func(p *k8s.Provider) {
+				_, events := seedAutoShutdownApp(t, p, 3, tc.storedCfg, tc.storedState)
+
+				k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", staleCfg, staleState, buildAutoShutdownManifest(30), t0)
+				events.drain()
+
+				assert.Empty(t, events.findActions(":armed"))
+				ss, err := p.AppBudgetShutdownStateGet("app1")
+				require.NoError(t, err)
+				assert.Nil(t, ss)
+			})
+		})
+	}
+}
+
+func TestReconcileAutoShutdown_StaleInputsDoNotFire(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		state := &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0, AlertFiredAtCap: t0}
+		alertOnly := &structs.AppBudget{MonthlyCapUsd: 100, AlertThresholdPercent: 80, AtCapAction: structs.BudgetAtCapActionAlertOnly, PricingAdjustment: 1}
+		kk, events := seedAutoShutdownApp(t, p, 3, alertOnly, state)
+		require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", armedShutdownState(t0.Add(-31*time.Minute), "tick-armed", "")))
+
+		k8s.ReconcileAutoShutdownWithManifestForTest(p, context.Background(), "app1", autoShutdownBudget(100), state, buildAutoShutdownManifest(30), t0)
+		events.drain()
+
+		assert.Empty(t, events.findActions(":fired"))
+		assert.Equal(t, int32(3), webReplicas(t, kk))
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, ss)
+		assert.Nil(t, ss.ShutdownAt)
+		assert.Equal(t, "tick-armed", ss.ShutdownTickId)
+	})
+}
+
+func TestAutoShutdown_CapRaiseDuringArmedStopsShutdownAcrossTicks(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		cc, _ := p.Convox.(*cvfake.Clientset)
+		require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+			"convox.com/app-status":  "running",
+			"convox.com/app-release": "RELEASE1",
+		}))
+		require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1",
+			"budget:\n  monthlyCapUsd: 100\n  atCapAction: auto-shutdown\n  notifyBeforeMinutes: 10\nservices:\n  web:\n    image: nginx\n"))
+		installFakeDynamicClient(p)
+		events := newEventCapture(t)
+		k8s.SetWebhooksForTest(p, []string{events.server.URL})
+		grace := int64(30)
+		makeDeployment(t, kk, "rack1-app1", "web", 3, &grace)
+
+		t0 := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeConfig(t, kk, "rack1-app1", autoShutdownBudget(100))
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{MonthStart: startOfApril(), CurrentMonthSpendUsd: 110, CurrentMonthSpendAsOf: t0})
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t0))
+		events.drain()
+		require.Len(t, events.findActions(":armed"), 1)
+		ss, err := p.AppBudgetShutdownStateGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, ss)
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("500")}, "alice@example.com"))
+
+		for i := 1; i <= 3; i++ {
+			require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", t0.Add(time.Duration(i)*10*time.Minute)))
+			events.drain()
+			assert.Len(t, events.findActions(":armed"), 1, "tick %d must not re-arm", i)
+			assert.Empty(t, events.findActions(":fired"), "tick %d must not fire", i)
+			assert.Equal(t, int32(3), webReplicas(t, kk), "tick %d", i)
+			_, state, err := p.AppBudgetGet("app1")
+			require.NoError(t, err)
+			assert.True(t, state.AlertFiredAtCap.IsZero(), "tick %d", i)
+		}
+	})
+}
