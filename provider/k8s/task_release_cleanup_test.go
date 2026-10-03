@@ -422,3 +422,33 @@ func TestAppReleaseAndBuildCleanup(t *testing.T) {
 		})
 	}
 }
+
+func TestAppReleaseAndBuildCleanupTags(t *testing.T) {
+	mockProvider := &MockProviderForReleaseCleaner{}
+	mockProvider.On("AppNamespace", "app1").Return("app1-namespace")
+
+	var tags []string
+	mockEngine := &MockEngine{}
+	mockEngine.On("RepositoryImagesBatchDelete", "app1", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+		var ok bool
+		tags, ok = args.Get(1).([]string)
+		require.True(t, ok)
+	})
+
+	convox := cvfake.NewSimpleClientset()
+
+	r := createTestRelease("release1", "app1-namespace", "build1", time.Now().Add(-1*time.Hour).Format(common.SortableTime))
+	_, err := convox.ConvoxV1().Releases(r.Namespace).Create(&r)
+	require.NoError(t, err)
+
+	b := createTestBuild("build2", "app1-namespace", time.Now().Add(-3*time.Hour).Format(common.SortableTime))
+	b.Spec.Manifest = "services:\n  web: {}\n  api: {}\n"
+	_, err = convox.ConvoxV1().Builds(b.Namespace).Create(&b)
+	require.NoError(t, err)
+
+	cleaner := createReleaseCleaner(mockProvider, mockEngine, convox, fake.NewSimpleClientset(), "test-namespace", 1)
+	require.NoError(t, cleaner.appReleaseAndBuildCleanup(&structs.App{Name: "app1", Release: "release1"}))
+
+	mockEngine.AssertExpectations(t)
+	assert.ElementsMatch(t, []string{"web.BUILD2", "web.buildcache.BUILD2", "api.BUILD2", "api.buildcache.BUILD2"}, tags)
+}

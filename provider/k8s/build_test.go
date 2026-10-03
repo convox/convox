@@ -307,6 +307,33 @@ func TestBuildCreateBuildArch(t *testing.T) {
 	})
 }
 
+func TestBuildCreateEcrImmutableTagsEnv(t *testing.T) {
+	t.Setenv("ECR_IMMUTABLE_TAGS_ENABLED", "true")
+
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
+		aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		_, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{})
+		require.NoError(t, err)
+
+		pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, pods.Items, 1)
+
+		envs := map[string]string{}
+		for _, e := range pods.Items[0].Spec.Containers[0].Env {
+			envs[e.Name] = e.Value
+		}
+		assert.Equal(t, "true", envs["ECR_IMMUTABLE_TAGS_ENABLED"])
+	})
+}
+
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
 	spec, err := buildFixture(fixture)
 	if err != nil {
