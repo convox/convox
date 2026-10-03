@@ -342,6 +342,13 @@ func AppsParamsSet(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	for k, v := range opts.Parameters {
+		if k == "Tags" {
+			if !tagsApplied(v, a.Parameters["Tags"], s.Parameters["Tags"], s.Version) {
+				return fmt.Errorf("failed to set params")
+			}
+			continue
+		}
+
 		if a.Parameters[k] != v {
 			return fmt.Errorf("failed to set params")
 		}
