@@ -14,6 +14,11 @@ import (
 	"github.com/convox/convox/provider/k8s/template"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
+	appsv1 "k8s.io/api/apps/v1"
+	ac "k8s.io/api/core/v1"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func TestRenderTemplate(t *testing.T) {
@@ -1285,6 +1290,144 @@ func TestRenderTemplateServiceSpreadAcrossZones(t *testing.T) {
 	data, err = p.RenderTemplate("app/service", params)
 	require.NoError(t, err)
 	require.NotContains(t, string(data), "topologySpreadConstraints:")
+}
+
+func TestRenderTemplateServiceSpreadAcrossNodes(t *testing.T) {
+	selector := &am.LabelSelector{MatchLabels: map[string]string{
+		"app":     "test-app",
+		"rack":    "rack",
+		"service": "web",
+		"system":  "convox",
+		"type":    "service",
+	}}
+	podTemplateHash := []string{"pod-template-hash"}
+	minDomains := int32(2)
+	honor := ac.NodeInclusionPolicyHonor
+
+	zone := func(maxSkew int32) ac.TopologySpreadConstraint {
+		return ac.TopologySpreadConstraint{
+			MaxSkew:           maxSkew,
+			TopologyKey:       "topology.kubernetes.io/zone",
+			WhenUnsatisfiable: ac.ScheduleAnyway,
+			LabelSelector:     selector,
+		}
+	}
+	softHostname := ac.TopologySpreadConstraint{
+		MaxSkew:           3,
+		TopologyKey:       "kubernetes.io/hostname",
+		WhenUnsatisfiable: ac.ScheduleAnyway,
+		LabelSelector:     selector,
+	}
+	hardHostname := func(matchLabelKeys []string) ac.TopologySpreadConstraint {
+		return ac.TopologySpreadConstraint{
+			MaxSkew:           1,
+			MinDomains:        &minDomains,
+			NodeTaintsPolicy:  &honor,
+			TopologyKey:       "kubernetes.io/hostname",
+			WhenUnsatisfiable: ac.DoNotSchedule,
+			LabelSelector:     selector,
+			MatchLabelKeys:    matchLabelKeys,
+		}
+	}
+	antiAffinity := func(matchLabelKeys []string) *ac.PodAntiAffinity {
+		return &ac.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []ac.PodAffinityTerm{{
+				TopologyKey:    "kubernetes.io/hostname",
+				LabelSelector:  selector,
+				MatchLabelKeys: matchLabelKeys,
+			}},
+		}
+	}
+	nodeAffinity := &ac.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
+			NodeSelectorTerms: []ac.NodeSelectorTerm{{
+				MatchExpressions: []ac.NodeSelectorRequirement{{Key: "tier", Operator: ac.NodeSelectorOpIn, Values: []string{"a"}}},
+			}},
+		},
+		PreferredDuringSchedulingIgnoredDuringExecution: []ac.PreferredSchedulingTerm{{
+			Weight: 5,
+			Preference: ac.NodeSelectorTerm{
+				MatchExpressions: []ac.NodeSelectorRequirement{{Key: "zone", Operator: ac.NodeSelectorOpIn, Values: []string{"b"}}},
+			},
+		}},
+	}
+
+	stateful := "    stateful: true\n    volumeOptions:\n      - persistentVolumeClaim:\n          id: data\n          mountPath: /data\n          size: 1Gi\n"
+	nodeLabels := "    nodeSelectorLabels:\n      tier: a\n    nodeAffinityLabels:\n      - label: zone\n        value: b\n        weight: 5\n"
+
+	tests := []struct {
+		name        string
+		body        string
+		statefulSet bool
+		constraints []ac.TopologySpreadConstraint
+		affinity    *ac.Affinity
+	}{
+		{
+			name:        "balanced",
+			body:        "    spreadAcrossNodes: balanced\n",
+			constraints: []ac.TopologySpreadConstraint{zone(5), hardHostname(podTemplateHash)},
+		},
+		{
+			name:        "balanced with spreadAcrossZones",
+			body:        "    spreadAcrossNodes: balanced\n    spreadAcrossZones: true\n",
+			constraints: []ac.TopologySpreadConstraint{zone(1), hardHostname(podTemplateHash)},
+		},
+		{
+			name:        "balanced stateful",
+			body:        "    spreadAcrossNodes: balanced\n" + stateful,
+			statefulSet: true,
+			constraints: []ac.TopologySpreadConstraint{zone(5), hardHostname(nil)},
+		},
+		{
+			name:     "one-per-node",
+			body:     "    spreadAcrossNodes: one-per-node\n",
+			affinity: &ac.Affinity{PodAntiAffinity: antiAffinity(podTemplateHash)},
+		},
+		{
+			name:        "one-per-node stateful",
+			body:        "    spreadAcrossNodes: one-per-node\n" + stateful,
+			statefulSet: true,
+			affinity:    &ac.Affinity{PodAntiAffinity: antiAffinity(nil)},
+		},
+		{
+			name:     "one-per-node with node labels",
+			body:     "    spreadAcrossNodes: one-per-node\n" + nodeLabels,
+			affinity: &ac.Affinity{NodeAffinity: nodeAffinity, PodAntiAffinity: antiAffinity(podTemplateHash)},
+		},
+		{
+			name:        "one-per-node with spreadAcrossZones",
+			body:        "    spreadAcrossNodes: one-per-node\n    spreadAcrossZones: true\n",
+			constraints: []ac.TopologySpreadConstraint{zone(1), softHostname},
+			affinity:    &ac.Affinity{PodAntiAffinity: antiAffinity(podTemplateHash)},
+		},
+	}
+
+	decoder := serializer.NewCodecFactory(scheme.Scheme, serializer.EnableStrict).UniversalDeserializer()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, params := gpuTemplateFixture(t, "services:\n  web:\n    image: example/web\n"+tt.body)
+			data, err := p.RenderTemplate("app/service", params)
+			require.NoError(t, err)
+
+			var spec *ac.PodSpec
+			var statefulSet bool
+			for _, doc := range strings.Split(string(data), "---\n") {
+				obj, _, err := decoder.Decode([]byte(doc), nil, nil)
+				require.NoError(t, err)
+				switch o := obj.(type) {
+				case *appsv1.Deployment:
+					spec = &o.Spec.Template.Spec
+				case *appsv1.StatefulSet:
+					spec, statefulSet = &o.Spec.Template.Spec, true
+				}
+			}
+			require.NotNil(t, spec)
+			require.Equal(t, tt.statefulSet, statefulSet)
+			require.Equal(t, tt.constraints, spec.TopologySpreadConstraints)
+			require.Equal(t, tt.affinity, spec.Affinity)
+		})
+	}
 }
 
 const controllerPodLabels = `      labels:

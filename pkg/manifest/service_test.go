@@ -2,6 +2,7 @@ package manifest_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -632,4 +633,49 @@ func TestManifestValidateSpreadAcrossZonesRejectsAgent(t *testing.T) {
 `), nil)
 	require.NoError(t, err)
 	require.EqualError(t, m.Validate(), "validation errors:\nservice worker can not set spreadAcrossZones when agent is enabled")
+}
+
+func TestManifestValidateSpreadAcrossNodes(t *testing.T) {
+	tests := []struct {
+		value   string
+		agent   bool
+		want    string
+		wantErr string
+	}{
+		{value: "balanced", want: manifest.SpreadAcrossNodesBalanced},
+		{value: "one-per-node", want: manifest.SpreadAcrossNodesOnePerNode},
+		{value: "true", wantErr: `service web spreadAcrossNodes must be one of "balanced", "one-per-node"; got "true"`},
+		{value: "yes", wantErr: `service web spreadAcrossNodes must be one of "balanced", "one-per-node"; got "true"`},
+		{value: "false", wantErr: `service web spreadAcrossNodes must be one of "balanced", "one-per-node"; got "false"`},
+		{value: "Balanced", wantErr: `service web spreadAcrossNodes must be one of "balanced", "one-per-node"; got "Balanced"`},
+		{value: "balanced", agent: true, wantErr: "service web can not set spreadAcrossNodes when agent is enabled"},
+		{value: "one-per-node", agent: true, wantErr: "service web can not set spreadAcrossNodes when agent is enabled"},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s agent=%t", tt.value, tt.agent), func(t *testing.T) {
+			src := fmt.Sprintf("services:\n  web:\n    image: example/web\n    agent: %t\n    spreadAcrossNodes: %s\n", tt.agent, tt.value)
+			m, err := manifest.Load([]byte(src), nil)
+			require.NoError(t, err)
+
+			if tt.wantErr != "" {
+				require.EqualError(t, m.Validate(), "validation errors:\n"+tt.wantErr)
+				return
+			}
+
+			require.NoError(t, m.Validate())
+			svc, err := m.Service("web")
+			require.NoError(t, err)
+			require.Equal(t, tt.want, svc.SpreadAcrossNodes)
+		})
+	}
+
+	t.Run("unset", func(t *testing.T) {
+		m, err := manifest.Load([]byte("services:\n  web:\n    image: example/web\n"), nil)
+		require.NoError(t, err)
+		require.NoError(t, m.Validate())
+		svc, err := m.Service("web")
+		require.NoError(t, err)
+		require.Empty(t, svc.SpreadAcrossNodes)
+	})
 }

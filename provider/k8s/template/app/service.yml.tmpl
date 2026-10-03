@@ -101,9 +101,9 @@ spec:
         fsGroup: {{ . }}
         fsGroupChangePolicy: OnRootMismatch
       {{ end }}
-      {{ if .Service.SpreadAcrossZones }}
+      {{ if or .Service.SpreadAcrossZones (eq .Service.SpreadAcrossNodes "balanced") }}
       topologySpreadConstraints:
-      - maxSkew: 1
+      - maxSkew: {{ if .Service.SpreadAcrossZones }}1{{ else }}5{{ end }}
         topologyKey: topology.kubernetes.io/zone
         whenUnsatisfiable: ScheduleAnyway
         labelSelector:
@@ -113,6 +113,24 @@ spec:
             app: {{.App.Name}}
             service: {{.Service.Name}}
             type: service
+      {{ if eq .Service.SpreadAcrossNodes "balanced" }}
+      - maxSkew: 1
+        minDomains: 2
+        nodeTaintsPolicy: Honor
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
+        {{ if not .Service.Stateful }}
+        matchLabelKeys:
+        - pod-template-hash
+        {{ end }}
+      {{ else }}
       - maxSkew: 3
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: ScheduleAnyway
@@ -124,8 +142,10 @@ spec:
             service: {{.Service.Name}}
             type: service
       {{ end }}
-      {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
+      {{ end }}
+      {{ if or .Service.NodeSelectorLabels .Service.NodeAffinityLabels (eq .Service.SpreadAcrossNodes "one-per-node") }}
       affinity:
+        {{ if or .Service.NodeSelectorLabels .Service.NodeAffinityLabels }}
         nodeAffinity:
           {{ if .Service.NodeSelectorLabels }}
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -150,6 +170,23 @@ spec:
                 - {{ .Value }}
           {{ end }}
           {{ end }}
+        {{ end }}
+        {{ if eq .Service.SpreadAcrossNodes "one-per-node" }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                system: convox
+                rack: {{.Rack}}
+                app: {{.App.Name}}
+                service: {{.Service.Name}}
+                type: service
+            {{ if not .Service.Stateful }}
+            matchLabelKeys:
+            - pod-template-hash
+            {{ end }}
+        {{ end }}
       {{ end }}
       {{ $hasDedicatedNode := false }}
       {{ range keyValue .Service.NodeSelectorLabels }}
