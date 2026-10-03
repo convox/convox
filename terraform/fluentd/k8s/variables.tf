@@ -39,3 +39,9 @@ variable "fluentd_memory" {
 variable "target" {
   type = string
 }
+
+variable "node_name_env" {
+  description = "Set K8S_NODE_NAME from spec.nodeName (kubernetes_metadata_filter 3.x then lists, watches and caches only this node's pods)"
+  type        = bool
+  default     = false
+}

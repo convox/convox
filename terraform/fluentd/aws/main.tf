@@ -17,6 +17,7 @@ module "k8s" {
 
   fluentd_disable = var.fluentd_disable
   fluentd_memory  = var.fluentd_memory
+  node_name_env   = true
 
   cluster = var.cluster
   # 1.19-all runs fluentd 1.19 with kubernetes_metadata_filter 3.8, which re-reads the

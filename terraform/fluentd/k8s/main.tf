@@ -122,6 +122,18 @@ resource "kubernetes_daemonset" "fluentd" {
             value = var.cluster
           }
 
+          dynamic "env" {
+            for_each = var.node_name_env ? [1] : []
+            content {
+              name = "K8S_NODE_NAME"
+              value_from {
+                field_ref {
+                  field_path = "spec.nodeName"
+                }
+              }
+            }
+          }
+
           env {
             name  = "TARGET_HASH"
             value = sha256(var.target)
