@@ -48,6 +48,19 @@ type Build struct {
 	writer   io.Writer
 }
 
+// PrintedError is a build failure that Execute has already written to the build output.
+type PrintedError struct {
+	err error
+}
+
+func (e PrintedError) Error() string {
+	return e.err.Error()
+}
+
+func (e PrintedError) Unwrap() error {
+	return e.err
+}
+
 func New(rack structs.Provider, opts Options, engine Engine) (*Build, error) {
 	b := &Build{Options: opts}
 
@@ -185,7 +198,7 @@ func (bb *Build) prepareSourceObject(app, key string) (string, error) {
 }
 
 func (bb *Build) success() error {
-	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bytes.NewReader(bb.logs.Bytes()), structs.ObjectStoreOptions{})
+	logs, err := bb.storeLogs()
 	if err != nil {
 		return err
 	}
@@ -223,7 +236,7 @@ func (bb *Build) fail(buildError error) error {
 
 	bb.Provider.EventSend("build:create", structs.EventSendOptions{Data: map[string]string{"app": bb.App, "id": bb.Id}, Error: options.String(buildError.Error())})
 
-	logs, err := bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bytes.NewReader(bb.logs.Bytes()), structs.ObjectStoreOptions{})
+	logs, err := bb.storeLogs()
 	if err != nil {
 		return err
 	}
@@ -238,5 +251,12 @@ func (bb *Build) fail(buildError error) error {
 		return err
 	}
 
-	return buildError
+	return PrintedError{err: buildError}
+}
+
+func (bb *Build) storeLogs() (*structs.Object, error) {
+	// Pod log streams drop the \r of CRLF line endings, and the CLI compares its
+	// streamed byte count against this stored copy.
+	logs := bytes.ReplaceAll(bb.logs.Bytes(), []byte("\r\n"), []byte("\n"))
+	return bb.Provider.ObjectStore(bb.App, fmt.Sprintf("build/%s/logs", bb.Id), bytes.NewReader(logs), structs.ObjectStoreOptions{})
 }
