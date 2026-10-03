@@ -286,6 +286,11 @@ resource "kubernetes_deployment" "api" {
           }
 
           env {
+            name  = "COST_TRACKING_HISTORY_DAYS"
+            value = var.cost_tracking_history_days
+          }
+
+          env {
             name  = "DOMAIN"
             value = var.domain
           }

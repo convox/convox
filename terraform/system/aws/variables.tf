@@ -68,6 +68,11 @@ variable "cost_tracking_enable" {
   description = "Enable the rack-side cost accumulator and budget enforcement. Opt-in; false preserves existing behaviour."
 }
 
+variable "cost_tracking_history_days" {
+  type    = number
+  default = 62
+}
+
 variable "seccomp_default_enabled" {
   type    = bool
   default = false

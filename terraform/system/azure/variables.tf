@@ -18,6 +18,11 @@ variable "cost_tracking_enable" {
   type    = bool
 }
 
+variable "cost_tracking_history_days" {
+  default = 62
+  type    = number
+}
+
 variable "docker_hub_username" {
   default = ""
 }

@@ -8,6 +8,7 @@ locals {
     azure_files_enable                   = var.azure_files_enable
     cert_duration                        = var.cert_duration
     cost_tracking_enable                 = var.cost_tracking_enable
+    cost_tracking_history_days           = var.cost_tracking_history_days
     docker_hub_password                  = var.docker_hub_password
     docker_hub_username                  = var.docker_hub_username
     fluentd_memory                       = var.fluentd_memory
@@ -45,6 +46,7 @@ locals {
     azure_files_enable                   = "false"
     cert_duration                        = "2160h"
     cost_tracking_enable                 = "false"
+    cost_tracking_history_days           = "62"
     docker_hub_password                  = ""
     docker_hub_username                  = ""
     fluentd_memory                       = "200Mi"

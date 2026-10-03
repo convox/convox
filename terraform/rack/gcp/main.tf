@@ -23,24 +23,25 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled          = var.buildkit_enabled
-  cluster                   = var.cluster
-  cost_tracking_enable      = var.cost_tracking_enable
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  fluentd_memory            = var.fluentd_memory
-  domain                    = module.router.endpoint
-  image                     = var.image
-  name                      = var.name
-  rack_name                 = var.rack_name
-  namespace                 = module.k8s.namespace
-  nodes_account             = var.nodes_account
-  project_id                = var.project_id
-  region                    = var.region
-  release                   = var.release
-  resolver                  = module.resolver.endpoint
-  router                    = module.router.endpoint
-  syslog                    = var.syslog
-  webhook_signing_key       = var.webhook_signing_key
+  buildkit_enabled           = var.buildkit_enabled
+  cluster                    = var.cluster
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_authentication  = module.k8s.docker_hub_authentication
+  fluentd_memory             = var.fluentd_memory
+  domain                     = module.router.endpoint
+  image                      = var.image
+  name                       = var.name
+  rack_name                  = var.rack_name
+  namespace                  = module.k8s.namespace
+  nodes_account              = var.nodes_account
+  project_id                 = var.project_id
+  region                     = var.region
+  release                    = var.release
+  resolver                   = module.resolver.endpoint
+  router                     = module.router.endpoint
+  syslog                     = var.syslog
+  webhook_signing_key        = var.webhook_signing_key
 }
 
 module "resolver" {
