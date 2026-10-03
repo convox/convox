@@ -9,6 +9,7 @@ import (
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdapi"
 	"github.com/stretchr/testify/require"
 )
 
@@ -153,6 +154,117 @@ func TestBudgetCapStatus_AppBudgetGetError_LogsAndReturnsClear(t *testing.T) {
 		require.NotContains(t, res.Stdout, "at-cap", "no decoration applied on budget API failure")
 		// stderr namespace tag is the contract for log scrapers.
 		require.Contains(t, res.Stderr, "ns=cli_budget at=fetch-error")
+	})
+}
+
+func TestBudgetCapStatus_RackWithoutBudgetRoute_Silent(t *testing.T) {
+	tests := []struct {
+		cmd    string
+		setup  func(*mocksdk.Interface)
+		stdout []string
+	}{
+		{
+			cmd: "ps -a app1",
+			setup: func(i *mocksdk.Interface) {
+				i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess(), *fxProcessPending()}, nil)
+			},
+			stdout: []string{
+				"ID    SERVICE  STATUS   RELEASE   STARTED     COMMAND",
+				"pid1  name     running  release1  2 days ago  command",
+				"pid1  name     pending  release1  2 days ago  command",
+			},
+		},
+		{
+			cmd: "services -a app1",
+			setup: func(i *mocksdk.Interface) {
+				i.On("ServiceList", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
+			},
+			stdout: []string{
+				"SERVICE   DOMAIN  PORTS",
+				"service1  domain  1:2 1:2",
+				"service1  domain  1:2 1:2",
+			},
+		},
+		{
+			cmd: "scale -a app1",
+			setup: func(i *mocksdk.Interface) {
+				i.On("ServiceList", "app1").Return(structs.Services{*fxService(), *fxService()}, nil)
+				i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess(), *fxProcess()}, nil)
+			},
+			stdout: []string{
+				"SERVICE   DESIRED  RUNNING  CPU  MEMORY  GPU  MIN  MAX  STATUS",
+				"service1  1        0        2    3       -    -    -    ",
+				"service1  1        0        2    3       -    -    -    ",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.cmd, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				tt.setup(i)
+				i.On("AppBudgetGet", "app1").Return(nil, nil, fmt.Errorf("response status 404"))
+
+				res, err := testExecute(e, tt.cmd, nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{""})
+				res.RequireStdout(t, tt.stdout)
+			})
+		})
+	}
+}
+
+func TestBudgetCapStatus_RealErrorsStillLogged(t *testing.T) {
+	for _, msg := range []string{"app not found: app1", "response status 503", "you are unauthorized to access this"} {
+		t.Run(msg, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				i.On("ProcessList", "app1", structs.ProcessListOptions{}).Return(structs.Processes{*fxProcess()}, nil)
+				i.On("AppBudgetGet", "app1").Return(nil, nil, fmt.Errorf("%s", msg))
+
+				res, err := testExecute(e, "ps -a app1", nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{fmt.Sprintf("ns=cli_budget at=fetch-error err=%q", msg)})
+			})
+		})
+	}
+}
+
+func TestPs_RackWithoutBudgetRoute_RealClient(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testRealRack(t, func(s *stdapi.Server) {
+			s.Route("GET", "/apps/{app}/processes", func(c *stdapi.Context) error {
+				return c.RenderJSON(structs.Processes{*fxProcess()})
+			})
+		})
+
+		res, err := testExecute(e, "ps -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"ID    SERVICE  STATUS   RELEASE   STARTED     COMMAND",
+			"pid1  name     running  release1  2 days ago  command",
+		})
+	})
+}
+
+func TestPs_BudgetAppNotFound_RealClient(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testRealRack(t, func(s *stdapi.Server) {
+			s.Route("GET", "/apps/{app}/processes", func(c *stdapi.Context) error {
+				return c.RenderJSON(structs.Processes{*fxProcess()})
+			})
+			s.Route("GET", "/apps/{app}/budget", func(c *stdapi.Context) error {
+				return structs.ErrNotFound("app not found: %s", c.Var("app"))
+			})
+		})
+
+		res, err := testExecute(e, "ps -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{`ns=cli_budget at=fetch-error err="app not found: app1"`})
 	})
 }
 

@@ -41,7 +41,9 @@ func budgetCapStatusWithServices(rack sdk.Interface, appName string, services st
 func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (capStatus, bool) {
 	cfg, state, err := rack.AppBudgetGet(appName)
 	if err != nil {
-		fmt.Fprintf(stderr, "ns=cli_budget at=fetch-error err=%q\n", err)
+		if !isRackVersionGated(err) {
+			fmt.Fprintf(stderr, "ns=cli_budget at=fetch-error err=%q\n", err)
+		}
 		return capStatus{}, false
 	}
 	if cfg == nil || state == nil || !state.CircuitBreakerTripped {

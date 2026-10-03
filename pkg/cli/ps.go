@@ -2,6 +2,7 @@ package cli
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -36,6 +37,12 @@ func Ps(rack sdk.Interface, c *stdcli.Context) error {
 	ps, err := rack.ProcessList(app(c), opts)
 	if err != nil {
 		return err
+	}
+
+	if len(ps) == 0 {
+		if _, err := rack.AppGet(app(c)); err != nil && strings.Contains(strings.ToLower(err.Error()), "app not found") {
+			return err
+		}
 	}
 
 	// budgetCapStatus is best-effort: errors are logged to stderr inside the
