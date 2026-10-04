@@ -159,6 +159,7 @@ locals {
     ssl_ciphers                               = var.ssl_ciphers
     ssl_protocols                             = var.ssl_protocols
     syslog                                    = var.syslog
+    syslog_tls_verify                         = var.syslog_tls_verify
     system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
     tags                                      = var.tags
     telemetry                                 = var.telemetry
@@ -329,6 +330,7 @@ locals {
     ssl_ciphers                               = ""
     ssl_protocols                             = ""
     syslog                                    = ""
+    syslog_tls_verify                         = "true"
     system_readonly_rootfs_enabled            = "false"
     tags                                      = ""
     telemetry                                 = "false"

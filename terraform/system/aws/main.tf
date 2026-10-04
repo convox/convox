@@ -273,6 +273,7 @@ module "fluentd" {
   oidc_sub                     = module.cluster.oidc_sub
   rack                         = local.name
   syslog                       = var.syslog
+  syslog_tls_verify            = var.syslog_tls_verify
 }
 
 module "rack" {
