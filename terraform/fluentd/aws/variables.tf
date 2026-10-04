@@ -44,3 +44,8 @@ variable "oidc_sub" {
 variable "syslog" {
   default = ""
 }
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
+}

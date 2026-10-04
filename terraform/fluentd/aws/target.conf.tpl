@@ -76,6 +76,7 @@
 				hostname_key hostname
 				tag_key program
 				payload_key log
+				tls_verify ${syslog_tls_verify}
 			</store>
 		%{ endfor ~}
 	</match>
@@ -94,6 +95,7 @@
 			hostname_key hostname
 			tag_key program
 			payload_key log
+			tls_verify ${syslog_tls_verify}
 		</store>
 %{ endfor ~}
 %{ else ~}

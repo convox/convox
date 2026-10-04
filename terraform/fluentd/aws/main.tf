@@ -19,7 +19,7 @@ module "k8s" {
   fluentd_memory  = var.fluentd_memory
 
   cluster   = var.cluster
-  image     = "convox/fluentd:1.19-all@sha256:bb519f1ca5b8d28a7c94c9dfd52af2c8befa55ed941daadaca90f6d4c725fd45"
+  image     = "convox/fluentd:1.19.2-all@sha256:502faa2a494cdb83e4931239b1dc44365a53bdce4832ee84719b1cf1bad3d141"
   namespace = var.namespace
   rack      = var.rack
 
@@ -28,7 +28,8 @@ module "k8s" {
     app_cloudwatch_disable = var.app_cloudwatch_disable,
     rack                   = var.rack,
     region                 = data.aws_region.current.name,
-    syslog                 = compact(split(",", var.syslog))
+    syslog                 = compact(split(",", var.syslog)),
+    syslog_tls_verify      = var.syslog_tls_verify,
   })
 
   annotations = {

@@ -552,7 +552,7 @@ func TestValidateAndMutateParams_BoolParam_AwsCoverage(t *testing.T) {
 		"gpu_tag_enable", "imds_tags_enable", "internal_router", "contour_internal_tls",
 		"karpenter_consolidation_enabled", "keda_enable", "network_policy_enable",
 		"pod_identity_agent_enable",
-		"pod_imds_block_enabled", "seccomp_default_enabled", "system_readonly_rootfs_enabled",
+		"pod_imds_block_enabled", "seccomp_default_enabled", "syslog_tls_verify", "system_readonly_rootfs_enabled",
 		"telemetry", "vpa_enable",
 	} {
 		t.Run(k, func(t *testing.T) {

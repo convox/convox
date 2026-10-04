@@ -532,6 +532,11 @@ Groups:
         regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
         description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
         optional: true
+      - name: syslog_tls_verify
+        default: "true"
+        type: boolean
+        description: "Checks the certificate of a tcp+tls syslog endpoint against the public certificate authorities trusted by the log forwarder. Turn it off for an endpoint with a self-signed or private certificate."
+        sideNote: "Only applies to tcp+tls syslog endpoints."
       - name: fluentd_disable
         default: "false"
         type: boolean
