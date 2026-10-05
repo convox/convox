@@ -478,6 +478,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 		req.StartTime = aws.Int64(start)
 	}
 
+	if !follow {
+		req.EndTime = aws.Int64(time.Now().UTC().UnixNano() / int64(time.Millisecond))
+	}
+
 	if stream != "" {
 		req.LogStreamNames = []*string{aws.String(stream)}
 	} else {
@@ -541,6 +545,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 
 			req.NextToken = res.NextToken
 
+			if res.NextToken == nil && !follow {
+				return nil
+			}
+
 			if res.NextToken != nil {
 				time.Sleep(2 * time.Second)
 			} else if len(es) == 0 {
@@ -550,10 +558,6 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			}
 
 			if res.NextToken == nil {
-				if !follow {
-					return nil
-				}
-
 				req.StartTime = aws.Int64(start)
 			}
 		}
