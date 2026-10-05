@@ -992,3 +992,58 @@ func TestRunLogRetentionReconcilerSweepsThenStops(t *testing.T) {
 		t.Fatal("reconciler did not return after the context was cancelled")
 	}
 }
+
+func TestStreamLogsNoFollowBoundsEndTime(t *testing.T) {
+	m := &mocks.CloudWatchLogsAPI{}
+	m.On("FilterLogEvents", mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{}, nil)
+	p := &Provider{CloudWatchLogs: m}
+
+	r, w := io.Pipe()
+	go func() { _, _ = io.Copy(io.Discard, r) }()
+
+	follow := false
+	since := 10 * time.Minute
+	before := time.Now().UnixNano() / int64(time.Millisecond)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- p.streamLogs(context.Background(), w, "/convox/rack/app", "", structs.LogsOptions{Follow: &follow, Since: &since})
+	}()
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("streamLogs did not return promptly after the last page")
+	}
+
+	after := time.Now().UnixNano() / int64(time.Millisecond)
+
+	in, ok := m.Calls[0].Arguments.Get(0).(*cloudwatchlogs.FilterLogEventsInput)
+	require.True(t, ok)
+	require.NotNil(t, in.EndTime)
+	require.GreaterOrEqual(t, *in.EndTime, before)
+	require.LessOrEqual(t, *in.EndTime, after)
+	require.Less(t, aws.Int64Value(in.StartTime), *in.EndTime)
+}
+
+func TestStreamLogsFollowLeavesEndTimeUnset(t *testing.T) {
+	r, w := io.Pipe()
+	go func() { _, _ = io.Copy(io.Discard, r) }()
+
+	m := &mocks.CloudWatchLogsAPI{}
+	m.On("FilterLogEvents", mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{
+		Events: []*cloudwatchlogs.FilteredLogEvent{
+			{EventId: aws.String("e1"), Timestamp: aws.Int64(1), Message: aws.String("hi")},
+		},
+	}, nil).Run(func(mock.Arguments) { _ = r.Close() })
+	p := &Provider{CloudWatchLogs: m}
+
+	follow := true
+	err := p.streamLogs(context.Background(), w, "/convox/rack/app", "", structs.LogsOptions{Follow: &follow})
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+
+	in, ok := m.Calls[0].Arguments.Get(0).(*cloudwatchlogs.FilterLogEventsInput)
+	require.True(t, ok)
+	require.Nil(t, in.EndTime)
+}
