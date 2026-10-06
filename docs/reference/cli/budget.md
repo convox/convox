@@ -73,6 +73,8 @@ Set or update the app's budget config: the monthly cap, alert threshold, at-cap 
     Setting budget for myapp... OK
 ```
 
+When the App has no budget yet, `--alert-at` defaults to `80` and `--at-cap-action` to `alert-only`. On a later call, a flag you leave out keeps its stored value, with CLI `3.25.10` or later; earlier CLIs reset the omitted threshold and action to those defaults whenever `--monthly-cap` is passed. `--alert-at` and `--at-cap-action` need `--monthly-cap` on the same command.
+
 ### Prerequisite: cost tracking must be enabled
 
 `budget set` rejects with HTTP 422 when the rack parameter `cost_tracking_enable` is `false` and you supply any enforcement field (`--monthly-cap`, `--alert-at`, `--at-cap-action`). Enable cost tracking first:
@@ -123,7 +125,7 @@ If spend is still at or above the cap, the next accumulator tick, within 10 minu
 
 ## budget cap raise
 
-Raise the monthly cap. Atomic with breaker-clear when the new cap is above current spend. Alias for `budget set --monthly-cap`.
+Raise the monthly cap. When the new cap is above both the previous cap and current spend, the same operation clears the breaker and, on Rack version `3.25.10` or later, resets the threshold and cap alerts and cancels an armed auto-shutdown countdown. Changes only the cap, like `budget set --monthly-cap` with CLI `3.25.10` or later.
 
 ### Usage
 ```bash
@@ -137,7 +139,7 @@ Raise the monthly cap. Atomic with breaker-clear when the new cap is above curre
 
 If the new cap is below current spend, the CLI prints a warning that the cap will trip on the next accumulator tick, and the Rack saves the cap anyway.
 
-Raising the cap does not restart services that auto-shutdown scaled to zero. Run `convox budget reset myapp` right after the raise to restore them. See [Cap raise](/management/budget-caps#raising-or-recovering-a-cap).
+Raising the cap does not restart services that auto-shutdown scaled to zero. They stay at zero until you run `convox budget reset myapp`, at any time after the raise. See [Cap raise](/management/budget-caps#raising-or-recovering-a-cap).
 
 ## budget simulate-shutdown
 

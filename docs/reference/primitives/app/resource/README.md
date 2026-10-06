@@ -49,6 +49,8 @@ services:
 
 See [AWS RDS Managed Database Resources](#aws-rds-managed-database-resources) and [AWS ElastiCache Redis and Memcached Resources](#aws-elasticache-redis-and-memcached-resources) below for configuration details.
 
+A deploy that adds an AWS managed Resource waits for the instance to become available before it updates the App's Services, which commonly takes 10 to 15 minutes, and the App shows `updating` throughout. An existing Resource that is not available at promote time holds the deploy only for a short lookup. From Rack version `3.25.10`, [`convox apps cancel`](/reference/cli/apps#apps-cancel) works during the wait.
+
 ## Linking
 
 Linking a Resource to a [Service](/reference/primitives/app/service) causes an environment variable to be injected into [Processes](/reference/primitives/app/process) of that [Service](/reference/primitives/app/service) based on the name of the Resource.

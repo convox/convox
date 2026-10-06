@@ -137,6 +137,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable)         | Stops the Rack from creating, writing, and reading its own CloudWatch log groups. |
 | [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) | Sets how long CloudWatch keeps the Rack, App, and EKS control plane log groups, or stops them expiring. |
 | [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
+| [cost_tracking_history_days](/configuration/rack-parameters/aws/cost_tracking_history_days) | Sets how many days of daily App cost history the Rack keeps for `convox cost --start` and `--end`. |
 | [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
 | [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |
 | [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
@@ -157,6 +158,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Retention window for the free-plan Prometheus chart deployed via the Convox Console. |
 | [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and the Console GPU columns. Must be set explicitly post-3.24.6 (no auto-resolution). |
 | [syslog](/configuration/rack-parameters/aws/syslog)                                 | Specifies the endpoint to forward logs to a syslog server.               |
+| [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) | Verifies the certificate of a `tcp+tls` syslog endpoint against public certificate authorities. |
 
 ### TLS and Security
 

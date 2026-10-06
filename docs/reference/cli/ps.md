@@ -1,6 +1,6 @@
 ---
 title: "ps"
-description: "The convox ps command lists an app's running processes and manages per-process operations such as info and stop, including exit status for a finished process and budget-cap sub-states."
+description: "The convox ps command lists an app's processes, shows one process and its exit status with ps info, and stops a process with ps stop."
 slug: ps
 url: /reference/cli/ps
 ---
@@ -20,6 +20,7 @@ List app processes
 | ---- | ----- | ----------- |
 | `--release` | | Filter by release |
 | `--service` | `-s` | Filter by service |
+| `--watch` | | Rerun the command every given number of seconds |
 
 ### Examples
 ```bash
@@ -27,6 +28,8 @@ List app processes
     ID            SERVICE  STATUS   RELEASE      STARTED     COMMAND
     62942430327e  web      running  RCRLBREFPBX  1 week ago
 ```
+
+For an App that does not exist, `convox ps` prints `ERROR: app not found: <app>` and exits 1, with CLI `3.25.10` or later. An App with no Processes, or a `--service` or `--release` filter that matches nothing, prints only the header and exits 0. Without `-a`, the App name comes from `.convox/app` or the current directory name, so running `convox ps` in a directory not named after an App also exits 1. With `--watch`, each run prints the error and the command keeps running until interrupted.
 
 When the app's budget cap has been breached (3.24.6+), `convox ps` adds a
 `BUDGET` column showing the per-process sub-state. Possible values:

@@ -43,6 +43,8 @@ $ convox budget set myapp --monthly-cap 1000 --alert-at 75 --at-cap-action block
 | `--at-cap-action` | `alert-only` | What happens when spend crosses the cap. See [Cap actions](#cap-actions). |
 | `--pricing-adjustment` | `1.0` | Multiplier applied to computed spend (e.g. `0.7` to model a 30% committed-use discount). |
 
+The defaults apply when the App has no budget yet. On a later `convox budget set`, a flag you leave out keeps its stored value, with CLI `3.25.10` or later; earlier CLIs reset an omitted `--alert-at` to `80` and an omitted `--at-cap-action` to `alert-only` whenever `--monthly-cap` is passed. `--alert-at` and `--at-cap-action` need `--monthly-cap` on the same command.
+
 The same keys in the [convox.yml budget block](/configuration/convox-yml#budget) do not set these values; the Rack enforces only what `convox budget set` or the Console saves.
 
 ## Cap actions
@@ -55,7 +57,7 @@ The at-cap action set with `--at-cap-action` selects what happens when an app's 
 | `block-new-deploys` | Fires `app:budget:cap` and rejects deploys, promotes, `convox scale` and `convox run` with HTTP 409 and an over-cap error. Running services keep running. |
 | `auto-shutdown` | Starts the auto-shutdown countdown. After `notifyBeforeMinutes`, every eligible service is scaled to zero in the same tick, in `shutdownOrder` order. Agent and stateful services are exempt and keep running. |
 
-The cap check and the shutdown both run on the 10-minute accumulator tick: the countdown starts at the first tick that sees spend at or above the cap, and services scale to zero at the first tick at or after the end of `notifyBeforeMinutes`.
+The cap check and the shutdown both run on the 10-minute accumulator tick: the countdown starts at the first tick that sees spend at or above the cap, and services scale to zero at the first tick at or after the end of `notifyBeforeMinutes`. From Rack version `3.25.10`, if that tick runs more than an hour after the countdown ended, for example after a long Rack API outage, the countdown is cancelled with `cancel_reason` `countdown-lapsed` instead of firing, and the next tick that still sees spend at or above the cap starts a new countdown with a new `:armed` event.
 
 When you choose `auto-shutdown`, the CLI prints a warning reminding you to configure your at-cap webhook and to validate the configuration first:
 
@@ -73,18 +75,18 @@ Run `convox budget simulate-shutdown myapp` to preview which services would be s
 
 ## Raising or recovering a cap
 
-Raising the cap mid-month re-enables blocked deploys (when current spend is below the new cap) and dismisses any active recovery banner:
+Raising the cap mid-month above both the previous cap and current spend clears the threshold and cap alerts, so each can fire again this month against the new cap, re-enables blocked deploys, and cancels an armed auto-shutdown countdown. The countdown does not arm again unless spend crosses the new cap. Resetting the alerts when deploys are not blocked, and the countdown staying cancelled, need Rack version `3.25.10` or later.
 
 ```bash
 $ convox budget cap raise myapp --monthly-cap-usd 500
 Raising monthly cap for myapp... OK
 ```
 
-`budget cap raise` is an alias for `budget set --monthly-cap`. Both `--monthly-cap-usd` and `--monthly-cap` are accepted.
+`budget cap raise` changes only the cap, and so does `budget set --monthly-cap` with CLI `3.25.10` or later. Both `--monthly-cap-usd` and `--monthly-cap` are accepted. The Console's **Raise Cap** dialog also changes only the cap.
 
 The breaker clears only when the new cap is above both the previous cap and current spend. A cap below current spend is saved anyway: the CLI prints a warning that the cap will trip on the next accumulator tick, and blocked deploys stay blocked. Use `convox cost --app myapp` to confirm current spend before raising.
 
-Auto-shutdown never blocks deploys. After it has fired, raising the cap does **not** restart the services it scaled to zero. Run `convox budget reset` (see below) right after the raise to restore them.
+Auto-shutdown never blocks deploys. After it has fired, raising the cap does **not** restart the services it scaled to zero. The shutdown stays active, with those Services at zero, until you run `convox budget reset` (see below), at any time after the raise, or scale them back up yourself. With `recoveryMode: manual`, the shutdown expires at the month rollover, and after that `convox budget reset` no longer restores the Services.
 
 ## Reset and force-clear cooldown
 
@@ -135,7 +137,7 @@ The `convox ps` `STATUS` column and the `convox services` `BUDGET` column both s
 | `at-cap-auto` | Service has been scaled to zero by auto-shutdown (deployment-only services). |
 | `at-cap` | Cap is breached with `atCapAction: block-new-deploys`; no scale-to-zero, deploys are rejected. |
 
-When you recover (raise the cap or reset), these tokens clear and any recovery banner in the Console is dismissed.
+Raising the cap above both the previous cap and current spend clears the `at-cap` token and cancels an armed countdown. After auto-shutdown has fired, the tokens clear only when `convox budget reset`, or scaling the Services back up yourself, recovers them.
 
 ## Authorization
 
@@ -210,7 +212,7 @@ Confirm `convox budget show myapp` reports `"at-cap-action": "auto-shutdown"` un
 
 ### Auto-shutdown fired but I want to keep services running
 
-Run `convox budget reset myapp`. The plain reset restarts services that were scaled to zero. Raising the cap alone (`convox budget cap raise`) does not restart them; if you raise it, run the reset right after. `convox budget reset` is the recovery path after auto-shutdown has fired.
+Run `convox budget reset myapp`. The plain reset restarts services that were scaled to zero. Raising the cap alone (`convox budget cap raise`) does not restart them; if you raise it, the reset is still needed. `convox budget reset` is the recovery path after auto-shutdown has fired.
 
 ## See Also
 

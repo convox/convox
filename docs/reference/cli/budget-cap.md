@@ -10,7 +10,7 @@ The `budget cap` command group operates on the `monthlyCapUsd` field of an app's
 
 ## budget cap raise
 
-Raise the monthly cap. Atomic with breaker-clear when the new cap is above current spend.
+Raise the monthly cap. When the new cap is above both the previous cap and current spend, the same operation clears the breaker and, on Rack version `3.25.10` or later, resets the threshold and cap alerts and cancels an armed auto-shutdown countdown.
 
 > **Requires admin role on the rack.** A non-admin caller (`rw` role) receives `403 AppBudgetSet: admin role required to set budget cap`. Basic-auth (rack-password) callers automatically pass the admin check.
 
@@ -35,7 +35,7 @@ If the new cap is below current spend, the CLI prints a warning and the Rack sav
 
 Use `convox cost --app myapp` to confirm current spend before raising.
 
-Raising the cap does not restart services that auto-shutdown scaled to zero. Run `convox budget reset myapp` right after the raise to restore them.
+Raising the cap does not restart services that auto-shutdown scaled to zero. They stay at zero until you run `convox budget reset myapp`, at any time after the raise.
 
 ## See Also
 

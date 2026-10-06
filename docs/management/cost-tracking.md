@@ -44,7 +44,9 @@ DigitalOcean, Equinix Metal and Local Racks cannot enable cost tracking. Budget 
 
 ## How spend is computed
 
-The accumulator ticks every 10 minutes. On each tick, a running pod is charged for the time since the previous tick at its node's hourly rate, times the larger of its CPU and memory requests as a share of the node's allocatable capacity. A pod that requests GPUs on an instance type with GPUs is charged its share of the node's GPUs instead. The rate comes from a built-in price table keyed by the exact instance type name, such as `m5.large`, `Standard_D4s_v5` or `n2-standard-4`, so a size missing from the table is not priced even when its family is. The per-tick charges are summed across the month into the App's month-to-date spend (`current-month-spend-usd` in `convox budget show`), which also surfaces in the Console budget panel.
+The accumulator ticks every 10 minutes. On each tick, a running pod is charged for the time since the previous tick, up to one hour, at its node's hourly rate, times the larger of its CPU and memory requests as a share of the node's allocatable capacity. A pod that requests GPUs on an instance type with GPUs is charged its share of the node's GPUs instead. The rate comes from a built-in price table keyed by the exact instance type name, such as `m5.large`, `Standard_D4s_v5` or `n2-standard-4`, so a size missing from the table is not priced even when its family is. The per-tick charges are summed across the month into the App's month-to-date spend (`current-month-spend-usd` in `convox budget show`), which also surfaces in the Console budget panel. From Rack version `3.25.10` the Rack also adds each tick's spend to a daily history; see [Daily history and date ranges](#daily-history-and-date-ranges).
+
+The one-hour limit applies from Rack version `3.25.10` to any gap between ticks, such as the first tick after cost tracking is turned back on or a long Rack API outage, so spend for the rest of the gap is not counted.
 
 The App's pricing adjustment, set with `convox budget set --pricing-adjustment` or in the Console, multiplies every tick's charge. A value of `1.10` records 10% more spend than the table price would; `0.95` records 5% less. Use it to align Convox's estimate with the contract pricing your finance team sees, or to add a buffer for cap headroom. The `pricingAdjustment` key in `convox.yml` is not read.
 
@@ -97,9 +99,22 @@ The `SPEND-USD` column is the accumulated spend for each variant. A Rack that ha
 
 Service-level numbers help identify which workload is driving spend. Use the output to refine the monthly cap, decide whether to opt a service out of auto-shutdown via `neverAutoShutdown`, or scale the workload down before cap fire.
 
+## Daily history and date ranges
+
+From Rack version `3.25.10`, the Rack keeps each App's spend per UTC day, per Service, for [`cost_tracking_history_days`](/configuration/rack-parameters/aws/cost_tracking_history_days) days, `62` by default. [`convox cost --start` and `--end`](/reference/cli/cost#date-ranges), with CLI version `3.25.10` or later, and the Console date range pickers sum the days in a range. Month-to-date spend, budget caps, alerts and auto-shutdown do not use the history.
+
+| Behavior | Detail |
+|---|---|
+| Day boundaries | UTC. West of UTC, an evening's spend lands in the next UTC day |
+| First day | the first tick after the Rack updates to `3.25.10`. Nothing is backfilled, and the update day holds only part of that day's spend |
+| Month rollover, **Reset Period**, `convox budget clear` | reset month-to-date spend only. The history is kept, so range spend can exceed month-to-date spend |
+| Service names | `_build` and `_unattributed` appear as in the month-to-date breakdown. `_other` collects any Service after the first 50 recorded on a day |
+| Retention | lowering `cost_tracking_history_days` drops older days; raising it keeps more from then on |
+| Downgrade below `3.25.10` | the stored days stay, but no days are recorded while the Rack runs the older version, so the range shows a gap for that period |
+
 ## Per-month rollover
 
-Spend resets to zero at the first of each month, UTC, and caps that tripped in the previous month are cleared with it. The rollover does not restore Services that auto-shutdown scaled to zero. With `recoveryMode: auto-on-reset` they stay at zero until `convox budget reset`; with `manual`, scale them back up yourself. The 24-hour flap-suppression cooldown is not tied to the month: it ends 24 hours after the restore that started it.
+Spend resets to zero at the first of each month, UTC, and caps that tripped in the previous month are cleared with it. The rollover does not restore Services that auto-shutdown scaled to zero. With `recoveryMode: auto-on-reset` they stay at zero until `convox budget reset`; with `manual`, scale them back up yourself. The 24-hour flap-suppression cooldown is not tied to the month: it ends 24 hours after the restore that started it. The daily history is not reset at rollover.
 
 ## See Also
 

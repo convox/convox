@@ -81,7 +81,22 @@ Convox supports forwarding logs to external log aggregation services via syslog.
 $ convox rack params set syslog=tcp+tls://logs.example.com:1234
 ```
 
-This will forward all application and system logs to the specified syslog destination. See the [syslog rack parameter](/configuration/rack-parameters/aws/syslog) documentation for full configuration details.
+Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, one syslog message per line. The URL scheme is `tcp`, `tcp+tls` or `udp`. Each message, header and tag included, is cut at 1024 bytes, and the syslog tag, `<type>/<name>/<pod>` such as `service/web/<pod>`, is cut at 32 characters.
+
+These lines never reach the endpoint:
+
+| Lines | Why |
+|---|---|
+| Containerized Resources such as `postgres` or `redis`, Contour and Envoy on a Rack with `router_type=contour`, Kubernetes add-ons such as CoreDNS or the Cluster Autoscaler, and a Service whose name starts with `fluentd` or `cloudwatch-agent` | Fluentd does not collect them, on any provider, so they are not in CloudWatch or Elasticsearch either |
+| Builds on an AWS Rack with [`pod_security_mode=enforce`](/configuration/rack-parameters/aws/pod_security_mode) | they run in a separate namespace Fluentd does not collect from; `convox builds logs` still shows their output |
+| Deploy state changes, Kubernetes events and resource provisioning messages | the Rack writes them to CloudWatch or Elasticsearch itself |
+| The `ingress-nginx` router's access logs, on AWS | they go only to the `/nginx-access-logs` stream of `/convox/<rack>/system` |
+| Lines written while syslog output is paused for 60 seconds after a `tcp` or `tcp+tls` endpoint failure, on AWS | they are not resent; CloudWatch still receives them, except App lines while `app_cloudwatch_disable` is `true` |
+| Lines sent to a `udp` endpoint that is down | UDP returns no error, so they are lost without a warning |
+
+A `tcp+tls` endpoint on AWS must present a certificate that verifies against public certificate authorities, unless [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) is set to `false` for a self-signed or private-CA endpoint.
+
+See the `syslog` parameter page for each provider: [AWS](/configuration/rack-parameters/aws/syslog), [GCP](/configuration/rack-parameters/gcp/syslog), [Azure](/configuration/rack-parameters/azure/syslog), [DigitalOcean](/configuration/rack-parameters/do/syslog).
 
 Fluentd performs the forwarding, so `syslog` has no effect on a Rack with [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) set to `true`. On an AWS Rack, Fluentd also writes container output to CloudWatch whenever it is running, and [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable) does not change that. Taking a Rack fully off CloudWatch therefore requires both `fluentd_disable=true` and `cloudwatch_disable=true`. In that configuration Convox does not forward logs anywhere: `convox logs --service <service>` still reads Pod logs directly, and any external collection has to come from an agent you run yourself.
 
@@ -105,7 +120,7 @@ To disable Fluentd entirely (e.g., when using a custom logging solution), see [f
 
 ## CloudWatch on AWS Racks
 
-On AWS, two writers put data into the same CloudWatch log group for an App, `/convox/<rack>/<app>`. Fluentd ships container output from every Pod, and the Rack controller writes Kubernetes events, deploy state transitions, and AWS resource provisioning messages. The Rack writes its own events to a separate group, `/convox/<rack>/system`, which is what `convox rack logs` reads.
+On AWS, two writers put data into the same CloudWatch log group for an App, `/convox/<rack>/<app>`. Fluentd ships the container output of the App's Services, Timers, Processes and Builds (see [Log Forwarding](#log-forwarding) for the Pods it does not collect), and the Rack controller writes Kubernetes events, deploy state transitions, and AWS resource provisioning messages. The Rack writes its own events to a separate group, `/convox/<rack>/system`, which is what `convox rack logs` reads. Fluentd writes the container output of Rack system Pods to the same group, including the router's Nginx error log and controller output in the `service/ingress-nginx/<pod>` streams and Nginx access logs in the `/nginx-access-logs` stream. To reduce the warning-level Nginx lines, add `error-log-level=error` to [nginx_additional_config](/configuration/rack-parameters/aws/nginx_additional_config).
 
 This is why the whole-App view and the per-Service view show different content. `convox logs -a my-app` reads the CloudWatch group, so it returns container output and Rack-side event lines together. `convox logs -a my-app --service web` reads Pod logs directly through Kubernetes, so it returns container output only. CloudWatch applies the `--filter` pattern, which is why `--filter` narrows the whole-App view and is ignored when `--service` is set.
 
@@ -134,3 +149,4 @@ For long-term storage and analysis beyond CloudWatch, forward logs to an externa
 - [Monitoring and Alerting](/configuration/monitoring) for setting up monitoring
 - [Datadog Integration](/integrations/monitoring) for forwarding logs to Datadog
 - [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for Rack-wide CloudWatch log retention
+- [syslog](/configuration/rack-parameters/aws/syslog) and [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) for forwarding logs from an AWS Rack
