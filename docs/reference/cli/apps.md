@@ -37,7 +37,9 @@ Cancel an app update
     OK
 ```
 
-`convox apps cancel` cancels a deploy that is in progress and rolls the App back to the Release it was running before. It returns `app is not updating` when no deploy is running, including while a failed deploy is already rolling back. After the cancel, the CLI creates a new Release with the same build, environment and description as the App's most recent Release, without promoting it. It does not affect Builds. To cancel a Build the Rack is still running, use [`convox builds cancel`](/reference/cli/builds#builds-cancel).
+`convox apps cancel` cancels a deploy that is in progress and rolls the App back to the Release it was running before. On AWS that includes a deploy still waiting for a new RDS or ElastiCache resource to become available, on Rack version `3.25.10` or later; an earlier Rack returns `not currently updating` during that wait. It returns `app is not updating` when no deploy is running, including while a failed deploy is already rolling back. After the cancel, the CLI creates a new Release with the same build, environment and description as the App's most recent Release, without promoting it. It does not affect Builds. To cancel a Build the Rack is still running, use [`convox builds cancel`](/reference/cli/builds#builds-cancel).
+
+A cancel does not remove an RDS or ElastiCache resource the cancelled deploy added. The instance keeps provisioning and is billed, `convox resources` does not list it, and the next promote whose `convox.yml` omits it deletes it, including the re-promote that `convox apps params set`, `convox apps lock` and `convox apps unlock` run. A resource the cancelled deploy removed from `convox.yml` is still deleted.
 
 ## apps create
 

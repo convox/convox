@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/azure/cost_tracking_enable
 # cost_tracking_enable
 
 ## Description
-The `cost_tracking_enable` parameter turns on the Rack's cost accumulator, which estimates each App's VM compute spend and powers [`convox cost`](/reference/cli/cost) and per-App [budget caps](/management/budget-caps). The accumulator runs inside the Rack API. On each tick, every 10 minutes, it charges each running pod the share of its node's hourly price that the pod's CPU or memory requests reserve, whichever is larger, or its share of the node's GPUs when it requests GPUs. The result is added to the App's spend for the current calendar month, which resets on the 1st, UTC. Spend is stored as an annotation on the App's namespace and surfaces in `convox cost`, the Convox Console cost views, and budget enforcement.
+The `cost_tracking_enable` parameter turns on the Rack's cost accumulator, which estimates each App's VM compute spend and powers [`convox cost`](/reference/cli/cost) and per-App [budget caps](/management/budget-caps). The accumulator runs inside the Rack API. On each tick, every 10 minutes, it charges each running pod the share of its node's hourly price that the pod's CPU or memory requests reserve, whichever is larger, or its share of the node's GPUs when it requests GPUs. The result is added to the App's spend for the current calendar month, which resets on the 1st, UTC. From Rack version `3.25.10` the Rack also keeps each UTC day's spend for [`cost_tracking_history_days`](/configuration/rack-parameters/azure/cost_tracking_history_days) days, for date-range queries. Spend is stored as an annotation on the App's namespace and surfaces in `convox cost`, the Convox Console cost views, and budget enforcement.
 
 On Azure, spend is priced against eastus Linux list prices, keyed by the VM size in the node's `node.kubernetes.io/instance-type` label (for example `Standard_D4s_v5`). Spot node pools are detected from the `kubernetes.azure.com/priority` or `kubernetes.azure.com/scalesetpriority` node label and discounted automatically.
 
@@ -53,9 +53,10 @@ The accumulator stops once the update has rolled the Rack API. Stored spend is k
 - Estimates use list prices, so discounts Azure applies to your bill, such as reservations or savings plans, are not reflected, and neither are other regions' rates. The pricing adjustment on an App's budget scales its estimate by a multiplier from `0.1` to `1.5`: `convox budget set my-app --monthly-cap 1000 --pricing-adjustment 0.7` records 70% of the estimate.
 - A pod on an AKS spot node pool is priced at `0.30` of its VM size's pay-as-you-go rate, except on 19 GPU sizes that carry their own spot factor in the table. A node with no capacity label at all is priced at the pay-as-you-go rate and shows capacity `unknown`.
 - A VM size missing from the table adds no spend, and its pods are counted in `warning-count`. See [Unpriced instance types](/management/cost-tracking#unpriced-instance-types).
-- Spend covers the current calendar month and resets on the 1st, UTC. The Rack keeps no earlier months.
+- Month-to-date spend covers the current calendar month and resets on the 1st, UTC. Racks before `3.25.10` keep no earlier spend; from `3.25.10` the daily history above is kept separately and is not reset.
 
 ## Related Parameters
+- [cost_tracking_history_days](/configuration/rack-parameters/azure/cost_tracking_history_days): Days of daily App cost history kept for `convox cost --start` and `--end` and the Console date ranges.
 - [webhook_signing_key](/configuration/rack-parameters/azure/webhook_signing_key): Webhook deliveries from cost-tracking events (`app:budget:auto-shutdown:armed`, `app:budget:auto-shutdown:fired`) carry an HMAC signature when this is set, so receivers can verify authenticity.
 
 ## Version Requirements

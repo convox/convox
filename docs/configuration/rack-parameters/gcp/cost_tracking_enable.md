@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/gcp/cost_tracking_enable
 # cost_tracking_enable
 
 ## Description
-The `cost_tracking_enable` parameter turns on the Rack's cost accumulator, which estimates each App's Compute Engine spend and powers [`convox cost`](/reference/cli/cost) and per-App [budget caps](/management/budget-caps). The accumulator runs inside the Rack API. On each tick, every 10 minutes, it charges each running pod the share of its node's hourly price that the pod's CPU or memory requests reserve, whichever is larger, or its share of the node's GPUs when it requests GPUs. The result is added to the App's spend for the current calendar month, which resets on the 1st, UTC.
+The `cost_tracking_enable` parameter turns on the Rack's cost accumulator, which estimates each App's Compute Engine spend and powers [`convox cost`](/reference/cli/cost) and per-App [budget caps](/management/budget-caps). The accumulator runs inside the Rack API. On each tick, every 10 minutes, it charges each running pod the share of its node's hourly price that the pod's CPU or memory requests reserve, whichever is larger, or its share of the node's GPUs when it requests GPUs. The result is added to the App's spend for the current calendar month, which resets on the 1st, UTC. From Rack version `3.25.10` the Rack also keeps each UTC day's spend for [`cost_tracking_history_days`](/configuration/rack-parameters/gcp/cost_tracking_history_days) days, for date-range queries.
 
 Cost tracking is a prerequisite for budget caps. While it is off, the Rack rejects `convox budget cap raise`, and any `convox budget set` that sets a monthly cap, alert threshold or at-cap action, with HTTP 422. It also rejects every promote of an App whose `convox.yml` `budget:` block sets `monthlyCapUsd`, `alertThresholdPercent` or `atCapAction`. The error points at this parameter.
 
@@ -69,6 +69,7 @@ On a Rack managed through the Console the value stays in the Console's stored pa
 - Budget caps, alerts and auto-shutdown work the same on GCP as on AWS and Azure. See [Budget Caps](/management/budget-caps) and [Cost Tracking](/management/cost-tracking).
 
 ## Related Parameters
+- [cost_tracking_history_days](/configuration/rack-parameters/gcp/cost_tracking_history_days): Days of daily App cost history kept for `convox cost --start` and `--end` and the Console date ranges.
 - [preemptible](/configuration/rack-parameters/gcp/preemptible): Nodes in the default pool are preemptible by default and priced at the spot rate.
 - [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config): A pool with `capacity_type: SPOT` is priced at the spot rate. Cloud TPU pools are not priced.
 - [webhook_signing_key](/configuration/rack-parameters/gcp/webhook_signing_key): Webhook deliveries of budget events carry an HMAC signature when this is set, so receivers can verify authenticity.

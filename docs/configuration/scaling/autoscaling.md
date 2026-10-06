@@ -455,6 +455,8 @@ The single `status` key holds YAML with the top-level fields `time`, `autoscaler
 
 The [`spreadAcrossZones`](/reference/primitives/app/service#spreadacrosszones) Service attribute keeps a Service's pods spread across zones and nodes. It shapes where pods land on nodes that already exist and does not choose which node group the autoscaler grows. Both constraints it renders are scheduler preferences rather than requirements, so a skew the scheduler cannot satisfy still places the pod; nothing is left Pending, and the autoscaler has nothing to react to.
 
+[`spreadAcrossNodes`](/reference/primitives/app/service#spreadacrossnodes), from Rack version 3.25.10, is a requirement. A replica it cannot place stays Pending, and the Cluster Autoscaler adds a node for it the same way it does for a pod that does not fit. GKE's autoscaler is the exception for `balanced`; see the table in that section.
+
 ## See Also
 
 - [convox.yml](/configuration/convox-yml) for configuring scale defaults

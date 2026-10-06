@@ -1,19 +1,19 @@
 ---
 title: "cost"
-description: "The convox cost command shows an app's month-to-date spend by service, instance type, and capacity type, or the app total with --aggregate."
+description: "The convox cost command shows an app's month-to-date spend by service, instance type, and capacity type, or its spend over a range of UTC days."
 slug: cost
 url: /reference/cli/cost
 ---
 # cost
 
-Show an app's month-to-date spend by service, instance type, and capacity type.
+Show an App's month-to-date spend by Service, instance type, and capacity type, or its spend over a range of days.
 
 ### Usage
 ```bash
     convox cost [-a app] [--aggregate] [--start YYYY-MM-DD] [--end YYYY-MM-DD] [--format table|json]
 ```
 
-`--aggregate` switches the table to a single row of app-level totals. `--start` / `--end` bound the snapshot to a calendar window; rows whose `AsOf` falls outside the window are zeroed. `--format json` emits the raw `*structs.AppCost` for jq consumption.
+`--aggregate` switches the table to a single row of app-level totals. `--start` and `--end` select a range of UTC days; see [Date ranges](#date-ranges). `--format json` prints the cost response as JSON for jq consumption.
 
 ### Examples
 
@@ -41,6 +41,36 @@ Aggregated app totals via `--aggregate`:
 ```
 
 `PRICING-SOURCE` shows the date of the Rack's pricing table, which ships with the Rack version: `2026-09-28` from Rack version `3.25.9`.
+
+### Date ranges
+
+With Rack version `3.25.10` or later and CLI version `3.25.10` or later, `--start` and `--end` return the App's spend for a range of UTC days, summed from the daily history the Rack keeps for [`cost_tracking_history_days`](/configuration/rack-parameters/aws/cost_tracking_history_days) days, `62` by default. Both take `YYYY-MM-DD`, and both days are included.
+
+```bash
+    $ convox cost --app myapp --start 2026-11-01 --end 2026-11-30
+    Range: 2026-11-01 to 2026-11-30 (UTC)
+    SERVICE  INSTANCE   SPEND-USD
+    web      t3.medium  $412.18
+    worker   t3.small   $96.40
+    _build   c5.large   $3.12
+    TOTAL: $511.70
+```
+
+| Case | Output |
+|---|---|
+| `--start` omitted | the range starts on the first day stored for the App |
+| `--end` omitted | the range ends on the current UTC day |
+| No history stored yet | `No cost history stored for this app yet` above the table, and `TOTAL: $0.00` |
+| History starts after `--start` | `Cost history for this app starts <day>` above the table |
+| A range before the history, or in the future | `TOTAL: $0.00`, not an error |
+| `--aggregate` | the single `APP` row with the range spend, and no `TOTAL` line |
+| Cost tracking off | the tracking-disabled notice above the range line; the stored days are still summed |
+
+Rows are per Service, sorted by descending spend, and the reserved `_build` and `_unattributed` buckets can appear as in the month-to-date table. `_other` collects the spend of any Service after the first 50 recorded on a given day. `INSTANCE` is the Service's instance type in the current month's breakdown, and is empty for a Service with no spend this month. The range table has no `CAPACITY` or `ACTIVE-REPLICAS` column.
+
+History starts at the first tick after the Rack updates to `3.25.10`, and nothing earlier is backfilled. Range spend can exceed month-to-date spend, because the Console's **Reset Period** and `convox budget clear` zero month-to-date spend but not the history. The CLI rejects a `--start` after `--end`, and any date not in `YYYY-MM-DD` form.
+
+On a Rack before `3.25.10`, the CLI prints `Date ranges need rack version 3.25.10 or later; showing the month-to-date snapshot` in table output and shows the month-to-date table. If the snapshot's last tick falls outside the range, every row and `TOTAL` show `$0.00`. A CLI before `3.25.10` reads only the month-to-date snapshot against any Rack and prints no notice; run `sudo convox update` to read the history.
 
 ### Output table (3.24.6+)
 
@@ -104,6 +134,8 @@ A Rack that has not recorded any spend yet emits no `variant-breakdown` array, a
 
 `tracking-enabled` is `true` while cost tracking runs and absent while it is off. `warning-count`, the number of pods the most recent tick could not fully price, is absent when it is zero.
 
+With `--start` or `--end` on Rack version `3.25.10` or later, `spend-usd` and `breakdown` cover the range, `variant-breakdown` is absent, and three fields are added: `range-start` and `range-end`, the first and last day of the range after the defaults are applied, and `history-start`, the first day stored for the App, absent when nothing is stored. Against an older Rack the CLI prints the month-to-date response without these fields and without the notice. When the snapshot's last tick falls outside the range, it sets `spend-usd` to 0, empties `breakdown`, and zeroes the spend in each `variant-breakdown` row. Check for `range-start` to tell the two apart.
+
 See [Per-service cost breakdown](/management/budget-caps#per-service-cost-breakdown) for bucket semantics, the 1000-entry truncation cap, and the service-rename / deleted-service / downgrade behavior.
 
 The breakdown populates from the first accumulator tick after rack upgrade to 3.24.6 (ticks run every 10 minutes); pre-upgrade history is not retroactively attributed.
@@ -136,7 +168,7 @@ The app's pricing adjustment, set with `convox budget set --pricing-adjustment` 
 
 ### Per-month rollover
 
-Month-to-date spend resets to zero at the first of each month, UTC. Caps that were tripped in the previous month are cleared as part of the rollover. The rollover does not restore Services that auto-shutdown scaled to zero. With `recoveryMode: auto-on-reset` they stay at zero until `convox budget reset`; with `manual`, scale them back up yourself.
+Month-to-date spend resets to zero at the first of each month, UTC. The daily history behind `--start` and `--end` is not reset, so a range can span months. Caps that were tripped in the previous month are cleared as part of the rollover. The rollover does not restore Services that auto-shutdown scaled to zero. With `recoveryMode: auto-on-reset` they stay at zero until `convox budget reset`; with `manual`, scale them back up yourself.
 
 ## See Also
 

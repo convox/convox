@@ -238,6 +238,8 @@ services:
       convox.io/label: batch-workers
 ```
 
+To require a Service's replicas to run on more than one node, set [`spreadAcrossNodes`](/reference/primitives/app/service#spreadacrossnodes) to `balanced` or `one-per-node` (Rack version 3.25.10 or later). Only nodes that match the Service's `nodeSelectorLabels` count toward the spread.
+
 You can also specify nodeAffinityLabels with weights to specify preferences of where to place services. The `node.kubernetes.io/instance-type` label uses EC2 instance types on AWS or Azure VM sizes on Azure:
 
 AWS example:

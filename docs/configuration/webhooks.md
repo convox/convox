@@ -75,7 +75,7 @@ The actor class for each event is noted alongside the action below.
 | `app:budget:clear` | Emitted after `convox budget clear` removes the budget config (HTTP-handler; JWT actor). Carries the prior-state snapshot so an auditor can reconstruct what was destroyed. |
 | `app:budget:threshold` | `alertThresholdPercent` crossed (accumulator-tick; `actor: "system"`). |
 | `app:budget:cap` | `monthlyCapUsd` crossed; breaker may have tripped depending on `atCapAction` (accumulator-tick; `actor: "system"`). |
-| `app:budget:breaker-cleared` | Emitted when a cap-raise clears the deploy circuit breaker (both during the armed countdown and post-`:fired`) (HTTP-handler; JWT actor populated from `data.ack_by`). NOT a sub-type of `auto-shutdown`. |
+| `app:budget:breaker-cleared` | Emitted when a cap raise above both the previous cap and current spend clears the deploy circuit breaker that `block-new-deploys` trips (HTTP-handler; JWT actor populated from `data.ack_by`). NOT a sub-type of `auto-shutdown`; a raise during an auto-shutdown countdown sends `app:budget:auto-shutdown:cancelled` instead. |
 | `app:budget:per-service-truncated` | Emitted by the accumulator when the per-service breakdown table exceeds its bounded-cardinality cap and entries are dropped from this month's persisted breakdown (accumulator-tick; `actor: "system"`). Payload `data.dropped` is the count of services dropped this tick and `data.cap` is the per-service-entries cap. |
 
 ### Scale override (3.24.6)
@@ -103,7 +103,7 @@ JWT-derived actor.
 |---|---|
 | `app:budget:auto-shutdown:armed` | Armed countdown begins (accumulator-tick; `actor: "system"`). |
 | `app:budget:auto-shutdown:fired` | Countdown elapsed; services scaled to zero (accumulator-tick; `actor: "system"`). |
-| `app:budget:auto-shutdown:cancelled` | Emitted when an in-flight armed countdown is cancelled before `:fired`. The payload's `cancel_reason` field carries one of: `reset-during-armed` (operator ran `convox budget reset` during the armed window, HTTP-handler; JWT actor), `cap-raised` (the cap was raised mid-armed-window to a value above current spend, HTTP-handler when triggered by `convox budget cap raise`; accumulator-tick when `convox apps update --manifest` produces both a manifest-SHA change AND the new `monthlyCapUsd` exceeds current spend (`cfg.MonthlyCapUsd > baseState.CurrentMonthSpendUsd`). If the manifest change does not raise the cap above current spend, the same accumulator-tick branch fires `config-changed` instead, so receivers should not assume `cap-raised` for every manifest-SHA change in the armed window. JWT actor flows through `cfg.LastCapMutationBy` on both paths), `manual-detected` (an out-of-band manual scale-up resolved the breach, accumulator-tick with `actor: "system"` on the primary path; HTTP-handler with JWT-derived actor when `convox budget reset` is run during the armed window and the user has already manually scaled some services back up, with the operator's identity flowing through `data.ack_by`), `config-changed` (the budget config was edited mid-armed-window in a way that altered eligibility, accumulator-tick; `actor: "system"`). |
+| `app:budget:auto-shutdown:cancelled` | Emitted when an in-flight armed countdown is cancelled before `:fired`. The payload's `cancel_reason` field carries one of the values in [Cancel reasons](#cancel-reasons). |
 | `app:budget:auto-shutdown:restored` | Services restored from the persisted shutdown-state annotation. Tick-driven (`actor: "system"`) unless triggered by `convox budget reset` post-`:fired`, in which case the JWT-derived actor flows through. |
 | `app:budget:auto-shutdown:expired` | Manual-mode month rollover with user absent (accumulator-tick; `actor: "system"`). |
 | `app:budget:auto-shutdown:flap-suppressed` | A cap-fire was suppressed by the 24-hour cooldown after a recent recovery (accumulator-tick; `actor: "system"`). |
@@ -111,6 +111,19 @@ JWT-derived actor.
 | `app:budget:auto-shutdown:failed` | Shutdown patch retries exhausted (accumulator-tick; `actor: "system"`). |
 | `app:budget:auto-shutdown:simulated` | `convox budget simulate-shutdown --app <app>` was run (HTTP-handler; JWT actor). |
 | `app:budget:auto-shutdown:dismissed` | Emitted when the recovery banner is dismissed via `convox budget dismiss-recovery` or the Console UI (HTTP-handler; JWT actor, falling back to `"system"` if the request was unauthenticated). |
+
+#### Cancel reasons
+
+| `cancel_reason` | Sent by | Actor | When |
+|---|---|---|---|
+| `reset-during-armed` | HTTP handler | JWT actor | `convox budget reset` ran during the countdown |
+| `cap-raised` | HTTP handler | the user who raised the cap | `convox budget set`, `convox budget cap raise` or the Console raised the cap above both the previous cap and current spend during the countdown |
+| `cap-raised` | accumulator tick | the user of the last cap change, else `system` | a tick found the countdown armed, with current spend above zero and below the cap |
+| `manual-detected` | accumulator tick | `system` | a manual scale-up during the countdown resolved the breach |
+| `config-changed` | accumulator tick | `system` | the cap or the set of eligible Services changed during the countdown, and the cap is not above current spend |
+| `countdown-lapsed` | accumulator tick | `system` | the countdown ended more than an hour before a tick ran, so it is cancelled instead of firing. The next tick that still sees spend at or above the cap arms a new countdown with a new `:armed`. Requires Rack version `3.25.10` or later |
+
+Receivers should not assume `cap-raised` for every change during the countdown: a cap change that leaves the cap at or below current spend sends `config-changed`. Changing the at-cap action away from `auto-shutdown` during the countdown sends no `:cancelled` event.
 
 ### Signing
 

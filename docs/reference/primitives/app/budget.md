@@ -44,7 +44,7 @@ Alongside the fields you configure, Convox tracks the live state of each Budget 
 
 - the current month-to-date spend and the time it was last calculated
 - whether the cap has been reached, and which user acknowledged the breach (when applicable)
-- whether the alert threshold and the cap have already fired this month
+- whether the alert threshold and the cap have already fired this month. Raising the cap above both the previous cap and current spend resets both, on Rack version `3.25.10` or later
 
 When the at-cap action is `auto-shutdown` and the cap is reached, Convox also tracks the shutdown progress (armed, active, recovered, or failed) and the previous scale of each service so it can be restored on `convox budget reset`. Spend totals reset at the start of each month.
 

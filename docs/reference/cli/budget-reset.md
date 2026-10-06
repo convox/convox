@@ -46,7 +46,7 @@ Reset without the confirmation prompt, for example in a script:
 
 - Asks for confirmation unless `-f` or `--force` is passed. When stdin is not a terminal and `--force` is not passed, it exits with `refusing to prompt for confirmation on non-interactive stdin; pass --force to proceed`.
 - Clears the breaker so deploys are re-enabled. Reset also clears the cap alert, so if spend is still at or above the cap, the next accumulator tick, within 10 minutes, fires the cap again and, under `block-new-deploys`, blocks deploys again.
-- Restarts any services that were scaled down by an auto-shutdown. Raising the cap does not restart them; if you raise the cap, run `convox budget reset` right after it. Reset is the recovery path after an auto-shutdown fires.
+- Restarts any services that were scaled down by an auto-shutdown. Raising the cap does not restart them; if you raise the cap, `convox budget reset` is still needed. Reset is the recovery path after an auto-shutdown fires.
 - Preserves the flap-prevention cooldown unless `--force-clear-cooldown` is set. The flag is additive: it does not change the breaker-clear or service restart, it additionally clears the cooldown so the next cap fire is not suppressed.
 - Does NOT reset the current month's spend; spend continues accumulating toward the cap. Reset clears the breaker, it does not zero out spend. The Console's Reset Period button also zeroes spend; the CLI has no equivalent.
 

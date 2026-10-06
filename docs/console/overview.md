@@ -26,7 +26,7 @@ The Console sidebar organizes all platform functionality into five sections.
 | Page | Description |
 |------|-------------|
 | **Racks** | Install, update, and manage Racks across AWS, GCP, Azure, and DigitalOcean. Select a Rack to access its Apps, Instances, Processes, Resources, Logs, and Settings. |
-| **Cost Overview** | Organization-wide cost tracking. View month-to-date spend across all Apps and Racks, filter by date range, and export to CSV. See [Cost Tracking](/management/cost-tracking). |
+| **Cost Overview** | Organization-wide cost tracking. View month-to-date spend across all Apps and Racks, or spend for a range of UTC days on Racks at version 3.25.10 or later, and export to CSV. See [Cost Tracking](/management/cost-tracking). |
 | **Integrations** | Connect cloud providers (runtime), code repositories (source), and notification channels (Slack, Discord). See [Integrations](/console/integrations). |
 
 ### CI/CD

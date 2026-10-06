@@ -148,6 +148,7 @@ services:
 | **scale**       | map        | 1                   | Define scaling parameters (see below)                                                                                                      |
 | **securityContext** | map   |                     | Container security settings including capabilities, read-only filesystem, and seccomp profiles (see below)                               |
 | **singleton**   | boolean    | false               | Set to **true** to prevent extra [Processes](/reference/primitives/app/process) of this Service from being started during deployments                               |
+| **spreadAcrossNodes** | string |                  | Set to `balanced` or `one-per-node` to require this Service's replicas to run on more than one node (see [spreadAcrossNodes](#spreadacrossnodes) below). Requires Rack version 3.25.10 or later |
 | **spreadAcrossZones** | boolean | false            | Set to **true** to spread this Service's pods across availability zones (see [spreadAcrossZones](#spreadacrosszones) below). Requires rack version 3.25.4 or later |
 | **stateful**    | boolean    | false               | Set to **true** to give each replica stable identity and its own PersistentVolumeClaim. Requires rack version 3.25.4 or later. See [Volumes](/configuration/volumes#per-replica-persistent-volumes) |
 | **sticky**      | boolean    | false               | Set to **true** to enable sticky sessions                                                                                                    |
@@ -607,7 +608,67 @@ The zone spread only has an effect when the Rack has eligible nodes in at least 
 
 Agent services do not support `spreadAcrossZones` because they run one pod on each eligible node as a DaemonSet.
 
-Turning the attribute off, including by rolling back to a Release that never set it, patches the Deployment in place. The pods stay where they are and are not recreated, so removing the spread is not an availability event.
+Turning the attribute on or off, including by rolling back to a Release that never set it, changes the pod template, so the Service's pods roll. They roll gradually like any deploy, so changing the spread is not an availability event.
+
+&nbsp;
+
+### spreadAcrossNodes
+
+Set `spreadAcrossNodes` to require Kubernetes to run this Service's replicas on more than one node:
+
+```yaml
+services:
+  web:
+    image: example/web
+    spreadAcrossNodes: balanced
+    scale:
+      count: 3
+```
+
+| | `balanced` | `one-per-node` |
+|---|---|---|
+| Placement | A replica never goes on a node while another eligible node holds none of the Service's replicas, and the spread never becomes uneven by more than one | Never two replicas on one node |
+| After a scale-down (`convox scale`, HPA, KEDA) | The remaining replicas can end up sharing a node, and stay there until they are next rescheduled, such as on the next deploy | Still one per node |
+| More replicas than eligible nodes | Replicas stack evenly once every eligible node holds one | The extra replicas stay Pending until an autoscaler adds a node |
+| Only one eligible node | The second replica stays Pending until a second eligible node exists | Same |
+
+Both modes are scheduling requirements, not preferences. Eligible nodes are the nodes the pod can run on: nodes that match the Service's `nodeSelectorLabels` and whose taints the pod tolerates. Cordoned nodes, system nodes on Karpenter Racks, build nodes, and dedicated node groups the Service is not pinned to do not count. During a rolling deploy a new replica can share a node with an outgoing one in both modes, so a rollout does not need extra nodes.
+
+The value is case-sensitive, and any other value, including `true`, fails the Build in seconds:
+
+```text
+service web spreadAcrossNodes must be one of "balanced", "one-per-node"; got "true"
+```
+
+YAML `yes` and `on` also arrive as `"true"`. Leave the attribute out to turn it off. Agent Services cannot set it (`service web can not set spreadAcrossNodes when agent is enabled`). `spreadAcrossNodes` and [`spreadAcrossZones`](#spreadacrosszones) are independent and can both be set: `spreadAcrossZones` is a zone preference, `spreadAcrossNodes` a node requirement.
+
+Requires Rack version 3.25.10 or later. An older Rack ignores the attribute without an error. Local and metal Racks run on your own cluster, which needs Kubernetes 1.33 or later for this attribute. Setting, changing or removing the attribute rolls the Service's pods gradually, like any change to the pod template. After a downgrade below 3.25.10 the requirement is dropped at the next deploy.
+
+When the requirement cannot be met, replicas stay Pending and the deploy waits:
+
+| Case | Result |
+|---|---|
+| No second eligible node can exist (a single-node local Rack, a node group with a maximum of 1, `nodeSelectorLabels` pinned to a one-node group) | The second replica stays Pending; `convox deploy` waits for the promote timeout and rolls back |
+| `one-per-node` with more replicas than the eligible node groups can reach, including HPA or KEDA scaling past them | Same, and every later deploy times out while it lasts |
+| A low `deployment.progressDeadline` | A deploy waiting for a new node to join can hit the deadline and roll back. Keep `progressDeadline` above the time a node takes to join |
+| A `stateful` Service with the default `podManagementPolicy: OrderedReady` and a replica left Pending | The StatefulSet does not replace that replica on rollback or on a later deploy, even one that removes the attribute, until you stop the pod with `convox ps stop <pid>` |
+| A `stateful` Service with zonal volumes | A replica's volume pins it to one zone, so it can need a new node in that zone; at the node group maximum it stays Pending |
+| `one-per-node`, as many replicas as eligible nodes, and `convox ps stop` on one replica | The replacement stays Pending until the old pod finishes terminating; an autoscaler may briefly add a node |
+| `balanced` on a GPU Service without `nodeSelectorLabels`, on a Rack that also has CPU nodes | The CPU nodes count as eligible nodes that always hold zero replicas, so the Service behaves like `one-per-node` on the GPU nodes. Pin GPU Services with `nodeSelectorLabels`; `nodeAffinityLabels` is a preference and does not narrow the eligible nodes |
+
+Both modes can cost more nodes:
+
+| Rack | `balanced` | `one-per-node` |
+|---|---|---|
+| AWS with Cluster Autoscaler | Adds a node when a replica is Pending for it. A Rack that is not highly available and runs one node goes to two on the first deploy with a `count` of 2 or more | Adds a node per replica as needed |
+| AWS with [Karpenter](/configuration/scaling/karpenter) | About one node per replica, because Karpenter places at most one replica of the Service on each node it provisions. At [`karpenter_cpu_limit`](/configuration/rack-parameters/aws/karpenter_cpu_limit) or [`karpenter_memory_limit_gb`](/configuration/rack-parameters/aws/karpenter_memory_limit_gb), or a custom pool's own limits, replicas can stay Pending even though other nodes have room | One node per replica |
+| GCP | Spreads across existing nodes. GKE documents that its autoscaler does not support this kind of spread requirement, so it may not add a node for it | GKE documents no such limit |
+| Azure, DigitalOcean | Upstream Cluster Autoscaler behavior | Same. A DigitalOcean Rack that is not highly available has at most 3 nodes, so at most 3 replicas run |
+| Local, metal | Only the nodes that exist | Same |
+
+`balanced` never puts a second replica on a node while any eligible node holds none, even when that node is full, so a full node can make the autoscaler add a node.
+
+For a replica Pending because of this attribute, [`convox deploy-debug`](/reference/cli/deploy-debug) prints a generic hint about `scale.cpu` and `scale.memory`; the scheduler event it prints next to the hint gives the actual reason.
 
 &nbsp;
 

@@ -1,6 +1,6 @@
 ---
 title: "releases_to_retain_after_active"
-description: "The releases_to_retain_after_active AWS rack parameter sets how many releases and their ECR images to keep after the active release, unset by default (no cleanup)."
+description: "The releases_to_retain_after_active AWS rack parameter sets how many releases and their ECR images to keep after the active release, unset by default."
 slug: releases_to_retain_after_active
 url: /configuration/rack-parameters/aws/releases_to_retain_after_active
 ---
@@ -47,7 +47,7 @@ $ convox rack params set releases_to_retain_after_active=10 -r rackName
 - **Feature Activation**: The cleanup feature is disabled by default and will not remove any releases unless this parameter is explicitly set.
 - **Active Release Focus**: The retention count is based on the active release, not the latest release, ensuring production deployments are protected.
 - **Application Safety**: Applications without an active release will be skipped during the cleanup process.
-- **Comprehensive Cleanup**: Both application releases and their corresponding ECR images will be removed when the threshold is exceeded.
+- **Comprehensive Cleanup**: Both application releases and their corresponding ECR images will be removed when the threshold is exceeded. With [`ecr_immutable_tags_enabled=true`](/configuration/rack-parameters/aws/ecr_immutable_tags_enabled) on Rack version `3.25.10` or later, that includes each Build's `<service>.buildcache.<build id>` cache images.
 - **Cleanup Scheduling**: The cleanup task runs according to the interval defined by the `releases_to_retain_task_run_interval_hour` parameter (default: 24 hours).
 - When a new release becomes active, the retention policy is re-evaluated during the next cleanup cycle.
 - The active release itself is always retained regardless of this setting.

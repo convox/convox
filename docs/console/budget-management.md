@@ -21,12 +21,20 @@ Navigate to **Organization > Cost Overview** to see aggregate spend across all A
 
 The overview displays:
 
-- **Total month-to-date spend** across all tracked Apps
+- **Total spend** across all tracked Apps, month to date or for the selected range
 - **Per-App table** sortable by App name, Rack, Service count, MTD spend, and last updated time
-- **Date range picker** for custom time windows (defaults to current month)
+- **Date range pickers** for a range of UTC days, defaulting to the current month (see [Date ranges](#date-ranges))
 - **CSV export** for the displayed data
 
 Click any row to navigate to that App's Budget tab.
+
+### Date ranges
+
+Date ranges read the daily cost history a Rack keeps from version `3.25.10`, for [`cost_tracking_history_days`](/configuration/rack-parameters/aws/cost_tracking_history_days) days, 62 by default. History starts when the Rack updates to `3.25.10`, and days are UTC.
+
+- The Cost Overview pickers stay locked to month-to-date until at least one Rack the Console installed or updated is on `3.25.10` or later. An imported Rack does not unlock them, but once they are unlocked an imported Rack on `3.25.10` reports the range. While a range is set, Apps on older Racks are left out of the table, and a note gives their count.
+- The pickers on an App's Cost Breakdown section are locked to month-to-date while the App's Rack is below `3.25.10`.
+- With a range set, the summary, the spend column and the CSV header name the range.
 
 Informational banners surface when:
 
@@ -83,7 +91,7 @@ When the at-cap action is set to Auto-Shutdown, the system follows a state machi
 
 Budget cap reached. A banner displays a countdown timer (default 30 minutes). During this window:
 
-- **Raise Cap:** Opens a dialog to increase the monthly cap above current spend, which cancels the shutdown.
+- **Raise Cap:** Opens a dialog to increase the monthly cap above current spend, which cancels the shutdown. On Racks at `3.25.10` or later, the countdown does not arm again unless spend crosses the new cap.
 - **Cancel Shutdown:** Resets the budget state without changing the cap. If spend is still at or above the cap, the next accumulator tick, within 10 minutes, arms a new countdown.
 
 ### Active
@@ -112,6 +120,7 @@ Available during the Armed state or from the Budget configuration:
 - Displays current cap and current spend with percentage
 - New cap must exceed both current cap and current spend
 - Pre-fills with a suggested value (current cap x 1.5, rounded up to a multiple of $50)
+- On Racks at `3.25.10` or later, resets the threshold and cap alerts, so each can fire again this month against the new cap
 - If auto-shutdown is armed, raising above current spend cancels the scheduled shutdown
 
 ### Budget Reset
@@ -129,7 +138,7 @@ Resets the budget enforcement state:
 Below the budget configuration, the Cost Breakdown section displays per-Service spend with:
 
 - **Service-level rows** showing instance type, capacity type (on-demand vs. spot), and accumulated cost
-- **Date range filtering** and Service name filtering
+- **Date range filtering** in UTC days on Racks at `3.25.10` or later (see [Date ranges](#date-ranges)), and Service name filtering
 - **Aggregate toggle** to group by Service or show individual breakdowns
 - **Warning banner** when pods run on unpriced instance types
 - **Reset Period** (organization Administrators only) to zero the App's month-to-date spend and start the period at the current time. It also does everything Budget Reset does and clears the 24-hour cooldown: it clears the breaker and restores Services that auto-shutdown scaled to zero. The period still rolls over on the 1st.
