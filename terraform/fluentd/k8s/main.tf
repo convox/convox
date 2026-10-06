@@ -92,6 +92,10 @@ resource "kubernetes_daemonset" "fluentd" {
         service_account_name            = "fluentd"
         automount_service_account_token = true
 
+        # Per-node log collector: preempt app pods on a full node instead of staying
+        # Pending, which would leave that node's logs unshipped.
+        priority_class_name = "system-node-critical"
+
         toleration {
           operator = "Exists"
         }
