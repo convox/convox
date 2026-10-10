@@ -57,6 +57,7 @@ var awsKnownParams = map[string]bool{
 	"eks_access_entries":                  true,
 	"eks_api_server_private_access_cidrs": true,
 	"eks_api_server_public_access_cidrs":  true,
+	"eks_control_plane_private_subnets":   true,
 	"eks_log_types":                       true,
 	"enable_private_access":               true,
 	"contour_cpu_request":                 true, "contour_memory_request": true,
@@ -193,43 +194,44 @@ var managedParams = map[string]bool{
 // boolParams lists type=bool TF variables that require ParseBool validation.
 // Maintain in sync with terraform/{system,rack}/<provider>/variables.tf.
 var boolParams = map[string]bool{
-	"app_cloudwatch_disable":          true,
-	"azure_files_enable":              true,
-	"build_disable_convox_resolver":   true,
-	"build_node_enabled":              true,
-	"build_node_minimal_role_enabled": true,
-	"buildkit_host_path_cache_enable": true,
-	"cloudwatch_disable":              true,
-	"convox_domain_tls_cert_disable":  true,
-	"cost_tracking_enable":            true,
-	"deploy_extra_nlb":                true,
-	"disable_convox_resolver":         true,
-	"disable_image_manifest_cache":    true,
-	"disable_public_access":           true,
-	"ebs_volume_encryption_enabled":   true,
-	"ecr_docker_hub_cache":            true,
-	"ecr_full_access":                 true,
-	"ecr_immutable_tags_enabled":      true,
-	"ecr_scan_on_push_enable":         true,
-	"efs_csi_driver_enable":           true,
-	"enable_private_access":           true,
-	"fast_image_pull_enable":          true,
-	"fluentd_disable":                 true,
-	"gpu_observability_enable":        true,
-	"gpu_tag_enable":                  true,
-	"imds_tags_enable":                true,
-	"pod_imds_block_enabled":          true,
-	"network_policy_enable":           true,
-	"internal_router":                 true,
-	"contour_internal_tls":            true,
-	"karpenter_consolidation_enabled": true,
-	"keda_enable":                     true,
-	"pod_identity_agent_enable":       true,
-	"seccomp_default_enabled":         true,
-	"syslog_tls_verify":               true,
-	"system_readonly_rootfs_enabled":  true,
-	"telemetry":                       true,
-	"vpa_enable":                      true,
+	"app_cloudwatch_disable":            true,
+	"azure_files_enable":                true,
+	"build_disable_convox_resolver":     true,
+	"build_node_enabled":                true,
+	"build_node_minimal_role_enabled":   true,
+	"buildkit_host_path_cache_enable":   true,
+	"cloudwatch_disable":                true,
+	"convox_domain_tls_cert_disable":    true,
+	"cost_tracking_enable":              true,
+	"deploy_extra_nlb":                  true,
+	"disable_convox_resolver":           true,
+	"disable_image_manifest_cache":      true,
+	"disable_public_access":             true,
+	"ebs_volume_encryption_enabled":     true,
+	"ecr_docker_hub_cache":              true,
+	"ecr_full_access":                   true,
+	"ecr_immutable_tags_enabled":        true,
+	"ecr_scan_on_push_enable":           true,
+	"efs_csi_driver_enable":             true,
+	"eks_control_plane_private_subnets": true,
+	"enable_private_access":             true,
+	"fast_image_pull_enable":            true,
+	"fluentd_disable":                   true,
+	"gpu_observability_enable":          true,
+	"gpu_tag_enable":                    true,
+	"imds_tags_enable":                  true,
+	"pod_imds_block_enabled":            true,
+	"network_policy_enable":             true,
+	"internal_router":                   true,
+	"contour_internal_tls":              true,
+	"karpenter_consolidation_enabled":   true,
+	"keda_enable":                       true,
+	"pod_identity_agent_enable":         true,
+	"seccomp_default_enabled":           true,
+	"syslog_tls_verify":                 true,
+	"system_readonly_rootfs_enabled":    true,
+	"telemetry":                         true,
+	"vpa_enable":                        true,
 }
 
 // sensitiveParams enumerates rack params whose values are rendered as
@@ -332,6 +334,7 @@ var paramGroups = map[string]map[string]bool{
 		"disable_public_access":               true,
 		"eks_api_server_private_access_cidrs": true,
 		"eks_api_server_public_access_cidrs":  true,
+		"eks_control_plane_private_subnets":   true,
 		"enable_private_access":               true,
 		"internal_router":                     true,
 		"internet_gateway_id":                 true,
@@ -375,6 +378,7 @@ var paramGroups = map[string]map[string]bool{
 		"eks_access_entries":                  true,
 		"eks_api_server_private_access_cidrs": true,
 		"eks_api_server_public_access_cidrs":  true,
+		"eks_control_plane_private_subnets":   true,
 		"eks_log_types":                       true,
 		"enable_private_access":               true,
 		"high_availability":                   true,
@@ -1951,6 +1955,34 @@ func validateFastImagePull(params, currentParams map[string]string, force bool) 
 		msg, strings.Join(raise, " and "), fastImagePullMinThroughput)
 }
 
+func validateControlPlanePrivateSubnets(params, currentParams map[string]string, force bool) error {
+	if force || params["eks_control_plane_private_subnets"] != "true" {
+		return nil
+	}
+
+	count := func(key string) int {
+		n := 0
+		for _, id := range strings.Split(effectiveParam(params, currentParams, key, ""), ",") {
+			if id != "" {
+				n++
+			}
+		}
+		return n
+	}
+
+	private := count("private_subnets_ids")
+	if private >= 2 {
+		return nil
+	}
+	if private > 0 || count("public_subnets_ids") > 0 {
+		return fmt.Errorf("eks_control_plane_private_subnets requires at least 2 private subnets in different availability zones, and private_subnets_ids has %d", private)
+	}
+	if b, err := strconv.ParseBool(effectiveParam(params, currentParams, "private", "true")); err == nil && !b {
+		return errors.New("eks_control_plane_private_subnets requires private subnets, and this rack was installed with private=false")
+	}
+	return nil
+}
+
 func decodeKarpenterNodePools(v string) (KarpenterNodePools, error) {
 	if v == "" {
 		return nil, nil
@@ -2880,6 +2912,9 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return err
 		}
 		if err := validateFastImagePull(params, currentParams, force); err != nil {
+			return err
+		}
+		if err := validateControlPlanePrivateSubnets(params, currentParams, force); err != nil {
 			return err
 		}
 	}
