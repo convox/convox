@@ -10,6 +10,8 @@ locals {
   validate_private_subnets_count = length(var.private_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.private_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 private subnets on each AZ")) : true)
   private_subnets_ids            = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
 
+  validate_control_plane_private_subnets = var.eks_control_plane_private_subnets ? (length(local.private_subnets_ids) >= 2 ? true : tobool("eks_control_plane_private_subnets requires at least 2 private subnets in different availability zones")) : true
+
   validate_public_subnets_count = length(var.public_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.public_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 public subnets on each AZ")) : true)
   public_subnets_ids            = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
 }
