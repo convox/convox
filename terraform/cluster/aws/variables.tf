@@ -66,6 +66,11 @@ variable "enable_private_access" {
   default = false
 }
 
+variable "eks_control_plane_private_subnets" {
+  type    = bool
+  default = false
+}
+
 variable "efs_csi_driver_enable" {
   type    = bool
   default = false

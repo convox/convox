@@ -171,6 +171,11 @@ variable "enable_private_access" {
   default = false
 }
 
+variable "eks_control_plane_private_subnets" {
+  type    = bool
+  default = false
+}
+
 variable "ecr_additional_policy_arn" {
   type    = string
   default = ""

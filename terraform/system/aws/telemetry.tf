@@ -50,6 +50,7 @@ locals {
     eks_access_entries                        = var.eks_access_entries
     eks_api_server_private_access_cidrs       = var.eks_api_server_private_access_cidrs
     eks_api_server_public_access_cidrs        = var.eks_api_server_public_access_cidrs
+    eks_control_plane_private_subnets         = var.eks_control_plane_private_subnets
     eks_log_types                             = var.eks_log_types
     enable_private_access                     = var.enable_private_access
     envoy_cpu_request                         = var.envoy_cpu_request
@@ -221,6 +222,7 @@ locals {
     eks_access_entries                        = "false"
     eks_api_server_private_access_cidrs       = ""
     eks_api_server_public_access_cidrs        = "0.0.0.0/0"
+    eks_control_plane_private_subnets         = "false"
     eks_log_types                             = ""
     enable_private_access                     = "false"
     envoy_cpu_request                         = "100m"
