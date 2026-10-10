@@ -144,6 +144,7 @@ module "cluster" {
   coredns_version                         = var.coredns_version
   disable_public_access                   = var.disable_public_access
   enable_private_access                   = var.enable_private_access
+  eks_control_plane_private_subnets       = var.eks_control_plane_private_subnets
   ebs_volume_encryption_enabled           = var.ebs_volume_encryption_enabled
   efs_csi_driver_enable                   = var.efs_csi_driver_enable
   efs_csi_driver_version                  = var.efs_csi_driver_version

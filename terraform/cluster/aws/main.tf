@@ -101,7 +101,7 @@ resource "aws_eks_cluster" "cluster" {
     endpoint_private_access = var.disable_public_access ? true : var.enable_private_access
     public_access_cidrs     = var.public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
-    subnet_ids              = concat(local.public_subnets_ids)
+    subnet_ids              = var.eks_control_plane_private_subnets ? local.private_subnets_ids : local.public_subnets_ids
   }
 
   enabled_cluster_log_types = var.eks_log_types

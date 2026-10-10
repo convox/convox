@@ -1434,3 +1434,51 @@ func TestValidateAndMutateParams_Whitelist(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_ControlPlanePrivateSubnets(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		value   string
+		current map[string]string
+		force   bool
+		err     string
+	}{
+		{name: "managed vpc, nothing stored", value: "true"},
+		{name: "managed vpc, empty stored params", value: "true", current: map[string]string{}},
+		{name: "managed vpc, private stored true", value: "true", current: map[string]string{"private": "true"}},
+		{name: "private=false", value: "true", current: map[string]string{"private": "false"}, err: "installed with private=false"},
+		{name: "private=0", value: "true", current: map[string]string{"private": "0"}, err: "installed with private=false"},
+		{name: "non-canonical True", value: "True", current: map[string]string{"private": "false"}, err: "installed with private=false"},
+		{name: "non-canonical 1", value: "1", current: map[string]string{"private": "false"}, err: "installed with private=false"},
+		{name: "turning it off on a private=false rack", value: "false", current: map[string]string{"private": "false"}},
+		{name: "one private subnet", value: "true", current: map[string]string{"private_subnets_ids": "subnet-a", "public_subnets_ids": "subnet-x,subnet-y"}, err: "private_subnets_ids has 1"},
+		{name: "two private subnets", value: "true", current: map[string]string{"private_subnets_ids": "subnet-a,subnet-b", "public_subnets_ids": "subnet-x,subnet-y"}},
+		{name: "three private subnets", value: "true", current: map[string]string{"private_subnets_ids": "subnet-a,subnet-b,subnet-c"}},
+		{name: "two private subnets with private=false", value: "true", current: map[string]string{"private": "false", "private_subnets_ids": "subnet-a,subnet-b"}},
+		{name: "trailing comma", value: "true", current: map[string]string{"private_subnets_ids": "subnet-a,"}, err: "private_subnets_ids has 1"},
+		{name: "public subnets only", value: "true", current: map[string]string{"public_subnets_ids": "subnet-x,subnet-y"}, err: "private_subnets_ids has 0"},
+		{name: "empty stored subnet lists", value: "true", current: map[string]string{"private_subnets_ids": "", "public_subnets_ids": ""}},
+		{name: "null stored subnet lists", value: "true", current: map[string]string{"private_subnets_ids": "null", "public_subnets_ids": "null"}},
+		{name: "forced", value: "true", current: map[string]string{"private": "false"}, force: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			params := map[string]string{"eks_control_plane_private_subnets": tc.value}
+			err := validateAndMutateParams(params, "aws", tc.current, tc.force)
+			if tc.err == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error containing %q", tc.err)
+			}
+			if !strings.Contains(err.Error(), tc.err) {
+				t.Errorf("error %q should contain %q", err, tc.err)
+			}
+			if strings.Contains(err.Error(), "--force") {
+				t.Errorf("error %q should not suggest --force", err)
+			}
+		})
+	}
+}
