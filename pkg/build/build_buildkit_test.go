@@ -677,6 +677,7 @@ func TestBuildImageManifestCache(t *testing.T) {
 		ListErr   error
 		Exists    map[string]bool
 		Cache     []string
+		NoCache   bool
 	}{
 		{
 			Name:      "GateOff",
@@ -721,6 +722,15 @@ func TestBuildImageManifestCache(t *testing.T) {
 			Exists:    map[string]bool{"registry.test.com:web.buildcache": false},
 			Cache:     []string{"--export-cache", export + ".build1"},
 		},
+		{
+			Name:      "NoCache",
+			Immutable: "false",
+			Cache: []string{
+				"--export-cache", export,
+				"--import-cache", "type=registry,ignore-error=true,ref=registry.test.com:web.buildcache",
+			},
+			NoCache: true,
+		},
 	}
 
 	opts := build.Options{
@@ -739,6 +749,8 @@ func TestBuildImageManifestCache(t *testing.T) {
 			t.Setenv("PROVIDER", "aws")
 			t.Setenv("DISABLE_IMAGE_MANIFEST_CACHE", "false")
 			t.Setenv("ECR_IMMUTABLE_TAGS_ENABLED", test.Immutable)
+
+			opts.Cache = !test.NoCache
 
 			testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
@@ -773,6 +785,9 @@ func TestBuildImageManifestCache(t *testing.T) {
 					args = append(args, c)
 				}
 				args = append(args, "--opt", "build-arg:FOO=bar")
+				if test.NoCache {
+					args = append(args, "--no-cache")
+				}
 				e.On("Run", args...).Return(nil).Once()
 
 				e.On("Execute", "skopeo", "inspect", "--config", "docker://registry.test.com:web.build1").Return(fxSkopeoInspect(), nil)
