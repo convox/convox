@@ -31,8 +31,18 @@ variable "release" {
   default = ""
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
 }
 
 variable "fluentd_memory" {

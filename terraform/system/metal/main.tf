@@ -18,16 +18,18 @@ module "rack" {
     kubernetes = kubernetes
   }
 
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  domain              = var.domain
-  fluentd_memory      = var.fluentd_memory
-  image               = var.image
-  name                = local.name
-  release             = local.release
-  registry_disk       = var.registry_disk
-  syslog              = var.syslog
-  webhook_signing_key = var.webhook_signing_key
-  whitelist           = split(",", var.whitelist)
+  docker_hub_username      = var.docker_hub_username
+  docker_hub_password      = var.docker_hub_password
+  domain                   = var.domain
+  fluentd_memory           = var.fluentd_memory
+  image                    = var.image
+  name                     = local.name
+  release                  = local.release
+  registry_disk            = var.registry_disk
+  router_log_redact_params = var.router_log_redact_params
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
+  webhook_signing_key      = var.webhook_signing_key
+  whitelist                = split(",", var.whitelist)
 }
 

@@ -176,12 +176,12 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 			{"us-east-1", false},
 		},
 		// AWS resources
-		"aws/vpc_id":                {{"vpc-abc123", true}, {"sg-123", false}},
-		"aws/internet_gateway_id":   {{"igw-abc123", true}, {"vpc-123", false}},
-		"aws/nlb_security_group":    {{"sg-abc123", true}, {"vpc-123", false}},
-		"aws/private_subnets_ids":   {{"subnet-abc", true}, {"subnet-a,subnet-b", true}},
-		"aws/key_pair_name":         {{"my-key", true}, {"my key", false}},
-		"aws/user_data_url":         {{"https://example.com/s.sh", true}, {"ftp://x.com", false}},
+		"aws/vpc_id":              {{"vpc-abc123", true}, {"sg-123", false}},
+		"aws/internet_gateway_id": {{"igw-abc123", true}, {"vpc-123", false}},
+		"aws/nlb_security_group":  {{"sg-abc123", true}, {"vpc-123", false}},
+		"aws/private_subnets_ids": {{"subnet-abc", true}, {"subnet-a,subnet-b", true}},
+		"aws/key_pair_name":       {{"my-key", true}, {"my key", false}},
+		"aws/user_data_url":       {{"https://example.com/s.sh", true}, {"ftp://x.com", false}},
 		// CIDR
 		"aws/cidr": {
 			{"10.0.0.0/16", true},
@@ -218,7 +218,18 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 			{"tcp://host:514", true},
 			{"tcp+tls://logs.example.com:5514", true},
 			{"tcp://host_under.com:514", true},
+			{"udp://host:514", true},
 			{"http://x.com:80", false},
+			{"udp+tls://host:514", false},
+		},
+		"aws/router_log_redact_params": {
+			{"all", true},
+			{"token", true},
+			{"reset_password_token,token,api.key", true},
+			{"token, code", false},
+			{"a,,b", false},
+			{"token,", false},
+			{"", false},
 		},
 		// Karpenter disruption window (identical regexes in pkg/cli/rack.go)
 		"aws/karpenter_disruption_block_schedule": {

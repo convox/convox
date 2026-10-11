@@ -24,8 +24,10 @@ locals {
     rack_name                       = var.rack_name
     region                          = var.region
     release                         = var.release
+    router_log_redact_params        = var.router_log_redact_params
     settings                        = var.settings
     syslog                          = var.syslog
+    syslog_tls_verify               = var.syslog_tls_verify
     telemetry                       = var.telemetry
     terraform_update_timeout        = var.terraform_update_timeout
     webhook_signing_key             = var.webhook_signing_key
@@ -54,8 +56,10 @@ locals {
     rack_name                       = ""
     region                          = "us-east1"
     release                         = ""
+    router_log_redact_params        = ""
     settings                        = ""
     syslog                          = ""
+    syslog_tls_verify               = "true"
     telemetry                       = "false"
     terraform_update_timeout        = "2h"
     webhook_signing_key             = ""

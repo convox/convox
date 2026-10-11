@@ -43,7 +43,9 @@ module "api" {
   resource_group_name                  = var.resource_group_name
   resource_group_location              = var.resource_group_location
   router                               = module.router.endpoint
+  router_log_redact_params             = var.router_log_redact_params
   syslog                               = var.syslog
+  syslog_tls_verify                    = var.syslog_tls_verify
   webhook_signing_key                  = var.webhook_signing_key
   workspace                            = var.workspace
 }

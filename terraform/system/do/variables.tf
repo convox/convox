@@ -70,8 +70,18 @@ variable "settings" {
   default = ""
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
 }
 
 variable "telemetry" {

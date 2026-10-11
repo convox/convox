@@ -44,24 +44,26 @@ module "rack" {
     kubernetes   = kubernetes
   }
 
-  access_id             = var.access_id
-  buildkit_enabled      = var.buildkit_enabled
-  cluster               = module.cluster.id
-  docker_hub_username   = var.docker_hub_username
-  docker_hub_password   = var.docker_hub_password
-  fluentd_memory        = var.fluentd_memory
-  high_availability     = var.high_availability
-  image                 = var.image
-  name                  = local.name
-  rack_name             = local.rack_name
-  region                = var.region
-  registry_disk         = var.registry_disk
-  release               = local.release
-  secret_key            = var.secret_key
-  syslog                = var.syslog
-  telemetry             = var.telemetry
-  telemetry_map         = local.telemetry_map
-  telemetry_default_map = local.telemetry_default_map
-  webhook_signing_key   = var.webhook_signing_key
-  whitelist             = split(",", var.whitelist)
+  access_id                = var.access_id
+  buildkit_enabled         = var.buildkit_enabled
+  cluster                  = module.cluster.id
+  docker_hub_username      = var.docker_hub_username
+  docker_hub_password      = var.docker_hub_password
+  fluentd_memory           = var.fluentd_memory
+  high_availability        = var.high_availability
+  image                    = var.image
+  name                     = local.name
+  rack_name                = local.rack_name
+  region                   = var.region
+  registry_disk            = var.registry_disk
+  release                  = local.release
+  router_log_redact_params = var.router_log_redact_params
+  secret_key               = var.secret_key
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
+  telemetry                = var.telemetry
+  telemetry_map            = local.telemetry_map
+  telemetry_default_map    = local.telemetry_default_map
+  webhook_signing_key      = var.webhook_signing_key
+  whitelist                = split(",", var.whitelist)
 }
