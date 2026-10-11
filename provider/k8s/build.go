@@ -134,7 +134,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		return nil, errors.WithStack(err)
 	}
 
-	cache := common.DefaultBool(opts.NoCache, true)
+	cache := !common.DefaultBool(opts.NoCache, false)
 
 	env := map[string]string{
 		"BUILD_APP":                       app,

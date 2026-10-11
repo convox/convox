@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
@@ -332,6 +333,40 @@ func TestBuildCreateEcrImmutableTagsEnv(t *testing.T) {
 		}
 		assert.Equal(t, "true", envs["ECR_IMMUTABLE_TAGS_ENABLED"])
 	})
+}
+
+func TestBuildCreateNoCache(t *testing.T) {
+	tests := []struct {
+		Name    string
+		NoCache *bool
+		Cache   string
+	}{
+		{Name: "Absent", NoCache: nil, Cache: "true"},
+		{Name: "True", NoCache: options.Bool(true), Cache: "false"},
+		{Name: "False", NoCache: options.Bool(false), Cache: "true"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+				_, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{NoCache: test.NoCache})
+				require.NoError(t, err)
+
+				pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+				require.NoError(t, err)
+				require.Len(t, pods.Items, 1)
+				assert.Equal(t, []string{"build", "-method", "tgz", "-cache", test.Cache}, pods.Items[0].Spec.Containers[0].Args)
+			})
+		})
+	}
 }
 
 func buildCreate(kc cv.Interface, ns, id, fixture string) error {
