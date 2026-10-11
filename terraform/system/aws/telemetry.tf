@@ -151,6 +151,7 @@ locals {
     release_watcher_gc_interval               = var.release_watcher_gc_interval
     releases_to_retain_after_active           = var.releases_to_retain_after_active
     releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+    router_log_redact_params                  = var.router_log_redact_params
     router_type                               = var.router_type
     schedule_rack_scale_down                  = var.schedule_rack_scale_down
     schedule_rack_scale_up                    = var.schedule_rack_scale_up
@@ -159,6 +160,7 @@ locals {
     ssl_ciphers                               = var.ssl_ciphers
     ssl_protocols                             = var.ssl_protocols
     syslog                                    = var.syslog
+    syslog_access_logs                        = var.syslog_access_logs
     syslog_tls_verify                         = var.syslog_tls_verify
     system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
     tags                                      = var.tags
@@ -322,6 +324,7 @@ locals {
     release_watcher_gc_interval               = "5m"
     releases_to_retain_after_active           = "0"
     releases_to_retain_task_run_interval_hour = "24"
+    router_log_redact_params                  = ""
     router_type                               = "nginx"
     schedule_rack_scale_down                  = ""
     schedule_rack_scale_up                    = ""
@@ -330,6 +333,7 @@ locals {
     ssl_ciphers                               = ""
     ssl_protocols                             = ""
     syslog                                    = ""
+    syslog_access_logs                        = "false"
     syslog_tls_verify                         = "true"
     system_readonly_rootfs_enabled            = "false"
     tags                                      = ""

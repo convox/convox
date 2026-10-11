@@ -92,7 +92,9 @@ module "rack" {
   ssl_ciphers                          = var.ssl_ciphers
   ssl_protocols                        = var.ssl_protocols
   fluentd_memory                       = var.fluentd_memory
+  router_log_redact_params             = var.router_log_redact_params
   syslog                               = var.syslog
+  syslog_tls_verify                    = var.syslog_tls_verify
   tags                                 = local.tags
   telemetry                            = var.telemetry
   telemetry_map                        = local.telemetry_map

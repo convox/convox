@@ -29,10 +29,12 @@ locals {
     rack_name                            = var.rack_name
     region                               = var.region
     release                              = var.release
+    router_log_redact_params             = var.router_log_redact_params
     settings                             = var.settings
     ssl_ciphers                          = var.ssl_ciphers
     ssl_protocols                        = var.ssl_protocols
     syslog                               = var.syslog
+    syslog_tls_verify                    = var.syslog_tls_verify
     tags                                 = var.tags
     telemetry                            = var.telemetry
     terraform_update_timeout             = var.terraform_update_timeout
@@ -67,10 +69,12 @@ locals {
     rack_name                            = ""
     region                               = "eastus"
     release                              = ""
+    router_log_redact_params             = ""
     settings                             = ""
     ssl_ciphers                          = ""
     ssl_protocols                        = ""
     syslog                               = ""
+    syslog_tls_verify                    = "true"
     tags                                 = ""
     telemetry                            = "false"
     terraform_update_timeout             = "2h"

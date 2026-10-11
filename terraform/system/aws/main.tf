@@ -272,7 +272,9 @@ module "fluentd" {
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub
   rack                         = local.name
+  router_log_redact_params     = var.router_log_redact_params
   syslog                       = var.syslog
+  syslog_access_logs           = var.syslog_access_logs
   syslog_tls_verify            = var.syslog_tls_verify
 }
 

@@ -177,9 +177,21 @@ Groups:
         default: "null"
         sideNote: Not forwarded by default
         type: string
-        regex: ^(tcp|udp|tcp\+tls|udp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        regex: ^(tcp|udp|tcp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
         description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
         optional: true
+      - name: syslog_tls_verify
+        default: "true"
+        type: boolean
+        description: "Checks the certificate of a tcp+tls syslog endpoint against the public certificate authorities trusted by the log forwarder. Turn it off for an endpoint with a self-signed or private certificate."
+        sideNote: "Only applies to tcp+tls syslog endpoints."
+      - name: router_log_redact_params
+        default: "null"
+        sideNote: Router logs are not masked if not set
+        optional: true
+        type: string
+        regex: ^(all|[A-Za-z0-9_.-]+(,[A-Za-z0-9_.-]+)*)$
+        description: "Masks query parameter values in router access and error logs before the logs are stored or forwarded. &l &l Set &b all &b to mask every value, or a comma-separated list of parameter names, such as &i reset_password_token,token,api_key &i, to mask only those. Names match in any case. A masked value reads FILTERED; the parameter name is kept. &l"
       - name: fluentd_memory
         default: 200Mi
         type: string

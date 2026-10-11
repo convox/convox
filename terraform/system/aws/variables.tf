@@ -578,6 +578,11 @@ variable "nginx_additional_config" {
   default     = ""
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "router_type" {
   type    = string
   default = "nginx"
@@ -781,6 +786,11 @@ variable "settings" {
 
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_access_logs" {
+  type    = bool
+  default = false
 }
 
 variable "syslog_tls_verify" {

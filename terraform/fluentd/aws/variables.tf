@@ -33,6 +33,11 @@ variable "rack" {
   type = string
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "oidc_arn" {
   type = string
 }
@@ -43,6 +48,11 @@ variable "oidc_sub" {
 
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_access_logs" {
+  type    = bool
+  default = false
 }
 
 variable "syslog_tls_verify" {

@@ -73,7 +73,9 @@ module "rack" {
   project_id                 = module.project.id
   region                     = var.region
   release                    = local.release
+  router_log_redact_params   = var.router_log_redact_params
   syslog                     = var.syslog
+  syslog_tls_verify          = var.syslog_tls_verify
   telemetry                  = var.telemetry
   telemetry_map              = local.telemetry_map
   telemetry_default_map      = local.telemetry_default_map

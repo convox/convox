@@ -110,7 +110,7 @@ var awsKnownParams = map[string]bool{
 	"private_subnets_ids": true, "prometheus_gpu_metrics_chart_version": true,
 	"prometheus_gpu_metrics_retention": true, "prometheus_url": true,
 	"proxy_protocol":     true,
-	"public_subnets_ids": true, "rack_name": true, "router_type": true,
+	"public_subnets_ids": true, "rack_name": true, "router_log_redact_params": true, "router_type": true,
 	"region": true, "release": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
@@ -118,7 +118,7 @@ var awsKnownParams = map[string]bool{
 	"seccomp_default_enabled": true,
 	"settings":                true, "ssl_ciphers": true,
 	"ssl_protocols": true, "sync_tf_now": true,
-	"syslog": true, "syslog_tls_verify": true, "system_readonly_rootfs_enabled": true, "tags": true,
+	"syslog": true, "syslog_access_logs": true, "syslog_tls_verify": true, "system_readonly_rootfs_enabled": true, "tags": true,
 	"telemetry": true, "terraform_update_timeout": true,
 	"user_data": true, "user_data_url": true,
 	"vpa_enable": true, "vpc_cni_version": true,
@@ -134,8 +134,8 @@ var gcpKnownParams = map[string]bool{
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
-	"rack_name": true, "region": true, "release": true, "settings": true,
-	"sync_tf_now": true, "syslog": true, "telemetry": true,
+	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true, "settings": true,
+	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
 }
@@ -150,8 +150,8 @@ var azureKnownParams = map[string]bool{
 	"nginx_image": true, "node_disk": true, "node_type": true,
 	"nvidia_device_plugin_enable": true, "nvidia_device_time_slicing_replicas": true,
 	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
-	"release": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
-	"sync_tf_now": true, "syslog": true, "tags": true, "telemetry": true,
+	"release": true, "router_log_redact_params": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
+	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "tags": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
 }
@@ -161,8 +161,8 @@ var doKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "fluentd_memory": true,
 	"high_availability": true, "image": true, "k8s_version": true,
 	"name": true, "node_type": true, "rack_name": true, "region": true,
-	"registry_disk": true, "release": true, "secret_key": true,
-	"settings": true, "sync_tf_now": true, "syslog": true, "telemetry": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "secret_key": true,
+	"settings": true, "sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
 	"whitelist": true,
 }
@@ -170,8 +170,8 @@ var doKnownParams = map[string]bool{
 var metalKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
 	"fluentd_memory": true, "image": true, "name": true, "rack_name": true,
-	"registry_disk": true, "release": true, "sync_tf_now": true,
-	"syslog": true, "webhook_signing_key": true, "whitelist": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "sync_tf_now": true,
+	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
 }
 
 var localKnownParams = map[string]bool{
@@ -226,6 +226,7 @@ var boolParams = map[string]bool{
 	"keda_enable":                     true,
 	"pod_identity_agent_enable":       true,
 	"seccomp_default_enabled":         true,
+	"syslog_access_logs":              true,
 	"syslog_tls_verify":               true,
 	"system_readonly_rootfs_enabled":  true,
 	"telemetry":                       true,
@@ -577,7 +578,9 @@ var paramGroups = map[string]map[string]bool{
 		"grafana_dashboard_var_service":   true,
 		"grafana_url":                     true,
 		"prometheus_url":                  true,
+		"router_log_redact_params":        true,
 		"syslog":                          true,
+		"syslog_access_logs":              true,
 		"syslog_tls_verify":               true,
 		"telemetry":                       true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
@@ -743,8 +746,9 @@ var clearableParams = map[string]bool{
 	"docker_hub_username": true,
 	"docker_hub_password": true,
 	// Logging — clear means "stop shipping" / "disable"
-	"syslog":        true,
-	"eks_log_types": true,
+	"syslog":                   true,
+	"eks_log_types":            true,
+	"router_log_redact_params": true,
 	// Private API access — clear means "remove all private CIDR rules"
 	"eks_api_server_private_access_cidrs": true,
 	// Ingress resources: clear means "use Helm chart defaults"
@@ -2352,6 +2356,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if v, has := params["cloudwatch_retention_in_days"]; has && v != "" {
 		if !cloudwatchRetentionValues[v] {
 			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be Never or one of the periods AWS allows: %s", strings.Join(cloudwatchRetentionDays, ", "))
+		}
+	}
+
+	if v, has := params["router_log_redact_params"]; has && v != "" {
+		nameRe := regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
+		names := strings.Split(v, ",")
+		for _, n := range names {
+			if strings.EqualFold(n, "all") && (n != "all" || len(names) > 1) {
+				return fmt.Errorf("param 'router_log_redact_params' takes 'all' on its own and in lowercase, or a comma-separated list of names")
+			}
+			if !nameRe.MatchString(n) {
+				return fmt.Errorf("param 'router_log_redact_params' has an invalid name %q: use letters, digits, '_', '.' and '-', separated by commas", n)
+			}
 		}
 	}
 

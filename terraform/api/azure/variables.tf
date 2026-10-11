@@ -90,8 +90,18 @@ variable "router" {
   type = string
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
 }
 
 variable "webhook_signing_key" {
