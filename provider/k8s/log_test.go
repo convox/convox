@@ -7,7 +7,13 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/mock"
+	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/logger"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/kubectl/pkg/cmd/logs"
 )
 
 type logCaptureEngine struct {
@@ -73,5 +79,39 @@ func TestNamespaceTid(t *testing.T) {
 			}
 			require.Equal(t, strings.TrimPrefix(tc.ns, p.Name+"-"), name)
 		})
+	}
+}
+
+func TestConfigureLogOptionsBySelectorTail(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		opts  structs.LogsOptions
+		tail  *int64
+		since *int64
+	}{
+		{name: "since without tail", opts: structs.LogsOptions{Since: options.Duration(2 * time.Hour)}, since: options.Int64(7200)},
+		{name: "since with tail", opts: structs.LogsOptions{Since: options.Duration(2 * time.Minute), Tail: options.Int(50)}, tail: options.Int64(50), since: options.Int64(120)},
+		{name: "tail -1", opts: structs.LogsOptions{Tail: options.Int(-1)}},
+		{name: "tail 0", opts: structs.LogsOptions{Tail: options.Int(0)}, tail: options.Int64(0)},
+		{name: "since 0", opts: structs.LogsOptions{Since: options.Duration(0)}},
+	} {
+		for _, follow := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s follow=%t", tc.name, follow), func(t *testing.T) {
+				p := &Provider{Name: "rack1", logger: logger.Discard}
+				o := logs.NewLogsOptions(genericiooptions.IOStreams{})
+				o.Object = &corev1.PodList{}
+
+				opts := tc.opts
+				opts.Follow = options.Bool(follow)
+
+				require.NoError(t, p.configureLogOptionsBySelector("app1", "app=app1,name=web,type=service", nil, o, opts))
+
+				lo, ok := o.Options.(*corev1.PodLogOptions)
+				require.True(t, ok)
+				require.Equal(t, follow, lo.Follow)
+				require.Equal(t, tc.tail, lo.TailLines)
+				require.Equal(t, tc.since, lo.SinceSeconds)
+			})
+		}
 	}
 }
