@@ -17,8 +17,10 @@ locals {
     region                   = var.region
     registry_disk            = var.registry_disk
     release                  = var.release
+    router_log_redact_params = var.router_log_redact_params
     settings                 = var.settings
     syslog                   = var.syslog
+    syslog_tls_verify        = var.syslog_tls_verify
     telemetry                = var.telemetry
     terraform_update_timeout = var.terraform_update_timeout
     webhook_signing_key      = var.webhook_signing_key
@@ -40,8 +42,10 @@ locals {
     region                   = "nyc3"
     registry_disk            = "50Gi"
     release                  = ""
+    router_log_redact_params = ""
     settings                 = ""
     syslog                   = ""
+    syslog_tls_verify        = "true"
     telemetry                = "false"
     terraform_update_timeout = "2h"
     webhook_signing_key      = ""

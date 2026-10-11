@@ -36,8 +36,10 @@ module "api" {
   release                   = var.release
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
+  router_log_redact_params  = var.router_log_redact_params
   secret                    = random_string.secret.result
   syslog                    = var.syslog
+  syslog_tls_verify         = var.syslog_tls_verify
   webhook_signing_key       = var.webhook_signing_key
 }
 

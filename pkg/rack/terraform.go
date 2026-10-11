@@ -73,6 +73,7 @@ var preserveEmpty = map[string]bool{
 	"docker_hub_username":                 true,
 	"docker_hub_password":                 true,
 	"syslog":                              true,
+	"router_log_redact_params":            true,
 	"eks_log_types":                       true,
 	"eks_api_server_private_access_cidrs": true,
 	"convox_rack_domain":                  true,

@@ -33,6 +33,7 @@ func TestWhitespaceNormalizationOnClearableParams(t *testing.T) {
 		{"tabs-and-spaces", "prometheus_url", " \t\n ", ""},
 		{"chart-version-empty", "prometheus_gpu_metrics_chart_version", "", ""},
 		{"chart-version-whitespace", "prometheus_gpu_metrics_chart_version", "   ", ""},
+		{"redact-params-whitespace", "router_log_redact_params", " ", ""},
 		{"non-clearable-empty-rejected", "cost_tracking_enable", "", "REJECT"},
 		{"non-clearable-whitespace-rejected", "cost_tracking_enable", " ", "REJECT"},
 		{"clearable-non-empty-passthrough", "prometheus_url", "https://prom.kube-system.svc.cluster.local", "https://prom.kube-system.svc.cluster.local"},
