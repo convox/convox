@@ -116,6 +116,7 @@ func (p *Provider) configureLogOptionsBySelector(app, selector string, f cmdutil
 	o.ConsumeRequestFn = logs.DefaultConsumeRequest
 	o.GetPodTimeout = 20 * time.Second
 	o.Selector = selector
+	o.TailSpecified = true
 	o.Options, err = o.ToLogOptions()
 	if err != nil {
 		return err
