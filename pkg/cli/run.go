@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -14,7 +17,11 @@ import (
 	"github.com/convox/stdcli"
 )
 
-const waitRetainSeconds = 60
+const (
+	waitRetainSeconds = 60
+	runLogRetries     = 5
+	runLogGrace       = 2 * time.Second
+)
 
 func init() {
 	entrypoint := stdcli.BoolFlag("entrypoint", "e", "set to false to disable the original entrypoint in your container")
@@ -153,6 +160,61 @@ func runDetached(rack sdk.Interface, c *stdcli.Context, service string, opts *st
 func waitForProcessExit(rack sdk.Interface, c *stdcli.Context, pid string, timeout int) error {
 	var done *structs.Process
 
+	out := c.Writer().Stdout
+
+	signal.Ignore(syscall.SIGPIPE)
+
+	logs := openProcessLogs(rack, app(c), pid, out)
+	retries := runLogRetries
+
+	follow := func(terminal bool) {
+		if logs == nil {
+			return
+		}
+
+		if terminal {
+			select {
+			case <-logs.done:
+			case <-time.After(runLogGrace):
+				return
+			}
+		} else {
+			select {
+			case <-logs.done:
+			default:
+				return
+			}
+		}
+
+		switch {
+		case logs.denied:
+			fmt.Fprintln(c.Writer().Stderr, "WARNING: process output is not available to this deploy key; assign it a role with read access to the app to see output here")
+		case logs.broken || terminal:
+		case !logs.seen:
+			// reconnecting a poll later keeps the rack's whole-second start from repeating lines
+			logs.seen = true
+			return
+		default:
+			if logs.printed || time.Since(logs.opened) >= 12*WaitDuration {
+				retries = runLogRetries
+			}
+
+			if retries > 0 {
+				retries--
+				logs = openProcessLogs(rack, app(c), pid, out)
+				return
+			}
+
+			if logs.message != "" {
+				fmt.Fprintf(c.Writer().Stderr, "WARNING: process output stopped (%s); still waiting for the exit status\n", logs.message)
+			} else {
+				fmt.Fprintln(c.Writer().Stderr, "WARNING: process output stopped; still waiting for the exit status")
+			}
+		}
+
+		logs = nil
+	}
+
 	// common.Wait wants two consecutive successes; latch so the second never races cleanup
 	err := common.Wait(WaitDuration, time.Duration(timeout)*time.Second, 2, func() (bool, error) {
 		if done != nil {
@@ -165,6 +227,7 @@ func waitForProcessExit(rack sdk.Interface, c *stdcli.Context, pid string, timeo
 		}
 
 		if !ps.Terminal() {
+			follow(false)
 			return false, nil
 		}
 
@@ -172,13 +235,84 @@ func waitForProcessExit(rack sdk.Interface, c *stdcli.Context, pid string, timeo
 
 		return true, nil
 	})
-	if err != nil {
+	if err != nil && done == nil {
 		return fmt.Errorf("could not confirm the outcome of process %s: %s\n       convox ps info %s -a %s", pid, err, pid, app(c))
 	}
+
+	follow(true)
 
 	if done.ExitCode == nil {
 		return fmt.Errorf("process %s ended with status %s but the rack did not report an exit status.\n       It may have been stopped before its command ran, or the rack may predate the release that reports one", pid, done.Status)
 	}
 
 	return stdcli.Exit(*done.ExitCode)
+}
+
+type processLogs struct {
+	done    chan struct{}
+	opened  time.Time
+	printed bool
+	denied  bool
+	broken  bool
+	seen    bool
+	message string
+}
+
+func openProcessLogs(rack sdk.Interface, app, pid string, w io.Writer) *processLogs {
+	l := &processLogs{done: make(chan struct{}), opened: time.Now()}
+
+	go func() {
+		defer close(l.done)
+		defer func() { _ = recover() }()
+
+		// an absent Since becomes the rack's 2m default, which it adds to now
+		r, err := rack.ProcessLogs(app, pid, structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(0)})
+		if err != nil {
+			l.message = err.Error()
+			return
+		}
+
+		defer r.Close()
+
+		br := bufio.NewReader(r)
+
+		for {
+			line, err := br.ReadString('\n')
+			line = strings.TrimSuffix(line, "\n")
+
+			if text, ok := processLogText(line, pid); ok {
+				if _, err := io.WriteString(w, text+"\n"); err != nil {
+					l.broken = true
+					return
+				}
+				l.printed = true
+			} else if line == "ERROR: operation not permitted for deploy keys" {
+				l.denied = true
+				return
+			} else if strings.HasPrefix(line, "ERROR: ") {
+				l.message = strings.TrimPrefix(line, "ERROR: ")
+				return
+			}
+
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	return l
+}
+
+func processLogText(line, pid string) (string, bool) {
+	parts := strings.SplitN(line, " ", 3)
+
+	if len(parts) != 3 || !strings.HasPrefix(parts[1], "service/") || !strings.HasSuffix(parts[1], "/"+pid) {
+		return "", false
+	}
+
+	if _, err := time.Parse(time.RFC3339, parts[0]); err != nil {
+		return "", false
+	}
+
+	return parts[2], true
 }
