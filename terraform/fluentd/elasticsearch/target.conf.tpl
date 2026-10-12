@@ -35,6 +35,7 @@
 			target_index_key index
 			type_name _doc
 			logstash_format true
+			unrecoverable_error_types ["out_of_memory_error", "es_rejected_execution_exception", "cluster_block_exception"]
 			<buffer>
 				@type file
 				path /var/log/fluentd-buffers/elasticsearch
@@ -48,6 +49,7 @@
 				queued_chunks_limit_size 32
 				overflow_action block
 				retry_forever true
+				retry_max_interval 30s
 			</buffer>
 		</store>
 
