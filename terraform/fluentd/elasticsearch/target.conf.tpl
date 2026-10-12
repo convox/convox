@@ -36,7 +36,13 @@
 			type_name _doc
 			logstash_format true
 			<buffer>
+				@type file
+				path /var/log/fluentd-buffers/elasticsearch
+				file_permission 0600
+				dir_permission 0700
 				flush_interval 1
+				flush_at_shutdown true
+				flush_thread_burst_interval 0.1
 				chunk_limit_size 2m
 				total_limit_size ${buffer_size}m
 				queued_chunks_limit_size 32
