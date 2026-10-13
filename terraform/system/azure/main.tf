@@ -76,6 +76,7 @@ module "rack" {
   cost_tracking_history_days           = var.cost_tracking_history_days
   docker_hub_username                  = var.docker_hub_username
   docker_hub_password                  = var.docker_hub_password
+  elasticsearch_disk                   = var.elasticsearch_disk
   high_availability                    = var.high_availability
   idle_timeout                         = var.idle_timeout
   image                                = var.image

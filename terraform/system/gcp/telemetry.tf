@@ -11,6 +11,7 @@ locals {
     dcgm_scrape_interval            = var.dcgm_scrape_interval
     docker_hub_password             = var.docker_hub_password
     docker_hub_username             = var.docker_hub_username
+    elasticsearch_disk              = var.elasticsearch_disk
     fluentd_memory                  = var.fluentd_memory
     gpu_observability_chart_version = var.gpu_observability_chart_version
     gpu_observability_enable        = var.gpu_observability_enable
@@ -43,6 +44,7 @@ locals {
     dcgm_scrape_interval            = "15s"
     docker_hub_password             = ""
     docker_hub_username             = ""
+    elasticsearch_disk              = "5Gi"
     fluentd_memory                  = "200Mi"
     gpu_observability_chart_version = "4.8.1"
     gpu_observability_enable        = "false"

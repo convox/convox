@@ -11,6 +11,7 @@ locals {
     cost_tracking_history_days           = var.cost_tracking_history_days
     docker_hub_password                  = var.docker_hub_password
     docker_hub_username                  = var.docker_hub_username
+    elasticsearch_disk                   = var.elasticsearch_disk
     fluentd_memory                       = var.fluentd_memory
     high_availability                    = var.high_availability
     idle_timeout                         = var.idle_timeout
@@ -51,6 +52,7 @@ locals {
     cost_tracking_history_days           = "62"
     docker_hub_password                  = ""
     docker_hub_username                  = ""
+    elasticsearch_disk                   = "5Gi"
     fluentd_memory                       = "200Mi"
     high_availability                    = "true"
     idle_timeout                         = "4"

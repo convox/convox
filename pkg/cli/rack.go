@@ -24,6 +24,7 @@ import (
 	"github.com/convox/convox/provider"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 var providerKnownParams = map[string]map[string]bool{
@@ -131,7 +132,7 @@ var gcpKnownParams = map[string]bool{
 	"additional_node_groups_config": true,
 	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"dcgm_scrape_interval": true, "docker_hub_password": true,
-	"docker_hub_username": true, "fluentd_memory": true,
+	"docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
@@ -144,7 +145,7 @@ var gcpKnownParams = map[string]bool{
 var azureKnownParams = map[string]bool{
 	"additional_build_groups_config": true, "additional_node_groups_config": true,
 	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
-	"docker_hub_password": true, "docker_hub_username": true,
+	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true,
 	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
 	"image": true, "k8s_version": true, "max_on_demand_count": true,
 	"min_on_demand_count": true, "name": true, "nginx_additional_config": true,
@@ -159,7 +160,7 @@ var azureKnownParams = map[string]bool{
 
 var doKnownParams = map[string]bool{
 	"access_id": true, "buildkit_enabled": true, "cert_duration": true,
-	"docker_hub_password": true, "docker_hub_username": true, "fluentd_memory": true,
+	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"high_availability": true, "image": true, "k8s_version": true,
 	"name": true, "node_type": true, "rack_name": true, "region": true,
 	"registry_disk": true, "release": true, "router_log_redact_params": true, "secret_key": true,
@@ -170,7 +171,7 @@ var doKnownParams = map[string]bool{
 
 var metalKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
-	"fluentd_memory": true, "image": true, "name": true, "rack_name": true,
+	"elasticsearch_disk": true, "fluentd_memory": true, "image": true, "name": true, "rack_name": true,
 	"registry_disk": true, "release": true, "router_log_redact_params": true, "sync_tf_now": true,
 	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
 }
@@ -622,6 +623,7 @@ var paramGroups = map[string]map[string]bool{
 		"ebs_volume_encryption_enabled":    true,
 		"efs_csi_driver_enable":            true,
 		"efs_csi_driver_version":           true,
+		"elasticsearch_disk":               true,
 		"karpenter_node_disk":              true, // dual-listed in karpenter
 		"karpenter_node_volume_iops":       true, // dual-listed in karpenter
 		"karpenter_node_volume_throughput": true, // dual-listed in karpenter
@@ -691,7 +693,7 @@ var groupDescriptions = map[string]string{
 	"logging":   "syslog, telemetry, fluentd, EKS audit logs, Grafana, Prometheus",
 	"ingress":   "router type (NGINX/Contour), idle timeout, TLS cert duration, Envoy resources",
 	"domain":    "rack domain and TLS toggle",
-	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry disk",
+	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry and Elasticsearch disks",
 	"retention": "release retention policy",
 	"versions":  "K8s and managed component versions",
 	"cost":      "cost tracking and allocation tags",
@@ -714,6 +716,8 @@ var cloudwatchRetentionValues = func() map[string]bool {
 	}
 	return m
 }()
+
+var elasticsearchDiskRe = regexp.MustCompile(`^([5-9]|[1-9][0-9]+)Gi$`)
 
 var clearableParams = map[string]bool{
 	// Labels/taints — clear means "remove all"
@@ -2388,6 +2392,16 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	if v, has := params["cloudwatch_retention_in_days"]; has && v != "" {
 		if !cloudwatchRetentionValues[v] {
 			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be Never or one of the periods AWS allows: %s", strings.Join(cloudwatchRetentionDays, ", "))
+		}
+	}
+
+	if v, has := params["elasticsearch_disk"]; has {
+		if !elasticsearchDiskRe.MatchString(v) {
+			return fmt.Errorf("param 'elasticsearch_disk' must be a whole number of Gi and at least 5Gi, such as 20Gi")
+		}
+		want := resource.MustParse(v)
+		if cur, err := resource.ParseQuantity(currentParams["elasticsearch_disk"]); err == nil && !force && want.Cmp(cur) < 0 {
+			return fmt.Errorf("param 'elasticsearch_disk' cannot be below the current %s: the volumes can grow but not shrink (use --force to set it anyway)", currentParams["elasticsearch_disk"])
 		}
 	}
 

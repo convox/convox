@@ -7,6 +7,7 @@ locals {
     cert_duration            = var.cert_duration
     docker_hub_password      = var.docker_hub_password
     docker_hub_username      = var.docker_hub_username
+    elasticsearch_disk       = var.elasticsearch_disk
     fluentd_memory           = var.fluentd_memory
     high_availability        = var.high_availability
     image                    = var.image
@@ -32,6 +33,7 @@ locals {
     cert_duration            = "2160h"
     docker_hub_password      = ""
     docker_hub_username      = ""
+    elasticsearch_disk       = "5Gi"
     fluentd_memory           = "200Mi"
     high_availability        = "true"
     image                    = "convox/convox"

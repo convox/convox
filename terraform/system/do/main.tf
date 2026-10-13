@@ -49,6 +49,7 @@ module "rack" {
   cluster                  = module.cluster.id
   docker_hub_username      = var.docker_hub_username
   docker_hub_password      = var.docker_hub_password
+  elasticsearch_disk       = var.elasticsearch_disk
   fluentd_memory           = var.fluentd_memory
   high_availability        = var.high_availability
   image                    = var.image

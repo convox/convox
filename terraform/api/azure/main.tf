@@ -80,6 +80,7 @@ module "k8s" {
     AZURE_TENANT_ID                      = data.azurerm_client_config.current.tenant_id
     CERT_MANAGER                         = "true"
     ELASTIC_URL                          = module.elasticsearch.url
+    ELASTICSEARCH_DISK                   = var.elasticsearch_disk
     PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
     PROVIDER                             = "azure"
     REGION                               = var.region

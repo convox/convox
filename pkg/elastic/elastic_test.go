@@ -108,7 +108,7 @@ func (f *fakeES) searches() []esRequest {
 	rs := []esRequest{}
 
 	for _, r := range f.recorded() {
-		if strings.HasSuffix(r.path, "/convox.rack.app/_search") {
+		if strings.HasPrefix(r.path, "/convox.rack.app,") && strings.HasSuffix(r.path, "/_search") {
 			rs = append(rs, r)
 		}
 	}
@@ -164,13 +164,13 @@ func ids(ls []logLine) []string {
 	return s
 }
 
-func stream(c *Client, index string, opts structs.LogsOptions) (chan string, io.Closer, chan struct{}) {
+func stream(c *Client, rack, app string, opts structs.LogsOptions) (chan string, io.Closer, chan struct{}) {
 	r, w := io.Pipe()
 	done := make(chan struct{})
 	lines := make(chan string, 10000)
 
 	go func() {
-		c.Stream(context.Background(), w, index, opts)
+		c.Stream(context.Background(), w, rack, app, opts)
 		close(done)
 	}()
 
@@ -215,7 +215,13 @@ func timestampRange(t *testing.T, r esRequest) map[string]interface{} {
 
 	q, ok := r.body["query"].(map[string]interface{})
 	require.True(t, ok)
-	rg, ok := q["range"].(map[string]interface{})
+	b, ok := q["bool"].(map[string]interface{})
+	require.True(t, ok)
+	f, ok := b["filter"].([]interface{})
+	require.True(t, ok)
+	first, ok := f[0].(map[string]interface{})
+	require.True(t, ok)
+	rg, ok := first["range"].(map[string]interface{})
 	require.True(t, ok)
 	ts, ok := rg["@timestamp"].(map[string]interface{})
 	require.True(t, ok)
@@ -234,7 +240,7 @@ func TestStreamNoFollowReadsEveryPage(t *testing.T) {
 	c, es := newFakeES(t, page("s1", 0, all[:5000]...), page("s1", 0, all[5000:]...))
 
 	start := time.Now()
-	lines, _, done := stream(c, "convox.rack.app", noFollow(time.Hour))
+	lines, _, done := stream(c, "rack", "app", noFollow(time.Hour))
 
 	require.Equal(t, ids(all), collect(lines))
 	<-done
@@ -242,7 +248,10 @@ func TestStreamNoFollowReadsEveryPage(t *testing.T) {
 	rs := es.recorded()
 	require.Len(t, rs, 3)
 
-	require.Equal(t, "/convox.rack.app/_search", rs[0].path)
+	require.True(t, strings.HasPrefix(rs[0].path, "/convox.rack.app,convox.rack."), rs[0].path)
+	require.True(t, strings.HasSuffix(rs[0].path, "/_search"), rs[0].path)
+	require.Equal(t, "true", rs[0].query.Get("ignore_unavailable"))
+	require.Equal(t, "true", rs[0].query.Get("allow_no_indices"))
 	require.Equal(t, "300000ms", rs[0].query.Get("scroll"))
 	require.Equal(t, "5000", rs[0].query.Get("size"))
 	require.Equal(t, []interface{}{map[string]interface{}{"@timestamp": "asc"}}, rs[0].body["sort"])
@@ -260,13 +269,14 @@ func TestStreamNoFollowReadsEveryPage(t *testing.T) {
 	require.WithinDuration(t, start.Add(-time.Hour), bound("gte"), 5*time.Second)
 	require.WithinDuration(t, start, bound("lt"), 5*time.Second)
 
-	require.Equal(t, http.MethodGet, rs[1].method)
 	require.Equal(t, "/_search/scroll", rs[1].path)
-	require.Equal(t, "s1", rs[1].query.Get("scroll_id"))
+	require.Empty(t, rs[1].query.Get("scroll_id"))
+	require.Equal(t, "s1", rs[1].body["scroll_id"])
 	require.Equal(t, "300000ms", rs[1].query.Get("scroll"))
 
 	require.Equal(t, http.MethodDelete, rs[2].method)
-	require.Equal(t, "/_search/scroll/s1", rs[2].path)
+	require.Equal(t, "/_search/scroll", rs[2].path)
+	require.Equal(t, []interface{}{"s1"}, rs[2].body["scroll_id"])
 }
 
 func TestStreamFollowPrintsLateLinesOnce(t *testing.T) {
@@ -281,7 +291,7 @@ func TestStreamFollowPrintsLateLinesOnce(t *testing.T) {
 		page("s3", 0, older, first, later),
 	)
 
-	lines, r, done := stream(c, "convox.rack.app", structs.LogsOptions{Since: options.Duration(time.Minute)})
+	lines, r, done := stream(c, "rack", "app", structs.LogsOptions{Since: options.Duration(time.Minute)})
 
 	require.Equal(t, "first", next(t, lines))
 	require.Equal(t, "older", next(t, lines))
@@ -327,7 +337,7 @@ func TestStreamOrdersWithinMillisecond(t *testing.T) {
 
 	c, _ := newFakeES(t, page("s1", 0, lines...))
 
-	out, _, done := stream(c, "convox.rack.app", noFollow(time.Hour))
+	out, _, done := stream(c, "rack", "app", noFollow(time.Hour))
 
 	require.Equal(t, []string{"trace-0", "trace-1", "trace-2"}, collect(out))
 	<-done
@@ -337,17 +347,21 @@ func TestWriteReusesConnection(t *testing.T) {
 	c, es := newFakeES(t)
 
 	for i := 0; i < 3; i++ {
-		require.NoError(t, c.Write("convox.rack.app", time.Now(), "event", map[string]string{"stream": "system"}))
+		require.NoError(t, c.Write("rack", "app", time.Date(2026, 10, 13, 23, 30, 0, 0, time.FixedZone("x", -2*3600)), "event", map[string]string{"stream": "system"}))
 	}
 
-	require.Len(t, es.recorded(), 3)
+	rs := es.recorded()
+	require.Len(t, rs, 3)
+	require.Equal(t, "/convox.rack.2026.10.14/_doc", rs[0].path)
+	require.Equal(t, "app", rs[0].body["app"])
+	require.Equal(t, "system", rs[0].body["stream"])
 	require.Equal(t, int32(1), atomic.LoadInt32(&es.conns))
 }
 
 func TestStreamMissingIndex(t *testing.T) {
 	c, es := newFakeES(t, esPage{status: http.StatusNotFound, body: `{"error":{"type":"index_not_found_exception"},"status":404}`})
 
-	lines, _, done := stream(c, "convox.rack.app", noFollow(time.Minute))
+	lines, _, done := stream(c, "rack", "app", noFollow(time.Minute))
 
 	require.Empty(t, collect(lines))
 	<-done
@@ -357,7 +371,7 @@ func TestStreamMissingIndex(t *testing.T) {
 func TestStreamClearsEmptyScroll(t *testing.T) {
 	c, es := newFakeES(t, page("s9", 0))
 
-	lines, _, done := stream(c, "convox.rack.app", noFollow(time.Minute))
+	lines, _, done := stream(c, "rack", "app", noFollow(time.Minute))
 
 	require.Empty(t, collect(lines))
 	<-done
@@ -365,7 +379,7 @@ func TestStreamClearsEmptyScroll(t *testing.T) {
 	rs := es.recorded()
 	require.Len(t, rs, 2)
 	require.Equal(t, http.MethodDelete, rs[1].method)
-	require.Equal(t, "/_search/scroll/s9", rs[1].path)
+	require.Equal(t, []interface{}{"s9"}, rs[1].body["scroll_id"])
 }
 
 func TestStreamScrollFailure(t *testing.T) {
@@ -378,7 +392,7 @@ func TestStreamScrollFailure(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			c, es := newFakeES(t, page("s1", 0, all[:5000]...), failure)
 
-			lines, _, done := stream(c, "convox.rack.app", noFollow(time.Hour))
+			lines, _, done := stream(c, "rack", "app", noFollow(time.Hour))
 
 			got := collect(lines)
 			<-done
@@ -389,7 +403,7 @@ func TestStreamScrollFailure(t *testing.T) {
 
 			rs := es.recorded()
 			require.Equal(t, http.MethodDelete, rs[len(rs)-1].method)
-			require.Equal(t, "/_search/scroll/s1", rs[len(rs)-1].path)
+			require.Equal(t, []interface{}{"s1"}, rs[len(rs)-1].body["scroll_id"])
 		})
 	}
 }
@@ -403,7 +417,7 @@ func TestStreamStopsWhenReaderCloses(t *testing.T) {
 	done := make(chan struct{})
 
 	go func() {
-		c.Stream(context.Background(), w, "convox.rack.app", noFollow(time.Hour))
+		c.Stream(context.Background(), w, "rack", "app", noFollow(time.Hour))
 		close(done)
 	}()
 
@@ -425,10 +439,10 @@ func TestStreamStopsWhenReaderCloses(t *testing.T) {
 	rs := es.recorded()
 	require.Len(t, rs, 2)
 	require.Equal(t, http.MethodDelete, rs[1].method)
-	require.Equal(t, "/_search/scroll/s1", rs[1].path)
+	require.Equal(t, []interface{}{"s1"}, rs[1].body["scroll_id"])
 }
 
-func bulk(t *testing.T, c *Client, index string, lines ...logLine) {
+func bulk(t *testing.T, c *Client, index, app string, labels map[string]string, lines ...logLine) {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -436,10 +450,18 @@ func bulk(t *testing.T, c *Client, index string, lines ...logLine) {
 	for _, l := range lines {
 		fmt.Fprintf(&buf, "{\"index\":{\"_index\":%q,\"_type\":\"_doc\"}}\n", index)
 
-		doc, err := json.Marshal(map[string]string{"log": l.id + "\n", "stream": "service.web.web-1", "@timestamp": l.ts.Format(fluentdTime)})
+		doc := map[string]interface{}{"log": l.id + "\n", "stream": "service.web.web-1", "@timestamp": l.ts.Format(fluentdTime)}
+		if app != "" {
+			doc["app"] = app
+		}
+		if labels != nil {
+			doc["kubernetes"] = map[string]interface{}{"labels": labels}
+		}
+
+		data, err := json.Marshal(doc)
 		require.NoError(t, err)
 
-		buf.Write(doc)
+		buf.Write(data)
 		buf.WriteByte('\n')
 	}
 
@@ -456,6 +478,48 @@ func bulk(t *testing.T, c *Client, index string, lines ...logLine) {
 	require.False(t, body.Errors)
 }
 
+func TestStreamIndices(t *testing.T) {
+	now := time.Date(2026, 10, 13, 0, 30, 0, 0, time.UTC)
+
+	require.Equal(t, []string{"convox.rack.app", "convox.rack.2026.10.12", "convox.rack.2026.10.13"},
+		streamIndices("rack", "app", now.Add(-time.Hour), now))
+	require.Equal(t, []string{"convox.rack.app", "convox.rack.2026.10.10", "convox.rack.2026.10.11", "convox.rack.2026.10.12", "convox.rack.2026.10.13"},
+		streamIndices("rack", "app", now.Add(-72*time.Hour), now))
+	require.Equal(t, []string{"convox.rack.app", "convox.rack.2*"}, streamIndices("rack", "app", now.Add(-200*24*time.Hour), now))
+	require.Equal(t, []string{"convox.rack.app", "convox.rack.2*"}, streamIndices("rack", "app", time.Time{}, now))
+	require.Equal(t, []string{"convox.rack.app", "convox.rack.2026.10.13"},
+		streamIndices("rack", "app", time.Date(2026, 10, 12, 21, 0, 0, 0, time.FixedZone("x", -4*3600)), now))
+}
+
+func TestStreamFirstSearchError(t *testing.T) {
+	c, _ := newFakeES(t, esPage{status: http.StatusBadRequest, body: `{"error":{"type":"too_long_frame_exception"},"status":400}`})
+
+	lines, _, done := stream(c, "rack", "app", noFollow(time.Hour))
+
+	got := collect(lines)
+	<-done
+
+	require.Len(t, got, 1)
+	require.True(t, strings.HasPrefix(got[0], "error: "), got[0])
+	require.Contains(t, got[0], "too_long_frame_exception")
+}
+
+func TestStreamFiltersByApp(t *testing.T) {
+	c, es := newFakeES(t, page("s1", 0))
+
+	_, _, done := stream(c, "rack", "app", noFollow(time.Hour))
+	<-done
+
+	rs := es.recorded()
+	require.NotEmpty(t, rs)
+
+	data, err := json.Marshal(rs[0].body["query"])
+	require.NoError(t, err)
+	require.Contains(t, string(data), `{"term":{"_index":"convox.rack.app"}}`)
+	require.Contains(t, string(data), `{"term":{"app.keyword":"app"}}`)
+	require.Contains(t, string(data), `"minimum_should_match":1`)
+}
+
 func TestStreamElasticsearch(t *testing.T) {
 	addr := os.Getenv("ES_URL")
 	if addr == "" {
@@ -465,11 +529,11 @@ func TestStreamElasticsearch(t *testing.T) {
 	c, err := New(addr)
 	require.NoError(t, err)
 
-	index := func(t *testing.T) string {
-		name := fmt.Sprintf("convox.test.%d", time.Now().UnixNano())
+	rack := func(t *testing.T) string {
+		name := fmt.Sprintf("t%d", time.Now().UnixNano())
 
 		t.Cleanup(func() {
-			if res, err := c.client.Indices.Delete([]string{name}); err == nil {
+			if res, err := c.client.Indices.Delete([]string{fmt.Sprintf("convox.%s.*", name)}); err == nil {
 				res.Body.Close()
 			}
 		})
@@ -477,30 +541,33 @@ func TestStreamElasticsearch(t *testing.T) {
 		return name
 	}
 
+	require.NoError(t, check(c.client.Indices.PutTemplate("convox", bytes.NewReader(indexTemplate))))
+
 	t.Run("NoFollow", func(t *testing.T) {
-		name := index(t)
-		all := sequence(time.Now().UTC().Add(-time.Minute), 0, 6000)
+		r := rack(t)
+		now := time.Now().UTC()
+		all := sequence(now.Add(-time.Minute), 0, 6000)
 
-		bulk(t, c, name, all...)
+		bulk(t, c, dayIndex(r, now), "web", nil, all...)
 
-		lines, _, done := stream(c, name, noFollow(2*time.Minute))
+		lines, _, done := stream(c, r, "web", noFollow(2*time.Minute))
 
 		require.Equal(t, ids(all), collect(lines))
 		<-done
 	})
 
 	t.Run("Follow", func(t *testing.T) {
-		name := index(t)
+		r := rack(t)
 		second := time.Now().UTC().Truncate(time.Second)
 		first := logLine{id: "first", ts: second.Add(100 * time.Millisecond)}
 
-		bulk(t, c, name, first)
+		bulk(t, c, dayIndex(r, second), "web", nil, first)
 
-		lines, r, done := stream(c, name, structs.LogsOptions{Since: options.Duration(10 * time.Second)})
+		lines, rc, done := stream(c, r, "web", structs.LogsOptions{Since: options.Duration(10 * time.Second)})
 
 		require.Equal(t, "first", next(t, lines))
 
-		bulk(t, c, name,
+		bulk(t, c, dayIndex(r, second), "web", nil,
 			logLine{id: "later", ts: second.Add(900 * time.Millisecond)},
 			logLine{id: "older", ts: second.Add(50 * time.Millisecond)},
 		)
@@ -513,7 +580,58 @@ func TestStreamElasticsearch(t *testing.T) {
 		case <-time.After(2500 * time.Millisecond):
 		}
 
-		r.Close()
+		rc.Close()
+		<-done
+	})
+
+	t.Run("BothLayoutsAndAppsApart", func(t *testing.T) {
+		r := rack(t)
+		now := time.Now().UTC()
+		day := now.Add(-48 * time.Hour)
+
+		bulk(t, c, appIndex(r, "web"), "", nil, logLine{id: "web-old", ts: now.Add(-50 * time.Hour)})
+		bulk(t, c, appIndex(r, "api"), "", nil, logLine{id: "api-old", ts: now.Add(-50 * time.Hour)})
+		bulk(t, c, dayIndex(r, day), "web", nil, logLine{id: "web-day", ts: day})
+		bulk(t, c, dayIndex(r, day), "api", nil, logLine{id: "api-day", ts: day.Add(time.Millisecond)})
+		bulk(t, c, dayIndex(r, now), "web", nil, logLine{id: "web-now", ts: now.Add(-time.Second)})
+
+		lines, _, done := stream(c, r, "web", noFollow(72*time.Hour))
+
+		require.Equal(t, []string{"web-old", "web-day", "web-now"}, collect(lines))
+		<-done
+	})
+
+	t.Run("ConflictingLabelsSameDay", func(t *testing.T) {
+		r := rack(t)
+		now := time.Now().UTC()
+
+		bulk(t, c, dayIndex(r, now), "one", map[string]string{"version": "2026-10-01", "team": "x"}, logLine{id: "one", ts: now.Add(-2 * time.Second)})
+		bulk(t, c, dayIndex(r, now), "two", map[string]string{"version": "v1.2", "team.example.com/owner": "y"}, logLine{id: "two", ts: now.Add(-time.Second)})
+
+		lines, _, done := stream(c, r, "two", noFollow(time.Minute))
+
+		require.Equal(t, []string{"two"}, collect(lines))
+		<-done
+	})
+
+	t.Run("ManyDailyIndicesAndPages", func(t *testing.T) {
+		defer func(n int) { pageSize = n }(pageSize)
+		pageSize = 50
+
+		r := rack(t)
+		now := time.Now().UTC()
+		want := []string{}
+
+		for d := 119; d >= 0; d-- {
+			ts := now.Add(-time.Duration(d) * 24 * time.Hour).Add(-time.Minute)
+			id := fmt.Sprintf("day-%03d", 119-d)
+			bulk(t, c, dayIndex(r, ts), "web", nil, logLine{id: id, ts: ts})
+			want = append(want, id)
+		}
+
+		lines, _, done := stream(c, r, "web", noFollow(121*24*time.Hour))
+
+		require.Equal(t, want, collect(lines))
 		<-done
 	})
 }
