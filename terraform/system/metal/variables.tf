@@ -10,6 +10,11 @@ variable "domain" {
   default = ""
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
 variable "image" {
   default = "convox/convox"
 }

@@ -198,3 +198,10 @@ Groups:
         regex: ^\d+(Mi|Gi)$
         description: Memory request and limit for the Fluentd DaemonSet. Increase
           if Fluentd pods are experiencing OOMKills.
+      - name: elasticsearch_disk
+        default: 5Gi
+        type: string
+        regex: ^([5-9]|[1-9][0-9]+)Gi$
+        description: Size of each Elasticsearch log volume in Kubernetes volume format, at
+          least 5Gi &l &i e.g. &i - 5Gi, 20Gi &l The volumes can grow but not shrink. When a
+          volume passes 80% full, the oldest logs are deleted.

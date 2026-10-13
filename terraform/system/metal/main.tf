@@ -21,6 +21,7 @@ module "rack" {
   docker_hub_username      = var.docker_hub_username
   docker_hub_password      = var.docker_hub_password
   domain                   = var.domain
+  elasticsearch_disk       = var.elasticsearch_disk
   fluentd_memory           = var.fluentd_memory
   image                    = var.image
   name                     = local.name

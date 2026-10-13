@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -18,10 +19,13 @@ import (
 )
 
 const (
-	pageSize  = 5000
-	keepAlive = 5 * time.Minute
-	overlap   = 5 * time.Second
+	keepAlive  = 5 * time.Minute
+	overlap    = 5 * time.Second
+	dayFormat  = "2006.01.02"
+	listedDays = 31
 )
+
+var pageSize = 5000
 
 type Client struct {
 	client *elasticsearch.Client
@@ -60,7 +64,34 @@ func New(url string) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) Stream(ctx context.Context, w io.WriteCloser, index string, opts structs.LogsOptions) {
+func appIndex(rack, app string) string {
+	return fmt.Sprintf("convox.%s.%s", rack, app)
+}
+
+func dayIndex(rack string, t time.Time) string {
+	return fmt.Sprintf("convox.%s.%s", rack, t.UTC().Format(dayFormat))
+}
+
+// streamIndices lists the per-app index from before daily indices and the daily indices from floor's day
+// through now's, falling back to a wildcard when the list would not fit in a request line.
+func streamIndices(rack, app string, floor, now time.Time) []string {
+	indices := []string{appIndex(rack, app)}
+
+	from := floor.UTC()
+	day := time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
+
+	if floor.IsZero() || now.Sub(day) > listedDays*24*time.Hour {
+		return append(indices, fmt.Sprintf("convox.%s.2*", rack))
+	}
+
+	for ; !day.After(now); day = day.AddDate(0, 0, 1) {
+		indices = append(indices, dayIndex(rack, day))
+	}
+
+	return indices
+}
+
+func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string, opts structs.LogsOptions) {
 	defer w.Close()
 
 	follow := common.DefaultBool(opts.Follow, true)
@@ -79,8 +110,17 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, index string, opt
 
 	body := map[string]interface{}{
 		"query": map[string]interface{}{
-			"range": map[string]interface{}{
-				"@timestamp": timestamp,
+			"bool": map[string]interface{}{
+				"filter": []interface{}{
+					map[string]interface{}{"range": map[string]interface{}{"@timestamp": timestamp}},
+					map[string]interface{}{"bool": map[string]interface{}{
+						"should": []interface{}{
+							map[string]interface{}{"term": map[string]interface{}{"_index": appIndex(rack, app)}},
+							map[string]interface{}{"term": map[string]interface{}{"app.keyword": app}},
+						},
+						"minimum_should_match": 1,
+					}},
+				},
 			},
 		},
 		"sort": []map[string]string{{"@timestamp": "asc"}},
@@ -102,7 +142,7 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, index string, opt
 
 		timestamp["gte"] = floor.Format(time.RFC3339Nano)
 
-		err := c.search(index, body, func(sres *result) error {
+		err := c.search(streamIndices(rack, app, floor, time.Now()), body, func(sres *result) error {
 			sort.SliceStable(sres.Hits.Hits, func(i, j int) bool {
 				return sres.Hits.Hits[i].Source.Timestamp.Before(sres.Hits.Hits[j].Source.Timestamp)
 			})
@@ -150,20 +190,31 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, index string, opt
 	}
 }
 
-func (c *Client) search(index string, body map[string]interface{}, fn func(*result) error) error {
+func (c *Client) search(indices []string, body map[string]interface{}, fn func(*result) error) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
 
 	res, err := c.client.Search(
-		c.client.Search.WithIndex(index),
+		c.client.Search.WithIndex(indices...),
+		c.client.Search.WithIgnoreUnavailable(true),
+		c.client.Search.WithAllowNoIndices(true),
 		c.client.Search.WithSize(pageSize),
 		c.client.Search.WithScroll(keepAlive),
 		c.client.Search.WithBody(bytes.NewReader(data)),
 	)
 	if err != nil {
 		return err
+	}
+
+	if res.StatusCode == http.StatusNotFound {
+		drain(res)
+		return nil
+	}
+
+	if res.IsError() {
+		return errors.New(res.String())
 	}
 
 	sres, err := decode(res)
@@ -189,7 +240,7 @@ func (c *Client) search(index string, body map[string]interface{}, fn func(*resu
 		}
 
 		res, err := c.client.Scroll(
-			c.client.Scroll.WithScrollID(scrollID),
+			c.client.Scroll.WithBody(scrollBody(scrollID)),
 			c.client.Scroll.WithScroll(keepAlive),
 		)
 		if err != nil {
@@ -214,8 +265,15 @@ func (c *Client) search(index string, body map[string]interface{}, fn func(*resu
 	}
 }
 
+func scrollBody(id string) io.Reader {
+	data, _ := json.Marshal(map[string]string{"scroll_id": id})
+	return bytes.NewReader(data)
+}
+
 func (c *Client) clearScroll(id string) {
-	if res, err := c.client.ClearScroll(c.client.ClearScroll.WithScrollID(id)); err == nil {
+	data, _ := json.Marshal(map[string][]string{"scroll_id": {id}})
+
+	if res, err := c.client.ClearScroll(c.client.ClearScroll.WithBody(bytes.NewReader(data))); err == nil {
 		drain(res)
 	}
 }
@@ -242,7 +300,7 @@ func decode(res *esapi.Response) (*result, error) {
 	return &sres, nil
 }
 
-func (c *Client) Write(index string, ts time.Time, message string, tags map[string]string) error {
+func (c *Client) Write(rack, app string, ts time.Time, message string, tags map[string]string) error {
 	body := map[string]interface{}{
 		"log":        fmt.Sprintf("%s\n", message),
 		"@timestamp": ts.Format(time.RFC3339Nano),
@@ -252,12 +310,14 @@ func (c *Client) Write(index string, ts time.Time, message string, tags map[stri
 		body[k] = v
 	}
 
+	body["app"] = app
+
 	data, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
 
-	res, err := c.client.Index(index, bytes.NewReader(data))
+	res, err := c.client.Index(dayIndex(rack, ts), bytes.NewReader(data))
 	if err != nil {
 		return err
 	}

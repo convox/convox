@@ -17,6 +17,11 @@ variable "cost_tracking_history_days" {
   type    = number
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
 variable "fluentd_memory" {
   type    = string
   default = "200Mi"

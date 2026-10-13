@@ -19,6 +19,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
 variable "high_availability" {
   default = true
 }

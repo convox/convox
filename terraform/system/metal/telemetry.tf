@@ -6,6 +6,7 @@ locals {
     docker_hub_password      = var.docker_hub_password
     docker_hub_username      = var.docker_hub_username
     domain                   = var.domain
+    elasticsearch_disk       = var.elasticsearch_disk
     fluentd_memory           = var.fluentd_memory
     image                    = var.image
     name                     = var.name
@@ -23,6 +24,7 @@ locals {
     docker_hub_password      = ""
     docker_hub_username      = ""
     domain                   = ""
+    elasticsearch_disk       = "5Gi"
     fluentd_memory           = "200Mi"
     image                    = "convox/convox"
     name                     = ""

@@ -28,6 +28,7 @@ module "api" {
   cost_tracking_enable       = var.cost_tracking_enable
   cost_tracking_history_days = var.cost_tracking_history_days
   docker_hub_authentication  = module.k8s.docker_hub_authentication
+  elasticsearch_disk         = var.elasticsearch_disk
   fluentd_memory             = var.fluentd_memory
   domain                     = module.router.endpoint
   image                      = var.image

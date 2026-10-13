@@ -3,7 +3,8 @@
 		@type record_transformer
 		enable_ruby true
 		<record>
-			index convox.$${record["kubernetes"]["namespace_labels"]["rack"]}.$${record["kubernetes"]["namespace_labels"]["app"]}
+			index convox.$${record["kubernetes"]["namespace_labels"]["rack"]}.$${time.getutc.strftime("%Y.%m.%d")}
+			app $${record["kubernetes"]["namespace_labels"]["app"]}
 			stream $${record["kubernetes"]["labels"]["type"]}.$${record["kubernetes"]["labels"]["name"]}.$${record["kubernetes"]["pod_name"]}
 			hostname ${rack}.$${record["kubernetes"]["labels"]["app"]}
 			program $${record["kubernetes"]["labels"]["type"]}/$${record["kubernetes"]["labels"]["name"]}/$${record["kubernetes"]["pod_name"]}

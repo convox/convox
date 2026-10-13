@@ -28,6 +28,7 @@ module "api" {
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = local.endpoint
+  elasticsearch_disk        = var.elasticsearch_disk
   fluentd_memory            = var.fluentd_memory
   image                     = var.image
   name                      = var.name

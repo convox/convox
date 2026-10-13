@@ -1,7 +1,6 @@
 package azure
 
 import (
-	"fmt"
 	"io"
 	"time"
 
@@ -9,14 +8,12 @@ import (
 )
 
 func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
-	index := fmt.Sprintf("convox.%s.%s", p.Name, app)
-
 	tags := map[string]string{
 		"app":    app,
 		"stream": stream,
 	}
 
-	if err := p.elastic.Write(index, ts, message, tags); err != nil {
+	if err := p.elastic.Write(p.Name, app, ts, message, tags); err != nil {
 		return err
 	}
 
@@ -26,7 +23,7 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 
-	go p.elastic.Stream(p.Context(), w, fmt.Sprintf("convox.%s.%s", p.Name, name), opts)
+	go p.elastic.Stream(p.Context(), w, p.Name, name, opts)
 
 	return r, nil
 }
