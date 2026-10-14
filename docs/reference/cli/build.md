@@ -26,7 +26,7 @@ Create a build
 | `--force` | | bool | Reduce the environment drop guard message to a one-line notice, and bypass the guard when `CONVOX_ENV_DROP_GUARD=strict`. Requires CLI version 3.25.1+ |
 | `--id` | | bool | Output only the build ID |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
-| `--no-cache` | | bool | Build without using the Docker cache |
+| `--no-cache` | | bool | Build without the layer cache. Requires rack version 3.25.11+; earlier racks build with the cache. With `--external` it applies to the local build on any rack version |
 | `--wildcard-domain` | | bool | Use wildcard domain for the build |
 
 ### Examples
@@ -45,6 +45,16 @@ Create a build
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```
+
+### Building Without the Cache
+
+`--no-cache` makes a Build on the Rack run every Dockerfile step for every Service, including Services built from the same Dockerfile. Without it, a Service built from the same Dockerfile as another reuses that Service's layers.
+
+> Building without the cache on the Rack requires Rack version `3.25.11` or later. Earlier Racks ignore `--no-cache` and build with the cache. The CLI version does not matter.
+
+- BuildKit can still print `CACHED` for `FROM` and `WORKDIR` steps.
+- `--no-cache` does not empty the build cache. The Build still exports its layers to the cache, and the next Build without the flag reads the cache as usual.
+- With `--external`, the CLI passes `--no-cache` to the local `docker build` on any Rack version.
 
 ### Environment Drop Guard
 
@@ -114,29 +124,30 @@ The `--external` flag runs the Docker build on your local machine (or CI runner)
 A standard `convox build` packages the source directory into a tarball, uploads it through the rack's load balancer, and builds the image in-cluster. With `--external`, the flow changes:
 
 1. The CLI creates a Build record on the rack via a small API call
-2. The rack returns a container registry URL with embedded push credentials (ECR on AWS, ACR on Azure, GCR on GCP)
+2. The Rack returns its own API endpoint, `api.<rack domain>`, as the registry to push to, with the Rack's credentials
 3. The CLI uploads only the `convox.yml` manifest to the rack
 4. Docker builds the image locally using your source directory
-5. The CLI pushes the built image directly to the rack's container registry
+5. The CLI pushes the built image to the Rack API, which forwards it to the App's registry (ECR on AWS, ACR on Azure, Artifact Registry on GCP, and the registry the Rack runs itself on DigitalOcean and metal)
 6. A Release is created on the rack referencing the pushed image
 
-The source tarball never passes through the load balancer, eliminating upload-size and idle-timeout constraints.
+The source directory is never uploaded. The image push goes to `api.<rack domain>`, so it reaches the Rack API through the Rack's load balancer and router like any other request to that host.
 
 #### Requirements
 
 - Docker must be installed and running on the machine executing the build
-- The machine must have network access to the rack's container registry
+- Docker on the machine must reach `api.<rack domain>` over HTTPS, including when the CLI reaches the Rack through the Console
 
 #### Example
 
 ```bash
     $ convox build --external -a myapp
+    Authenticating api.0a1b2c3d4e5f.convox.cloud/myrack/myapp: Login Succeeded
     Building: .
     Sending build context to Docker daemon  2.51GB
     Step 1/10 : FROM python:3.11-slim AS base
      ---> a1b2c3d4e5f6
     ...
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
+    Running: docker push api.0a1b2c3d4e5f.convox.cloud/myrack/myapp:web.BABCDEFGHI
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```

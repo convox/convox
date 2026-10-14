@@ -8,11 +8,11 @@ url: /configuration/rack-parameters/aws/syslog
 # syslog
 
 ## Description
-The `syslog` parameter sets the endpoint Fluentd forwards logs to, for example `tcp+tls://example.org:1234`. The URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out.
+The `syslog` parameter sets the endpoint Fluentd forwards logs to, for example `tcp+tls://example.org:1234`. The URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out. Any other scheme, such as `udp+tls`, forwards nothing.
 
-Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, over one connection from each node's Fluentd pod. These lines are not forwarded:
+Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, from each node's Fluentd pod. These lines are not forwarded:
 
-- Nginx access log lines from the `ingress-nginx` router, which go only to the `/nginx-access-logs` stream in `/convox/<rack>/system`.
+- Access log lines from the public `ingress-nginx` router, unless [`syslog_access_logs`](/configuration/rack-parameters/aws/syslog_access_logs) is `true`. They always go to the `/nginx-access-logs` stream in `/convox/<rack>/system`. The internal router's access lines and the public router's error lines are forwarded.
 - Event lines the Rack writes to CloudWatch itself, such as deploy state changes, Kubernetes events and resource provisioning messages.
 - Output of Pods Fluentd does not collect, which is not in CloudWatch either:
   - containerized Resources such as `postgres` or `redis`
@@ -38,8 +38,9 @@ Updating parameters... OK
 The change rolls the Fluentd pods on every node. Forwarding to CloudWatch continues throughout.
 
 ## Additional Information
-- **Message format:** each line is sent with facility `user` and severity `info`. The syslog hostname is `<rack>.<app>` and the tag is `<type>/<name>/<pod>`, cut to 32 characters: `service/web/<pod>` for a Service, `timer/<timer>/<pod>` for a Timer, and `process/<service>/<pod>` for a `convox run` Process. Each message, header and tag included, is cut at 1024 bytes.
+- **Message format:** each line is sent with facility `user` and severity `info`. The syslog hostname is `<rack>.<app>` and the tag is `<type>/<name>/<pod>`, cut to 32 characters: `service/web/<pod>` for a Service, `timer/<timer>/<pod>` for a Timer, and `process/<service>/<pod>` for a `convox run` Process. Over `tcp` and `tcp+tls`, a line of up to 16,384 bytes arrives whole. Over `udp`, each message, header and tag included, is cut at 1,024 bytes.
 - **TLS:** Fluentd verifies a `tcp+tls` endpoint's certificate against public certificate authorities. For an endpoint with a self-signed or private-CA certificate, set [`syslog_tls_verify`](/configuration/rack-parameters/aws/syslog_tls_verify) to `false`.
+- **Masking:** [`router_log_redact_params`](/configuration/rack-parameters/aws/router_log_redact_params) masks query parameter values in router lines before they are stored or forwarded.
 - **Failing endpoint:** when a `tcp` or `tcp+tls` endpoint refuses the connection, is unreachable or stops reading, Fluentd drops the line it was sending, logs a warning, skips syslog output for 60 seconds, then reconnects. Lines written during the pause are not resent. Each failure delays CloudWatch delivery on that node by up to about 10 seconds, and nothing is lost from CloudWatch, except App lines while [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) is `true`, which then have no other destination. A `udp` endpoint that is down returns no error, so lines sent to it are lost without a warning.
 - **CloudWatch:** forwarding is a copy. Fluentd still writes to CloudWatch, and [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) takes App logs off CloudWatch without stopping forwarding.
 - **Fluentd required:** `syslog` has no effect while [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) is `true`.
@@ -47,5 +48,7 @@ The change rolls the Fluentd pods on every node. Forwarding to CloudWatch contin
 
 ## See Also
 - [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) for certificate verification on `tcp+tls` endpoints
+- [syslog_access_logs](/configuration/rack-parameters/aws/syslog_access_logs) for forwarding the public router's access logs
+- [router_log_redact_params](/configuration/rack-parameters/aws/router_log_redact_params) for masking query parameter values in router logs
 - [Logging](/configuration/logging#log-forwarding) for log forwarding on every provider
 - [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory) for Fluentd memory on high log volume

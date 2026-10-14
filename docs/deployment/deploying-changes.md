@@ -67,9 +67,9 @@ OK
 
 ## External Builds
 
-By default, `convox build` and `convox deploy` package the source directory into a tarball and upload it through the rack's load balancer for in-cluster building. For applications with large source directories (e.g., model weights, large binary assets), that upload can be slow or hit load balancer idle-timeout limits.
+By default, `convox build` and `convox deploy` package the source directory into a tarball and upload it through the rack's load balancer for in-cluster building. For applications with large source directories (e.g., model weights, large binary assets), that upload can be slow.
 
-The `--external` flag builds the Docker image on your local machine (or CI runner) and pushes it directly to the rack's container registry, skipping the source upload entirely:
+The `--external` flag builds the Docker image on your local machine (or CI runner) and pushes it to the Rack, skipping the source upload entirely:
 
 ```bash
 $ convox build --external -a myapp
@@ -79,17 +79,17 @@ $ convox deploy --external -a myapp
 With external builds:
 
 1. The CLI creates a Build record on the rack via a small API call
-2. The rack returns a container registry URL with embedded push credentials (ECR on AWS, ACR on Azure, GCR on GCP)
+2. The Rack returns its own API endpoint, `api.<rack domain>`, as the registry to push to, with the Rack's credentials
 3. Docker builds the image locally using your source directory
-4. The CLI pushes the built image directly to the rack's container registry
+4. The CLI pushes the built image to the Rack API, which forwards it to the App's registry (ECR on AWS, ACR on Azure, Artifact Registry on GCP, and the registry the Rack runs itself on DigitalOcean and metal)
 5. A Release is created on the rack referencing the pushed image (and promoted, if using `convox deploy --external`)
 
-The source tarball never passes through the load balancer, eliminating upload-size and idle-timeout constraints. External builds also benefit from local Docker layer caching for faster incremental rebuilds.
+The source directory is never uploaded. External builds also benefit from local Docker layer caching for faster incremental rebuilds.
 
 **Requirements:**
 
 - Docker must be installed and running on the machine executing the build
-- The machine must have network access to the rack's container registry
+- Docker on the machine must reach `api.<rack domain>` over HTTPS, including when the CLI reaches the Rack through the Console
 
 External builds work on all v3 cloud providers and are well suited for CI pipelines that already have the source checked out. See the [External Builds section of the build reference](/reference/cli/build#external-builds) for the full CLI reference.
 

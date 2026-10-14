@@ -1,6 +1,6 @@
 ---
 title: "Digital Ocean Rack Parameters"
-description: "Reference for the rack parameters available when running a Convox rack on Digital Ocean, covering node type, region, high availability, registry disk, and logging."
+description: "Reference for the Digital Ocean rack parameters, covering node type, region, high availability, registry and Elasticsearch disks, and logging."
 slug: do-rack-parameters
 url: /configuration/rack-parameters/do
 ---
@@ -17,11 +17,14 @@ The following parameters are available for configuring your Convox rack on Digit
 | [cert_duration](/configuration/rack-parameters/do/cert_duration)         | Certificate renewal period.                                               |
 | [docker_hub_password](/configuration/rack-parameters/do/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/do/docker_hub_username) | Docker Hub username for authenticated image pulls. |
+| [elasticsearch_disk](/configuration/rack-parameters/do/elasticsearch_disk) | Size of each Elasticsearch log volume, which sets how much log history the Rack keeps. |
 | [fluentd_memory](/configuration/rack-parameters/do/fluentd_memory)       | Configures memory allocation for the Fluentd log collector DaemonSet.     |
 | [high_availability](/configuration/rack-parameters/do/high_availability) | Enable high availability mode with multiple nodes.                        |
 | [node_type](/configuration/rack-parameters/do/node_type)                 | Specifies the node instance type.                                         |
 | [region](/configuration/rack-parameters/do/region)                       | Specifies the Digital Ocean region for the rack.                          |
 | [registry_disk](/configuration/rack-parameters/do/registry_disk)         | Specifies the size of the registry disk.                                  |
+| [router_log_redact_params](/configuration/rack-parameters/do/router_log_redact_params) | Masks query parameter values in router access and error logs, for every parameter (`all`) or a list of names. |
 | [syslog](/configuration/rack-parameters/do/syslog)                       | Specifies the endpoint to forward logs to a syslog server.                |
+| [syslog_tls_verify](/configuration/rack-parameters/do/syslog_tls_verify) | Verifies the certificate of a `tcp+tls` syslog endpoint against public certificate authorities. |
 | [terraform_update_timeout](/configuration/rack-parameters/do/terraform_update_timeout) | Controls how long Terraform waits for cluster update operations to complete. |
 | [webhook_signing_key](/configuration/rack-parameters/do/webhook_signing_key) | HMAC secret that signs outbound webhook deliveries with a Convox-Signature header. |

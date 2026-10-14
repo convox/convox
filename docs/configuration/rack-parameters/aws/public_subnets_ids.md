@@ -25,6 +25,8 @@ The `public_subnets_ids` parameter must be configured at rack installation. Exam
 | `public_subnets_ids`   | `subnet-12345678,subnet-87654321,subnet-11223344` |
 
 ## Additional Information
-When configuring `public_subnets_ids`, ensure that you also set the [vpc_id](/configuration/rack-parameters/aws/vpc_id) parameter and properly configure the VPC with an internet gateway and route table. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) parameter for internal resources. For high availability, there should be at least three subnets.
+When configuring `public_subnets_ids`, ensure that you also set the [vpc_id](/configuration/rack-parameters/aws/vpc_id) parameter and properly configure the VPC with an internet gateway and route table. Additionally, configure the [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids) parameter for internal resources. With [high_availability](/configuration/rack-parameters/aws/high_availability) set to `true` (the default), pass exactly three subnets; any other count fails the install.
+
+The EKS control-plane network interfaces sit in these subnets unless [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets) is `true`.
 
 Using this parameter lets you attach the rack load balancer to public subnets you already manage rather than having Convox create new ones. This advanced configuration is suitable when inbound traffic must enter through an existing public network layout.

@@ -8,15 +8,14 @@ url: /configuration/rack-parameters/aws/fluentd_memory
 # fluentd_memory
 
 ## Description
-The `fluentd_memory` parameter configures the memory request and limit for the Fluentd log collector DaemonSet. Fluentd runs on every node in the cluster and forwards application and system logs to CloudWatch. Both the Kubernetes memory request and limit are set to the same value, giving the Fluentd pod a Guaranteed QoS class.
+The `fluentd_memory` parameter configures the memory request and limit for the Fluentd log collector DaemonSet. Fluentd runs on every node in the cluster and forwards application and system logs to CloudWatch. Both the Kubernetes memory request and limit are set to this value. Fluentd runs at the `system-node-critical` priority, so on a node with no room for it the scheduler evicts lower-priority Pods to place it.
 
 ## Default Value
 The default value for `fluentd_memory` is `200Mi`.
 
 ## Use Cases
-- **High Log Throughput**: Increase memory for racks with many services, verbose application logging, or high request rates to prevent Fluentd OOM restarts and log loss.
+- **Output outages and bursts**: Fluentd sizes the buffer for lines it has not yet delivered from this value. A larger value lets it absorb a longer CloudWatch outage or a bigger burst before it pauses reading container logs.
 - **GPU / ML Workloads**: Workloads generating large volumes of stdout/stderr may require `512Mi` or `1Gi`.
-- **Resource Optimization**: Reduce memory below `200Mi` on racks with low log volume to reclaim node resources.
 
 ## Setting Parameters
 To set the `fluentd_memory` parameter, use the following command:
@@ -27,9 +26,7 @@ Updating parameters... OK
 This command sets the Fluentd memory allocation to 512Mi.
 
 ## Additional Information
-The value must be a valid Kubernetes memory string matching the pattern `^\d+(Mi|Gi)$` (e.g., `200Mi`, `512Mi`, `1Gi`). When Fluentd is OOM-killed due to high log throughput, in-flight log buffers are lost. Increasing this value prevents gaps in log delivery during high-throughput periods.
-
-The default of `200Mi` matches the previously hardcoded allocation, so existing racks are unaffected.
+Set the value as a whole number of `Mi` or `Gi`, such as `200Mi`, `512Mi` or `1Gi`; the Console accepts only that form. When its buffer is full, Fluentd stops reading container logs until CloudWatch catches up, and syslog forwarding pauses with it. The lines arrive late rather than being lost, unless the node rotates a container's log file before Fluentd reads it. Values below `200Mi` leave Fluentd little room under load. Changing the value rolls the Fluentd pods on every node.
 
 ## See Also
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) to disable Fluentd entirely

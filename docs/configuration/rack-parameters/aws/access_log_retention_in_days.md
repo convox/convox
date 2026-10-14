@@ -1,6 +1,6 @@
 ---
 title: "access_log_retention_in_days"
-description: "The access_log_retention_in_days AWS rack parameter is passed to Fluentd but sets no retention on any CloudWatch log group; cloudwatch_retention_in_days controls Rack log retention."
+description: "The access_log_retention_in_days AWS rack parameter sets no retention on any CloudWatch log group; cloudwatch_retention_in_days controls Rack log retention."
 slug: access_log_retention_in_days
 url: /configuration/rack-parameters/aws/access_log_retention_in_days
 ---
@@ -29,4 +29,5 @@ The parameter is still accepted and still stored. It is not deprecated and it is
 ## See Also
 - [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) for how long CloudWatch keeps the Rack, App, and EKS control plane log groups
 - [App Settings](/configuration/app-settings) for the per-App `awsLogs` override
+- [syslog_access_logs](/configuration/rack-parameters/aws/syslog_access_logs) for forwarding the same access logs to a syslog endpoint
 - [Logging](/configuration/logging) for an overview of Convox logging

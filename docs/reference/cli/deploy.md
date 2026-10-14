@@ -26,7 +26,7 @@ Create and promote a build
 | `--force` | | bool | Promote without waiting for the app to be ready; also reduces the environment drop guard message to a one-line notice and bypasses the guard when `CONVOX_ENV_DROP_GUARD=strict` |
 | `--id` | | bool | Print only the Release ID on stdout; progress goes to stderr |
 | `--manifest` | `-m` | string | Path to an alternate manifest file |
-| `--no-cache` | | bool | Build without using the Docker cache |
+| `--no-cache` | | bool | Build without the layer cache. Requires rack version 3.25.11+; earlier racks build with the cache. With `--external` it applies to the local build on any rack version. See [Building Without the Cache](/reference/cli/build#building-without-the-cache) |
 | `--wildcard-domain` | | bool | Use wildcard domain for the build |
 
 ### Examples

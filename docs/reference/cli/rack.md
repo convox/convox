@@ -38,7 +38,7 @@ url: /reference/cli/rack
 | `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
 | `convox rack mv` | Transfer rack management between user and org |
 
-The subcommand reference below follows the Command Summary grouping above, so the body order matches the table you just read.
+The subcommand reference below follows the Command Summary grouping above.
 
 ## rack
 
@@ -68,15 +68,14 @@ List rack processes
 ### Examples
 ```bash
     $ convox rack ps
-    ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.23.3        2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.23.3        2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.23.3        2 weeks ago  atom
-    router-846b84d544-ndz76  rack    router         running  3.23.3        2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.23.3        2 weeks ago  router
+    ID                              APP     SERVICE        STATUS   RELEASE  STARTED     COMMAND
+    api-59969ff7bc-dbw4c            system  api            running  3.25.11  2 days ago  api
+    api-59969ff7bc-r7xgr            system  api            running  3.25.11  2 days ago  api
+    atom-bcf4f5d76-7m4f7            system  atom           running  3.25.11  2 days ago  atom
+    ingress-nginx-5946c459d9-6qf2v  system  ingress-nginx  running  3.25.11  2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    ingress-nginx-5946c459d9-wzsbn  system  ingress-nginx  running  3.25.11  2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    resolver-554bdb6c98-fwmmn       system  resolver       running  3.25.11  2 days ago  resolver
+    resolver-554bdb6c98-tqsc8       system  resolver       running  3.25.11  2 days ago  resolver
 ```
 ## rack ps --all
 
@@ -89,28 +88,22 @@ List rack processes as well as essential system ones running on the Rack
 ### Examples
 ```bash
     $ convox rack ps --all
-    ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.23.3        2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.23.3        2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.23.3        2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.23.3        2 weeks ago  atom
-    elasticsearch-0          rack    elasticsearch  running  3.23.3        2 weeks ago
-    elasticsearch-0          system  elasticsearch  running  3.23.3        2 weeks ago
-    elasticsearch-1          rack    elasticsearch  running  3.23.3        2 weeks ago
-    elasticsearch-1          system  elasticsearch  running  3.23.3        2 weeks ago
-    fluentd-p56dk            rack    fluentd        running  3.23.3        2 weeks ago
-    fluentd-p56dk            system  fluentd        running  3.23.3        2 weeks ago
-    fluentd-qrttw            rack    fluentd        running  3.23.3        2 weeks ago
-    fluentd-qrttw            system  fluentd        running  3.23.3        2 weeks ago
-    fluentd-zsv8f            rack    fluentd        running  3.23.3        2 weeks ago
-    fluentd-zsv8f            system  fluentd        running  3.23.3        2 weeks ago
-    redis-77b4f65c55-nbx89   rack    redis          running  3.23.3        2 weeks ago
-    redis-77b4f65c55-nbx89   system  redis          running  3.23.3        2 weeks ago
-    router-846b84d544-ndz76  rack    router         running  3.23.3        2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.23.3        2 weeks ago  router
+    ID                              APP     SERVICE        STATUS   RELEASE      STARTED     COMMAND
+    web-7cd6cc78dd-blvtn            myapp   web            running  RABCDEFGHIJ  2 days ago  npm start
+    web-7cd6cc78dd-x2kq9            myapp   web            running  RABCDEFGHIJ  2 days ago  npm start
+    api-59969ff7bc-dbw4c            system  api            running  3.25.11      2 days ago  api
+    api-59969ff7bc-r7xgr            system  api            running  3.25.11      2 days ago  api
+    atom-bcf4f5d76-7m4f7            system  atom           running  3.25.11      2 days ago  atom
+    fluentd-2vmln                   system  fluentd        running  3.25.11      2 days ago
+    fluentd-gqjg4                   system  fluentd        running  3.25.11      2 days ago
+    fluentd-mnw9b                   system  fluentd        running  3.25.11      2 days ago
+    ingress-nginx-5946c459d9-6qf2v  system  ingress-nginx  running  3.25.11      2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    ingress-nginx-5946c459d9-wzsbn  system  ingress-nginx  running  3.25.11      2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    resolver-554bdb6c98-fwmmn       system  resolver       running  3.25.11      2 days ago  resolver
+    resolver-554bdb6c98-tqsc8       system  resolver       running  3.25.11      2 days ago  resolver
 ```
+
+With `--all`, the list also includes the Processes of every App on the Rack, and Rack system Pods that run outside the Rack's own namespace, such as Fluentd on AWS.
 
 ## rack logs
 
@@ -118,8 +111,20 @@ Get logs for the rack
 
 ### Usage
 ```bash
-    convox rack logs
+    convox rack logs [--since <duration>] [--no-follow] [--filter <string>]
 ```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--filter` | | Filter for a specific string within the logs |
+| `--no-follow` | | Print logs and exit rather than streaming |
+| `--rack` | `-r` | Rack name |
+| `--since` | | Time frame for log query (e.g., `24h`, `30m`; default `2m`) |
+
+On AWS the command reads the Rack's `/convox/<rack>/system` CloudWatch log group, and on GCP, Azure, DigitalOcean and metal Racks it reads the Rack's Elasticsearch. See [Logging](/configuration/logging).
+
 ### Examples
 ```bash
     $ convox rack logs
@@ -309,7 +314,7 @@ The listing contains only parameters that have a value stored for the Rack. A pa
 
 ### Masking Sensitive Values
 
-Values for `docker_hub_password`, `secret_key`, `token`, `access_id`, `private_eks_host`, `private_eks_user`, and `private_eks_pass` render as `**********` on a TTY to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
+Values for `docker_hub_password`, `secret_key`, `token`, `access_id`, `webhook_signing_key`, and the private EKS connection settings render as `**********` on a TTY to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
 
 Piped and non-TTY output is always unmasked, so backup and automation flows (`convox rack params > rack-state.txt`, `| grep`, `| jq`) continue to return real values. Use `--reveal` on a TTY for one-off inspection when the real value is needed.
 
@@ -344,7 +349,7 @@ Pass `-g` / `--group` to narrow the output to one of a curated set of logical gr
 | `retention` | release retention policy |
 | `scaling` | capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets |
 | `security` | access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials |
-| `storage` | CSI drivers, EBS/EFS/Azure Files, registry disk |
+| `storage` | CSI drivers, EBS/EFS/Azure Files, registry and Elasticsearch disks |
 | `versions` | K8s and managed component versions |
 
 Exact names and unique prefixes both resolve:
@@ -361,9 +366,9 @@ Exact names and unique prefixes both resolve:
 
     $ convox rack params --group security -r prod     # long form
     access_id                          **********
-    disable_public_access              false
     docker_hub_password                **********
-    private_eks_host                   **********
+    ebs_volume_encryption_enabled      true
+    eks_control_plane_private_subnets  true
     ...
 ```
 
@@ -393,7 +398,7 @@ Set rack parameters
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, and fast-image-pull throughput guards |
+| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, and EKS control-plane subnet guards |
 
 ### Examples
 ```bash
@@ -437,8 +442,12 @@ The CLI validates parameters before sending them to the Rack. This catches commo
          Currently: node_volume_throughput=125
          Raise node_volume_throughput to 600 or higher in the same call, or re-run with --force to proceed
   ```
+- **Elasticsearch volume size** is checked as of 3.25.11. On GCP, Azure, DigitalOcean and metal Racks, [`elasticsearch_disk`](/configuration/rack-parameters/gcp/elasticsearch_disk) must be a whole number of Gi of at least `5Gi`, and a value below the one currently set is refused because the volumes cannot shrink:
+  ```text
+  ERROR: param 'elasticsearch_disk' cannot be below the current 10Gi: the volumes can grow but not shrink (use --force to set it anyway)
+  ```
 
-Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, and fast-image-pull throughput guards. Install-only, empty-value, and type validators cannot be overridden.
+Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, and EKS control-plane subnet guards. Install-only, empty-value, and type validators cannot be overridden.
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
 

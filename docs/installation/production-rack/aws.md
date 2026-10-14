@@ -56,6 +56,7 @@ The table below lists common install-time parameters; the complete reference is 
 | **cidr**                 | **10.1.0.0/16**        | CIDR range for VPC                                                                                             |
 | **convox_domain_tls_cert_disable** | false        | Disable convox domain(*.convox.cloud) tls certificate generation for services |
 | **efs_csi_driver_enable**       | **false**              | Enable efs csi driver to use AWS EFS volume feature |
+| **eks_control_plane_private_subnets** | **false**        | Place the EKS control-plane network interfaces in the private subnets. See [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets) |
 | **fluentd_disable**       | **false**              | Disable fluentd installation in the rack |
 | **gpu_tag_enable**       | **false**              | Enable gpu tagging. Some AWS regions do not support gpu tagging  |
 | **high_availability**    | **true**               | Setting this to "false" will create a cluster with less redundant resources for cost optimization              |
@@ -106,6 +107,8 @@ There are four modes available for configuring the cluster endpoint access:
 - **Semi-Private**: In this mode, the cluster temporarily switches to public access during updates or configuration changes, then reverts to private when complete. This mode is suitable for older racks and any version, but enabling Semi-Private mode will add approximately 15 minutes to each update.
 
 - **Private**: The EKS cluster endpoint is restricted to VPC access only, ensuring that only internal traffic can access it. This mode provides the highest level of security by limiting access to within the VPC while maintaining full Convox API functionality.
+
+The mode sets who can reach the API server. The [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets) parameter sets which subnets hold the API server's network interfaces in your VPC.
 
 ### Requirements
 

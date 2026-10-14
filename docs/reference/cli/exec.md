@@ -1,6 +1,6 @@
 ---
 title: "exec"
-description: "The convox exec command runs a command inside an existing running process, for example opening a shell in a container to inspect or debug it, piping input to it, or reading its error output."
+description: "The convox exec command runs a command inside a running process, such as a shell to inspect or debug a container, with piped input and error output."
 slug: exec
 url: /reference/cli/exec
 ---
@@ -75,7 +75,7 @@ For work that must survive a lost connection and stay observable, use [`convox r
     $ convox run web bin/migrate --detach --wait -a my-app
 ```
 
-A detached process keeps running after the connection ends and can be stopped with [`convox ps stop`](/reference/cli/ps). With `--wait`, the CLI holds the command open until the process finishes and exits with its status. Without `--wait`, pass `--retain` and read the status later with [`convox ps info`](/reference/cli/ps).
+A detached process keeps running after the connection ends and can be stopped with [`convox ps stop`](/reference/cli/ps). With `--wait`, the CLI holds the command open until the process finishes, prints its output (CLI version `3.25.11` or later), and exits with its status. Without `--wait`, pass `--retain` and read the status later with [`convox ps info`](/reference/cli/ps).
 
 Interrupting an interactive session is not this case. The CLI puts the terminal in raw mode, so Ctrl-C reaches the command inside the container instead of killing the CLI.
 

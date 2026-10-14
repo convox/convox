@@ -22,7 +22,7 @@ The default value is `false`. At the default, the ECR registry Build cache is ac
 - **Immutable ECR tags before 3.25.10**: with `ecr_immutable_tags_enabled=true` on a Rack before `3.25.10`, the `buildcache` tag is written once and can never be refreshed, so the registry cache stops updating. Disable the cache on those Racks. From `3.25.10`, while `ecr_immutable_tags_enabled` is `true`, per-Build cache tags keep the cache updating on immutable repositories.
 - **ECR storage costs**: the cache export uses `mode=max`, which pushes intermediate layers for every Build stage. Disabling the cache stops these pushes and keeps App repositories limited to deployable images.
 - **Repository content policies**: keep App ECR repositories free of cache artifacts when lifecycle rules or compliance scanning do not account for the `buildcache` tag.
-- **Stale cache troubleshooting**: rule out cache reuse when debugging unexpected Build output. For a one-off Build without cache, `convox build --no-cache` avoids a Rack parameter change.
+- **Stale cache troubleshooting**: rule out cache reuse when debugging unexpected Build output. On Rack version `3.25.11` or later, `convox build --no-cache` runs one Build without the cache and avoids a Rack parameter change. That Build still exports the registry cache, so later Builds reuse its layers. Earlier Racks ignore `--no-cache` on Builds that run on the Rack.
 
 ## Setting Parameters
 

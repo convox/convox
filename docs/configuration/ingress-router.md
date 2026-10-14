@@ -72,6 +72,15 @@ Data-plane requests (Envoy):
 $ convox rack params set envoy_cpu_request=200m envoy_memory_request=512Mi -r rackName
 ```
 
+## Router logs
+
+On an `nginx` Rack, Fluentd writes the router's lines to the Rack system log group `/convox/<rack>/system`, which `convox rack logs` reads. The public router's access lines go to the `/nginx-access-logs` stream, its error and controller output to `service/ingress-nginx/<pod>` streams, and the internal router's lines to `service/ingress-nginx-internal/<pod>` streams.
+
+- [`syslog_access_logs`](/configuration/rack-parameters/aws/syslog_access_logs) also forwards the public router's access lines to the [`syslog`](/configuration/rack-parameters/aws/syslog) endpoint. The router's other lines are forwarded without it.
+- [`router_log_redact_params`](/configuration/rack-parameters/aws/router_log_redact_params) masks query parameter values in every router line before it is stored or forwarded.
+
+On a `contour` Rack, Convox does not collect Envoy's access or error logs, so they reach neither CloudWatch nor `syslog`, and neither parameter has any effect.
+
 ## See Also
 
 - [`router_type`](/configuration/rack-parameters/aws/router_type)
@@ -80,5 +89,7 @@ $ convox rack params set envoy_cpu_request=200m envoy_memory_request=512Mi -r ra
 - [`contour_memory_request`](/configuration/rack-parameters/aws/contour_memory_request)
 - [`envoy_cpu_request`](/configuration/rack-parameters/aws/envoy_cpu_request)
 - [`envoy_memory_request`](/configuration/rack-parameters/aws/envoy_memory_request)
+- [`syslog_access_logs`](/configuration/rack-parameters/aws/syslog_access_logs)
+- [`router_log_redact_params`](/configuration/rack-parameters/aws/router_log_redact_params)
 - [Load Balancers](/configuration/load-balancers)
 - [Rack to Rack](/configuration/rack-to-rack)

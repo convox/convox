@@ -29,5 +29,7 @@ The `private` parameter must be configured at rack installation. Example:
 ## Additional Information
 When the `private` parameter is set to `true`, nodes are placed in private subnets, which enhances security by preventing direct access from the internet.
 
+With `private=false`, Convox creates no private subnets, so a Rack whose subnets Convox created cannot use [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets).
+
 Proper configuration of private subnets is essential to ensure network connectivity and security for your applications. By setting the `private` parameter, you can improve the security posture of your Convox rack.
 

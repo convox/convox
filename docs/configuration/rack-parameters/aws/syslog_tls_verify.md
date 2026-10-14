@@ -46,7 +46,7 @@ $ convox rack params -r rackName
 - **Validation:** boolean. The CLI rejects other values with `param 'syslog_tls_verify' must be 'true' or 'false' (got "<value>")`.
 - **Version:** requires Rack version `3.25.10` or later and CLI version `3.25.10` or later. An older CLI rejects the parameter with `unknown parameter 'syslog_tls_verify' for aws provider`.
 - **Downgrade:** downgrading below `3.25.10` removes the parameter with `NOTICE: removing parameters not supported by version <version>: syslog_tls_verify` on stderr. A Rack managed through the Console keeps the stored value and applies it again on the next update to `3.25.10` or later. A self-managed Rack drops the value, so set it again after upgrading.
-- **Providers:** AWS only. GCP, Azure and DigitalOcean Racks do not have this parameter.
+- **Providers:** AWS from Rack version `3.25.10`; GCP, Azure, DigitalOcean and metal from `3.25.11`. See [GCP](/configuration/rack-parameters/gcp/syslog_tls_verify), [Azure](/configuration/rack-parameters/azure/syslog_tls_verify) and [DigitalOcean](/configuration/rack-parameters/do/syslog_tls_verify). On metal Racks, set it through the CLI.
 
 ## See Also
 
