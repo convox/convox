@@ -187,6 +187,7 @@ For detailed descriptions and instructions, visit the [Digital Ocean Rack Parame
 | Name                    | Default           |
 |-------------------------|-------------------|
 | **cert_duration**       | **2160h**         |
+| **elasticsearch_disk**  | **5Gi**           |
 | **node_type**           | **s-2vcpu-4gb**   |
 | **region**              | **nyc3**          |
 | **registry_disk**       | **50Gi**          |
@@ -203,6 +204,7 @@ For detailed descriptions and instructions, visit the [Google Cloud Platform Rac
 | Name                    | Default           |
 |-------------------------|-------------------|
 | **cert_duration**       | **2160h**         |
+| **elasticsearch_disk**  | **5Gi**           |
 | **node_type**           | **n1-standard-2** |
 | **preemptible**         | **true**          |
 | **region**              | **us-east1**      |
@@ -216,6 +218,7 @@ For detailed descriptions and instructions, visit the [Microsoft Azure Rack Para
 | Name                    | Default           |
 |-------------------------|-------------------|
 | **cert_duration**       | **2160h**         |
+| **elasticsearch_disk**  | **5Gi**           |
 | **node_type**           | **Standard_D2_v3**|
 | **region**              | **eastus**        |
 | **syslog**              |                   |

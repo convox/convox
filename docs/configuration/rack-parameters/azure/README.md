@@ -22,6 +22,7 @@ The following parameters are available for configuring your Convox rack on Micro
 | [cost_tracking_history_days](/configuration/rack-parameters/azure/cost_tracking_history_days) | Sets how many days of daily App cost history the Rack keeps for `convox cost --start` and `--end`. |
 | [docker_hub_password](/configuration/rack-parameters/azure/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/azure/docker_hub_username) | Docker Hub username for authenticated image pulls. |
+| [elasticsearch_disk](/configuration/rack-parameters/azure/elasticsearch_disk) | Size of each Elasticsearch log volume, which sets how much log history the Rack keeps. |
 | [fluentd_memory](/configuration/rack-parameters/azure/fluentd_memory) | Configures memory allocation for the Fluentd log collector DaemonSet. |
 | [high_availability](/configuration/rack-parameters/azure/high_availability) | Enables high availability mode with redundant replicas. |
 | [idle_timeout](/configuration/rack-parameters/azure/idle_timeout) | Load balancer idle timeout in minutes. |
@@ -35,9 +36,11 @@ The following parameters are available for configuring your Convox rack on Micro
 | [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/azure/nvidia_device_time_slicing_replicas) | Number of virtual GPU replicas per physical GPU for time-slicing. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/azure/pdb_default_min_available_percentage) | Default minimum available percentage for PDBs. |
 | [region](/configuration/rack-parameters/azure/region) | Specifies the Azure region for the rack. |
+| [router_log_redact_params](/configuration/rack-parameters/azure/router_log_redact_params) | Masks query parameter values in router access and error logs, for every parameter (`all`) or a list of names. |
 | [ssl_ciphers](/configuration/rack-parameters/azure/ssl_ciphers) | Custom SSL/TLS cipher suites for nginx. |
 | [ssl_protocols](/configuration/rack-parameters/azure/ssl_protocols) | SSL/TLS protocol versions for nginx. |
 | [syslog](/configuration/rack-parameters/azure/syslog) | Specifies the endpoint to forward logs to a syslog server. |
+| [syslog_tls_verify](/configuration/rack-parameters/azure/syslog_tls_verify) | Verifies the certificate of a `tcp+tls` syslog endpoint against public certificate authorities. |
 | [tags](/configuration/rack-parameters/azure/tags) | Custom Azure resource tags. |
 | [terraform_update_timeout](/configuration/rack-parameters/azure/terraform_update_timeout) | Controls how long Terraform waits for cluster and node pool update operations to complete. |
 | [webhook_signing_key](/configuration/rack-parameters/azure/webhook_signing_key) | Per-rack HMAC secret that signs outbound webhook deliveries with a Convox-Signature header. |

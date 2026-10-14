@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/aws
 
 The following parameters are available for configuring your Convox rack on Amazon Web Services (AWS). These parameters allow you to customize and optimize the behavior of your applications and services running on the AWS platform.
 
-> Some parameters can only be set during rack installation and cannot be changed afterwards. These include `cidr`, `high_availability`, `private`, `private_subnets_ids`, `public_subnets_ids`, `vpc_id`, and `internet_gateway_id`. See individual parameter pages for details.
+> Some parameters can only be set when the Rack is installed and cannot be changed afterwards. These include `availability_zones`, `cidr`, `high_availability`, `private`, `private_subnets_ids`, `public_subnets_ids`, `vpc_id`, and `internet_gateway_id`. See individual parameter pages for details.
 
 ## Parameters
 
@@ -20,7 +20,8 @@ Parameters are grouped by category below. Every parameter links to its own refer
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [availability_zones](/configuration/rack-parameters/aws/availability_zones)         | Specifies a list of Availability Zones for better availability and fault tolerance. |
 | [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
-| [eks_api_server_private_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_private_access_cidrs) | Comma-separated CIDRs allowed to reach the EKS API via the private endpoint (cluster SG ingress on TCP 443). |
+| [eks_api_server_private_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_private_access_cidrs) | Comma-separated CIDRs allowed to reach the EKS API via the private endpoint (TCP 443 ingress on the Rack's `<rack>-cluster` security group). |
+| [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets) | Places the EKS control-plane network interfaces in the Rack's private subnets instead of its public subnets. |
 | [high_availability](/configuration/rack-parameters/aws/high_availability)           | Ensures high availability by creating a cluster with redundant resources. |
 | [idle_timeout](/configuration/rack-parameters/aws/idle_timeout)                     | Specifies the idle timeout value for the Rack Load Balancer.             |
 | [internal_router](/configuration/rack-parameters/aws/internal_router)               | Installs an internal load balancer within the VPC.                       |
@@ -157,7 +158,9 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) | Helm chart version pin for the free-plan Prometheus chart deployed via the Convox Console. |
 | [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Retention window for the free-plan Prometheus chart deployed via the Convox Console. |
 | [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and the Console GPU columns. Must be set explicitly post-3.24.6 (no auto-resolution). |
+| [router_log_redact_params](/configuration/rack-parameters/aws/router_log_redact_params) | Masks query parameter values in router access and error logs, for every parameter (`all`) or a list of names. |
 | [syslog](/configuration/rack-parameters/aws/syslog)                                 | Specifies the endpoint to forward logs to a syslog server.               |
+| [syslog_access_logs](/configuration/rack-parameters/aws/syslog_access_logs) | Also forwards the public router's access logs to the `syslog` endpoint. |
 | [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) | Verifies the certificate of a `tcp+tls` syslog endpoint against public certificate authorities. |
 
 ### TLS and Security

@@ -19,11 +19,11 @@ The default value for `high_availability` is `true`.
 - **Production Resilience**: Keep enabled in production for increased fault tolerance.
 
 ## Setting Parameters
-To set the `high_availability` parameter, use the following command:
+The `high_availability` parameter can only be set when the Rack is installed:
 ```bash
-$ convox rack params set high_availability=true -r rackName
-Updating parameters... OK
+$ convox rack install azure <name> high_availability=false
 ```
+It cannot be changed afterwards. `convox rack params set` rejects it with `param 'high_availability' can only be set during rack installation`.
 
 ## Additional Information
-When `high_availability` is `true`, the nginx ingress controller runs with 2-10 replicas (autoscaled) and the API runs with 2 replicas. When `false`, both run with a single replica. This parameter should typically be set at rack installation time.
+When `high_availability` is `true`, the nginx ingress controller runs with 2-10 replicas (autoscaled) and the API runs with 2 replicas. When `false`, both run with a single replica.

@@ -1,6 +1,6 @@
 ---
 title: "Process Management"
-description: "The convox cloud process commands exec into, list, inspect, and stop running processes, and run one-off commands in a new process, detached and waited on if needed."
+description: "The convox cloud process commands exec into, list, inspect and stop running processes, and run one-off commands in a new process, detached or waited on."
 slug: processes
 url: /cloud/cli-reference/processes
 ---
@@ -94,7 +94,7 @@ $ convox cloud run <service> <command> -a <app> -i <machine>
 - `--release`: Specific release
 - `--retain`: With `--detach`, seconds to keep the finished process readable by `ps info`
 - `--timeout`: Seconds before an attached run is abandoned, or before `--wait` gives up (default `3600`)
-- `--wait`: With `--detach`, wait for the process to finish and exit with its status
+- `--wait`: With `--detach`, wait for the process to finish, print its output, and exit with its status
 
 An attached run streams the command's own output and exits with its status.
 
@@ -106,11 +106,12 @@ $ convox cloud run web bash -a myapp -i production
 /app #
 ```
 
-`--wait` reads the process record every 5 seconds until it reports `complete` or `failed`, then exits with the process's own exit code, so a pipeline step fails when the command does:
+`--wait` prints the command's output while it waits, reads the process record every 5 seconds until it reports `complete` or `failed`, then exits with the process's own exit code, so a pipeline step fails when the command does:
 
 ```bash
 $ convox cloud run web "bin/migrate" --detach --wait -a myapp -i production
 Running detached process... OK, web-s43xf
+Migrating users... done
 ```
 
 `--retain` keeps the finished process readable by `convox cloud ps info` after its command exits. The machine caps retention at 600 seconds, and `--wait` raises it to 60 seconds when the run asks for less. Retention is best effort, so a process the pipeline can no longer find is an unknown outcome and the step must treat it as a failure.
@@ -120,4 +121,4 @@ $ pid=$(convox cloud run web "bin/backfill" --detach --id --retain 600 -a myapp 
 $ convox cloud ps info "$pid" -a myapp -i production
 ```
 
-`--wait` and `--retain` require machine version 3.25.5 or later. `--id` is handled by the CLI and works against any version. See [run](/reference/cli/run#detached-runs) for the full detached-run reference.
+`--wait` and `--retain` require machine version 3.25.5 or later. The output under `--wait` requires CLI version 3.25.11 or later. `--id` is handled by the CLI and works against any version. See [run](/reference/cli/run#detached-runs) for the full detached-run reference.

@@ -35,7 +35,7 @@ Without a role, a deploy key is limited to these commands for security reasons:
 | `convox rack` | |
 | `convox racks` | |
 | `convox releases promote` | Only when you name the Release id |
-| `convox run` | |
+| `convox run` | With `--detach --wait`, prints a warning in place of the command's output and still exits with the Process's exit code |
 | `convox cloud machines` | |
 
 The Workflow API is also available to a deploy key through the `X-Deploy-Token` header.

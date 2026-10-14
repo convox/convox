@@ -1,6 +1,6 @@
 ---
 title: "Troubleshooting"
-description: "Diagnose common Convox problems including install errors, failed deploys, SSL and health check failures, stuck uninstalls, failing Rack updates, and disappearing environment variables."
+description: "Diagnose Convox problems: install errors, failed deploys, SSL and health check failures, stuck uninstalls, failing Rack updates, lost environment variables."
 slug: troubleshooting
 url: /help/troubleshooting
 ---
@@ -95,23 +95,22 @@ If your local Kubernetes setup does not point to a valid cluster, that can slow 
 
 ## A rack uninstall is stuck or failed
 
-When a rack uninstall fails, it is typically because a cloud resource cannot be deleted due to dependencies.
+Uninstalling a Rack runs `terraform destroy` against the Rack's Terraform state. The uninstall fails when the cloud provider refuses to delete a resource, typically because another resource still depends on it, such as a network interface or a security group that is still in use.
 
-1. **Attempt a forced uninstall from the CLI.**
-    ```bash
-$ convox rack uninstall <rack_name>
-    ```
+| Rack | Run the uninstall | Read the error |
+|------|-------------------|----------------|
+| Self-managed | `convox rack uninstall <rack_name>` | In the command's output |
+| Console-managed | **Uninstall Rack** in the Rack's settings in the Console. Selecting a Rack whose uninstall failed reopens the same dialog | In the uninstall log on the Rack in the Console |
 
-2. **Identify the blocking resource in CloudFormation (AWS).**
-    If the CLI command fails, go to the AWS CloudFormation console. Find the stack for your rack (e.g., `convox-my-rack`). Its status will be `DELETE_FAILED`. Check the "Events" or "Resources" tab to find the specific resource that failed to delete.
+Running `convox rack uninstall` against a Console-managed Rack fails with `console uninstall not yet supported`.
 
-3. **Manually delete the blocking resource.**
-    Navigate to the appropriate service console (e.g., EC2 for Network Interfaces, VPC for Security Groups) and delete the resource identified in the previous step. You may need to detach or delete other dependent resources first.
+1. **Find the blocking resource.** The Terraform error at the end of the uninstall output names the resource that could not be deleted and the cloud provider's reason.
+2. **Delete it in your cloud provider's console.** Detach or delete anything that depends on it first. On AWS, a network interface left in the `available` state in the Rack's VPC can block the uninstall; see [Known Issues](/help/known-issues).
+3. **Run the uninstall again.** Terraform deletes the resources that are left. A self-managed Rack keeps its Terraform state until an uninstall completes, so the command can be repeated.
 
-4. **Retry the CloudFormation stack deletion.**
-    Return to the CloudFormation console, select the failed stack, and click "Delete". In the deletion dialog, check the box next to the resource you manually deleted and proceed.
+`convox rack uninstall` has no force option. In the Console, **Force Remove Rack from Console** removes only the Console's record of the Rack and leaves every cloud resource in place for you to delete yourself.
 
-Once the CloudFormation stack is gone, the rack will be removed from your Convox console.
+When the uninstall completes, a Console-managed Rack is removed from the Console.
 
 ## A Rack update keeps failing with a Helm "another operation in progress" error
 

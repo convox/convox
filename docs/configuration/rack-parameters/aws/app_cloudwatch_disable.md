@@ -1,6 +1,6 @@
 ---
 title: "app_cloudwatch_disable"
-description: "The app_cloudwatch_disable AWS rack parameter stops both CloudWatch writers for the per-App log groups while leaving the Rack system group live, defaulting to false."
+description: "The app_cloudwatch_disable AWS rack parameter stops both CloudWatch writers for per-App log groups and leaves the Rack system group live, defaulting to false."
 slug: app_cloudwatch_disable
 url: /configuration/rack-parameters/aws/app_cloudwatch_disable
 ---
@@ -51,7 +51,7 @@ Adding `cloudwatch_disable=true` to any of these rows stops the Rack controller 
 
 ## Syslog Forwarding
 
-Turning this parameter on does not stop [syslog](/configuration/rack-parameters/aws/syslog) forwarding. Fluentd keeps its syslog store on Rack system records, and App records reach a catch-all that carries a syslog copy whenever the `syslog` parameter is set. App output leaves CloudWatch and still leaves the Rack. With `syslog` unset, App records are discarded.
+Turning this parameter on does not stop [syslog](/configuration/rack-parameters/aws/syslog) forwarding. Fluentd keeps its syslog store on Rack system records, and App records reach a catch-all that carries a syslog copy whenever the `syslog` parameter is set. App output leaves CloudWatch and still leaves the Rack. With `syslog` unset, App records are discarded. Public router access lines reach syslog only while [syslog_access_logs](/configuration/rack-parameters/aws/syslog_access_logs) is `true`.
 
 ## Warnings
 

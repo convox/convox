@@ -1,6 +1,6 @@
 ---
 title: "One-off Commands"
-description: "Run one-off commands on an app with convox run to spawn a new Process, detached or waited on, or convox exec to run inside an existing Process for debugging and migrations."
+description: "Run one-off commands with convox run in a new Process, detached or waited on, or with convox exec inside an existing Process for debugging and migrations."
 slug: one-off-commands
 url: /management/run
 ---
@@ -34,12 +34,13 @@ Running detached is useful for long-running tasks that you don't want to be disr
 > The output of detached [Processes](/reference/primitives/app/process) will appear in the
 > [application logs](/configuration/logging)
 
-The two follow-up lines go to standard error. Add `--wait` to hold the command open until the [Process](/reference/primitives/app/process) finishes and exit with its own exit code, which suppresses those lines and lets a CI step fail when the command does:
+The two follow-up lines go to standard error. Add `--wait` to hold the command open until the [Process](/reference/primitives/app/process) finishes, print its output while it runs, and exit with its own exit code. `--wait` also suppresses the two follow-up lines and lets a CI step fail when the command does:
 ```bash
     $ convox run web bin/migrate --detach --wait -a my-app
     Running detached process... OK, web-s43xf
+    Migrating users... done
 ```
-See [Detached Runs](/reference/cli/run#detached-runs) for `--wait`, `--retain`, and `--id`.
+Printing the output requires CLI version `3.25.11` or later. See [Detached Runs](/reference/cli/run#detached-runs) for `--wait`, `--retain`, and `--id`.
 
 ## Running a command in an existing Process
 

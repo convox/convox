@@ -1,6 +1,6 @@
 ---
 title: "run"
-description: "The convox run command executes a command in a new one-off process, with flags for CPU, memory, GPU, node placement, pod customization, release, and service volumes."
+description: "The convox run command runs a command in a new one-off process, with flags for CPU, memory, GPU, node placement, pod customization, release, and volumes."
 slug: run
 url: /reference/cli/run
 ---
@@ -39,7 +39,7 @@ Execute a command in a new process
 | `--tolerations` | string | Pod tolerations as comma-separated entries (requires rack >= 3.25.1) |
 | `--use-service-lifecycle` | bool | Copy the service's lifecycle hooks onto the run container (requires rack >= 3.25.1) |
 | `--use-service-volume` | bool | Attach all service-configured volumes to the run pod (requires rack >= 3.22.3) |
-| `--wait` | bool | With `--detach`, wait for the process to finish and exit with its status (requires rack >= 3.25.5) |
+| `--wait` | bool | With `--detach`, wait for the process to finish, print its output, and exit with its status (requires rack >= 3.25.5; output requires CLI >= 3.25.11) |
 
 ### Examples
 
@@ -70,16 +70,18 @@ The two follow-up lines go to standard error. Passing `--wait` suppresses them.
 
 ### `--wait`
 
-`--wait` holds the command open until the detached process finishes, then exits with the process's own exit code.
+`--wait` holds the command open until the detached process finishes, prints the command's output as it runs, then exits with the process's own exit code.
 
 ```bash
     $ convox run web bin/migrate --detach --wait -a my-app
     Running detached process... OK, web-s43xf
+    Migrating users... done
+    Migrating orders... done
     $ echo $?
     0
 ```
 
-The CLI reads the process record every 5 seconds and accepts the result after two consecutive reads report a terminal status, either `complete` or `failed`. `--timeout` bounds the wait, not the process: when the wait runs out, the process keeps running.
+The CLI reads the process record every 5 seconds. Once a read reports a terminal status, either `complete` or `failed`, the CLI exits after the next 5-second interval. `--timeout` bounds the wait, not the process: when the wait runs out, the process keeps running. With CLI 3.25.11 or later, a Process whose terminal status is first read in the last interval before `--timeout` still exits with its own exit code; earlier CLIs report `could not confirm the outcome` in that case.
 
 `--wait` raises retention to at least 60 seconds so the finished process is still readable when the last read comes back. Pass `--retain` to hold the record longer than that.
 
@@ -100,6 +102,21 @@ process web-s43xf ended with status failed but the rack did not report an exit s
 ```
 
 `-w` is the short form. Every `convox` command carries a `-w` / `--wait` flag kept for compatibility with the V2 CLI, and on every other command it does nothing. On `convox run` it selects the behavior above, so a script that passes `-w` out of habit now waits.
+
+#### Output
+
+With CLI 3.25.11 or later, `--wait` prints each line the Process writes while the CLI waits. The command's standard output and standard error arrive as one stream and print on the CLI's standard output, or on standard error with `--id`. The output needs no newer Rack than `--wait` itself, and the exit code still comes from the Process status, so a gap in the output never changes it.
+
+| Case | What prints |
+|------|-------------|
+| The Process is waiting to be scheduled or pulling its image | Nothing. Output starts when the command does |
+| The command prints as soon as it starts | Its first lines can occasionally be missing, when they are written before the output connection reaches the Rack |
+| The output connection drops | The CLI reconnects. Lines written while it was disconnected do not print |
+| Reconnecting keeps failing | `WARNING: process output stopped (<reason>); still waiting for the exit status`, or the same line without the parenthesis when there is no reason. The CLI keeps waiting |
+| A deploy key with no role | `WARNING: process output is not available to this deploy key; assign it a role with read access to the app to see output here`. The CLI keeps waiting. See [Custom Roles with Deploy Keys](/management/deploy-keys#custom-roles-with-deploy-keys) |
+| The output is piped to a command that stops reading, such as `head` | The CLI stops printing and still exits with the Process's exit code |
+
+Both warnings go to standard error and do not change the exit code.
 
 ### `--retain`
 
@@ -128,6 +145,16 @@ During the retention window, `convox ps` lists the process with a status of `com
     web-s43xf
 ```
 
+With `--wait`, the command's output also goes to standard error, so the capture still holds only the id:
+
+```bash
+    $ pid=$(convox run web bin/migrate --detach --wait --id -a my-app)
+    Running detached process... OK, web-s43xf
+    Migrating users... done
+    $ echo "$? $pid"
+    0 web-s43xf
+```
+
 `--id` is handled entirely by the CLI and works against any Rack version.
 
 ## Detached Runs in CI
@@ -140,7 +167,7 @@ Use `--wait` when the pipeline must stop if the command fails:
     $ convox run web "bin/migrate" --detach --wait -a my-app
 ```
 
-The step passes only when the Rack reports an exit code of `0`. It fails when the command exits non-zero, when the wait exceeds `--timeout`, and when no exit status arrives.
+The step passes only when the Rack reports an exit code of `0`. It fails when the command exits non-zero, when the wait exceeds `--timeout`, and when no exit status arrives. With CLI 3.25.11 or later, the command's output appears in the step log while the step waits.
 
 ### Start now, check later
 
@@ -376,6 +403,7 @@ Running with `--use-service-volume` ensures the `/data` directory is available i
 - Pod customization flags (`--termination-grace`, `--annotations`, `--labels`, `--use-service-lifecycle`, `--node-affinity`, `--tolerations`): Requires CLI and rack version >= 3.25.1. Against older racks the flags are ignored
 - Node pool validation on `--node-labels`: Requires rack version >= 3.25.4. The check runs on the rack, so it applies to any CLI version
 - Detached wait and retention (`--wait`, `--retain`): Requires CLI and rack version >= 3.25.5
+- Process output under `--wait`: Requires CLI version >= 3.25.11. It is handled by the CLI, so it works on any rack that supports `--wait`
 - `--id`: Handled by the CLI, so it applies to any rack version
 - Failing on a missing exit status: The CLI catches a stream lost in transit on its own; an error the rack raises before the command starts requires rack version >= 3.25.5
 

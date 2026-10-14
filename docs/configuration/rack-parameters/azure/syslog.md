@@ -23,12 +23,20 @@ To set the `syslog` parameter, use the following command:
 $ convox rack params set syslog=tcp+tls://example.org:1234 -r rackName
 Updating parameters... OK
 ```
-This command sets the `syslog` parameter to the specified value.
+The change rolls the Fluentd pods on every node.
 
 ## Additional Information
-When set to `""`, syslog forwarding is not enabled. This parameter is optional and can be configured based on your specific logging needs. Ensure that the syslog endpoint is reachable and properly configured to receive logs from your Convox rack. For more information on setting up a syslog server, refer to the [Azure documentation on logging](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/logs-overview).
+When set to `""`, syslog forwarding is not enabled. Ensure that the syslog endpoint is reachable and configured to receive logs from your Convox Rack.
 
-- **Scheme and port:** the URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out.
-- **What is forwarded:** Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver. It does not collect containerized Resources such as `postgres` or `redis`, Kubernetes add-ons such as CoreDNS, or a Service whose name starts with `fluentd` or `cloudwatch-agent`. The Rack's own event lines, such as deploy state changes, are written to Elasticsearch directly and are not forwarded.
-- **Message format:** each line is sent with facility `user` and severity `info`. The syslog hostname is `<rack>.<app>` and the tag is `<type>/<name>/<pod>`, cut to 32 characters: `service/web/<pod>` for a Service, `timer/<timer>/<pod>` for a Timer, and `process/<service>/<pod>` for a `convox run` Process. Each message, header and tag included, is cut at 1024 bytes.
-- **`udp` endpoints:** a `udp` endpoint that is down returns no error, so lines sent to it are lost without a warning.
+- **Scheme and port:** the URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out. Any other scheme, such as `udp+tls`, forwards nothing.
+- **What is forwarded:** Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver. It does not collect containerized Resources such as `postgres` or `redis`, Kubernetes add-ons such as CoreDNS, or a Service whose name starts with `fluentd` or `cloudwatch-agent`. The Rack's own event lines, such as deploy state changes, are written to Elasticsearch directly and are not forwarded. Every router line, access lines included, is forwarded.
+- **Message format:** each line is sent with facility `user` and severity `info`. The syslog hostname is `<rack>.<app>` and the tag is `<type>/<name>/<pod>`, cut to 32 characters: `service/web/<pod>` for a Service, `timer/<timer>/<pod>` for a Timer, and `process/<service>/<pod>` for a `convox run` Process. Over `tcp` and `tcp+tls`, a line of up to 16,384 bytes arrives whole. Over `udp`, each message, header and tag included, is cut at 1,024 bytes.
+- **TLS:** from Rack version `3.25.11`, Fluentd verifies a `tcp+tls` endpoint's certificate against public certificate authorities. For an endpoint with a self-signed or private-CA certificate, set [`syslog_tls_verify`](/configuration/rack-parameters/azure/syslog_tls_verify) to `false`.
+- **Masking:** [`router_log_redact_params`](/configuration/rack-parameters/azure/router_log_redact_params) masks query parameter values in router lines before they are stored or forwarded.
+- **Failing endpoint:** when a `tcp` or `tcp+tls` endpoint refuses the connection, is unreachable, fails certificate verification or stops reading, Fluentd drops the line it was sending, logs a warning, skips syslog output for 60 seconds, then reconnects. Lines written during the pause are not resent. Each failure delays Elasticsearch delivery on that node by up to about 10 seconds, and nothing is lost from Elasticsearch. A `udp` endpoint that is down returns no error, so lines sent to it are lost without a warning.
+
+## See Also
+- [syslog_tls_verify](/configuration/rack-parameters/azure/syslog_tls_verify) for certificate verification on `tcp+tls` endpoints
+- [router_log_redact_params](/configuration/rack-parameters/azure/router_log_redact_params) for masking query parameter values in router logs
+- [Logging](/configuration/logging#log-forwarding) for log forwarding on every provider
+- [fluentd_memory](/configuration/rack-parameters/azure/fluentd_memory) for Fluentd memory on high log volume
