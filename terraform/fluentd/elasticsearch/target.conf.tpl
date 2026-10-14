@@ -33,6 +33,8 @@
 			@type elasticsearch
 			host ${elasticsearch}
 			port 9200
+			reload_connections false
+			reconnect_on_error true
 			target_index_key index
 			type_name _doc
 			logstash_format true
