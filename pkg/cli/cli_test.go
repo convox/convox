@@ -139,6 +139,25 @@ func testLocalRack(e *cli.Engine, name, provider, api string) error {
 	return nil
 }
 
+// testLocalRackSymlink is like testLocalRack, but the rack directory lives outside the settings directory and is
+// linked into it, as when a rack's Terraform is kept in a git checkout.
+func testLocalRackSymlink(t *testing.T, e *cli.Engine, name, provider, api string) {
+	t.Helper()
+
+	target := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(target, "main.tf"), []byte{}, 0600))
+
+	racks := filepath.Join(e.Settings, "racks")
+	require.NoError(t, os.MkdirAll(racks, 0700))
+	require.NoError(t, os.Symlink(target, filepath.Join(racks, name)))
+
+	data := []byte(fmt.Sprintf(`{"api":{"value":%q},"provider":{"value":%q}}`, api, provider))
+
+	me := &mockstdcli.Executor{}
+	me.On("Execute", "terraform", "output", "-json").Return(data, nil)
+	e.Executor = me
+}
+
 func testLogs(logs []string) io.ReadCloser {
 	return io.NopCloser(strings.NewReader(fmt.Sprintf("%s\n", strings.Join(logs, "\n"))))
 }
