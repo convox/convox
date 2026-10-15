@@ -220,7 +220,7 @@ func listDirect(c *stdcli.Context) ([]Direct, error) {
 	ds := []Direct{}
 
 	for _, sub := range subs {
-		if sub.IsDir() {
+		if isDir(dir, sub) {
 			continue
 		}
 

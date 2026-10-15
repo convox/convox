@@ -47,6 +47,18 @@ func TestSwitch(t *testing.T) {
 	})
 }
 
+func TestSwitchLocalSymlink(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testLocalRackSymlink(t, e, "dev1", "local", "https://host1")
+
+		res, err := testExecute(e, "switch dev1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Switched to dev1"})
+	})
+}
+
 func TestSwitchUnknown(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		r := mux.NewRouter()
