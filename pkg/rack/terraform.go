@@ -1101,7 +1101,7 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	ts := []Terraform{}
 
 	for _, sub := range subs {
-		if !sub.IsDir() {
+		if !isDir(dir, sub) {
 			continue
 		}
 
@@ -1115,6 +1115,18 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	}
 
 	return ts, nil
+}
+
+// isDir reports whether an entry in dir is a directory, following symlinks so that a rack directory can be linked
+// in from elsewhere (for example, a git checkout that holds the rack's Terraform).
+func isDir(dir string, entry os.DirEntry) bool {
+	if entry.Type()&os.ModeSymlink == 0 {
+		return entry.IsDir()
+	}
+
+	fi, err := os.Stat(filepath.Join(dir, entry.Name()))
+
+	return err == nil && fi.IsDir()
 }
 
 func optionalEnv(vars ...string) map[string]string {
