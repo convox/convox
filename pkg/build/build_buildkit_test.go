@@ -802,6 +802,76 @@ func TestBuildImageManifestCache(t *testing.T) {
 	}
 }
 
+func TestBuildCacheProvider(t *testing.T) {
+	registry := []string{
+		"--export-cache", "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=registry.test.com:web.buildcache",
+		"--import-cache", "type=registry,ref=registry.test.com:web.buildcache",
+	}
+	local := []string{
+		"--export-cache", "type=local,dest=/var/lib/buildkit",
+		"--import-cache", "type=local,src=/var/lib/buildkit",
+	}
+
+	tests := []struct {
+		Provider string
+		Cache    []string
+	}{
+		{Provider: "azure", Cache: registry},
+		{Provider: "gcp", Cache: registry},
+		{Provider: "do", Cache: registry},
+		{Provider: "az", Cache: local},
+		{Provider: "metal", Cache: local},
+	}
+
+	opts := build.Options{
+		App:      "app1",
+		Auth:     "{}",
+		Cache:    true,
+		Id:       "build1",
+		Rack:     "rack1",
+		Source:   "object://app1/object.tgz",
+		Push:     "registry.test.com",
+		Manifest: "convox2.yml",
+	}
+
+	for _, test := range tests {
+		t.Run(test.Provider, func(t *testing.T) {
+			t.Setenv("PROVIDER", test.Provider)
+
+			testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+
+				bdata, err := os.ReadFile("testdata/httpd.tgz")
+				require.NoError(t, err)
+				p.On("ObjectFetch", "app1", "/object.tgz").Return(io.NopCloser(bytes.NewReader(bdata)), nil)
+
+				p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+				p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+				p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+				args := []interface{}{
+					mock.Anything,
+					"buildctl", "build", "--frontend", "dockerfile.v0", "--local", mock.MatchedBy(matchContext), "--local", mock.MatchedBy(matchDockerfile),
+					"--opt", mock.MatchedBy(matchFilename), "--output", mock.MatchedBy(matchTag),
+				}
+				for _, c := range test.Cache {
+					args = append(args, c)
+				}
+				args = append(args, "--opt", "build-arg:FOO=bar")
+				e.On("Run", args...).Return(nil).Once()
+
+				e.On("Execute", "skopeo", "inspect", "--config", "docker://registry.test.com:web.build1").Return(fxSkopeoInspect(), nil)
+
+				p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil)
+				p.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(fxRelease2(), nil)
+				p.On("EventSend", "build:create", structs.EventSendOptions{Data: map[string]string{"app": "app1", "id": "build1", "release_id": "release2"}}).Return(nil)
+
+				require.NoError(t, b.Execute())
+			})
+		})
+	}
+}
+
 func TestLogin(t *testing.T) {
 	tmp, err := os.MkdirTemp(os.TempDir(), "convox-tests")
 	if err != nil {
