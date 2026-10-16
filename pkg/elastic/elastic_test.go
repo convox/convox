@@ -521,6 +521,61 @@ func TestStreamFiltersByApp(t *testing.T) {
 	require.Contains(t, string(data), `"minimum_should_match":1`)
 }
 
+func TestStreamFilter(t *testing.T) {
+	base := time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)
+	all := []logLine{
+		{id: "err-1", ts: base},
+		{id: "ok-2", ts: base.Add(time.Millisecond)},
+		{id: "err-3", ts: base.Add(2 * time.Millisecond)},
+	}
+
+	tests := []struct {
+		name   string
+		filter string
+		prefix bool
+		want   []string
+	}{
+		{"Match", "err", false, []string{"err-1", "err-3"}},
+		{"Case", "ERR", false, []string{}},
+		{"Empty", "", false, []string{"err-1", "ok-2", "err-3"}},
+		{"PrefixOnly", "web-1", true, []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, _ := newFakeES(t, page("s1", 0, all...))
+
+			opts := noFollow(time.Hour)
+			opts.Filter = options.String(tt.filter)
+			opts.Prefix = options.Bool(tt.prefix)
+
+			lines, _, done := stream(c, "rack", "app", opts)
+
+			require.Equal(t, tt.want, collect(lines))
+			<-done
+		})
+	}
+}
+
+func TestStreamFilterFollowAdvancesFloor(t *testing.T) {
+	second := time.Now().UTC().Truncate(time.Second).Add(-10 * time.Second)
+	miss := logLine{id: "miss", ts: second.Add(100 * time.Millisecond)}
+	hit := logLine{id: "hit", ts: second.Add(200 * time.Millisecond)}
+
+	c, es := newFakeES(t, page("s1", 0, miss), page("s2", 0, miss, hit))
+
+	lines, r, done := stream(c, "rack", "app", structs.LogsOptions{Since: options.Duration(time.Minute), Filter: options.String("hit")})
+
+	require.Equal(t, "hit", next(t, lines))
+
+	r.Close()
+	<-done
+
+	ss := es.searches()
+	require.GreaterOrEqual(t, len(ss), 2)
+	require.Equal(t, miss.ts.Add(-5*time.Second).Truncate(time.Millisecond).Format(time.RFC3339Nano), timestampRange(t, ss[1])["gte"])
+}
+
 func TestStreamElasticsearch(t *testing.T) {
 	addr := os.Getenv("ES_URL")
 	if addr == "" {
