@@ -59,6 +59,8 @@ func NewWithProvider(p structs.Provider) *Server {
 
 		auth.Route("GET", "/auth", func(c *stdapi.Context) error { return c.RenderOK() })
 
+		auth.Route("ANY", "/artifacts-uploads/{path:.*}", s.RegistryProxy)
+
 		s.setupRoutes(*auth)
 	})
 
