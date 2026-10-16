@@ -259,7 +259,7 @@ func AppsLock(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func AppsParams(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func AppsParams(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func AppsParamsSet(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
