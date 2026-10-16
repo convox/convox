@@ -256,6 +256,10 @@ func ResourcesInfo(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
+	if rack.ClientType() == "machine" {
+		return fmt.Errorf("resources proxy is not available on Cloud machines")
+	}
+
 	r, err := rack.ResourceGet(app(c), c.Arg(0))
 	if err != nil {
 		return err
