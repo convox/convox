@@ -158,6 +158,10 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string,
 					floor = f
 				}
 
+				if opts.Filter != nil && !strings.Contains(log.Source.Log, *opts.Filter) {
+					continue
+				}
+
 				prefix := ""
 
 				if common.DefaultBool(opts.Prefix, false) {
