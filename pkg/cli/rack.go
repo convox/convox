@@ -719,6 +719,8 @@ var cloudwatchRetentionValues = func() map[string]bool {
 
 var elasticsearchDiskRe = regexp.MustCompile(`^([5-9]|[1-9][0-9]+)Gi$`)
 
+var syslogURLRe = regexp.MustCompile(`^(tcp|udp|tcp\+tls)://[a-zA-Z\d._-]+(:\d+)?$`)
+
 var clearableParams = map[string]bool{
 	// Labels/taints — clear means "remove all"
 	"karpenter_node_labels":       true,
@@ -2418,6 +2420,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v, has := params["syslog"]; has && v != "" {
+		for _, e := range strings.Split(v, ",") {
+			if !syslogURLRe.MatchString(strings.Trim(e, " \t")) {
+				return fmt.Errorf("param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got %q)", e)
+			}
+		}
+	}
+
 	// Reject karpenter_* params for non-AWS racks
 	if provider != "aws" {
 		for k := range params {
@@ -3460,6 +3470,20 @@ func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	opts.Prefix = options.Bool(true)
+
+	if opts.Tail != nil {
+		if s, err := rack.SystemGet(); err == nil && (!strings.HasPrefix(s.Version, "3.") || isVersionLessThan(s.Version, "3.25.12")) {
+			fmt.Fprintln(c.Writer().Stderr, "WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window")
+		}
+	}
+
+	if opts.Previous != nil {
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --allow-previous has no effect on convox rack logs")
+	}
+
+	if opts.MaxLogRequests != nil {
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --max-log-requests has no effect on convox rack logs")
+	}
 
 	r, err := rack.SystemLogs(opts)
 	if err != nil {
