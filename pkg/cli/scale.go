@@ -80,6 +80,25 @@ func scaleRackAtLeast3246(version string) bool {
 	return true
 }
 
+func machineRangeScale(rack sdk.Interface, app, service string, opts structs.ServiceUpdateOptions) error {
+	if opts.Max == nil || rack.ClientType() != "machine" {
+		return nil
+	}
+
+	ss, err := rack.ServiceList(app)
+	if err != nil {
+		return err
+	}
+
+	for i := range ss {
+		if ss[i].Name == service && (ss[i].TriggersOverrideActive == nil || !*ss[i].TriggersOverrideActive) {
+			return fmt.Errorf("--max on Cloud machines needs a cpu or memory trigger; set the range with convox cloud services triggers enable %s --min <count> --max <count> --cpu <percent>", service)
+		}
+	}
+
+	return nil
+}
+
 func Scale(rack sdk.Interface, c *stdcli.Context) error {
 	var opts structs.ServiceUpdateOptions
 
@@ -110,7 +129,7 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		// instead of letting the user think the scale change applied.
 		// --count is the long-standing wire surface; skip the probe so
 		// existing scripts targeting older racks keep working.
-		if opts.Min != nil || opts.Max != nil {
+		if (opts.Min != nil || opts.Max != nil) && rack.ClientType() != "machine" {
 			sys, err := rack.SystemGet()
 			if err != nil {
 				return err
@@ -118,6 +137,10 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 			if !scaleRackAtLeast3246(sys.Version) {
 				return fmt.Errorf("--min / --max range scale requires rack version 3.24.6 or later; rack reports %q", sys.Version)
 			}
+		}
+
+		if err := machineRangeScale(rack, app(c), service, opts); err != nil {
+			return err
 		}
 
 		if opts.Min != nil && *opts.Min == 0 {
