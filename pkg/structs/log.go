@@ -2,6 +2,8 @@ package structs
 
 import "time"
 
+const LogsTailMax = 10000
+
 type LogsOptions struct {
 	Filter         *string        `flag:"filter" header:"Filter"`
 	Follow         *bool          `header:"Follow"`
