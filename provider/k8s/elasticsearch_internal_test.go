@@ -475,3 +475,122 @@ func TestVolumeExpanderRecordAfterRestoredElsewhere(t *testing.T) {
 		require.False(t, a.GetVerb() == "patch" && a.GetResource().Resource == "statefulsets")
 	}
 }
+
+func esNode(name, arch string) *ac.Node {
+	return &ac.Node{ObjectMeta: am.ObjectMeta{Name: name, Labels: map[string]string{"kubernetes.io/arch": arch}}}
+}
+
+func esPod(name, node string, ready bool) *ac.Pod {
+	status := ac.ConditionFalse
+	if ready {
+		status = ac.ConditionTrue
+	}
+
+	return &ac.Pod{
+		ObjectMeta: am.ObjectMeta{Name: name, Namespace: "rack-system", Labels: map[string]string{"service": "elasticsearch"}},
+		Spec:       ac.PodSpec{NodeName: node},
+		Status:     ac.PodStatus{Conditions: []ac.PodCondition{{Type: ac.PodReady, Status: status}}},
+	}
+}
+
+func pinnedSet(selector map[string]string) *appsv1.StatefulSet {
+	s := elasticsearchSet(2, 2)
+	s.Spec.Selector = &am.LabelSelector{MatchLabels: map[string]string{"service": "elasticsearch"}}
+	s.Spec.Template.Spec.NodeSelector = selector
+
+	return s
+}
+
+func podNames(t *testing.T, p *Provider) []string {
+	t.Helper()
+
+	pods, err := p.Cluster.CoreV1().Pods("rack-system").List(context.TODO(), am.ListOptions{})
+	require.NoError(t, err)
+
+	names := []string{}
+	for i := range pods.Items {
+		names = append(names, pods.Items[i].Name)
+	}
+
+	return names
+}
+
+func TestRescheduleElasticsearchMovesPodOffExcludedNode(t *testing.T) {
+	p := &Provider{Namespace: "rack-system", Cluster: fake.NewSimpleClientset(
+		pinnedSet(map[string]string{"kubernetes.io/arch": "amd64"}),
+		esNode("x86", "amd64"),
+		esNode("arm", "arm64"),
+		esPod("elasticsearch-0", "x86", true),
+		esPod("elasticsearch-1", "arm", false),
+	)}
+
+	out := captureStdout(t, func() { p.rescheduleElasticsearch(context.TODO()) })
+
+	require.Equal(t, "ns=elastic at=reschedule pod=elasticsearch-1 node=arm\n", out)
+	require.Equal(t, []string{"elasticsearch-0"}, podNames(t, p))
+}
+
+func TestRescheduleElasticsearchLeavesPodsAlone(t *testing.T) {
+	amd64 := map[string]string{"kubernetes.io/arch": "amd64"}
+
+	terminating := esPod("elasticsearch-0", "arm", false)
+	terminating.DeletionTimestamp = &am.Time{Time: time.Now()}
+
+	router := esPod("router-0", "arm", false)
+	router.Labels = map[string]string{"service": "router"}
+
+	tests := map[string]struct {
+		selector map[string]string
+		pod      *ac.Pod
+	}{
+		"unpinned template": {nil, esPod("elasticsearch-0", "gone", false)},
+		"ready":             {amd64, esPod("elasticsearch-0", "arm", true)},
+		"matching node":     {amd64, esPod("elasticsearch-0", "x86", false)},
+		"unscheduled":       {amd64, esPod("elasticsearch-0", "", false)},
+		"terminating":       {amd64, terminating},
+		"other service":     {amd64, router},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			p := &Provider{Namespace: "rack-system", Cluster: fake.NewSimpleClientset(
+				pinnedSet(tt.selector),
+				esNode("x86", "amd64"),
+				esNode("arm", "arm64"),
+				tt.pod,
+			)}
+
+			out := captureStdout(t, func() { p.rescheduleElasticsearch(context.TODO()) })
+
+			require.Empty(t, out)
+			require.Equal(t, []string{tt.pod.Name}, podNames(t, p))
+		})
+	}
+}
+
+func TestRescheduleElasticsearchSkipsMissingNode(t *testing.T) {
+	p := &Provider{Namespace: "rack-system", Cluster: fake.NewSimpleClientset(
+		pinnedSet(map[string]string{"kubernetes.io/arch": "amd64"}),
+		esNode("arm", "arm64"),
+		esPod("elasticsearch-0", "gone", false),
+		esPod("elasticsearch-1", "arm", false),
+	)}
+
+	out := captureStdout(t, func() { p.rescheduleElasticsearch(context.TODO()) })
+
+	require.Contains(t, out, "ns=elastic at=reschedule pod=elasticsearch-0 error=")
+	require.Contains(t, out, "ns=elastic at=reschedule pod=elasticsearch-1 node=arm\n")
+	require.Equal(t, []string{"elasticsearch-0"}, podNames(t, p))
+}
+
+func TestRescheduleElasticsearchMissingStatefulSet(t *testing.T) {
+	p := &Provider{Namespace: "rack-system", Cluster: fake.NewSimpleClientset(
+		esNode("arm", "arm64"),
+		esPod("elasticsearch-0", "arm", false),
+	)}
+
+	out := captureStdout(t, func() { p.rescheduleElasticsearch(context.TODO()) })
+
+	require.Contains(t, out, "ns=elastic at=reschedule error=")
+	require.Equal(t, []string{"elasticsearch-0"}, podNames(t, p))
+}
