@@ -193,18 +193,12 @@ func EnvEdit(rack sdk.Interface, c *stdcli.Context) error {
 
 	var r *structs.Release
 
-	rackVersion := ""
-	if rack.ClientType() == "machine" {
-		rackVersion = "v3"
-	} else {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return err
-		}
-		rackVersion = s.Version
+	s, err := rackSystem(rack)
+	if err != nil {
+		return err
 	}
 
-	if rackVersion <= "20180708231844" {
+	if s.Version <= "20180708231844" {
 		r, err = rack.EnvironmentSet(app(c), []byte(nenv.String()))
 		if err != nil {
 			return err
@@ -295,18 +289,12 @@ func EnvSet(rack sdk.Interface, c *stdcli.Context) error {
 
 	var r *structs.Release
 
-	rackVersion := ""
-	if rack.ClientType() == "machine" {
-		rackVersion = "v3"
-	} else {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return err
-		}
-		rackVersion = s.Version
+	s, err := rackSystem(rack)
+	if err != nil {
+		return err
 	}
 
-	if rackVersion <= "20180708231844" {
+	if s.Version <= "20180708231844" {
 		r, err = rack.EnvironmentSet(app(c), []byte(env.String()))
 		if err != nil {
 			return err
@@ -366,18 +354,12 @@ func EnvUnset(rack sdk.Interface, c *stdcli.Context) error {
 
 	var r *structs.Release
 
-	rackVersion := ""
-	if rack.ClientType() == "machine" {
-		rackVersion = "v3"
-	} else {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return err
-		}
-		rackVersion = s.Version
+	s, err := rackSystem(rack)
+	if err != nil {
+		return err
 	}
 
-	if rackVersion <= "20180708231844" {
+	if s.Version <= "20180708231844" {
 		for _, e := range c.Args {
 			r, err = rack.EnvironmentUnset(app(c), e)
 			if err != nil {

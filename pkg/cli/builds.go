@@ -235,6 +235,10 @@ func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) 
 }
 
 func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Build, error) {
+	if c.Bool("external") && rack.ClientType() == "machine" {
+		return nil, fmt.Errorf("--external is not available on Cloud machines; run the command without it")
+	}
+
 	if err := checkPendingEnvDrop(rack, c, app(c)); err != nil {
 		return nil, err
 	}
@@ -280,20 +284,14 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.OK()
 
-	rackVersion := ""
-	if rack.ClientType() == "machine" {
-		rackVersion = "v3"
-	} else {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return nil, err
-		}
-		rackVersion = s.Version
+	s, err := rackSystem(rack)
+	if err != nil {
+		return nil, err
 	}
 
 	var b *structs.Build
 
-	if rackVersion < "20180708231844" {
+	if s.Version < "20180708231844" {
 		c.Startf("Starting build")
 
 		b, err = rack.BuildCreateUpload(app(c), bytes.NewReader(data), opts)
@@ -571,16 +569,9 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 
 	defer r.Close()
 
-	rackVersion := ""
-	var err error
-	if rack.ClientType() == "machine" {
-		rackVersion = "v3"
-	} else {
-		s, err := rack.SystemGet()
-		if err != nil {
-			return err
-		}
-		rackVersion = s.Version
+	s, err := rackSystem(rack)
+	if err != nil {
+		return err
 	}
 
 	c.Startf("Importing build")
@@ -588,9 +579,9 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 	var b *structs.Build
 
 	switch {
-	case rackVersion <= "20180416200237":
+	case s.Version <= "20180416200237":
 		b, err = rack.BuildImportMultipart(app(c), r)
-	case rackVersion <= "20180708231844":
+	case s.Version <= "20180708231844":
 		b, err = rack.BuildImportUrl(app(c), r)
 	default:
 		b, err = rack.BuildImport(app(c), r)

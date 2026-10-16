@@ -219,6 +219,10 @@ func ServicesUpdate(rack sdk.Interface, c *stdcli.Context) error {
 
 	name := c.Arg(0)
 
+	if err := machineRangeScale(rack, app(c), name, opts); err != nil {
+		return err
+	}
+
 	c.Startf("Updating <service>%s</service>", name)
 
 	if err := rack.ServiceUpdate(app(c), name, opts); err != nil {
@@ -269,6 +273,9 @@ func ServicesTriggersEnable(rack sdk.Interface, c *stdcli.Context) error {
 	if len(opts.Triggers) == 0 {
 		return fmt.Errorf("at least one of --cpu, --memory, --gpu, --queue is required")
 	}
+	if rack.ClientType() == "machine" && (c.Int("gpu") > 0 || c.Int("queue") > 0) {
+		return fmt.Errorf("gpu and queue triggers are not available on Cloud machines")
+	}
 
 	if err := servicesTriggersRackAtLeast3246(rack, "services triggers enable"); err != nil {
 		return err
@@ -302,6 +309,9 @@ func ServicesTriggersThresholdSet(rack sdk.Interface, c *stdcli.Context) error {
 	if !ok || canonical == "" {
 		return fmt.Errorf("invalid --type %q; expected cpu|memory|gpu|queue", rawType)
 	}
+	if rack.ClientType() == "machine" && (canonical == structs.TriggerTypeGPUUtilization || canonical == structs.TriggerTypeQueueDepth) {
+		return fmt.Errorf("gpu and queue triggers are not available on Cloud machines")
+	}
 	thresholdStr := strings.TrimSpace(c.String("threshold"))
 	if thresholdStr == "" {
 		return fmt.Errorf("--threshold is required")
@@ -326,6 +336,10 @@ func ServicesTriggersThresholdSet(rack sdk.Interface, c *stdcli.Context) error {
 // helper so any pre-3.24.6 rack target gets a clean upgrade-required
 // error instead of the older rack silently 404-ing the new endpoint.
 func servicesTriggersRackAtLeast3246(rack sdk.Interface, commandName string) error {
+	if rack.ClientType() == "machine" {
+		return nil
+	}
+
 	sys, err := rack.SystemGet()
 	if err != nil {
 		return err
