@@ -21,6 +21,9 @@ var sequenceTokens sync.Map
 
 var (
 	logRetrySleep              = 3 * time.Second
+	logPageSleep               = 2 * time.Second
+	logEmptySleep              = 5 * time.Second
+	logPollSleep               = 1 * time.Second
 	resourceNotFoundMaxRetries = 20
 	logRetentionInterval       = time.Hour
 	logRetentionPutInterval    = 250 * time.Millisecond
@@ -461,6 +464,16 @@ func (p *Provider) nextSequenceToken(group, stream string) (string, error) {
 func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stream string, opts structs.LogsOptions) error {
 	defer w.Close()
 
+	tail := -1
+	if opts.Tail != nil {
+		tail = *opts.Tail
+	}
+
+	if tail > structs.LogsTailMax {
+		fmt.Fprintf(w, "error: tail cannot be more than %d lines\n", structs.LogsTailMax)
+		return nil
+	}
+
 	req := &cloudwatchlogs.FilterLogEventsInput{
 		LogGroupName: aws.String(group),
 	}
@@ -478,7 +491,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 		req.StartTime = aws.Int64(start)
 	}
 
-	if !follow {
+	holding := tail >= 0
+	held := []*cloudwatchlogs.FilteredLogEvent{}
+
+	if !follow || holding {
 		req.EndTime = aws.Int64(time.Now().UTC().UnixNano() / int64(time.Millisecond))
 	}
 
@@ -518,6 +534,7 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 					time.Sleep(logRetrySleep)
 					continue
 				default:
+					fmt.Fprintf(w, "error: %v\n", err)
 					return err
 				}
 			}
@@ -539,6 +556,21 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 
 			sort.Slice(es, func(i, j int) bool { return *es[i].Timestamp < *es[j].Timestamp })
 
+			if holding {
+				held = append(held, es...)
+				if len(held) > tail {
+					held = held[len(held)-tail:]
+				}
+				es = nil
+
+				if res.NextToken == nil {
+					es, held, holding = held, nil, false
+					if follow {
+						req.EndTime = nil
+					}
+				}
+			}
+
 			if _, err := writeLogEvents(w, es, opts); err != nil {
 				return err
 			}
@@ -550,11 +582,11 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			}
 
 			if res.NextToken != nil {
-				time.Sleep(2 * time.Second)
+				time.Sleep(logPageSleep)
 			} else if len(es) == 0 {
-				time.Sleep(5 * time.Second)
+				time.Sleep(logEmptySleep)
 			} else {
-				time.Sleep(1 * time.Second)
+				time.Sleep(logPollSleep)
 			}
 
 			if res.NextToken == nil {

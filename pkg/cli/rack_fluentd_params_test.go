@@ -135,3 +135,56 @@ func TestValidateAndMutateParams_SyslogParamsProviderCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateAndMutateParams_Syslog(t *testing.T) {
+	tests := []struct {
+		value   string
+		wantErr bool
+		got     string
+	}{
+		{"", false, ""},
+		{"  ", false, ""},
+		{"tcp://logs", false, ""},
+		{"udp://10.0.0.5:514", false, ""},
+		{"tcp+tls://logs.example.com:6514", false, ""},
+		{"tcp+tls://a:6514, udp://b:514", false, ""},
+		{"tcp://a:514,\tudp://b_1:514 ", false, ""},
+		{"udp+tls://logs.example.com:6514", true, "udp+tls://logs.example.com:6514"},
+		{"tpc://logs", true, "tpc://logs"},
+		{"TCP://logs", true, "TCP://logs"},
+		{"tcp://logs/", true, "tcp://logs/"},
+		{"tcp://logs:abc", true, "tcp://logs:abc"},
+		{"tcp://", true, "tcp://"},
+		{"tcp://user@logs:514", true, "tcp://user@logs:514"},
+		{"logs:514", true, "logs:514"},
+		{"null", true, "null"},
+		{"tcp://a,", true, ""},
+		{"tcp://a, ", true, " "},
+		{"tcp://a,,udp://b", true, ""},
+		{"tcp://a, tcp://b c", true, " tcp://b c"},
+		{"udp+tcp://logs", true, "udp+tcp://logs"},
+		{"x tcp://logs", true, "x tcp://logs"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			for _, provider := range []string{"aws", "azure", "do", "gcp", "metal"} {
+				for _, force := range []bool{false, true} {
+					err := validateAndMutateParams(map[string]string{"syslog": tt.value}, provider, map[string]string{}, force)
+					if !tt.wantErr {
+						if err != nil {
+							t.Errorf("%s force=%v: %q rejected: %v", provider, force, tt.value, err)
+						}
+						continue
+					}
+					if err == nil {
+						t.Errorf("%s force=%v: %q accepted", provider, force, tt.value)
+						continue
+					}
+					if want := fmt.Sprintf("(got %q)", tt.got); !strings.Contains(err.Error(), want) {
+						t.Errorf("%s force=%v: %q: error %q does not contain %s", provider, force, tt.value, err, want)
+					}
+				}
+			}
+		})
+	}
+}

@@ -1,9 +1,11 @@
 package aws
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,6 +18,7 @@ import (
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	mocks "github.com/convox/convox/pkg/mock/aws"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
@@ -1046,4 +1049,156 @@ func TestStreamLogsFollowLeavesEndTimeUnset(t *testing.T) {
 	in, ok := m.Calls[0].Arguments.Get(0).(*cloudwatchlogs.FilterLogEventsInput)
 	require.True(t, ok)
 	require.Nil(t, in.EndTime)
+}
+
+type tailPage struct {
+	events []*cloudwatchlogs.FilteredLogEvent
+	token  string
+	err    error
+}
+
+func tailEvent(id string, ts int64) *cloudwatchlogs.FilteredLogEvent {
+	return &cloudwatchlogs.FilteredLogEvent{EventId: aws.String(id), Timestamp: aws.Int64(ts), Message: aws.String(id)}
+}
+
+func streamTail(t *testing.T, opts structs.LogsOptions, pages ...tailPage) ([]string, []cloudwatchlogs.FilterLogEventsInput, error) {
+	t.Helper()
+
+	prev := []time.Duration{logPageSleep, logEmptySleep, logPollSleep}
+	t.Cleanup(func() { logPageSleep, logEmptySleep, logPollSleep = prev[0], prev[1], prev[2] })
+	logPageSleep, logEmptySleep, logPollSleep = time.Millisecond, time.Millisecond, time.Millisecond
+
+	r, w := io.Pipe()
+	lines := []string{}
+	read := make(chan struct{})
+
+	go func() {
+		s := bufio.NewScanner(r)
+		for s.Scan() {
+			lines = append(lines, s.Text())
+		}
+		close(read)
+	}()
+
+	inputs := []cloudwatchlogs.FilterLogEventsInput{}
+	record := func(a mock.Arguments) {
+		in, ok := a.Get(0).(*cloudwatchlogs.FilterLogEventsInput)
+		require.True(t, ok)
+		inputs = append(inputs, *in)
+	}
+
+	m := &mocks.CloudWatchLogsAPI{}
+	for _, pg := range pages {
+		out := &cloudwatchlogs.FilterLogEventsOutput{Events: pg.events}
+		if pg.token != "" {
+			out.NextToken = aws.String(pg.token)
+		}
+		if pg.err != nil {
+			out = nil
+		}
+		m.On("FilterLogEvents", mock.Anything).Return(out, pg.err).Run(record).Once()
+	}
+	m.On("FilterLogEvents", mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{}, nil).Run(func(a mock.Arguments) {
+		record(a)
+		_ = r.Close()
+	})
+
+	err := (&Provider{CloudWatchLogs: m}).streamLogs(context.Background(), w, "/convox/rack/system", "", opts)
+	<-read
+
+	return lines, inputs, err
+}
+
+func TestStreamLogsTailNoFollow(t *testing.T) {
+	threePages := []tailPage{
+		{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("e1", 1), tailEvent("e2", 2)}, token: "t1"},
+		{token: "t2"},
+		{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("e3", 3), tailEvent("e4", 4)}},
+	}
+	lastEmpty := []tailPage{
+		{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("e1", 1), tailEvent("e2", 2)}, token: "t1"},
+		{},
+	}
+
+	for _, tt := range []struct {
+		name  string
+		tail  int
+		pages []tailPage
+		want  []string
+	}{
+		{"last two", 2, threePages, []string{"e3", "e4"}},
+		{"more than the window", 10, threePages, []string{"e1", "e2", "e3", "e4"}},
+		{"at the ceiling", structs.LogsTailMax, threePages, []string{"e1", "e2", "e3", "e4"}},
+		{"zero", 0, threePages, []string{}},
+		{"negative", -1, threePages, []string{"e1", "e2", "e3", "e4"}},
+		{"last page empty", 1, lastEmpty, []string{"e2"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lines, inputs, err := streamTail(t, structs.LogsOptions{Follow: options.Bool(false), Tail: options.Int(tt.tail)}, tt.pages...)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, lines)
+			require.Len(t, inputs, len(tt.pages))
+
+			for i, in := range inputs {
+				require.NotNil(t, in.EndTime)
+				if i > 0 {
+					require.Equal(t, tt.pages[i-1].token, aws.StringValue(in.NextToken))
+				}
+			}
+		})
+	}
+}
+
+func TestStreamLogsTailOverMax(t *testing.T) {
+	for _, tail := range []int{structs.LogsTailMax + 1, math.MaxInt} {
+		lines, inputs, err := streamTail(t, structs.LogsOptions{Follow: options.Bool(false), Tail: options.Int(tail)})
+		require.NoError(t, err)
+		require.Equal(t, []string{"error: tail cannot be more than 10000 lines"}, lines)
+		require.Empty(t, inputs)
+	}
+}
+
+func TestStreamLogsTailFollow(t *testing.T) {
+	base := time.Now().Add(-time.Minute).UnixNano() / int64(time.Millisecond)
+
+	lines, inputs, err := streamTail(t, structs.LogsOptions{Since: options.Duration(time.Hour), Tail: options.Int(1)},
+		tailPage{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("w1", base+100)}, token: "t1"},
+		tailPage{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("w2", base+200), tailEvent("w3", base+200)}},
+		tailPage{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("w2", base+200), tailEvent("w3", base+200), tailEvent("late", base+200), tailEvent("live", base+300)}},
+	)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+	require.Equal(t, []string{"w3", "late", "live"}, lines)
+	require.GreaterOrEqual(t, len(inputs), 3)
+	require.NotNil(t, inputs[0].EndTime)
+	require.NotNil(t, inputs[1].EndTime)
+	require.Nil(t, inputs[2].EndTime)
+	require.Equal(t, base+200, aws.Int64Value(inputs[2].StartTime))
+}
+
+func TestStreamLogsNegativeTailFollows(t *testing.T) {
+	lines, inputs, err := streamTail(t, structs.LogsOptions{Tail: options.Int(-1)},
+		tailPage{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("e1", 1)}},
+	)
+	require.ErrorIs(t, err, io.ErrClosedPipe)
+	require.Equal(t, []string{"e1"}, lines)
+	require.Nil(t, inputs[0].EndTime)
+}
+
+func TestStreamLogsWritesError(t *testing.T) {
+	failure := awserr.New("InvalidParameterException", "bad filter", nil)
+
+	for _, tt := range []struct {
+		tail *int
+		want []string
+	}{
+		{nil, []string{"e1", "error: InvalidParameterException: bad filter"}},
+		{options.Int(5), []string{"error: InvalidParameterException: bad filter"}},
+	} {
+		lines, _, err := streamTail(t, structs.LogsOptions{Follow: options.Bool(false), Tail: tt.tail},
+			tailPage{events: []*cloudwatchlogs.FilteredLogEvent{tailEvent("e1", 1)}, token: "t1"},
+			tailPage{err: failure},
+		)
+		require.Equal(t, failure, err)
+		require.Equal(t, tt.want, lines)
+	}
 }
