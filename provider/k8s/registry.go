@@ -87,6 +87,14 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 	path := c.Var("path")
 
+	if artifactUploadPath(p.Engine.RepositoryPrefix(), c.Request().URL.Path) {
+		return p.registryUploadProxy(c)
+	}
+
+	if strings.HasPrefix(c.Request().URL.Path, "/artifacts-uploads/") {
+		return registryError(structs.ErrNotFound("no such upload"))
+	}
+
 	if path == "" {
 		c.Response().Header().Add("Docker-Distribution-Api-Version", "registry/2.0")
 		return nil
@@ -107,12 +115,42 @@ func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 		return registryError(err)
 	}
 
-	u, err := url.Parse(fmt.Sprintf("https://%s", host))
+	return registryForward(c, host, fmt.Sprintf("/v2/%s", path), user, pass)
+}
+
+func (p *Provider) registryUploadProxy(c *stdapi.Context) error {
+	user, pass, err := p.Engine.RepositoryAuth("")
 	if err != nil {
-		registryError(err)
+		return registryError(err)
 	}
 
-	u.Path = fmt.Sprintf("/v2/%s", path)
+	host, _, err := p.Engine.RepositoryHost("")
+	if err != nil {
+		return registryError(err)
+	}
+
+	return registryForward(c, host, c.Request().URL.Path, user, pass)
+}
+
+// Artifact Registry continues blob uploads at Locations that name no app: first under
+// /artifacts-uploads, then under a pkg image in the /v2 API.
+func artifactUploadPath(prefix, path string) bool {
+	parts := strings.Split(strings.TrimSuffix(prefix, "/"), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return false
+	}
+
+	return strings.HasPrefix(path, fmt.Sprintf("/artifacts-uploads/namespaces/%s/repositories/%s/uploads/", parts[0], parts[1])) ||
+		strings.HasPrefix(path, fmt.Sprintf("/v2/%s/%s/pkg/blobs/uploads/", parts[0], parts[1]))
+}
+
+func registryForward(c *stdapi.Context, host, path, user, pass string) error {
+	u, err := url.Parse(fmt.Sprintf("https://%s", host))
+	if err != nil {
+		return registryError(err)
+	}
+
+	u.Path = path
 	u.RawQuery = c.Request().URL.RawQuery
 
 	proxy := httputil.ReverseProxy{
