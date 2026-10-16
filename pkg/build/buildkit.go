@@ -137,7 +137,7 @@ func (*BuildKit) Login(bb *Build) error {
 }
 
 func (*BuildKit) cacheProvider(provider string) bool {
-	return provider != "" && strings.Contains("do az gcp", provider) // skipcq
+	return provider == "azure" || provider == "do" || provider == "gcp"
 }
 
 func (*BuildKit) imageManifestCacheProvider(provider string) bool {
