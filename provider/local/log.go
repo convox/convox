@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -99,6 +100,9 @@ func subscribeLogs(ctx context.Context, w io.WriteCloser, stream string, opts st
 		case l, ok := <-ch:
 			if !ok {
 				return
+			}
+			if opts.Filter != nil && !strings.Contains(l.Message, *opts.Filter) {
+				continue
 			}
 			prefix := ""
 			if common.DefaultBool(opts.Prefix, false) {
