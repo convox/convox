@@ -14,6 +14,7 @@ import (
 	ac "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -53,6 +54,10 @@ func (p *Provider) RunElasticsearchMaintenance(ec *elastic.Client) {
 		r := ec.Retainer(p.Name)
 
 		for {
+			hctx, hcancel := context.WithTimeout(ctx, 30*time.Second)
+			p.rescheduleElasticsearch(hctx)
+			hcancel()
+
 			tctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 
 			if err := r.Tick(tctx, time.Now().UTC()); err != nil {
@@ -98,6 +103,51 @@ func campaign(elect func(onStarted func(context.Context), onStopped func()) erro
 		<-done
 
 		fmt.Println("ns=elastic at=lost_leadership")
+	}
+}
+
+func (p *Provider) rescheduleElasticsearch(ctx context.Context) {
+	sts, err := p.Cluster.AppsV1().StatefulSets(p.Namespace).Get(ctx, elasticsearchStatefulSet, am.GetOptions{})
+	if err != nil {
+		fmt.Printf("ns=elastic at=reschedule error=%q\n", err)
+		return
+	}
+
+	if len(sts.Spec.Template.Spec.NodeSelector) == 0 {
+		return
+	}
+
+	selector := labels.SelectorFromSet(sts.Spec.Template.Spec.NodeSelector)
+
+	pods, err := p.Cluster.CoreV1().Pods(p.Namespace).List(ctx, am.ListOptions{LabelSelector: am.FormatLabelSelector(sts.Spec.Selector)})
+	if err != nil {
+		fmt.Printf("ns=elastic at=reschedule error=%q\n", err)
+		return
+	}
+
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+
+		if pod.Spec.NodeName == "" || pod.DeletionTimestamp != nil || podReady(pod) {
+			continue
+		}
+
+		node, err := p.Cluster.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, am.GetOptions{})
+		if err != nil {
+			fmt.Printf("ns=elastic at=reschedule pod=%s error=%q\n", pod.Name, err)
+			continue
+		}
+
+		if selector.Matches(labels.Set(node.Labels)) {
+			continue
+		}
+
+		if err := p.Cluster.CoreV1().Pods(p.Namespace).Delete(ctx, pod.Name, am.DeleteOptions{Preconditions: &am.Preconditions{UID: &pod.UID}}); err != nil {
+			fmt.Printf("ns=elastic at=reschedule pod=%s error=%q\n", pod.Name, err)
+			continue
+		}
+
+		fmt.Printf("ns=elastic at=reschedule pod=%s node=%s\n", pod.Name, node.Name)
 	}
 }
 
@@ -305,6 +355,16 @@ func replicasOf(sts *appsv1.StatefulSet) int32 {
 	}
 
 	return *sts.Spec.Replicas
+}
+
+func podReady(pod *ac.Pod) bool {
+	for _, c := range pod.Status.Conditions {
+		if c.Type == ac.PodReady {
+			return c.Status == ac.ConditionTrue
+		}
+	}
+
+	return false
 }
 
 func counted(pvc *ac.PersistentVolumeClaim, replicas int32) bool {
