@@ -445,12 +445,68 @@ func TestRackLogsMaxLogRequests(t *testing.T) {
 		res, err := testExecute(e, "rack logs --max-log-requests 50", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
-		res.RequireStderr(t, []string{""})
+		res.RequireStderr(t, []string{"WARNING: --max-log-requests has no effect on convox rack logs"})
 		res.RequireStdout(t, []string{
 			fxLogs()[0],
 			fxLogs()[1],
 		})
 	})
+}
+
+func TestRackLogsUnusedFlags(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		s := fxSystem()
+		s.Version = "3.25.11"
+		i.On("SystemGet").Return(s, nil)
+		i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true), Previous: options.Bool(true), MaxLogRequests: options.Int(5), Tail: options.Int(5)}).Return(testLogs(fxLogs()), nil)
+
+		res, err := testExecute(e, "rack logs --max-log-requests 5 --allow-previous --tail 5", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{
+			"WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window",
+			"WARNING: --allow-previous has no effect on convox rack logs",
+			"WARNING: --max-log-requests has no effect on convox rack logs",
+		})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestRackLogsTail(t *testing.T) {
+	tests := []struct {
+		version string
+		err     error
+		stderr  string
+	}{
+		{"3.25.11", nil, "WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window"},
+		{"3.24.6", nil, "WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window"},
+		{"20261005214736", nil, "WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window"},
+		{"3.25.12", nil, ""},
+		{"3.26.0", nil, ""},
+		{"", fmt.Errorf("err1"), ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.version, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				s := fxSystem()
+				s.Version = tt.version
+				i.On("SystemGet").Return(s, tt.err)
+				i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true), Tail: options.Int(10)}).Return(testLogs(fxLogs()), nil)
+
+				res, err := testExecute(e, "rack logs --tail 10", nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{tt.stderr})
+				res.RequireStdout(t, []string{
+					fxLogs()[0],
+					fxLogs()[1],
+				})
+			})
+		})
+	}
 }
 
 func TestRackLogsError(t *testing.T) {

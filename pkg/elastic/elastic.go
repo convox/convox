@@ -94,6 +94,16 @@ func streamIndices(rack, app string, floor, now time.Time) []string {
 func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string, opts structs.LogsOptions) {
 	defer w.Close()
 
+	tail := -1
+	if opts.Tail != nil {
+		tail = *opts.Tail
+	}
+
+	if tail > structs.LogsTailMax {
+		fmt.Fprintf(w, "error: tail cannot be more than %d lines\n", structs.LogsTailMax)
+		return
+	}
+
 	follow := common.DefaultBool(opts.Follow, true)
 	now := time.Now().UTC()
 	floor := time.Time{}
@@ -127,6 +137,8 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string,
 	}
 
 	seen := map[string]time.Time{}
+	holding := tail >= 0
+	held := []string{}
 
 	for {
 		// check for closed writer
@@ -164,6 +176,14 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string,
 					prefix = fmt.Sprintf("%s %s ", log.Source.Timestamp.Format(time.RFC3339), strings.ReplaceAll(log.Source.Stream, ".", "/"))
 				}
 
+				if holding {
+					held = append(held, prefix+log.Source.Log)
+					if len(held) > tail {
+						held = held[len(held)-tail:]
+					}
+					continue
+				}
+
 				if _, err := fmt.Fprintf(w, "%s%s", prefix, log.Source.Log); err != nil {
 					return err
 				}
@@ -180,6 +200,12 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string,
 		if err != nil {
 			fmt.Fprintf(w, "error: %v\n", err)
 			return
+		}
+
+		if holding {
+			fmt.Fprint(w, strings.Join(held, ""))
+			holding = false
+			held = nil
 		}
 
 		if !follow {

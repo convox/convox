@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -634,4 +635,139 @@ func TestStreamElasticsearch(t *testing.T) {
 		require.Equal(t, want, collect(lines))
 		<-done
 	})
+}
+
+func TestStreamTailNoFollow(t *testing.T) {
+	defer func(n int) { pageSize = n }(pageSize)
+	pageSize = 3
+
+	all := sequence(time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC), 0, 5)
+
+	for _, tt := range []struct {
+		tail int
+		want []string
+	}{
+		{3, ids(all[2:])},
+		{10, ids(all)},
+		{structs.LogsTailMax, ids(all)},
+		{0, []string{}},
+		{-1, ids(all)},
+	} {
+		t.Run(fmt.Sprint(tt.tail), func(t *testing.T) {
+			c, es := newFakeES(t, page("s1", 0, all[:3]...), page("s1", 0, all[3:]...))
+
+			opts := noFollow(time.Hour)
+			opts.Tail = options.Int(tt.tail)
+
+			lines, _, done := stream(c, "rack", "app", opts)
+
+			require.Equal(t, tt.want, collect(lines))
+			<-done
+			require.Len(t, es.recorded(), 3)
+		})
+	}
+}
+
+func TestStreamTailPrefix(t *testing.T) {
+	all := sequence(time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC), 0, 3)
+
+	read := func(tail *int) []string {
+		c, _ := newFakeES(t, page("s1", 0, all...))
+
+		opts := noFollow(time.Hour)
+		opts.Prefix = options.Bool(true)
+		opts.Tail = tail
+
+		lines, _, done := stream(c, "rack", "app", opts)
+		out := collect(lines)
+		<-done
+
+		return out
+	}
+
+	full := read(nil)
+	require.Equal(t, "2026-10-16T12:00:00Z service/web/web-1 seq-00001", full[1])
+	require.Equal(t, full[1:], read(options.Int(2)))
+}
+
+func TestStreamTailSearchErrorDropsHeld(t *testing.T) {
+	defer func(n int) { pageSize = n }(pageSize)
+	pageSize = 3
+
+	all := sequence(time.Now().UTC().Add(-time.Second), 0, 4)
+	c, _ := newFakeES(t, page("s1", 0, all[:3]...), page("s1", 1, all[3:]...))
+
+	opts := noFollow(time.Hour)
+	opts.Tail = options.Int(2)
+
+	lines, _, done := stream(c, "rack", "app", opts)
+
+	require.Equal(t, []string{"error: 1 shards failed"}, collect(lines))
+	<-done
+}
+
+func TestStreamTailOverMax(t *testing.T) {
+	for _, tail := range []int{structs.LogsTailMax + 1, math.MaxInt} {
+		t.Run(fmt.Sprint(tail), func(t *testing.T) {
+			c, es := newFakeES(t, page("s1", 0, sequence(time.Now(), 0, 3)...))
+
+			opts := noFollow(time.Hour)
+			opts.Tail = options.Int(tail)
+
+			lines, _, done := stream(c, "rack", "app", opts)
+
+			require.Equal(t, []string{"error: tail cannot be more than 10000 lines"}, collect(lines))
+			<-done
+			require.Empty(t, es.recorded())
+		})
+	}
+}
+
+func TestStreamTailFollowDoesNotReprint(t *testing.T) {
+	base := time.Now().UTC().Add(-10 * time.Second)
+	a := logLine{id: "a", ts: base}
+	b := logLine{id: "b", ts: base.Add(100 * time.Millisecond)}
+	older := logLine{id: "older", ts: base.Add(150 * time.Millisecond)}
+	c1 := logLine{id: "c", ts: base.Add(200 * time.Millisecond)}
+	d := logLine{id: "d", ts: base.Add(300 * time.Millisecond)}
+	later := logLine{id: "later", ts: base.Add(900 * time.Millisecond)}
+
+	c, _ := newFakeES(t,
+		page("s1", 0, a, b, c1, d),
+		page("s2", 0, a, b, older, c1, d, later),
+	)
+
+	lines, r, done := stream(c, "rack", "app", structs.LogsOptions{Since: options.Duration(time.Minute), Tail: options.Int(2)})
+
+	require.Equal(t, "c", next(t, lines))
+	require.Equal(t, "d", next(t, lines))
+	require.Equal(t, "older", next(t, lines))
+	require.Equal(t, "later", next(t, lines))
+
+	select {
+	case l := <-lines:
+		require.FailNow(t, "unexpected line", l)
+	case <-time.After(1500 * time.Millisecond):
+	}
+
+	r.Close()
+	<-done
+}
+
+func TestStreamTailMissingIndexThenLive(t *testing.T) {
+	base := time.Now().UTC().Add(-10 * time.Second)
+
+	c, _ := newFakeES(t,
+		esPage{status: http.StatusNotFound, body: `{"error":{"type":"index_not_found_exception"},"status":404}`},
+		page("s1", 0, logLine{id: "x", ts: base}, logLine{id: "y", ts: base.Add(time.Millisecond)}, logLine{id: "z", ts: base.Add(2 * time.Millisecond)}),
+	)
+
+	lines, r, done := stream(c, "rack", "app", structs.LogsOptions{Since: options.Duration(time.Minute), Tail: options.Int(1)})
+
+	require.Equal(t, "x", next(t, lines))
+	require.Equal(t, "y", next(t, lines))
+	require.Equal(t, "z", next(t, lines))
+
+	r.Close()
+	<-done
 }
