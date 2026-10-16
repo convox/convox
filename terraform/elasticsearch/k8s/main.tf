@@ -51,6 +51,10 @@ resource "kubernetes_stateful_set" "elasticsearch" {
 
     update_strategy {
       type = "RollingUpdate"
+
+      rolling_update {
+        partition = 0
+      }
     }
 
     template {
@@ -61,6 +65,10 @@ resource "kubernetes_stateful_set" "elasticsearch" {
       }
 
       spec {
+        node_selector = {
+          "kubernetes.io/arch" = "amd64"
+        }
+
         security_context {
           fs_group = 1000
         }
