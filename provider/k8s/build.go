@@ -568,6 +568,19 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 		return errors.WithStack(structs.ErrUnprocessable("manifest has no services to relay"))
 	}
 
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	a, err := p.appFromNamespaceOnly(*ns)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	arch := a.Parameters[structs.AppParamBuildArch]
+	if arch != "" && arch != "amd64" && arch != "arm64" {
+		return errors.WithStack(structs.ErrUnprocessable("invalid BuildArch: %s, must be amd64 or arm64", arch))
+	}
+
 	// Acquire slot before flipping to running so rejection leaves build unchanged.
 	importSlot := snapshotImportSlots()
 	if !acquireImportSlotOn(importSlot) {
@@ -620,13 +633,13 @@ func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImp
 			})
 		}()
 
-		runErr = p.buildImportImageRun(app, &captured, m, image, srcUser, srcPass)
+		runErr = p.buildImportImageRun(app, &captured, m, image, srcUser, srcPass, arch)
 	}()
 
 	return nil
 }
 
-func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest.Manifest, imageRef, srcUser, srcPass string) error {
+func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest.Manifest, imageRef, srcUser, srcPass, arch string) error {
 	repo, _, err := p.Engine.RepositoryHost(app)
 	if err != nil {
 		return errors.WithStack(err)
@@ -657,6 +670,8 @@ func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest
 		args := []string{"copy", "--authfile", authPath}
 		if len(common.BuildArchs(os.Getenv("BUILD_ARCHS"))) > 0 {
 			args = append(args, "--all")
+		} else if arch != "" {
+			args = append(args, "--override-arch", arch)
 		}
 		args = append(args, "--", fmt.Sprintf("docker://%s", src), fmt.Sprintf("docker://%s", dst))
 

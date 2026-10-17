@@ -321,6 +321,35 @@ func TestProcessRun_BuildIgnoresNodeSelectorLabels(t *testing.T) {
 	require.Empty(t, spec.Tolerations)
 }
 
+func TestProcessRun_BuildKeepsNodeLabelsToleration(t *testing.T) {
+	dedicated := ac.Toleration{Key: "dedicated", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+	dedicatedNode := ac.Toleration{Key: "dedicated-node", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+
+	for name, tc := range map[string]struct {
+		nodeLabels *string
+		want       []ac.Toleration
+	}{
+		"BuildLabels":   {options.String("convox.io/label=arm"), []ac.Toleration{dedicatedNode, dedicated}},
+		"NoBuildLabels": {nil, []ac.Toleration{dedicated}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, kk, kc := minimalProvider(t)
+			createAppNamespace(t, kk, "rack1", "app1")
+			createBuild(t, kc, "rack1-app1", "build1")
+			createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
+
+			spec := runAndGetPodSpec(t, p, kk, "app1", "build", structs.ProcessRunOptions{
+				Release:    options.String("rel1"),
+				Command:    options.String("build"),
+				IsBuild:    true,
+				NodeLabels: tc.nodeLabels,
+			})
+
+			require.Equal(t, tc.want, spec.Tolerations)
+		})
+	}
+}
+
 func nodePoolProvider(t *testing.T, labels ...string) *Provider {
 	t.Helper()
 	p, kk, kc := minimalProvider(t)
