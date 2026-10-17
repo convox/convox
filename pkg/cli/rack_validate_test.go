@@ -1482,3 +1482,80 @@ func TestValidateAndMutateParams_ControlPlanePrivateSubnets(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParamsAzureArmGroups(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		key      string
+		config   string
+		warn     string
+	}{
+		{"arm node group", "azure", "additional_node_groups_config", `[{"type":"Standard_D4ps_v5","label":"arm"}]`, "without dedicated: true"},
+		{"dedicated arm node group", "azure", "additional_node_groups_config", `[{"type":"Standard_D4ps_v5","label":"arm","dedicated":true}]`, ""},
+		{"spot arm node group", "azure", "additional_node_groups_config", `[{"type":"Standard_D4ps_v5","capacity_type":"Spot"}]`, ""},
+		{"x86 node group", "azure", "additional_node_groups_config", `[{"type":"Standard_D4s_v5"}]`, ""},
+		{"arm build group", "azure", "additional_build_groups_config", `[{"type":"Standard_D4ps_v5"}]`, "BuildArch"},
+		{"spot arm build group", "azure", "additional_build_groups_config", `[{"type":"Standard_D4ps_v5","capacity_type":"SPOT"}]`, ""},
+		{"x86 build group", "azure", "additional_build_groups_config", `[{"type":"Standard_D4s_v5"}]`, ""},
+		{"gcp arm node group", "gcp", "additional_node_groups_config", `[{"type":"t2a-standard-4"}]`, ""},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var err error
+			stderr := captureStderr(t, func() {
+				err = validateAndMutateParams(map[string]string{c.key: c.config}, c.provider, map[string]string{}, false)
+			})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if c.warn == "" {
+				if strings.Contains(stderr, "WARNING") {
+					t.Errorf("expected no warning, got: %q", stderr)
+				}
+				return
+			}
+			if !strings.Contains(stderr, "WARNING: "+c.key) || !strings.Contains(stderr, c.warn) {
+				t.Errorf("expected a WARNING naming %s and %q, got: %q", c.key, c.warn, stderr)
+			}
+		})
+	}
+}
+
+func TestValidateAndMutateParamsGcpHyperdiskTypes(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		config   string
+		wantErr  bool
+	}{
+		{"c4a without disk_type", "gcp", `[{"type":"c4a-standard-4"}]`, true},
+		{"n4a with persistent disk", "gcp", `[{"type":"n4a-standard-4","disk_type":"pd-balanced"}]`, true},
+		{"c4a with a data-only hyperdisk", "gcp", `[{"type":"c4a-standard-4","disk_type":"hyperdisk-extreme"}]`, true},
+		{"n4a with hyperdisk-throughput", "gcp", `[{"type":"n4a-standard-4","disk_type":"hyperdisk-throughput"}]`, true},
+		{"a4x without disk_type", "gcp", `[{"type":"a4x-highgpu-4g"}]`, true},
+		{"c4a with hyperdisk", "gcp", `[{"type":"c4a-standard-4","disk_type":"hyperdisk-balanced"}]`, false},
+		{"t2a without disk_type", "gcp", `[{"type":"t2a-standard-4"}]`, false},
+		{"n2 without disk_type", "gcp", `[{"type":"n2-standard-4"}]`, false},
+		{"azure is not checked", "azure", `[{"type":"c4a-standard-4"}]`, false},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := validateAndMutateParams(map[string]string{"additional_node_groups_config": c.config}, c.provider, map[string]string{}, false)
+			if !c.wantErr {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected a Hyperdisk error, got nil")
+			}
+			if !strings.Contains(err.Error(), "hyperdisk-balanced") {
+				t.Errorf("expected error to name hyperdisk-balanced, got: %v", err)
+			}
+		})
+	}
+}
