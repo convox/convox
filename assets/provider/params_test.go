@@ -146,6 +146,26 @@ func TestParamsYAML_DefaultMatchesRegex(t *testing.T) {
 }
 
 func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
+	fluentdMemoryCases := []struct {
+		input string
+		valid bool
+	}{
+		{"200Mi", true},
+		{"512Mi", true},
+		{"1Gi", true},
+		{"1Mi", true},
+		{"0Mi", false},
+		{"0200Mi", false},
+		{"05Gi", false},
+		{"2.5Gi", false},
+		{"512", false},
+		{"500m", false},
+		{"2560000Ki", false},
+		{"1Ti", false},
+		{"512mi", false},
+		{"512 Mi", false},
+	}
+
 	// Table-driven regex validation with known-good and known-bad inputs
 	testCases := map[string][]struct {
 		input string
@@ -264,6 +284,10 @@ func TestParamsYAML_RegexAcceptsValidInputs(t *testing.T) {
 			{"5", false},
 			{"5.5Gi", false},
 		},
+		"aws/fluentd_memory":   fluentdMemoryCases,
+		"gcp/fluentd_memory":   fluentdMemoryCases,
+		"azure/fluentd_memory": fluentdMemoryCases,
+		"do/fluentd_memory":    fluentdMemoryCases,
 		// Karpenter disruption window (identical regexes in pkg/cli/rack.go)
 		"aws/karpenter_disruption_block_schedule": {
 			{"0 9 * * MON-FRI", true},
