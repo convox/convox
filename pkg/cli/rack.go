@@ -1119,6 +1119,14 @@ func (n *NodeGroupConfigParam) Validate(provider string) error {
 		}
 	}
 
+	if provider == "gcp" && (n.DiskType == nil || *n.DiskType != "hyperdisk-balanced") {
+		for _, prefix := range []string{"c4a-", "n4a-", "a4x-"} {
+			if strings.HasPrefix(n.Type, prefix) {
+				return fmt.Errorf("node type '%s' boots only from Hyperdisk; set disk_type to hyperdisk-balanced", n.Type)
+			}
+		}
+	}
+
 	if n.Tags != nil {
 		reserved := []string{"name", "rack"}
 		for _, part := range strings.Split(*n.Tags, ",") {
@@ -1521,6 +1529,24 @@ func instanceArch(instanceType string) string {
 	}
 	first := strings.Split(instanceType, ",")[0]
 	return familyArch(strings.Split(first, ".")[0])
+}
+
+// Azure marks Arm sizes with a "p" feature letter after the vCPU count, e.g. Standard_D4ps_v5.
+var azureArmSizeRe = regexp.MustCompile(`^standard_[a-z]+\d+(-\d+)?[a-z]*p[a-z]*_v\d+$`)
+
+func armMachineType(provider, machineType string) bool {
+	machineType = strings.ToLower(strings.TrimSpace(machineType))
+	switch provider {
+	case "gcp":
+		for _, prefix := range []string{"t2a-", "c4a-", "n4a-", "a4x-"} {
+			if strings.HasPrefix(machineType, prefix) {
+				return true
+			}
+		}
+	case "azure":
+		return azureArmSizeRe.MatchString(machineType)
+	}
+	return false
 }
 
 func validateInstanceTypeList(param, value string) error {
@@ -2598,6 +2624,19 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 	}
 
+	if v := params["node_type"]; armMachineType(provider, v) {
+		if !force {
+			return fmt.Errorf("param 'node_type' %s is an Arm machine type; the primary node pool must stay x86\n"+
+				"  Add Arm nodes with additional_node_groups_config instead.\n"+
+				"  Re-run with --force to proceed", v)
+		}
+		impact := "Elasticsearch, the rack log store, has no Arm image and will not run"
+		if provider == "gcp" {
+			impact = "GKE taints Arm nodes, so rack services cannot schedule there and the rack goes offline without another x86 node group"
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: node_type %s is an Arm machine type. %s.\n", v, impact)
+	}
+
 	if err := validateKarpenterArchFamilies(params, currentParams); err != nil {
 		return err
 	}
@@ -2868,6 +2907,20 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 			if err := nCfgs.Validate(provider); err != nil {
 				return err
+			}
+
+			if provider == "azure" {
+				for i := range nCfgs {
+					ng := &nCfgs[i]
+					if !armMachineType(provider, ng.Type) || (ng.CapacityType != nil && strings.EqualFold(*ng.CapacityType, "spot")) {
+						continue
+					}
+					if k == "additional_build_groups_config" {
+						fmt.Fprintf(os.Stderr, "WARNING: %s type %s is an Arm machine type. Builds of apps without the BuildArch app parameter can run on it and produce Arm-only images.\n", k, ng.Type)
+					} else if ng.Dedicated == nil || !*ng.Dedicated {
+						fmt.Fprintf(os.Stderr, "WARNING: %s type %s is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.\n", k, ng.Type)
+					}
+				}
 			}
 
 			sort.Slice(nCfgs, func(i, j int) bool {

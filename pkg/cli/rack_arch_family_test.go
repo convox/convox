@@ -238,3 +238,92 @@ func TestValidateAndMutateParamsRejectsMixedArchNodeType(t *testing.T) {
 		t.Errorf("aws-only check must not fire for other providers: %v", err)
 	}
 }
+
+func TestArmMachineType(t *testing.T) {
+	cases := []struct {
+		provider    string
+		machineType string
+		want        bool
+	}{
+		{"gcp", "t2a-standard-4", true},
+		{"gcp", "c4a-highmem-96-metal", true},
+		{"gcp", "n4a-standard-8", true},
+		{"gcp", "a4x-highgpu-4g", true},
+		{"gcp", " C4A-STANDARD-4 ", true},
+		{"gcp", "t2d-standard-4", false},
+		{"gcp", "c4-standard-4", false},
+		{"gcp", "c4d-standard-4", false},
+		{"gcp", "n4-standard-4", false},
+		{"gcp", "a4-highgpu-8g", false},
+		{"gcp", "n1-standard-2", false},
+		{"gcp", "Standard_D4ps_v5", false},
+		{"azure", "Standard_D4ps_v5", true},
+		{"azure", "Standard_D2pls_v6", true},
+		{"azure", "Standard_D2plds_v5", true},
+		{"azure", "Standard_E4pds_v5", true},
+		{"azure", "Standard_B2pts_v2", true},
+		{"azure", "standard_d4ps_v5", true},
+		{"azure", "Standard_D4s_v5", false},
+		{"azure", "Standard_D2ads_v6", false},
+		{"azure", "Standard_DS2_v2", false},
+		{"azure", "Standard_DS2_v2_Promo", false},
+		{"azure", "Standard_NC4as_T4_v3", false},
+		{"azure", "Standard_NP10s", false},
+		{"azure", "t2a-standard-4", false},
+		{"aws", "t2a-standard-4", false},
+		{"aws", "Standard_D4ps_v5", false},
+		{"do", "s-2vcpu-4gb", false},
+		{"gcp", "", false},
+	}
+
+	for _, c := range cases {
+		if got := armMachineType(c.provider, c.machineType); got != c.want {
+			t.Errorf("armMachineType(%q, %q) = %v, want %v", c.provider, c.machineType, got, c.want)
+		}
+	}
+}
+
+func TestValidateAndMutateParamsArmNodeType(t *testing.T) {
+	for provider, tc := range map[string]struct{ armType, impact string }{
+		"gcp":   {"t2a-standard-4", "the rack goes offline"},
+		"azure": {"Standard_D4ps_v5", "Elasticsearch"},
+	} {
+		armType := tc.armType
+		t.Run(provider, func(t *testing.T) {
+			err := validateAndMutateParams(map[string]string{"node_type": armType}, provider, map[string]string{}, false)
+			if err == nil {
+				t.Fatalf("expected Arm node_type to be refused")
+			}
+			for _, want := range []string{"node_type", "additional_node_groups_config", "--force"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("expected error to contain %q, got: %v", want, err)
+				}
+			}
+
+			var forcedErr error
+			stderr := captureStderr(t, func() {
+				forcedErr = validateAndMutateParams(map[string]string{"node_type": armType}, provider, map[string]string{}, true)
+			})
+			if forcedErr != nil {
+				t.Fatalf("forced Arm node_type should pass, got: %v", forcedErr)
+			}
+			if !strings.Contains(stderr, "WARNING: node_type "+armType) || !strings.Contains(stderr, tc.impact) {
+				t.Errorf("expected a WARNING naming the node_type and %q, got: %q", tc.impact, stderr)
+			}
+
+			if err := validateAndMutateParams(map[string]string{"node_disk": "100"}, provider, map[string]string{"node_type": armType}, false); err != nil {
+				t.Errorf("a stored Arm node_type must not block other params: %v", err)
+			}
+		})
+	}
+
+	for provider, x86Type := range map[string]string{"gcp": "n2-standard-4", "azure": "Standard_D4s_v5"} {
+		if err := validateAndMutateParams(map[string]string{"node_type": x86Type}, provider, map[string]string{}, false); err != nil {
+			t.Errorf("%s: x86 node_type should pass, got: %v", provider, err)
+		}
+	}
+
+	if err := validateAndMutateParams(map[string]string{"node_type": "t4g.large"}, "aws", map[string]string{}, false); err != nil {
+		t.Errorf("aws Arm node_type should pass, got: %v", err)
+	}
+}

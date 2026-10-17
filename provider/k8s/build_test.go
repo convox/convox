@@ -584,6 +584,85 @@ func TestBuildImportImage(t *testing.T) {
 			waitForBuildStatus(t, p, "app1", "build9", "complete")
 			assertArgsShape(t, capturedArgs)
 			assert.NotContains(t, capturedArgs, "--all")
+			assert.NotContains(t, capturedArgs, "--override-arch")
+		})
+	})
+
+	t.Run("BuildArchSelectsPlatform", func(t *testing.T) {
+		t.Setenv("BUILD_ARCHS", "")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+				"convox.com/params": `{"BuildArch":"arm64"}`,
+			}))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build11", "basic"))
+
+			var capturedArgs []string
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				capturedArgs = append([]string(nil), args...)
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build11", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.NoError(t, err)
+
+			waitForBuildStatus(t, p, "app1", "build11", "complete")
+			assertArgsShape(t, capturedArgs)
+			assert.Contains(t, strings.Join(capturedArgs, " "), "--override-arch arm64")
+			assert.NotContains(t, capturedArgs, "--all")
+		})
+	})
+
+	t.Run("MultiArchRackIgnoresBuildArch", func(t *testing.T) {
+		t.Setenv("BUILD_ARCHS", "amd64,arm64")
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+				"convox.com/params": `{"BuildArch":"arm64"}`,
+			}))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build12", "basic"))
+
+			var capturedArgs []string
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				capturedArgs = append([]string(nil), args...)
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build12", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.NoError(t, err)
+
+			waitForBuildStatus(t, p, "app1", "build12", "complete")
+			assertArgsShape(t, capturedArgs)
+			assert.Contains(t, capturedArgs, "--all")
+			assert.NotContains(t, capturedArgs, "--override-arch")
+		})
+	})
+
+	t.Run("InvalidBuildArchRejected", func(t *testing.T) {
+		testProvider(t, func(p *k8s.Provider) {
+			kk, ok := p.Cluster.(*fake.Clientset)
+			require.True(t, ok)
+			require.NoError(t, appCreateWithAnnotation(kk, "rack1", "app1", map[string]string{
+				"convox.com/params": `{"BuildArch":"bogus"}`,
+			}))
+			require.NoError(t, buildCreate(p.Convox, "rack1-app1", "build13", "basic"))
+
+			called := false
+			*k8s.SkopeoExecForTest = func(ctx context.Context, args ...string) ([]byte, error) {
+				called = true
+				return []byte("ok"), nil
+			}
+
+			err := p.BuildImportImage("app1", "build13", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid BuildArch")
+			assert.False(t, called)
+
+			b, err := p.BuildGet("app1", "build13")
+			require.NoError(t, err)
+			assert.NotEqual(t, "running", b.Status)
 		})
 	})
 
