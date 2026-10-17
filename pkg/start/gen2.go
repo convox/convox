@@ -120,6 +120,10 @@ func (*Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 			bopts.Manifest = options.String(opts.Manifest)
 		}
 
+		if !opts.Cache {
+			bopts.NoCache = options.Bool(true)
+		}
+
 		b, err := opts.buildCreate(ctx, &pw, bopts)
 		if err != nil {
 			return err
