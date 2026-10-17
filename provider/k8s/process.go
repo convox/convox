@@ -485,13 +485,11 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			})
 		}
 
-		s.Tolerations = []ac.Toleration{
-			{
-				Key:      "dedicated",
-				Operator: ac.TolerationOpExists,
-				Effect:   ac.TaintEffectNoSchedule,
-			},
-		}
+		s.Tolerations = append(s.Tolerations, ac.Toleration{
+			Key:      "dedicated",
+			Operator: ac.TolerationOpExists,
+			Effect:   ac.TaintEffectNoSchedule,
+		})
 	}
 
 	if opts.SystemCritical != nil && *opts.SystemCritical {
