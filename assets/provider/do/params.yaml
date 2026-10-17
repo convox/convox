@@ -77,9 +77,11 @@ Groups:
       - name: fluentd_memory
         default: 200Mi
         type: string
-        regex: ^\d+(Mi|Gi)$
+        regex: ^[1-9][0-9]*(Mi|Gi)$
         description: Memory request and limit for the Fluentd DaemonSet. Increase
-          if Fluentd pods are experiencing OOMKills.
+          if Fluentd pods are experiencing OOMKills. From 3.25.11 Fluentd also sizes
+          its buffers from this value, so a larger value holds more logs while
+          Elasticsearch is slow or unreachable.
       - name: elasticsearch_disk
         default: 5Gi
         type: string

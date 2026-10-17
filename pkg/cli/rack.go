@@ -717,6 +717,8 @@ var cloudwatchRetentionValues = func() map[string]bool {
 	return m
 }()
 
+var fluentdMemoryRe = regexp.MustCompile(`^[1-9][0-9]*(Mi|Gi)$`)
+
 var elasticsearchDiskRe = regexp.MustCompile(`^([5-9]|[1-9][0-9]+)Gi$`)
 
 var syslogURLRe = regexp.MustCompile(`^(tcp|udp|tcp\+tls)://[a-zA-Z\d._-]+(:\d+)?$`)
@@ -2299,7 +2301,7 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 
 	k8sResourceParams := map[string]bool{
 		"contour_cpu_request": true, "contour_memory_request": true, "envoy_cpu_request": true,
-		"envoy_memory_request": true, "fluentd_memory": true,
+		"envoy_memory_request": true,
 	}
 	k8sResourceRe := regexp.MustCompile(`^\d+(\.\d+)?(m|Ki|Mi|Gi|Ti|Pi|Ei)?$`)
 	for k, v := range params {
@@ -2308,6 +2310,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 				return fmt.Errorf("param '%s' must be a Kubernetes resource quantity (e.g., '100m', '256Mi', '1Gi')", k)
 			}
 		}
+	}
+
+	if v, has := params["fluentd_memory"]; has && !fluentdMemoryRe.MatchString(v) {
+		return errors.New("param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi")
 	}
 
 	if v, has := params["router_type"]; has && v != "" {
