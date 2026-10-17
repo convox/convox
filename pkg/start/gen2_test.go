@@ -3,6 +3,7 @@ package start_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -138,4 +139,26 @@ func TestStart2Options(t *testing.T) {
 
 	p.AssertExpectations(t)
 	e.AssertExpectations(t)
+}
+
+func TestStart2NoCache(t *testing.T) {
+	p := &structs.MockProvider{}
+
+	p.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2"}, nil)
+	p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{}, nil)
+	p.On("ObjectStore", "app1", "", mock.Anything, structs.ObjectStoreOptions{}).Return(&structs.Object{Url: "object://app1/object1.tgz"}, nil)
+	p.On("BuildCreate", "app1", "object://app1/object1.tgz", structs.BuildCreateOptions{Development: options.Bool(true), External: options.Bool(false), NoCache: options.Bool(true)}).Return(nil, fmt.Errorf("err1"))
+
+	t.Chdir("testdata/httpd")
+
+	opts := start.Options2{
+		App:      "app1",
+		Build:    true,
+		Provider: p,
+	}
+
+	err := start.New().Start2(t.Context(), io.Discard, opts)
+	require.EqualError(t, err, "err1")
+
+	p.AssertExpectations(t)
 }
