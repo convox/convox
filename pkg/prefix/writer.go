@@ -13,7 +13,7 @@ const (
 )
 
 type Writer struct {
-	lock     sync.Mutex
+	lock     *sync.Mutex
 	max      int
 	prefixes map[string]string
 	writer   io.Writer
@@ -28,7 +28,7 @@ func NewWriter(w io.Writer, prefixes map[string]string) Writer {
 		}
 	}
 
-	return Writer{max: max, prefixes: prefixes, writer: w}
+	return Writer{lock: &sync.Mutex{}, max: max, prefixes: prefixes, writer: w}
 }
 
 func (w Writer) Write(prefix string, r io.Reader) {
