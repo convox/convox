@@ -2697,7 +2697,7 @@ func TestValidateAndMutateParams_K8sResourceQuantity(t *testing.T) {
 		{"memory GiB", "envoy_memory_request", "1Gi", false},
 		{"decimal cpu", "envoy_cpu_request", "0.5", false},
 		{"decimal with unit", "envoy_memory_request", "1.5Gi", false},
-		{"bare integer", "fluentd_memory", "512", false},
+		{"bare integer", "envoy_memory_request", "512", false},
 		{"KiB", "envoy_memory_request", "100Ki", false},
 		{"TiB", "envoy_memory_request", "2Ti", false},
 

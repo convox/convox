@@ -122,6 +122,52 @@ func TestValidateAndMutateParams_RouterLogRedactParams(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_FluentdMemory(t *testing.T) {
+	const invalid = "param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi"
+
+	tests := []struct {
+		value   string
+		wantErr bool
+	}{
+		{"200Mi", false},
+		{"512Mi", false},
+		{"1Gi", false},
+		{"1Mi", false},
+		{"0Mi", true},
+		{"0200Mi", true},
+		{"05Gi", true},
+		{"2.5Gi", true},
+		{"512", true},
+		{"500m", true},
+		{"2560000Ki", true},
+		{"1Ti", true},
+		{"512mi", true},
+		{"512 Mi", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.value, func(t *testing.T) {
+			for _, provider := range []string{"aws", "azure", "do", "gcp", "metal"} {
+				for _, force := range []bool{false, true} {
+					err := validateAndMutateParams(map[string]string{"fluentd_memory": tt.value}, provider, map[string]string{}, force)
+					if !tt.wantErr {
+						if err != nil {
+							t.Errorf("%s force=%v: %q rejected: %v", provider, force, tt.value, err)
+						}
+						continue
+					}
+					if err == nil || err.Error() != invalid {
+						t.Errorf("%s force=%v: %q: got %v, want %q", provider, force, tt.value, err, invalid)
+					}
+				}
+			}
+		})
+	}
+
+	if err := validateAndMutateParams(map[string]string{"fluentd_memory": "512Mi"}, "local", map[string]string{}, false); err == nil {
+		t.Error("fluentd_memory should be unknown on local")
+	}
+}
+
 func TestValidateAndMutateParams_SyslogParamsProviderCoverage(t *testing.T) {
 	for _, provider := range []string{"azure", "do", "gcp", "metal"} {
 		if err := validateAndMutateParams(map[string]string{"syslog_tls_verify": "false"}, provider, map[string]string{}, false); err != nil {
