@@ -465,6 +465,36 @@ func TestRackLogsError(t *testing.T) {
 	})
 }
 
+func TestRackLogsNoFollowCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemLogs", structs.LogsOptions{Follow: options.Bool(false), Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "rack logs --no-follow", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: log stream ended before the end of output"})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestRackLogsFollowCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemLogs", structs.LogsOptions{Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "rack logs", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
 func TestRackParams(t *testing.T) {
 	prev := cli.IsTerminalFn
 	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }

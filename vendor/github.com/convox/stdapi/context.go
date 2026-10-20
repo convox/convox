@@ -9,6 +9,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/convox/logger"
 	"github.com/gorilla/mux"
@@ -35,6 +38,10 @@ type Context struct {
 	session  sessions.Store
 	vars     map[string]interface{}
 	ws       *websocket.Conn
+
+	wsReadMu  sync.Mutex
+	wsTaken   int32
+	wsWritten int32
 }
 
 type Flash struct {
@@ -174,6 +181,9 @@ func (c *Context) Read(data []byte) (int, error) {
 	if c.ws == nil {
 		return c.Body().Read(data)
 	}
+
+	c.wsReadMu.Lock()
+	defer c.wsReadMu.Unlock()
 
 	t, r, err := c.ws.NextReader()
 	if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
@@ -331,6 +341,7 @@ func (c *Context) Var(name string) string {
 }
 
 func (c *Context) Websocket() *websocket.Conn {
+	atomic.StoreInt32(&c.wsTaken, 1)
 	return c.ws
 }
 
@@ -338,6 +349,8 @@ func (c *Context) Write(data []byte) (int, error) {
 	if c.ws == nil {
 		return c.response.Write(data)
 	}
+
+	atomic.StoreInt32(&c.wsWritten, 1)
 
 	w, err := c.ws.NextWriter(websocket.TextMessage)
 	if err != nil {
@@ -347,4 +360,33 @@ func (c *Context) Write(data []byte) (int, error) {
 	defer w.Close()
 
 	return w.Write(data)
+}
+
+var websocketDrainTimeout = 5 * time.Minute
+
+// drainWebsocket keeps reading a finished stream until the client hangs up:
+// closing a socket with unread input resets it and drops the queued tail.
+func (c *Context) drainWebsocket() {
+	if atomic.LoadInt32(&c.wsTaken) == 1 || atomic.LoadInt32(&c.wsWritten) == 0 {
+		return
+	}
+
+	c.ws.SetReadDeadline(time.Now().Add(websocketDrainTimeout))
+
+	c.wsReadMu.Lock()
+	defer c.wsReadMu.Unlock()
+
+	// a pong stuck behind the queued tail must not end the drain
+	c.ws.SetPingHandler(func(data string) error {
+		c.ws.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
+		return nil
+	})
+
+	for {
+		if _, _, err := c.ws.NextReader(); err != nil {
+			break
+		}
+	}
+
+	c.ws.Close()
 }

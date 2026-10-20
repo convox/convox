@@ -211,11 +211,19 @@ func (rt *Router) websocket(fn HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		var c *Context
+
+		defer func() {
+			if c != nil {
+				c.drainWebsocket()
+			}
+		}()
+
 		// empty binary message signals EOF
 		defer conn.WriteMessage(websocket.BinaryMessage, []byte{})
 		// defer conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(1000, ""))
 
-		c, err := rt.context(functionName(fn), w, r, conn)
+		c, err = rt.context(functionName(fn), w, r, conn)
 		if err != nil {
 			conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("ERROR: %s\n", err.Error())))
 			return
