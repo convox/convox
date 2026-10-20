@@ -86,13 +86,10 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 
 func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 	path := c.Var("path")
+	prefix := p.Engine.RepositoryPrefix()
 
-	if artifactUploadPath(p.Engine.RepositoryPrefix(), c.Request().URL.Path) {
-		return p.registryUploadProxy(c)
-	}
-
-	if strings.HasPrefix(c.Request().URL.Path, "/artifacts-uploads/") {
-		return registryError(structs.ErrNotFound("no such upload"))
+	if artifactUploadPath(prefix, c.Request().URL.Path) {
+		return p.registryUploadProxy(c, prefix)
 	}
 
 	if path == "" {
@@ -115,10 +112,10 @@ func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 		return registryError(err)
 	}
 
-	return registryForward(c, host, fmt.Sprintf("/v2/%s", path), user, pass)
+	return registryForward(c, host, fmt.Sprintf("/v2/%s", path), user, pass, prefix)
 }
 
-func (p *Provider) registryUploadProxy(c *stdapi.Context) error {
+func (p *Provider) registryUploadProxy(c *stdapi.Context, prefix string) error {
 	user, pass, err := p.Engine.RepositoryAuth("")
 	if err != nil {
 		return registryError(err)
@@ -129,22 +126,45 @@ func (p *Provider) registryUploadProxy(c *stdapi.Context) error {
 		return registryError(err)
 	}
 
-	return registryForward(c, host, c.Request().URL.Path, user, pass)
+	upstream, local, _ := artifactUploadPrefixes(prefix)
+
+	path := c.Request().URL.Path
+	if rest, ok := strings.CutPrefix(path, local+"artifacts-uploads/"); ok {
+		path = upstream + rest
+	}
+
+	return registryForward(c, host, path, user, pass, prefix)
 }
 
 // Artifact Registry continues blob uploads at Locations that name no app: first under
-// /artifacts-uploads, then under a pkg image in the /v2 API.
-func artifactUploadPath(prefix, path string) bool {
+// /artifacts-uploads, then under a pkg image in the /v2 API. Docker only authenticates
+// /v2 requests, so the proxy serves the /artifacts-uploads Locations under the pkg path.
+func artifactUploadPrefixes(prefix string) (string, string, bool) {
 	parts := strings.Split(strings.TrimSuffix(prefix, "/"), "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return false
+		return "", "", false
 	}
 
-	return strings.HasPrefix(path, fmt.Sprintf("/artifacts-uploads/namespaces/%s/repositories/%s/uploads/", parts[0], parts[1])) ||
-		strings.HasPrefix(path, fmt.Sprintf("/v2/%s/%s/pkg/blobs/uploads/", parts[0], parts[1]))
+	return fmt.Sprintf("/artifacts-uploads/namespaces/%s/repositories/%s/uploads/", parts[0], parts[1]),
+		fmt.Sprintf("/v2/%s/%s/pkg/blobs/uploads/", parts[0], parts[1]), true
 }
 
-func registryForward(c *stdapi.Context, host, path, user, pass string) error {
+func artifactUploadPath(prefix, path string) bool {
+	_, local, ok := artifactUploadPrefixes(prefix)
+
+	return ok && strings.HasPrefix(path, local) && len(path) > len(local)
+}
+
+func artifactUploadLocation(prefix, location string) string {
+	upstream, local, ok := artifactUploadPrefixes(prefix)
+	if rest, found := strings.CutPrefix(location, upstream); ok && found {
+		return local + "artifacts-uploads/" + rest
+	}
+
+	return location
+}
+
+func registryForward(c *stdapi.Context, host, path, user, pass, prefix string) error {
 	u, err := url.Parse(fmt.Sprintf("https://%s", host))
 	if err != nil {
 		return registryError(err)
@@ -158,6 +178,13 @@ func registryForward(c *stdapi.Context, host, path, user, pass string) error {
 			r.Host = u.Host
 			r.URL = u
 			r.SetBasicAuth(user, pass)
+		},
+		ModifyResponse: func(res *http.Response) error {
+			l := res.Header.Get("Location")
+			if nl := artifactUploadLocation(prefix, l); nl != l {
+				res.Header.Set("Location", nl)
+			}
+			return nil
 		},
 	}
 
