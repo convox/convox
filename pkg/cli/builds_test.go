@@ -885,3 +885,18 @@ func TestBuildsLogsError(t *testing.T) {
 		res.RequireStdout(t, []string{""})
 	})
 }
+
+func TestBuildsLogsCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "builds logs build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: log stream ended before the end of output"})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
