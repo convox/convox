@@ -21,9 +21,9 @@ require (
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/go-u2fhost v0.0.1
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
-	github.com/convox/stdapi v1.1.3-0.20260520042155-e3ea26364519
+	github.com/convox/stdapi v1.1.3-0.20261020175753-e462bb62fd86
 	github.com/convox/stdcli v0.0.0-20261003201141-9d1272b36616
-	github.com/convox/stdsdk v0.0.2
+	github.com/convox/stdsdk v0.0.5-0.20261020175630-e31411c33dc5
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/crazy-max/xgo v0.24.0
 	github.com/creack/pty v1.1.18
@@ -225,7 +225,7 @@ require (
 	github.com/bearsh/hid v1.6.0 // indirect
 	github.com/cert-manager/cert-manager v1.10.2
 	github.com/gorilla/sessions v1.2.1 // indirect
-	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	golang.org/x/net v0.58.0 // indirect
 )

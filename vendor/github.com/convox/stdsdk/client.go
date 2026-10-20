@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -218,11 +219,44 @@ func (c *Client) Websocket(path string, opts RequestOptions) (io.ReadCloser, err
 
 	adapterWs := NewAdapterWs(ws)
 
-	go copyToWS(c.ctx, adapterWs, or)
-	go copyFromWS(c.ctx, adapterWs, w)
-	go WsKeepAlivePing(c.ctx, adapterWs)
+	ctx, cancel := context.WithCancel(c.ctx)
 
-	return r, nil
+	go func() {
+		<-ctx.Done()
+		adapterWs.Close()
+	}()
+
+	wr := &websocketReader{PipeReader: r}
+
+	go copyToWS(ctx, adapterWs, or)
+	go func() {
+		err := copyFromWS(ctx, adapterWs, w)
+
+		wr.mu.Lock()
+		wr.err = err
+		wr.mu.Unlock()
+
+		w.Close()
+		cancel()
+	}()
+	go WsKeepAlivePing(ctx, adapterWs)
+
+	return wr, nil
+}
+
+type websocketReader struct {
+	*io.PipeReader
+
+	mu  sync.Mutex
+	err error
+}
+
+// Err returns the error that ended the stream before its end-of-stream frame, or nil.
+func (r *websocketReader) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.err
 }
 
 func (c *Client) Request(method, path string, opts RequestOptions) (*http.Request, error) {

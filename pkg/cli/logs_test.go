@@ -3,6 +3,7 @@ package cli_test
 import (
 	"fmt"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/convox/convox/pkg/cli"
@@ -99,5 +100,78 @@ func TestLogsError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{""})
+	})
+}
+
+type cutLogs struct {
+	io.Reader
+	err error
+}
+
+func (r *cutLogs) Close() error { return nil }
+
+func (r *cutLogs) Err() error { return r.err }
+
+func testCutLogs(logs []string, err error) io.ReadCloser {
+	return &cutLogs{Reader: strings.NewReader(strings.Join(logs, "\n") + "\n"), err: err}
+}
+
+func TestLogsNoFollowCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppLogs", "app1", structs.LogsOptions{Follow: options.Bool(false), Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "logs -a app1 --no-follow", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: log stream ended before the end of output"})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestLogsNoFollowComplete(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppLogs", "app1", structs.LogsOptions{Follow: options.Bool(false), Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), nil), nil)
+
+		res, err := testExecute(e, "logs -a app1 --no-follow", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestLogsServiceNoFollowCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("ServiceLogs", "app1", "web", structs.LogsOptions{Follow: options.Bool(false), Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "logs -a app1 -s web --no-follow", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: log stream ended before the end of output"})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
+	})
+}
+
+func TestLogsFollowCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true)}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "logs -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
 	})
 }

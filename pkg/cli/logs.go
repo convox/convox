@@ -50,7 +50,17 @@ func Logs(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	_, err = io.Copy(c, r)
+	if _, err = io.Copy(c, r); err == nil && c.Bool("no-follow") {
+		return logStreamErr(r)
+	}
+
+	return nil
+}
+
+func logStreamErr(r io.Reader) error {
+	if s, ok := r.(interface{ Err() error }); ok && s.Err() != nil {
+		return fmt.Errorf("log stream ended before the end of output")
+	}
 
 	return nil
 }

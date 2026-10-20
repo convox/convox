@@ -122,7 +122,7 @@ func (a *AdapterWs) SetWriteDeadline(t time.Time) error {
 	return a.conn.SetWriteDeadline(t)
 }
 
-func chanFromReader(r io.Reader) (chan []byte, chan error) {
+func chanFromReader(ctx context.Context, r io.Reader) (chan []byte, chan error) {
 	c := make(chan []byte)
 	errCh := make(chan error)
 
@@ -135,13 +135,25 @@ func chanFromReader(r io.Reader) (chan []byte, chan error) {
 				res := make([]byte, n)
 				// Copy the buffer so it doesn't get changed while read by the recipient.
 				copy(res, b[:n])
-				c <- res
+				select {
+				case c <- res:
+				case <-ctx.Done():
+					return
+				}
 			}
 			if err != nil {
 				if err != io.EOF {
-					errCh <- err
+					select {
+					case errCh <- err:
+					case <-ctx.Done():
+						return
+					}
 				}
-				c <- nil
+				select {
+				case c <- nil:
+				case <-ctx.Done():
+					return
+				}
 				return
 			}
 		}
@@ -152,8 +164,8 @@ func chanFromReader(r io.Reader) (chan []byte, chan error) {
 
 // CopyFromToWsTcp accepts a websocket connection and TCP connection and copies data between them
 func CopyFromToWsTcp(wsConn *AdapterWs, tcpConn net.Conn) error {
-	wsChan, wsErrChan := chanFromReader(wsConn)
-	tcpChan, tcpErrChan := chanFromReader(tcpConn)
+	wsChan, wsErrChan := chanFromReader(context.Background(), wsConn)
+	tcpChan, tcpErrChan := chanFromReader(context.Background(), tcpConn)
 
 	defer wsConn.Close()
 	defer tcpConn.Close()
@@ -186,15 +198,21 @@ func CopyFromToWsTcp(wsConn *AdapterWs, tcpConn net.Conn) error {
 }
 
 func CopyStreamToEachOther(fromConn io.ReadWriter, toConn io.ReadWriter) error {
-	fromChan, fromErrChan := chanFromReader(fromConn)
-	toChan, toErrChan := chanFromReader(toConn)
+	return CopyStreamToEachOtherWithCloseOption(fromConn, toConn, true)
+}
 
-	if xc, ok := toConn.(io.Closer); ok {
-		defer xc.Close()
-	}
+func CopyStreamToEachOtherWithCloseOption(fromConn io.ReadWriter, toConn io.ReadWriter, shouldClose bool) error {
+	fromChan, fromErrChan := chanFromReader(context.Background(), fromConn)
+	toChan, toErrChan := chanFromReader(context.Background(), toConn)
 
-	if yc, ok := fromConn.(io.Closer); ok {
-		defer yc.Close()
+	if shouldClose {
+		if xc, ok := toConn.(io.Closer); ok {
+			defer xc.Close()
+		}
+
+		if yc, ok := fromConn.(io.Closer); ok {
+			defer yc.Close()
+		}
 	}
 
 	for {
@@ -249,7 +267,7 @@ func copyToWS(ctx context.Context, ws *AdapterWs, r io.Reader) error {
 	if r == nil {
 		return nil
 	}
-	rChan, rErrChan := chanFromReader(r)
+	rChan, rErrChan := chanFromReader(ctx, r)
 
 	// used as eof
 	defer ws.WriteMessage(websocket.BinaryMessage, []byte{})
@@ -276,10 +294,8 @@ func copyToWS(ctx context.Context, ws *AdapterWs, r io.Reader) error {
 	}
 }
 
-func copyFromWS(ctx context.Context, ws *AdapterWs, w io.WriteCloser) error {
-	wsChan, wsErrChan := chanFromReader(ws)
-
-	defer w.Close()
+func copyFromWS(ctx context.Context, ws *AdapterWs, w io.Writer) error {
+	wsChan, wsErrChan := chanFromReader(ctx, ws)
 
 	for {
 		select {
@@ -287,7 +303,7 @@ func copyFromWS(ctx context.Context, ws *AdapterWs, w io.WriteCloser) error {
 			return nil
 		case data := <-wsChan:
 			if data == nil {
-				return fmt.Errorf("TCP connection closed from destination")
+				return nil
 			} else {
 				_, err := w.Write(data)
 				if err != nil {
@@ -298,6 +314,9 @@ func copyFromWS(ctx context.Context, ws *AdapterWs, w io.WriteCloser) error {
 				}
 			}
 		case err := <-wsErrChan:
+			if ctx.Err() != nil {
+				return nil
+			}
 			return err
 		}
 	}

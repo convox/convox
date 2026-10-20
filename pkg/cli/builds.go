@@ -751,7 +751,9 @@ func BuildsLogs(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	io.Copy(c, r)
+	if _, err = io.Copy(c, r); err == nil {
+		return logStreamErr(r)
+	}
 
 	return nil
 }
