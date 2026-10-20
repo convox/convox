@@ -908,6 +908,29 @@ func (_m *Interface) CertificateDelete(id string) error {
 	return r0
 }
 
+// CertificateDnsClassic provides a mock function with given fields:
+func (_m *Interface) CertificateDnsClassic() (*structs.CertificateDns, error) {
+	ret := _m.Called()
+
+	var r0 *structs.CertificateDns
+	if rf, ok := ret.Get(0).(func() *structs.CertificateDns); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*structs.CertificateDns)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CertificateGenerate provides a mock function with given fields: domains, opts
 func (_m *Interface) CertificateGenerate(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
 	ret := _m.Called(domains, opts)
@@ -947,6 +970,52 @@ func (_m *Interface) CertificateList(opts structs.CertificateListOptions) (struc
 	var r1 error
 	if rf, ok := ret.Get(1).(func(structs.CertificateListOptions) error); ok {
 		r1 = rf(opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CertificateMigrateClassic provides a mock function with given fields: _a0
+func (_m *Interface) CertificateMigrateClassic(_a0 []string) (structs.CertificateMigrations, error) {
+	ret := _m.Called(_a0)
+
+	var r0 structs.CertificateMigrations
+	if rf, ok := ret.Get(0).(func([]string) structs.CertificateMigrations); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.CertificateMigrations)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]string) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CertificateMigrationListClassic provides a mock function with given fields: _a0
+func (_m *Interface) CertificateMigrationListClassic(_a0 []string) (structs.CertificateMigrations, error) {
+	ret := _m.Called(_a0)
+
+	var r0 structs.CertificateMigrations
+	if rf, ok := ret.Get(0).(func([]string) structs.CertificateMigrations); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(structs.CertificateMigrations)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func([]string) error); ok {
+		r1 = rf(_a0)
 	} else {
 		r1 = ret.Error(1)
 	}

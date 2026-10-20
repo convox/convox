@@ -13,9 +13,11 @@ import (
 type HandlerFunc func(sdk.Interface, *stdcli.Context) error
 
 var (
-	Image        = "convox/convox"
-	Starter      = start.New()
-	WaitDuration = 5 * time.Second
+	CertsWaitInterval = 10 * time.Second
+	CertsWaitTimeout  = 15 * time.Minute
+	Image             = "convox/convox"
+	Starter           = start.New()
+	WaitDuration      = 5 * time.Second
 )
 
 var (
