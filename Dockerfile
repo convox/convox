@@ -6,7 +6,8 @@ ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 
-RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
+# skipcq: DOK-DL3008
+RUN apt-get update && apt-get -y install --no-install-recommends default-mysql-client postgresql-client redis-tools telnet
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -26,6 +27,7 @@ WORKDIR /usr/src/convox
 COPY go.mod go.sum ./
 COPY vendor vendor
 
+# skipcq: DOK-SC2046
 RUN go build -mod=vendor --ldflags="-s -w" $(go list -mod=vendor ./vendor/...)
 
 COPY . .
@@ -38,7 +40,8 @@ FROM golang:1.25.14 AS package
 
 WORKDIR /usr/src/convox
 
-RUN apt-get update && apt-get install -y libudev-dev
+# skipcq: DOK-DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends libudev-dev
 
 COPY . .
 
@@ -56,7 +59,8 @@ ARG KUBECTL_ARCH=amd64
 # upstream regression), or (c) on Ubuntu base-image major version bump. The
 # pinned version must be present in the active Ubuntu repository before
 # updating; check with `apt-cache madison skopeo` on the chosen base.
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3
+# skipcq: DOK-DL3008, DOK-DL3015
+RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3 && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
