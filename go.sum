@@ -139,12 +139,12 @@ github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6 h1:bigLg74wAp2d11va
 github.com/convox/inotify v0.0.0-20170313035821-b56f5149b5c6/go.mod h1:JOi7Az72uBLT9D2Qv/6FbUbC9W420st0MMIUgVYUyd0=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52 h1:HTaloo6by+4NE1A1mRYprWzsOy1PGH2tPGfgZ60dyHU=
 github.com/convox/logger v0.0.0-20180522214415-e39179955b52/go.mod h1:IcbSD+Pq+bQV2z/otiMCHLAYBrDR/jPFopFatrWjlMM=
-github.com/convox/stdapi v1.1.3-0.20261020175753-e462bb62fd86 h1:qSVM9DN1iyd2rOw3KPS2qiIMsIuxIGi0pefG38HxlGs=
-github.com/convox/stdapi v1.1.3-0.20261020175753-e462bb62fd86/go.mod h1:6wddvO0aV0NkV2CxV2Sk7UfgXE6FrgkWCZ9Ed3PBuuU=
+github.com/convox/stdapi v1.1.3 h1:ugsVA65tyuDQmZWTU43ojm14mJENDmIhrYM+1FEA6i4=
+github.com/convox/stdapi v1.1.3/go.mod h1:6wddvO0aV0NkV2CxV2Sk7UfgXE6FrgkWCZ9Ed3PBuuU=
 github.com/convox/stdcli v0.0.0-20261003201141-9d1272b36616 h1:kqM+CDdL1m8SAIoCqQMjBFy/CUoQRYDVvtYtQC6FnjE=
 github.com/convox/stdcli v0.0.0-20261003201141-9d1272b36616/go.mod h1:kLknwv4KTN9f9fZ2DDvG/L9ndXkcijaexIZ0enACvSc=
-github.com/convox/stdsdk v0.0.5-0.20261020175630-e31411c33dc5 h1:VY+jo99zIAGzdYSeO4dculS680oTGq9KyrvNw8FtWeo=
-github.com/convox/stdsdk v0.0.5-0.20261020175630-e31411c33dc5/go.mod h1:y1vtmkDKBkWSQ6e2gPXAyz1NCuWZ2x3vrP/SFeDDNco=
+github.com/convox/stdsdk v0.0.5 h1:TDxx800dORqkAWdIo/S+z0CyV+70PnKTy8M+M02ESbk=
+github.com/convox/stdsdk v0.0.5/go.mod h1:y1vtmkDKBkWSQ6e2gPXAyz1NCuWZ2x3vrP/SFeDDNco=
 github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2 h1:tdp/1KHBnbne0yT1yuKnAdOTBHRue9yQ4oON8rzGgZc=
 github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2/go.mod h1:s8HHEf4LLsmPppeubX/A5bz1JpLYkDXbu+ciuYMTk8A=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
