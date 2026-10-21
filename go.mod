@@ -21,9 +21,9 @@ require (
 	github.com/convox/exec v0.0.0-20180905012044-cc13d277f897
 	github.com/convox/go-u2fhost v0.0.1
 	github.com/convox/logger v0.0.0-20180522214415-e39179955b52
-	github.com/convox/stdapi v1.1.3-0.20261020175753-e462bb62fd86
+	github.com/convox/stdapi v1.1.3
 	github.com/convox/stdcli v0.0.0-20261003201141-9d1272b36616
-	github.com/convox/stdsdk v0.0.5-0.20261020175630-e31411c33dc5
+	github.com/convox/stdsdk v0.0.5
 	github.com/convox/version v0.0.0-20160822184233-ffefa0d565d2
 	github.com/crazy-max/xgo v0.24.0
 	github.com/creack/pty v1.1.18
