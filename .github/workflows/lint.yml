@@ -10,7 +10,7 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache: false
       - name: telemetry manifests match variables
         run: make lint-telemetry
@@ -25,7 +25,7 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache: false
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
@@ -33,7 +33,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           # pinned: the action's "latest" can resolve to a go1.24-built v1 binary that rejects a
-          # go 1.25 module. Bump this when go.mod's go version exceeds the linter's build go.
+          # go 1.25 module. Bump this when go.mod's toolchain minor version exceeds the linter's build go.
           version: v2.12.2
           args: --timeout 5m --new-from-rev=${{ github.event.pull_request.base.sha }}
 
@@ -46,7 +46,7 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.26"
           cache: false
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
