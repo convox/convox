@@ -19,7 +19,6 @@ $ convox cloud build [dir] -a <app> -i <machine>
 - `--build-args`: Build-time arguments
 - `--description`: Build description
 - `--development`: Development build
-- `--external`: Use external builder
 - `--manifest`: Manifest file (default: convox.yml)
 - `--no-cache`: Disable build cache
 
@@ -110,8 +109,10 @@ $ convox cloud builds logs <build> -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud builds logs BABCDEFGHI -a myapp -i production
-Building: .
-Step 1/5 : FROM node:22
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 133B done
+#1 DONE 0.2s
 ...
-Successfully built abc123def456
 ```
+
+With CLI 3.25.12 or later, a read that ends before the end of the Build's output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0.

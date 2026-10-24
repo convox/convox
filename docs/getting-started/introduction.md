@@ -176,11 +176,10 @@ $ convox deploy
 Packaging source... OK
 Uploading source... OK
 Starting build... OK
-Authenticating 123456789012.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-Building: .
-Sending build context to Docker daemon  48.95MB
-Step 1/5 : FROM node:20-alpine
-..........
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 133B done
+#1 DONE 0.2s
+...
 ```
 
 > The first time you deploy a new app into a Rack can take a few minutes depending on the size of the app, but subsequent deploys will be much faster.

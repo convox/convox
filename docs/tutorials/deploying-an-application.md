@@ -62,28 +62,22 @@ $ convox deploy
 Packaging source... OK
 Uploading source... OK
 Starting build... OK
-Authenticating 123456789012.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-Building: .
-Sending build context to Docker daemon  48.96MB
-Step 1/5 : FROM node:20-alpine
-20-alpine: Pulling from library/node
-e7c96db7181b: Pulling fs layer
-50958466d97a: Pulling fs layer
-56174ae7ed1d: Pulling fs layer
-284842a36c0d: Pulling fs layer
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 133B done
+#1 DONE 0.2s
 ...
-Status: Downloaded newer image for node:20-alpine
----> b95baba1cfdb
-Step 2/5 : WORKDIR /usr/src/app
----> 83aac0816456
-Step 3/5 : COPY . /usr/src/app
----> 6c88d15e88c9
-Step 4/5 : EXPOSE 3000
----> db735909e450
-Step 5/5 : CMD ["node", "app.js"]
----> 7bd8ca94d031
-Successfully built 7bd8ca94d031
-Running: docker push registry.05456db021737ab6.convox.cloud/nodejs:web.BNLGVRXMCAP
+#6 [1/3] FROM docker.io/library/node:20-alpine
+#6 DONE 4.1s
+
+#7 [2/3] WORKDIR /usr/src/app
+#7 DONE 0.1s
+
+#8 [3/3] COPY . /usr/src/app
+#8 DONE 0.2s
+
+#9 exporting to image
+#9 DONE 1.3s
+...
 
 Promoting RHQFJKRJNHJ...
 2026-03-18T14:22:13Z system/k8s/atom/app Status: Running => Pending

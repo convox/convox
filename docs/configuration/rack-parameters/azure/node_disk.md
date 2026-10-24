@@ -24,3 +24,5 @@ $ convox rack params set node_disk=50 -r rackName
 Updating parameters... OK
 ```
 This command sets the OS disk size for nodes to `50` GB.
+
+Changing `node_disk` replaces every node of the default node pool through a temporary node pool named `defaulttemp`. Pods on the default pool are drained and rescheduled twice, onto the temporary pool and then back onto the new nodes. Each node pool in [`additional_node_groups_config`](/configuration/rack-parameters/azure/additional_node_groups_config) and [`additional_build_groups_config`](/configuration/rack-parameters/azure/additional_build_groups_config) that does not set its own `disk` takes its disk size from `node_disk`, so the change rotates those pools the same way, each through its own temporary pool.

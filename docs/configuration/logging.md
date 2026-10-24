@@ -15,7 +15,7 @@ In addition to application output, Convox also captures:
 - State changes triggered by deployments
 - Health check failures
 
-Every log line is prefixed with a timestamp and a source identifier (e.g., `service/web/012345689`), making it easy to trace activity across services and processes.
+Every log line is prefixed with a timestamp and a source identifier (e.g., `service/web/web-7cd6cc78dd-blvtn`), making it easy to trace activity across services and processes.
 
 ## Viewing Logs
 
@@ -25,9 +25,9 @@ You can view logs for any application using the `convox logs` command. By defaul
 
 ```bash
 $ convox logs -a myapp
-2026-01-15T14:30:00Z service/web/012345689 starting on port 3000
-2026-01-15T14:30:01Z service/web/012345689 GET / 200
-2026-01-15T14:30:02Z service/web/012345689 GET /other 404
+2026-01-15T14:30:00Z service/web/web-7cd6cc78dd-blvtn starting on port 3000
+2026-01-15T14:30:01Z service/web/web-7cd6cc78dd-blvtn GET / 200
+2026-01-15T14:30:02Z service/web/web-7cd6cc78dd-blvtn GET /other 404
 ```
 
 ### Filtering by Service
@@ -42,11 +42,21 @@ On Rack version `3.25.11` or later, `--service` returns every line each Process 
 
 ### Filtering by Content
 
-Use the `--filter` flag to search for log lines containing a specific string:
+Use the `--filter` flag to show only the log lines that match a value:
 
 ```bash
-$ convox logs -a myapp --filter "GET /api"
+$ convox logs -a myapp --filter 404 --since 20m --no-follow
+2026-01-15T14:30:02Z service/web/web-7cd6cc78dd-blvtn GET /other 404
 ```
+
+How the value matches depends on where the Rack keeps its logs:
+
+| Provider | `--filter` |
+|---|---|
+| AWS | a [CloudWatch filter pattern](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html). It is case-sensitive, and a term with characters other than letters and digits goes in double quotes, such as `--filter '"payment-failed"'` |
+| GCP, Azure, DigitalOcean, metal and local | a line matches when its message contains the text, case-sensitive and as plain text, with no pattern syntax. Requires Rack version 3.25.12 or later; earlier Racks print every line |
+
+On every provider the value is matched against the message only, never the timestamp or the `service/...` prefix. To show one Service's lines, use `--service`.
 
 ### Setting a Time Window
 
@@ -56,16 +66,30 @@ Use the `--since` flag to limit logs to a specific time window. Values are durat
 $ convox logs -a myapp --since 1h
 ```
 
+### Showing the Last Lines
+
+Without `--service`, `--tail <n>` prints the last `n` lines of the App's log in the `--since` window, counted after `--filter`, then the live stream when following:
+
+```bash
+$ convox logs -a myapp --tail 2 --since 1h --no-follow
+2026-01-15T14:30:01Z service/web/web-7cd6cc78dd-blvtn GET / 200
+2026-01-15T14:30:02Z service/web/web-7cd6cc78dd-blvtn GET /other 404
+```
+
+`n` is 0 to 10000. This requires Rack version 3.25.12 or later; earlier Racks print every line of the window. Local Racks ignore `--tail` without `--service`. Nothing prints until the Rack has read the whole window, so a long `--since` on a busy App prints nothing for a while. With `--service`, `--tail` counts lines per Process instead.
+
 ### Viewing Historical Logs
 
 By default, `convox logs` streams logs in real-time. Use the `--no-follow` flag to print historical logs and exit instead of continuing to stream:
 
 ```bash
 $ convox logs -a myapp --since 20m --no-follow
-2026-01-15T14:30:00Z service/web/012345689 starting on port 3000
-2026-01-15T14:30:01Z service/web/012345689 GET / 200
-2026-01-15T14:30:02Z service/web/012345689 GET /other 404
+2026-01-15T14:30:00Z service/web/web-7cd6cc78dd-blvtn starting on port 3000
+2026-01-15T14:30:01Z service/web/web-7cd6cc78dd-blvtn GET / 200
+2026-01-15T14:30:02Z service/web/web-7cd6cc78dd-blvtn GET /other 404
 ```
+
+With CLI 3.25.12 or later, a `--no-follow` read that ends before the end of its output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0, so scripts can tell a complete read from a cut one.
 
 ### Combining Flags
 
@@ -85,7 +109,7 @@ Convox supports forwarding logs to external log aggregation services via syslog.
 $ convox rack params set syslog=tcp+tls://logs.example.com:1234
 ```
 
-Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, one syslog message per line. The URL scheme is `tcp`, `tcp+tls` or `udp`; any other scheme forwards nothing. Over `tcp` and `tcp+tls`, a line of up to 16,384 bytes arrives whole. Over `udp`, each message, header and tag included, is cut at 1,024 bytes. The syslog tag, `<type>/<name>/<pod>` such as `service/web/<pod>`, is cut at 32 characters. A receiver with a smaller limit, such as rsyslog's default of 8 KiB, cuts or splits long lines on its side.
+Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, one syslog message per line. The URL scheme is `tcp`, `tcp+tls` or `udp`, and with CLI 3.25.12 or later `convox rack params set` refuses any other value, even with `--force`. A value set with an older CLI or through `convox rack install` is not checked, and one with another scheme forwards nothing. Over `tcp` and `tcp+tls`, a line of up to 16,384 bytes arrives whole. Over `udp`, each message, header and tag included, is cut at 1,024 bytes. The syslog tag, `<type>/<name>/<pod>` such as `service/web/<pod>`, is cut at 32 characters. A receiver with a smaller limit, such as rsyslog's default of 8 KiB, cuts or splits long lines on its side.
 
 These lines never reach the endpoint:
 
@@ -117,6 +141,8 @@ Fluentd holds lines it has not yet delivered in a buffer sized from `fluentd_mem
 ```bash
 $ convox rack params set fluentd_memory=512Mi -r rackName
 ```
+
+The value is a whole number of `Mi` or `Gi`, and with CLI 3.25.12 or later `convox rack params set` refuses any other form, even with `--force`.
 
 See the provider-specific parameter pages for details:
 - [fluentd_memory (AWS)](/configuration/rack-parameters/aws/fluentd_memory)
@@ -157,8 +183,8 @@ From Rack version `3.25.11`, reads from Elasticsearch behave as follows:
 | `--no-follow` | prints every line from the start of the `--since` window up to the moment the command started, oldest first, then exits |
 | Live stream | prints each line once. A line whose timestamp is up to 5 seconds older than the newest line already printed still prints when it arrives, so the output is not strictly in timestamp order |
 | A line more than 5 seconds older than the newest line already printed | does not appear in the live stream; `--no-follow` shows it |
-
-`--tail` applies only with `--service`.
+| `--filter` | on Rack version 3.25.12 or later, prints the lines whose message contains the text, case-sensitive and as plain text |
+| `--tail <n>` | on Rack version 3.25.12 or later, prints the last `n` lines of the window, then the live stream when following. Lines still on their way to Elasticsearch when the window was read can print after them, even if they were written a few seconds before the command started; no line prints twice |
 
 From Rack version `3.25.11`, lines Fluentd has read but not yet written to Elasticsearch wait on each node's disk in `/var/log/fluentd-buffers/elasticsearch`, readable by root only, and the next Fluentd Pod sends them. A Fluentd restart or a Rack update does not drop them, but can show a second or two of lines twice. After a downgrade below `3.25.11`, lines still waiting there arrive after the next update to `3.25.11` or later.
 

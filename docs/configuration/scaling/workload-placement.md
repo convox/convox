@@ -57,7 +57,7 @@ These parameters allow you to specify:
 - Unique IDs for node group preservation across updates
 - Provider tags for cost allocation and resource organization
 
-> These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes while builds will be isolated according to your build configuration.
+> These configurations are independent of each other. You can use either one or both depending on your needs. If you only configure additional node groups, builds will continue using the rack's primary build node (if [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) is set on AWS) or the primary rack nodes. If you only configure build node groups, your services will continue running on the standard rack nodes. Builds run on a build node group when the App's [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) selects it, or on any build node when `build_node_enabled` is set on AWS. Otherwise a Build can run on any node whose taints it tolerates, including the primary rack nodes and the build node groups.
 
 ### Node Group Configuration Options
 
@@ -69,7 +69,7 @@ Each node group configuration supports the following fields:
 | `type` | Yes | The instance type to use (AWS EC2 type, Azure VM size, or GCP machine type) | |
 | `disk` | No | The disk size in GB for the nodes | Same as main node disk |
 | `capacity_type` | No | Whether to use on-demand or spot instances. AWS accepts `ON_DEMAND` or `SPOT`; Azure and GCP additionally accept `Regular` and `Spot`. Values are matched exactly. | `ON_DEMAND` |
-| `min_size` | No | Minimum number of nodes | 1 |
+| `min_size` | No | Minimum number of nodes | `1` for node groups, `0` for build groups |
 | `max_size` | No | Maximum number of nodes | 100 |
 | `label` | No | Custom label value for the node group. Applied as `convox.io/label: <label-value>` | On AWS, `custom` for node groups and `custom-build` for build groups. On Azure, `custom-build` for build groups; an Azure node group with no `label` gets no `convox.io/label`. On GCP, no `convox.io/label` unless `dedicated` is `true`, which applies `custom` |
 | `tags` | No | Custom provider tags as comma-separated key-value pairs | None |
@@ -219,7 +219,7 @@ This approach is useful for automation scripts or when making quick changes, tho
 
 At the application level, you can control where specific workloads run:
 
-- `BuildArch`: Pins the App's built image to a CPU architecture (`amd64` or `arm64`), and directs the build Pod to a matching build node when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled). Takes effect on Racks running 3.25.3 or later.
+- `BuildArch`: Pins the App's built image to a CPU architecture (`amd64` or `arm64`), and on AWS directs the build Pod to a matching build node when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled). Takes effect on Racks running 3.25.3 or later.
 - `BuildLabels`: Directs build pods to specific node groups
 - `BuildCpu` and `BuildMem`: Sets resource requests for build pods
 - `nodeSelectorLabels` in `convox.yml`: Directs service pods to specific node groups
@@ -297,9 +297,9 @@ For copy-ready, end-to-end walkthroughs, see [Workload Placement Examples](/conf
 1. **CPU Architecture (Single or Mixed)**:
    - A rack's primary nodes define the default architecture. Additional node groups can use a different architecture to create a mixed ARM/x86 rack.
    - On AWS, Graviton instances (e.g. `t4g`, `c7g`, `m7g`) are ARM. Standard instances (e.g. `t3`, `c5`, `m5`) are x86. You can mix architectures by adding additional node groups and build groups with different instance families. See [node_type](/configuration/rack-parameters/aws/node_type#cpu-architecture-x86-vs-arm) for the full list of supported instance families.
-   - On Azure, only x86-based VM SKUs are currently supported. ARM-based VM SKUs are not available. See [node_type](/configuration/rack-parameters/azure/node_type) for details.
+   - On GCP and Azure, `node_type` must be an x86 machine type, and Arm machine types run as node groups added with `additional_node_groups_config`: GCP T2A, C4A, N4A and A4X, and Azure sizes with a `p` after the vCPU count, such as `Standard_D4ps_v5`. This requires Rack version 3.25.12 or later. See Arm Node Pools on [GCP](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) and [Azure](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools).
    - **Mixed architecture with managed node groups requires `BuildArch`**: When running mixed-architecture managed node groups, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter (Racks running 3.25.3 or later) to pin each App's image to its target architecture. Without it, builds may produce images for the wrong architecture. On a Karpenter Rack with `karpenter_arch=amd64,arm64` this is not needed: builds produce a multi-architecture image index. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
-   - **Convox system images are multi-arch**: System components (including Fluentd) are published as multi-arch Docker manifests and run natively on both x86 and ARM nodes with no configuration.
+   - **Rack services**: Fluentd runs on every node of either architecture. On AWS every Convox system image is multi-arch, so the Rack runs on an x86 or Graviton `node_type`. On GCP and Azure some Rack services run only on x86 nodes, so the primary node pool stays x86 there.
 
 2. **Match Node Resources to Workload Requirements**:
    - On AWS: use compute-optimized instances (`c5`, `c6i`) for CPU-intensive workloads, memory-optimized (`r5`, `r6i`) for memory-intensive workloads, and general-purpose (`m5`, `t3`) for balanced workloads

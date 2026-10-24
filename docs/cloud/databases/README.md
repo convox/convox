@@ -198,25 +198,18 @@ Type "help" for help.
 database=#
 ```
 
-### Starting a Proxy
-
-```bash
-$ convox cloud resources proxy postgres-main -a myapp -i my-machine
-Proxying localhost:5432 to host.name:5432
-```
-
 ### Exporting Data
 
 ```bash
 $ convox cloud resources export postgres-main -a myapp -i my-machine --file backup.sql
-Exporting data from postgres-main... OK
+Exporting resource data... OK
 ```
 
 ### Importing Data
 
 ```bash
 $ convox cloud resources import postgres-main -a myapp -i my-machine --file backup.sql
-Importing data to postgres-main... OK
+Importing resource data... OK
 ```
 
 ## Next Steps

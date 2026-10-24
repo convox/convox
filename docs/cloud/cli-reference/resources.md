@@ -1,6 +1,6 @@
 ---
 title: "Resource Management (Cloud Databases)"
-description: "The convox cloud resources commands list, inspect, open a console, proxy, export, and import data for managed Cloud Databases defined in convox.yml."
+description: "The convox cloud resources commands list, inspect, open a console, export, and import data for managed Cloud Databases defined in convox.yml."
 slug: resources
 url: /cloud/cli-reference/resources
 ---
@@ -57,7 +57,7 @@ $ convox cloud resources export <resource> -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud resources export database -a myapp -i production --file backup.sql
-Exporting data from database... OK
+Exporting resource data... OK
 ```
 
 ### resources import
@@ -74,7 +74,7 @@ $ convox cloud resources import <resource> -a <app> -i <machine>
 **Example:**
 ```bash
 $ convox cloud resources import database -a myapp -i staging --file backup.sql
-Importing data to database... OK
+Importing resource data... OK
 ```
 
 ### resources info
@@ -83,24 +83,6 @@ Get information about a resource.
 
 ```bash
 $ convox cloud resources info <resource> -a <app> -i <machine>
-```
-
-### resources proxy
-
-Proxy a local port to a resource.
-
-```bash
-$ convox cloud resources proxy <resource> -a <app> -i <machine>
-```
-
-**Options:**
-- `--port`: Local port
-- `--tls`: Enable TLS
-
-**Example:**
-```bash
-$ convox cloud resources proxy database -a myapp -i production --port 5433
-Proxying localhost:5433 to database.internal:5432
 ```
 
 ### resources url

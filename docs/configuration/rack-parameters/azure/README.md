@@ -15,7 +15,7 @@ The following parameters are available for configuring your Convox rack on Micro
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_build_groups_config](/configuration/rack-parameters/azure/additional_build_groups_config) | Configures additional dedicated build node pools for the cluster. |
-| [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) | Configures additional customized node pools for the cluster. |
+| [additional_node_groups_config](/configuration/rack-parameters/azure/additional_node_groups_config) | Configures additional customized node pools for the cluster, including Arm node pools. |
 | [azure_files_enable](/configuration/rack-parameters/azure/azure_files_enable) | Enable Azure Files NFS volumes for shared persistent storage. |
 | [cert_duration](/configuration/rack-parameters/azure/cert_duration) | Certificate renewal period. |
 | [cost_tracking_enable](/configuration/rack-parameters/azure/cost_tracking_enable) | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |

@@ -8,7 +8,7 @@ url: /reference/primitives/app/build
 
 A Build is a compiled version of the code for each [Service](/reference/primitives/app/service) of an [App](/reference/primitives/app).
 
-Convox uses `docker` to compile code into a Build.
+The Rack builds the image for each Service from its Dockerfile with BuildKit. `convox build --external` builds it with Docker on your own machine instead; see [External Builds](/reference/cli/build#external-builds).
 
 ## Build Definition
 
@@ -66,8 +66,12 @@ A Build that failed or was cancelled also prints a `Reason` row.
 
 ```bash
     $ convox builds logs BABCDEFGHI -a myapp
-    Sending build context to Docker daemon  4.2MB
-    Step 1/34 : FROM golang AS development
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
+
+    #2 [internal] load metadata for docker.io/library/alpine:3.20
+    #2 DONE 0.5s
     ...
 ```
 
@@ -174,9 +178,37 @@ When using Convox Deployment and Review Workflows:
 2. Check the "Make Convox Managed Build Args Available" checkbox to include all Convox-managed build arguments
 3. Use the custom build args input field to add your own arguments (e.g., `FOO=BAR,VERSION=1.2.3`)
 
-### Build Layers Caching
+## Build Layers Caching
 
-Convox uses buildkit to build and push images. Buildkit allows us to specify a caching path in remote repositories to store/fetch layers that have already been created. Unfortunately, the only rack registries that support such feature so far are Azure and DigitalOcean(DO racks have a built-in registry).
+A Build imports a cache of each Service's layers when it starts and exports the cache again when it finishes. Dockerfile steps whose inputs have not changed print `CACHED` and do not run. Within one Build, Services built from the same Dockerfile reuse each other's layers on every provider. If the registry rejects the cache export, the Build still succeeds. To build without the cache, see [Building Without the Cache](/reference/cli/build#building-without-the-cache).
+
+| Provider | Where the cache is kept |
+|----------|-------------------------|
+| AWS | The App's ECR repository, tag `<service>.buildcache`. On by default; setting [`disable_image_manifest_cache`](/configuration/rack-parameters/aws/disable_image_manifest_cache) to `true` turns it off. With [`ecr_immutable_tags_enabled`](/configuration/rack-parameters/aws/ecr_immutable_tags_enabled) on Rack version 3.25.10 or later, each Build writes `<service>.buildcache.<build id>`. [`buildkit_host_path_cache_enable`](/configuration/rack-parameters/aws/buildkit_host_path_cache_enable) adds a cache on the build node |
+| GCP | The App's Artifact Registry repository, tag `<service>.buildcache` |
+| DigitalOcean | The App's repository in the registry the Rack runs, tag `<service>.buildcache` |
+| Azure | The App's repository in the Rack's Azure Container Registry, tag `<service>.buildcache`. Requires Rack version 3.25.12 or later; earlier Racks keep no cache between Builds |
+| Local and metal | Inside the build Process only; nothing is kept after the Build |
+
+The first Build of each Service, and every Build of a Service with no build steps of its own such as an `image:` Service, prints `ERROR: failed to configure registry cache importer: <repository>:<service>.buildcache: not found` and builds without the cache; the Build continues. This happens wherever the cache is kept in the registry, except on AWS with `ecr_immutable_tags_enabled` on.
+
+### Cache Storage on Azure
+
+Each Build moves the `<service>.buildcache` tag to a new cache manifest and leaves the previous one untagged. Convox deletes nothing from an Azure registry, so untagged cache manifests and Build images stay until you remove them. The Rack's registry is the Basic tier, which includes 10 GiB of storage and bills storage above that per GiB.
+
+The ACR retention policy for untagged manifests does not cover these: it requires the Premium tier and skips OCI manifests, and the cache manifest is OCI. To remove untagged manifests, run `acr purge --untagged-only` as an ACR Task. `acr purge` is a preview feature of Azure Container Registry. Run it with `--dry-run` first to list what it would delete:
+
+```bash
+$ az acr run --registry <registry> --cmd "acr purge --untagged-only --ago 7d --dry-run" /dev/null
+```
+
+Remove `--dry-run` to delete. To run it on a schedule, create a task:
+
+```bash
+$ az acr task create --name purge-untagged --cmd "acr purge --untagged-only --ago 7d" --schedule "0 0 * * *" --registry <registry> --context /dev/null
+```
+
+`<registry>` is the name of the Rack's registry, which `az acr list -o table` shows. Use `--untagged-only`, not `--filter` with `--ago`: a filter deletes tags older than `--ago`, including the Build images that Releases run from.
 
 ## Using Docker Credentials in Builds
 
@@ -219,3 +251,4 @@ This will list the current parameters for the rack, including the Docker credent
 - Basic build functionality: All versions
 - Convox-managed build arguments: Version 3.22.0+
 - `convox builds cancel`: Version 3.25.7+
+- Registry Build cache on Azure: Rack version 3.25.12 or later

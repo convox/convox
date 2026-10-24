@@ -124,6 +124,8 @@ View application parameters.
 $ convox cloud apps params [app] -i <machine>
 ```
 
+Requires CLI 3.25.12 or later.
+
 ### apps params set
 
 Set application parameters.
@@ -137,3 +139,5 @@ $ convox cloud apps params set <Key=Value> [Key=Value]... -a <app> -i <machine>
 $ convox cloud apps params set BuildMem=2048 -a myapp -i production
 Updating parameters... OK
 ```
+
+Requires CLI 3.25.12 or later.

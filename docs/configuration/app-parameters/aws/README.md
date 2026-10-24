@@ -17,7 +17,7 @@ The following parameters are available for configuring your Convox applications 
 | [BuildCpu](/configuration/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
 | [BuildMem](/configuration/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
 
-> **Warning**: When configuring `BuildLabels`, ensure that the specified labels match those defined in the [`additional_build_groups`](/configuration/rack-parameters/aws/additional_build_groups_config) rack parameter. If the labels don't match any existing build node groups, build pods will remain in a pending state indefinitely, preventing builds from completing.
+> **Warning**: When configuring `BuildLabels`, ensure that the specified labels match a node group defined in the [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameter. If the labels don't match any node, build pods remain Pending and the Build does not complete until you cancel it.
 
 These application-specific parameters complement the rack-level configuration available through [Rack Parameters](/configuration/rack-parameters/aws), providing fine-grained control over your application deployments.
 
@@ -32,7 +32,7 @@ Updating parameters... OK
 For example, to set the `BuildLabels` parameter:
 ```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
-Setting BuildLabels... OK
+Updating parameters... OK
 ```
 
 ## Viewing Parameters
@@ -40,8 +40,7 @@ Setting BuildLabels... OK
 To view the current parameters for an application:
 ```bash
 $ convox apps params -a appName
-NAME         VALUE
-BuildLabels  convox.io/label=app-build
 BuildCpu     500
+BuildLabels  convox.io/label=app-build
 BuildMem     1024
 ```

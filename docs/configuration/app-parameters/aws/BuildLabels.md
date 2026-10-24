@@ -87,4 +87,12 @@ For this to be effective, you need to:
 
 A `BuildLabels` value that matches no node in the cluster does not fail the Build. The build pod stays `Pending` and the Build stays `running` until it is cancelled, because nothing on the Rack moves a Build out of that state. Clear it with [`convox builds cancel <build>`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later, and set `BuildLabels` to labels your nodes carry before the next Build.
 
+### Dedicated Node Groups and Build Nodes
+
+| Rack configuration | Behavior |
+|--------------------|----------|
+| Target is an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entry with `dedicated: true` | The build pod tolerates the group's taint and runs there, from Rack version `3.25.12`. On earlier Racks it stays `Pending` |
+| AWS with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled) | Build pods also require the `convox-build=true` label that only build nodes carry, so `BuildLabels` chooses among build nodes. A value that names an additional node group leaves the build pod `Pending` |
+| GCP, target is an Arm node pool | The value must also include `kubernetes.io/arch=arm64`, or the build pod stays `Pending`. See [Arm Node Pools](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) |
+
 For more information on node selection and workload placement strategies, see the [Workload Placement](/configuration/scaling/workload-placement) guide.

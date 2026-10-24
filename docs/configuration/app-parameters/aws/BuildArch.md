@@ -1,6 +1,6 @@
 ---
 title: "BuildArch"
-description: "The BuildArch app parameter pins an App's built image to a single CPU architecture, amd64 or arm64, and directs its build pod to a matching build node when dedicated build nodes are enabled."
+description: "The BuildArch app parameter pins an App's built image to amd64 or arm64, and on AWS with dedicated build nodes sends the build pod to a matching node."
 slug: buildarch
 url: /configuration/app-parameters/aws/BuildArch
 ---
@@ -15,7 +15,8 @@ The `BuildArch` app parameter pins an App's built image to a single CPU architec
 | Effect | Applies when |
 |:-------|:-------------|
 | The image is built for `linux/<arch>` | Every provider, on any Build the Rack runs, including `--development` Builds from Rack version `3.25.9`. Not applied to `--external` Builds, which run on your own machine |
-| The build pod is restricted to a build node of that architecture | Only when the Rack has `build_node_enabled=true` |
+| The build pod is restricted to a build node of that architecture | Only on AWS, when the Rack has `build_node_enabled=true` |
+| [`convox builds import-image`](/reference/cli/builds-import-image) copies `linux/<arch>` from a multi-architecture source image | Every provider, from Rack version `3.25.12`. Not applied on an AWS Karpenter Rack that builds multi-architecture images or pins Builds, where an import copies every platform |
 
 `BuildArch` takes effect on Racks running 3.25.3 or later. On earlier Racks the CLI accepts the value and the Rack discards it: the parameter is not stored, `convox apps params` does not list it, and Builds are unaffected.
 
@@ -41,7 +42,7 @@ By default, `BuildArch` is not set. The App inherits the Rack's build architectu
 | `amd64` | x86/Intel/AMD | `t3.medium`, `c5.xlarge`, `m5.large` |
 | `arm64` | ARM/Graviton | `t4g.medium`, `c7g.xlarge`, `m7g.large` |
 
-Any other value is accepted when you set it and rejected when you start a Build. `convox apps params set BuildArch=x86 -a my-app` succeeds, and the next `convox build` fails immediately, before any build pod runs, with:
+Any other value is accepted when you set it and rejected when you start a Build or, from Rack version `3.25.12`, an import. `convox apps params set BuildArch=x86 -a my-app` succeeds, and the next `convox build` or `convox builds import-image` fails immediately, before any build pod runs or any image is copied, with:
 
 ```
 invalid BuildArch: x86, must be amd64 or arm64
@@ -50,7 +51,7 @@ invalid BuildArch: x86, must be amd64 or arm64
 ## Use Cases
 - **Pinning One App on a Multi-Architecture Rack**: Narrow a single App's Builds to one platform without changing the Rack, for example when a base image is published for only one architecture.
 - **Incremental ARM Migration**: Move Apps from x86 to ARM one at a time by adding an ARM node group, setting `BuildArch=arm64`, and targeting the App to ARM workers.
-- **Avoiding Cross-Architecture Emulation**: `BuildArch` avoids emulation only when the Rack also has matching build nodes, which means `build_node_enabled=true` plus a [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) or build node group of that architecture. Without them the Build is emulated, which is slower than a native Build.
+- **Avoiding Cross-Architecture Emulation**: A Build is native only when its pod runs on a node of the target architecture. On AWS that means `build_node_enabled=true` plus a [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) or build node group of that architecture. On any provider, [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) that select nodes of that architecture also give a native Build. Otherwise the Build is emulated, which is slower than a native Build.
 
 ## Setting the Parameter
 To pin an App's image to ARM:
@@ -151,8 +152,8 @@ The build pod runs on an ARM build node because `build_node_enabled=true` and `B
 - **Build Node Behavior Depends on `build_node_enabled`**: With `build_node_enabled=true`, the Rack must have build nodes of the specified architecture or build pods stay Pending. A Build whose pod stays Pending stays `running` until you clear it with [`convox builds cancel`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later. With `build_node_enabled=false`, the default, no placement constraint is applied and the Build proceeds under emulation when the node architecture differs.
 - **Development Builds Honor the Pin**: from Rack version `3.25.9`, `convox build --development`, `convox deploy --development` and `convox start` build for the pinned architecture. On earlier Racks a development Build does not receive the target platform and is native to the node it runs on.
 - **External Builds Ignore the Pin**: `convox build --external` and `convox deploy --external` build the image on your own machine with the local Docker engine, which does not receive the target platform, so the image is native to that machine's architecture.
-- **Provider Coverage**: The image platform pin is implemented in provider-agnostic Rack code and applies on every provider. The build node placement effect depends on `build_node_enabled`, which is an AWS Rack parameter.
-- **Fluentd**: Convox system images, including Fluentd, are multi-architecture manifests and run natively on both architectures with no additional configuration.
+- **Provider Coverage**: The image platform pin is implemented in provider-agnostic Rack code and applies on every provider. The build node placement effect depends on `build_node_enabled`, which is an AWS Rack parameter. On GCP and Azure `BuildArch` sets only the platform, and `BuildLabels` places the Build; on GCP a `BuildLabels` value that targets an Arm node pool also includes `kubernetes.io/arch=arm64`. See Arm Node Pools on [GCP](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) and [Azure](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools).
+- **Rack Services**: Fluentd runs on every node of either architecture. On AWS every Convox system image is multi-arch. On GCP and Azure some Rack services run only on x86 nodes, so the primary node pool stays x86 there.
 
 ## See Also
 - [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) for enabling dedicated build nodes, required for the placement effect

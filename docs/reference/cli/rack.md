@@ -111,28 +111,40 @@ Get logs for the rack
 
 ### Usage
 ```bash
-    convox rack logs [--since <duration>] [--no-follow] [--filter <string>]
+    convox rack logs [--since <duration>] [--no-follow] [--filter <string>] [--tail <n>]
 ```
 
 ### Flags
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--filter` | | Filter for a specific string within the logs |
+| `--filter` | | Show only matching lines. On AWS the value is a CloudWatch filter pattern; on GCP, Azure, DigitalOcean, metal and local Racks, a line matches when its message contains the text, case-sensitive (Rack version 3.25.12 or later). See [Filtering by Content](/configuration/logging#filtering-by-content) |
 | `--no-follow` | | Print logs and exit rather than streaming |
 | `--rack` | `-r` | Rack name |
 | `--since` | | Time frame for log query (e.g., `24h`, `30m`; default `2m`) |
+| `--tail` | | Print the last `n` lines of the `--since` window, counted after `--filter`, then the live stream when following. From 0 to 10000 (Rack version 3.25.12 or later; local Racks ignore it) |
 
 On AWS the command reads the Rack's `/convox/<rack>/system` CloudWatch log group, and on GCP, Azure, DigitalOcean and metal Racks it reads the Rack's Elasticsearch. See [Logging](/configuration/logging).
+
+With `--tail`, nothing prints until the Rack has read the whole `--since` window. A Rack older than 3.25.12 prints every line of the window instead, and a CLI 3.25.12 or later warns about that on stderr:
+
+```text
+WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window
+```
+
+With CLI 3.25.12 or later, a `--no-follow` read that ends before the end of its output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0, so scripts can tell a complete read from a cut one.
 
 ### Examples
 ```bash
     $ convox rack logs
-    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
-    2026-01-15T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
-    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
-    2026-01-15T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
+    2026-01-15T13:37:22Z service/api/api-6b96cd84c4-jcnv7 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=0.041
+    2026-01-15T13:37:23Z service/resolver/resolver-7ff596c56b-l9btt ns=dns at=question type=A question="logs.us-east-2.amazonaws.com"
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=f492a0dce931 ns=api at=AppList method="GET" path="/apps" response=200 elapsed=0.156
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=a437c85a56c9 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=0.036
     ...
+
+    $ convox rack logs --filter AppList --tail 1 --since 1h --no-follow
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=f492a0dce931 ns=api at=AppList method="GET" path="/apps" response=200 elapsed=0.156
 ```
 ## rack install
 
@@ -398,7 +410,7 @@ Set rack parameters
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, and EKS control-plane subnet guards |
+| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, EKS control-plane subnet, and Arm `node_type` guards |
 
 ### Examples
 ```bash
@@ -446,8 +458,31 @@ The CLI validates parameters before sending them to the Rack. This catches commo
   ```text
   ERROR: param 'elasticsearch_disk' cannot be below the current 10Gi: the volumes can grow but not shrink (use --force to set it anyway)
   ```
+- **Syslog endpoints** are checked by CLI 3.25.12 or later. Each comma-separated entry of [`syslog`](/configuration/rack-parameters/aws/syslog) must be `tcp://`, `tcp+tls://` or `udp://`, then a host and an optional port:
+  ```text
+  ERROR: param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got "udp+tls://logs.example.com:6514")
+  ```
+- **Fluentd memory** is checked by CLI 3.25.12 or later. [`fluentd_memory`](/configuration/rack-parameters/aws/fluentd_memory) must be a whole number of `Mi` or `Gi`:
+  ```text
+  ERROR: param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi
+  ```
+- **Arm primary node pool** is refused on GCP and Azure by CLI 3.25.12 or later. An Arm [`node_type`](/configuration/rack-parameters/gcp/node_type), such as GCP `t2a-standard-4` or Azure `Standard_D4ps_v5`, is refused; Arm nodes go in `additional_node_groups_config` instead ([GCP](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools), [Azure](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools)). `--force` sets it anyway, but the Rack does not support an Arm primary node pool:
+  ```text
+  ERROR: param 'node_type' t2a-standard-4 is an Arm machine type; the primary node pool must stay x86
+    Add Arm nodes with additional_node_groups_config instead.
+    Re-run with --force to proceed
+  ```
+- **Hyperdisk boot disks** are required on GCP by CLI 3.25.12 or later. An `additional_node_groups_config` entry with a C4A, N4A or A4X machine type must set `disk_type` to `hyperdisk-balanced` ([GCP Arm node pools](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools)):
+  ```text
+  ERROR: node type 'c4a-standard-4' boots only from Hyperdisk; set disk_type to hyperdisk-balanced
+  ```
+- **Arm node pools on Azure** are accepted with a warning by CLI 3.25.12 or later. An Arm entry in `additional_node_groups_config` without `dedicated: true`, or an Arm entry in `additional_build_groups_config`, prints one of these lines ([Azure Arm node pools](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools)):
+  ```text
+  WARNING: additional_node_groups_config type Standard_D4ps_v5 is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.
+  WARNING: additional_build_groups_config type Standard_D4ps_v5 is an Arm machine type. Builds of apps without the BuildArch app parameter can run on it and produce Arm-only images.
+  ```
 
-Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, and EKS control-plane subnet guards. Install-only, empty-value, and type validators cannot be overridden.
+Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, EKS control-plane subnet, and Arm `node_type` guards. Install-only, empty-value, and type validators, including the `syslog`, `fluentd_memory` and Hyperdisk checks, cannot be overridden.
 
 > The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
 

@@ -176,21 +176,14 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 ```bash
 $ convox cloud resources export database -a myapp -i my-machine --file backup.sql
-Exporting data from database... OK
+Exporting resource data... OK
 ```
 
 ### Import Data
 
 ```bash
 $ convox cloud resources import database -a myapp -i my-machine --file backup.sql
-Importing data to database... OK
-```
-
-### Proxy Connection
-
-```bash
-$ convox cloud resources proxy database -a myapp -i my-machine
-Proxying localhost:3306 to host.name:3306
+Importing resource data... OK
 ```
 
 ## Next Steps

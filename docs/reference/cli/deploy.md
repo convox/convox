@@ -35,13 +35,10 @@ Create and promote a build
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Promoting RABCDEFGHI...
     ...
     ...
@@ -62,13 +59,10 @@ You can pass env vars that will only exist at build time.
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Promoting RABCDEFGHI...
     ...
     ...
@@ -90,7 +84,7 @@ The `--external` flag runs the Docker build locally instead of uploading the sou
     $ convox deploy --external -a myapp
 ```
 
-See [build: External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
+On GCP, external builds require Rack version 3.25.12 or later; the CLI version does not matter. See [build: External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
 
 ### Failure Messages
 

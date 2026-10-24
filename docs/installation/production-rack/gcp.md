@@ -71,9 +71,9 @@ $ convox rack install gcp <name> [param1=value1]...
 
 | Name          | Default         | Description                                                                              |
 | ------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| **additional_node_groups_config** |   | JSON definition of additional node pools, including GPU pools and single-host Cloud TPU pools, see [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) |
+| **additional_node_groups_config** |   | JSON definition of additional node pools, including GPU pools, single-host Cloud TPU pools and Arm pools, see [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) |
 | **cert_duration** | **2160h**         | Certificate renewal period                                                                 |
-| **node_type**     | **n1-standard-2** | Node instance type                                                                         |
+| **node_type**     | **n1-standard-2** | Node machine type, x86 only                                                                |
 | **preemptible**   | **true**          | Use [preemptible](https://cloud.google.com/compute/docs/instances/preemptible) instances   |
 | **region**        | **us-east1**      | GCP Region                                                                                 |
 | **syslog**        |                   | Forward logs to a syslog endpoint (e.g. **tcp+tls://example.org:1234**)                    |

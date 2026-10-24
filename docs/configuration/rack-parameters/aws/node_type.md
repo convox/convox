@@ -1,6 +1,6 @@
 ---
 title: "node_type"
-description: "The node_type AWS rack parameter sets the EC2 instance type for cluster nodes, or a list of types to fall back through, fixing their compute, memory, and CPU architecture, defaulting to t3.small."
+description: "The node_type AWS rack parameter sets the EC2 instance type for cluster nodes, or a list of fallback types, and their CPU architecture; default t3.small."
 slug: node_type
 url: /configuration/rack-parameters/aws/node_type
 ---
@@ -83,6 +83,8 @@ Convox supports both x86 (Intel/AMD) and ARM (Graviton) instance types. The `nod
 Node groups added with [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) and [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) may use a different CPU architecture from `node_type`. Convox selects an arm64 or x86 EKS AMI for each node group from that node group's own instance type, so x86 and ARM node groups can coexist in one Rack.
 
 What does not follow automatically is your App's image. An image built for one architecture will not run on nodes of the other, and Processes scheduled onto a mismatched node fail with an exec format error. On a mixed-architecture Rack, use the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter to pin each App's image to the right architecture and `nodeSelectorLabels` to keep its Services on matching nodes. See [Workload Placement](/configuration/scaling/workload-placement).
+
+On GCP and Azure, `node_type` must be an x86 machine type and Arm machine types run as additional node pools; see the [GCP](/configuration/rack-parameters/gcp/node_type#cpu-architecture) and [Azure](/configuration/rack-parameters/azure/node_type#cpu-architecture) `node_type` pages.
 
 ## Additional Information
 Selecting the appropriate instance type for your nodes is crucial for achieving the desired performance and cost-efficiency. AWS offers a variety of instance types, each with different combinations of CPU, memory, storage, and networking capacity. Consider your application's specific needs when choosing an instance type. For more information on AWS EC2 instance types, refer to the [AWS documentation on EC2 instance types](https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-instance-type-specifications.html).

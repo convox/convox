@@ -13,6 +13,15 @@ The `fluentd_memory` parameter configures the memory request and limit for the F
 ## Default Value
 The default value for `fluentd_memory` is `200Mi`.
 
+## Accepted Values
+A whole number of `Mi` or `Gi` with no leading zero, such as `200Mi`, `512Mi` or `1Gi`. The CLI rejects any other value:
+
+```text
+ERROR: param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi
+```
+
+`--force` does not bypass the check, which requires CLI 3.25.12 or later. The Console form accepts the same values. A value in another form set with an older CLI or through `convox rack install`, such as `2.5Gi`, still sets the memory limit, but Fluentd sizes its buffers as for `200Mi` until the value is set again in `Mi` or `Gi`.
+
 ## Use Cases
 - **Output outages and bursts**: Fluentd sizes the buffer for lines it has not yet delivered from this value. A larger value lets it absorb a longer CloudWatch outage or a bigger burst before it pauses reading container logs.
 - **GPU / ML Workloads**: Workloads generating large volumes of stdout/stderr may require `512Mi` or `1Gi`.
@@ -26,7 +35,7 @@ Updating parameters... OK
 This command sets the Fluentd memory allocation to 512Mi.
 
 ## Additional Information
-Set the value as a whole number of `Mi` or `Gi`, such as `200Mi`, `512Mi` or `1Gi`; the Console accepts only that form. When its buffer is full, Fluentd stops reading container logs until CloudWatch catches up, and syslog forwarding pauses with it. The lines arrive late rather than being lost, unless the node rotates a container's log file before Fluentd reads it. Values below `200Mi` leave Fluentd little room under load. Changing the value rolls the Fluentd pods on every node.
+When its buffer is full, Fluentd stops reading container logs until CloudWatch catches up, and syslog forwarding pauses with it. The lines arrive late rather than being lost, unless the node rotates a container's log file before Fluentd reads it. Values below `200Mi` leave Fluentd little room under load. Changing the value rolls the Fluentd pods on every node.
 
 ## See Also
 - [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable) to disable Fluentd entirely

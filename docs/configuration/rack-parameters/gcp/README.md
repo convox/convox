@@ -14,7 +14,7 @@ The following parameters are available for configuring your Convox rack on Googl
 
 | Parameter                            | Description                                                              |
 |:-------------------------------------|:-------------------------------------------------------------------------|
-| [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) | Configures additional customized node pools for the cluster, including GPU pools and single-host Cloud TPU pools. |
+| [additional_node_groups_config](/configuration/rack-parameters/gcp/additional_node_groups_config) | Configures additional customized node pools for the cluster, including GPU pools, single-host Cloud TPU pools and Arm pools. |
 | [cert_duration](/configuration/rack-parameters/gcp/cert_duration)         | Certificate renewal period.                                               |
 | [cost_tracking_enable](/configuration/rack-parameters/gcp/cost_tracking_enable) | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
 | [cost_tracking_history_days](/configuration/rack-parameters/gcp/cost_tracking_history_days) | Sets how many days of daily App cost history the Rack keeps for `convox cost --start` and `--end`. |

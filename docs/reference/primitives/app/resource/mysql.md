@@ -132,11 +132,11 @@ Proxying localhost:3306 to host.name:port
 ### Exporting Data from a Resource
 ```bash
 $ convox resources export database -f /tmp/db.sql
-Exporting data from database... OK
+Exporting resource data... OK
 ```
 
 ### Importing Data to a Resource
 ```bash
 $ convox resources import database -f /tmp/db.sql
-Importing data to database... OK
+Importing resource data... OK
 ```

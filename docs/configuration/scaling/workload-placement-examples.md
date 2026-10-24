@@ -17,9 +17,10 @@ This example creates a cost-optimized infrastructure with dedicated node pools f
 
 1. **Rack Configuration**:
    ```bash
-   $ convox rack params set additional_node_groups_config=/path/to/node-groups.json -r production
-   $ convox rack params set additional_build_groups_config=/path/to/build-groups.json -r production
+   $ convox rack params set additional_node_groups_config=/path/to/node-groups.json additional_build_groups_config=/path/to/build-groups.json -r production
    ```
+
+   Set both parameters in one command. A second `convox rack params set` issued while the first update is still applying is rejected.
 
    Node groups config (AWS):
    ```json
@@ -175,7 +176,7 @@ To create dedicated node groups that exclusively run specific services:
 
 With `dedicated:true`, only services that explicitly select the node group will run on it, ensuring isolation for sensitive workloads.
 
-### Mixed ARM/x86 Architecture
+### Mixed ARM/x86 Architecture on AWS
 
 This example sets up an x86 primary rack with ARM worker nodes and ARM build nodes, allowing cost-optimized Graviton instances for selected apps while keeping x86 available for compatibility-sensitive workloads.
 
@@ -245,17 +246,32 @@ This example sets up an x86 primary rack with ARM worker nodes and ARM build nod
    $ convox deploy -a myapp
    ```
 
-With `build_node_enabled=true`, the build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM image. Without dedicated build nodes the build Pod is unconstrained, but `BuildArch` still pins the produced image to arm64, so the build is emulated rather than native. The resulting Pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`). Apps without `BuildArch` continue building and running on x86 nodes as before.
+With `build_node_enabled=true`, the build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM image. Without dedicated build nodes the build Pod is unconstrained, but `BuildArch` still pins the produced image to arm64, so a build that lands on an x86 node is emulated rather than native. The resulting Pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`).
+
+An App without `BuildArch` gets no architecture constraint on its build Pod, so its Build can land on an ARM build node and produce an arm64-only image that fails on x86 nodes. Once the Rack has build nodes of both architectures, set `BuildArch` on every App.
 
 **Reverse direction** works the same way: if your primary rack uses ARM (e.g., `node_type=t4g.medium`), add x86 additional groups and set `BuildArch=amd64` on apps that need Intel/AMD compatibility.
 
 **Key considerations:**
 - This walkthrough covers managed node groups. On a Karpenter Rack with `karpenter_arch=amd64,arm64`, builds produce a multi-architecture image index and no per-App pinning is needed. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
 - `BuildArch` is per-app, not per-service. Apps with services targeting different architectures should be split into separate apps.
-- Convox system images (including Fluentd) are multi-arch manifests and run natively on both architectures with no configuration.
-- The `kubernetes.io/arch` label is set automatically by the kubelet, so this works on AWS, Azure, and GCP without provider-specific setup.
+- Fluentd runs on every node of either architecture.
 
 For full `BuildArch` parameter details, see [BuildArch](/configuration/app-parameters/aws/BuildArch).
+
+### Mixed ARM/x86 Architecture on GCP and Azure
+
+Arm node groups on GCP and Azure need Rack version 3.25.12 or later, and the setup differs from AWS. `build_node_enabled` does not exist on either provider, so `BuildArch` sets only the image platform and `BuildLabels` places the Build.
+
+| Setting | GCP | Azure |
+|---------|-----|-------|
+| `node_type` | x86 only | x86 only |
+| Arm node group | T2A, C4A, N4A or A4X in `additional_node_groups_config`, with `zones` set. C4A, N4A and A4X need `disk_type: hyperdisk-balanced` | A size with a `p` after the vCPU count, such as `Standard_D4ps_v5`, with `dedicated: true` and a `label` |
+| Service `nodeSelectorLabels` | `convox.io/label` and `kubernetes.io/arch: arm64` | `convox.io/label` |
+| Native Arm Build | `BuildLabels=convox.io/label=<label>,kubernetes.io/arch=arm64` | `BuildLabels=convox.io/label=<label>` |
+| Build node groups | None | An Arm build group can take any App's Build, so set `BuildArch` on every App first |
+
+The full setup for each provider is in Arm Node Pools on [GCP](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) and [Azure](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools).
 
 ### Flexible Configuration Options
 

@@ -132,16 +132,24 @@ Get logs for a build
 ### Examples
 ```bash
     $ convox builds logs BABCDEFGHIJ
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
+
+    #2 [internal] load metadata for docker.io/library/alpine:3.20
+    #2 DONE 0.5s
     ...
+    #9 [3/3] COPY . /app
+    #9 DONE 0.2s
+
+    #10 exporting to image
+    #10 exporting layers 0.5s done
     ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
 ```
 
-A Build that did not finish has no stored logs, because the build pod uploads them when it finishes. `convox builds logs` on a cancelled or interrupted Build returns `unable to read logs for build: <build>`.
+For a running Build, the command streams the Build's output until the Build finishes. A Build that did not finish has no stored logs, because the build pod uploads them when it finishes. `convox builds logs` on a cancelled or interrupted Build returns `unable to read logs for build: <build>`.
+
+With CLI 3.25.12 or later, a read that ends before the end of the Build's output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. This applies to every read, including a running Build streamed until it finishes. A complete read exits 0, so scripts can tell a complete read from a cut one.
 
 ## See Also
 
