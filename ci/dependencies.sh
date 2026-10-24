@@ -14,7 +14,7 @@ fetch_verified https://download.docker.com/linux/static/stable/x86_64/docker-29.
 sudo tar -C /usr/bin --strip-components 1 -xzf /tmp/docker.tgz
 
 # install kubectl (match the rack's EKS k8s_version)
-fetch_verified https://dl.k8s.io/release/v1.35.10/bin/linux/amd64/kubectl /tmp/kubectl c49a28f1f4efc4d475ed05f47f2ce8e563bf7bef69ed77fe1b924ea6d83b6327
+fetch_verified https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl /tmp/kubectl 29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634
 sudo install -m 0755 /tmp/kubectl /usr/bin/kubectl
 
 # install terraform (1.x required by the hashicorp/aws 5.x provider the modules pin)

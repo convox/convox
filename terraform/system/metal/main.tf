@@ -31,6 +31,6 @@ module "rack" {
   syslog                   = var.syslog
   syslog_tls_verify        = var.syslog_tls_verify
   webhook_signing_key      = var.webhook_signing_key
-  whitelist                = split(",", var.whitelist)
+  whitelist                = [for c in split(",", var.whitelist) : cidrsubnet(c, 0, 0)]
 }
 

@@ -349,7 +349,7 @@ module "rack" {
   telemetry                                 = var.telemetry
   telemetry_map                             = local.telemetry_map
   telemetry_default_map                     = local.telemetry_default_map
-  whitelist                                 = split(",", var.whitelist)
+  whitelist                                 = [for c in split(",", var.whitelist) : cidrsubnet(c, 0, 0)]
   ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
   ecr_full_access                           = var.ecr_full_access
   ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled

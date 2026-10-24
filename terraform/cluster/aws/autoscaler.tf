@@ -393,7 +393,7 @@ resource "kubernetes_deployment" "autoscaler" {
         }
 
         container {
-          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.35.0"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.36.1"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 

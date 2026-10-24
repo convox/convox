@@ -14,7 +14,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://dl.k8s.io/release/v1.35.10/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://dl.k8s.io/release/v1.36.6/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 RUN curl -Ls https://github.com/mattgreen/watchexec/releases/download/1.8.6/watchexec-1.8.6-x86_64-unknown-linux-gnu.tar.gz | \
@@ -63,7 +63,7 @@ RUN apt-get -qq update && apt-get -qq -y upgrade && apt-get -qq -y install curl 
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN u=https://dl.k8s.io/release/v1.35.10/bin/linux/$KUBECTL_ARCH/kubectl && \
+RUN u=https://dl.k8s.io/release/v1.36.6/bin/linux/$KUBECTL_ARCH/kubectl && \
   curl -fsSL "$u" -o /usr/bin/kubectl && \
   echo "$(curl -fsSL "$u.sha256")  /usr/bin/kubectl" | sha256sum -c - && \
   chmod +x /usr/bin/kubectl
