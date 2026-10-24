@@ -6,6 +6,7 @@ resource "digitalocean_kubernetes_cluster" "rack" {
   name    = var.name
   region  = var.region
   version = data.digitalocean_kubernetes_versions.available.latest_version
+  ha      = false
 
   node_pool {
     name       = "${var.name}-node"
@@ -17,6 +18,10 @@ resource "digitalocean_kubernetes_cluster" "rack" {
 
   # digitalocean_kubernetes_cluster currently does not support an "update" timeout in
   # this provider version, so we keep the implicit default behavior.
+
+  lifecycle {
+    ignore_changes = [ha]
+  }
 }
 
 # new tokens sometimes take a few seconds to start working

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"net"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -507,6 +508,50 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	return pd, nil
 }
 
+// Kubernetes 1.36 rejects source ranges with host bits set, including those in templates stored by older releases.
+func canonicalSourceRanges(data []byte) ([]byte, error) {
+	var v map[string]interface{}
+
+	if err := yaml.Unmarshal(data, &v); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	spec, ok := v["spec"].(map[interface{}]interface{})
+	if !ok || v["kind"] != "Service" {
+		return data, nil
+	}
+
+	ranges, ok := spec["loadBalancerSourceRanges"].([]interface{})
+	if !ok {
+		return data, nil
+	}
+
+	changed := false
+
+	for i, r := range ranges {
+		s, ok := r.(string)
+		if !ok {
+			continue
+		}
+
+		if _, n, err := net.ParseCIDR(s); err == nil && n.String() != s {
+			ranges[i] = n.String()
+			changed = true
+		}
+	}
+
+	if !changed {
+		return data, nil
+	}
+
+	pd, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return pd, nil
+}
+
 func (c *Client) applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
 	rs, err := templateResources(filter)
 	if err != nil {
@@ -527,6 +572,11 @@ func (c *Client) applyTemplate(namespace string, data []byte, filter string) ([]
 		}
 
 		dp, err := applyLabels(parts[i], labels)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		dp, err = canonicalSourceRanges(dp)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

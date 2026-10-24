@@ -51,6 +51,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
 
   kubernetes_cluster_id       = azurerm_kubernetes_cluster.rack.id
   name                        = "np${each.key}"
+  orchestrator_version        = data.azurerm_kubernetes_service_versions.available.latest_version
   vm_size                     = each.value.vm_size
   os_disk_size_gb             = each.value.os_disk_size
   auto_scaling_enabled        = true
@@ -95,6 +96,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "build_additional" {
 
   kubernetes_cluster_id       = azurerm_kubernetes_cluster.rack.id
   name                        = "bp${each.key}"
+  orchestrator_version        = data.azurerm_kubernetes_service_versions.available.latest_version
   vm_size                     = each.value.vm_size
   os_disk_size_gb             = each.value.os_disk_size
   auto_scaling_enabled        = true

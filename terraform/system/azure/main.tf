@@ -101,6 +101,6 @@ module "rack" {
   telemetry_map                        = local.telemetry_map
   telemetry_default_map                = local.telemetry_default_map
   webhook_signing_key                  = var.webhook_signing_key
-  whitelist                            = split(",", var.whitelist)
+  whitelist                            = [for c in split(",", var.whitelist) : cidrsubnet(c, 0, 0)]
   workspace                            = module.cluster.workspace
 }

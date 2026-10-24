@@ -12,6 +12,7 @@ import (
 	afake "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/fake"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v2"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -789,4 +790,72 @@ func TestApplyTemplateServiceLookupFailureStopsTheApply(t *testing.T) {
 	_, err := c.applyTemplate("ns1", testStream(testBalancerDocument(testPairPorts)), "atom=abc")
 	require.Error(t, err)
 	assert.Empty(t, *calls)
+}
+
+func testSourceRangesDocument(ranges ...string) string {
+	doc := testBalancerDocument(testSinglePorts) + "  loadBalancerSourceRanges:\n"
+
+	for _, r := range ranges {
+		doc += fmt.Sprintf("  - %q\n", r)
+	}
+
+	return doc
+}
+
+func TestCanonicalSourceRanges(t *testing.T) {
+	cases := []struct {
+		name   string
+		ranges []string
+		want   []string
+	}{
+		{name: "host bits", ranges: []string{"10.1.2.3/16", "192.168.1.1/32"}, want: []string{"10.1.0.0/16", "192.168.1.1/32"}},
+		{name: "ipv6 host bits", ranges: []string{"2001:db8::1/64"}, want: []string{"2001:db8::/64"}},
+		{name: "unparseable entry", ranges: []string{"10.1.2.3/16", "10.1.2.3"}, want: []string{"10.1.0.0/16", "10.1.2.3"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			out, err := canonicalSourceRanges([]byte(testSourceRangesDocument(c.ranges...)))
+			require.NoError(t, err)
+
+			var s struct {
+				Kind string
+				Spec struct {
+					Ports                    []map[string]interface{}
+					LoadBalancerSourceRanges []string `yaml:"loadBalancerSourceRanges"`
+				}
+			}
+			require.NoError(t, yaml.Unmarshal(out, &s))
+
+			assert.Equal(t, "Service", s.Kind)
+			assert.Len(t, s.Spec.Ports, 1)
+			assert.Equal(t, c.want, s.Spec.LoadBalancerSourceRanges)
+		})
+	}
+}
+
+func TestCanonicalSourceRangesUnchanged(t *testing.T) {
+	for _, doc := range []string{
+		testSourceRangesDocument("0.0.0.0/0", "10.1.0.0/16"),
+		testBalancerDocument(testSinglePorts),
+		testDeploymentDocument,
+		"",
+	} {
+		out, err := canonicalSourceRanges([]byte(doc))
+		require.NoError(t, err)
+		assert.Equal(t, doc, string(out))
+	}
+}
+
+func TestApplyTemplateCanonicalizesSourceRanges(t *testing.T) {
+	calls := stubKubectl(t, nil, nil)
+
+	c := &Client{k8s: fake.NewSimpleClientset()}
+
+	_, err := c.applyTemplate("ns1", testStream(testDeploymentDocument, testSourceRangesDocument("10.1.2.3/16")), "atom=abc")
+	require.NoError(t, err)
+
+	require.Len(t, *calls, 1)
+	assert.Contains(t, string((*calls)[0].data), "10.1.0.0/16")
+	assert.NotContains(t, string((*calls)[0].data), "10.1.2.3/16")
 }
