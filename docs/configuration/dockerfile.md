@@ -40,7 +40,7 @@ The following example selectively copies only the files needed to run `npm` befo
     COPY . .
     CMD ["npm", "start"]
 ```
-The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed.
+The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed. See [Build Layers Caching](/reference/primitives/app/build#build-layers-caching) for where each Rack keeps the cache.
 
 ## .dockerignore
 

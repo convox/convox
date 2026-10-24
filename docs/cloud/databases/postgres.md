@@ -195,21 +195,14 @@ database=#
 
 ```bash
 $ convox cloud resources export database -a myapp -i my-machine --file backup.sql
-Exporting data from database... OK
+Exporting resource data... OK
 ```
 
 ### Import Data
 
 ```bash
 $ convox cloud resources import database -a myapp -i my-machine --file backup.sql
-Importing data to database... OK
-```
-
-### Proxy Connection
-
-```bash
-$ convox cloud resources proxy database -a myapp -i my-machine
-Proxying localhost:5432 to host.name:5432
+Importing resource data... OK
 ```
 
 ## Next Steps

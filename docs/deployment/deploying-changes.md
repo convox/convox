@@ -22,8 +22,6 @@ Packaging source... OK
 Uploading source... OK
 Starting build... OK
 ...
-Build: BABCDEFGHI
-Release: RBCDEFGHIJ
 Promoting RBCDEFGHIJ...
 2026-03-18T14:30:49Z system/k8s/atom/app Status: Running => Pending
 2026-03-18T14:30:51Z system/k8s/web Scaled up replica set web-745f845dc to 1
@@ -48,7 +46,7 @@ Packaging source... OK
 Uploading source... OK
 Starting build... OK
 ...
-Build: BABCDEFGHI
+Build:   BABCDEFGHI
 Release: RBCDEFGHIJ
 
 $ convox releases promote RBCDEFGHIJ -a myapp
@@ -91,7 +89,7 @@ The source directory is never uploaded. External builds also benefit from local 
 - Docker must be installed and running on the machine executing the build
 - Docker on the machine must reach `api.<rack domain>` over HTTPS, including when the CLI reaches the Rack through the Console
 
-External builds work on all v3 cloud providers and are well suited for CI pipelines that already have the source checked out. See the [External Builds section of the build reference](/reference/cli/build#external-builds) for the full CLI reference.
+External builds work on every cloud provider; on GCP they require Rack version 3.25.12 or later. They are well suited for CI pipelines that already have the source checked out. See the [External Builds section of the build reference](/reference/cli/build#external-builds) for the full CLI reference.
 
 ## Troubleshooting Failed Deployments
 

@@ -1,6 +1,6 @@
 ---
 title: "additional_node_groups_config"
-description: "The additional_node_groups_config GCP rack parameter defines additional GKE node pools with specific machine types, capacity types, scaling, GPU accelerators, and custom labels."
+description: "The additional_node_groups_config GCP rack parameter defines extra GKE node pools with their own machine types, scaling, labels, GPUs, TPUs or Arm CPUs."
 slug: additional_node_groups_config
 url: /configuration/rack-parameters/gcp/additional_node_groups_config
 ---
@@ -18,6 +18,7 @@ The default value for `additional_node_groups_config` is an empty array.
 ## Use Cases
 - **Workload-Specific Optimization**: Create node pools tailored to specific workload requirements (e.g., CPU-intensive, memory-intensive, GPU, or batch processing workloads).
 - **GPU Workloads**: Run machine learning, inference, or rendering workloads on nodes with NVIDIA GPUs.
+- **Arm Workloads**: Run Services on Arm machine types next to the x86 primary node pool. See [Arm Node Pools](#arm-node-pools).
 - **Cost Optimization**: Configure certain node pools to use Spot VMs for non-critical workloads while maintaining on-demand VMs for mission-critical services.
 - **Isolation**: Segregate workloads by dedicating specific node pools to particular services.
 
@@ -28,7 +29,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node pool co
 |-------|----------|-------------|---------|
 | `type` | Yes | The GCP machine type to use for the node pool (e.g., `n1-standard-4`, `g2-standard-8`) |  |
 | `disk` | No | The boot disk size in GB for the nodes | Same as main node disk (default: 100) |
-| `disk_type` | No | The boot disk type (e.g., `pd-balanced`, `pd-ssd`, `pd-standard`) | `pd-balanced` |
+| `disk_type` | No | The boot disk type (e.g., `pd-balanced`, `pd-ssd`, `pd-standard`, `hyperdisk-balanced`). C4A, N4A and A4X machine types require `hyperdisk-balanced` | `pd-balanced` |
 | `capacity_type` | No | Whether to use on-demand or spot VMs. Accepts `ON_DEMAND` or `SPOT` (`Regular` and `Spot` are also accepted, for configs shared with Azure) | `ON_DEMAND` |
 | `min_size` | No | Minimum number of nodes per zone. `0` is allowed for scale-to-zero pools | 1 |
 | `max_size` | No | Maximum number of nodes per zone | 100 |
@@ -53,11 +54,12 @@ The CLI validates these fields before submitting the parameter change:
 | `tpu_topology` | Must match `NxM` or `NxMxP` with no leading zeros (for example `2x4` or `2x2x2`). Cannot be combined with `gpu_type`. Requires a `type` that starts with `ct` or `tpu`. |
 | `tags` | Cannot use the reserved keys `name` or `rack`. |
 | `dedicated` | Requires `label` in the same entry. Setting `dedicated: true` without a `label` is rejected. |
+| `type` | A `c4a-`, `n4a-` or `a4x-` machine type requires `disk_type: hyperdisk-balanced`, and is rejected with `node type 'c4a-standard-4' boots only from Hyperdisk; set disk_type to hyperdisk-balanced`. Requires CLI 3.25.12 or later. |
 
-These checks run in the `convox` CLI, on the `convox rack params set` path only. Two consequences:
+These checks run in the `convox` CLI, on the `convox rack params set` path, and `--force` does not skip them. Two consequences:
 
 - `additional_node_groups_config` is new to GCP Racks in 3.25.3. A `convox` CLI older than 3.25.3 rejects it with `unknown parameter 'additional_node_groups_config' for gcp provider` before the request leaves your machine, unless you pass `--force`. Upgrade the CLI rather than forcing it, so the field validation above still runs.
-- A parameter change driven from the Console does not run these checks. An invalid value is passed through to Terraform, where malformed JSON fails the plan and a value GKE rejects surfaces as a GKE API error during the apply.
+- The Console runs the Hyperdisk check on `type` and none of the others. Any other invalid value is passed through to Terraform, where malformed JSON fails the plan and a value GKE rejects surfaces as a GKE API error during the apply.
 
 ## Setting Parameters
 To set the `additional_node_groups_config` parameter, there are several methods:
@@ -169,6 +171,95 @@ Convox maps `vendor: google` to the `google.com/tpu` resource request and limit,
 
 > **A dedicated pool also needs `convox.io/label`.** If the pool sets `dedicated: true`, add `convox.io/label: tpu-workers` to `nodeSelectorLabels` alongside the two `cloud.google.com/gke-tpu-*` selectors. The `dedicated-node` toleration is generated from the `convox.io/label` selector only, so the GKE TPU selectors on their own will not schedule the Process onto a dedicated pool.
 
+## Arm Node Pools
+
+Arm node pools run next to the x86 primary node pool on Rack version 3.25.12 or later. [`node_type`](/configuration/rack-parameters/gcp/node_type#cpu-architecture) must stay an x86 machine type, and Arm capacity is added here. The CLI treats these machine series as Arm:
+
+| Series | `type` prefix | `disk_type` |
+|--------|---------------|-------------|
+| T2A | `t2a-` | Default `pd-balanced` |
+| C4A | `c4a-` | `hyperdisk-balanced`, required |
+| N4A | `n4a-` | `hyperdisk-balanced`, required |
+| A4X | `a4x-` | `hyperdisk-balanced`, required |
+
+A C4A, N4A or A4X entry without `disk_type: hyperdisk-balanced` is rejected before anything reaches the Rack, with or without `--force`:
+
+```bash
+$ convox rack params set 'additional_node_groups_config=[{"type":"c4a-standard-4","label":"arm-c4a","dedicated":true}]' -r rackName
+Updating parameters... ERROR: node type 'c4a-standard-4' boots only from Hyperdisk; set disk_type to hyperdisk-balanced
+```
+
+### Zones
+
+GCP offers Arm machine types only in some regions and zones. T2A, for example, is not offered in `us-east1`, the default region of a GCP Rack. `region` cannot change after installation, so check availability before you install a Rack that will run Arm pools. See [GCP regions and zones](https://cloud.google.com/compute/docs/regions-zones).
+
+A pool without `zones` spans every zone of the Rack's cluster. If one of those zones does not offer the machine type, or has no capacity for it, GKE fails to create the pool and the Rack update fails. Set `zones` on every Arm pool to zones that offer its machine type. `min_size` and `max_size` apply per zone.
+
+### Example
+
+```json
+[
+  {
+    "id": 400,
+    "type": "t2a-standard-2",
+    "label": "arm",
+    "dedicated": true,
+    "zones": "us-central1-a,us-central1-b,us-central1-f"
+  },
+  {
+    "id": 401,
+    "type": "c4a-standard-4",
+    "label": "arm-c4a",
+    "dedicated": true,
+    "disk_type": "hyperdisk-balanced",
+    "zones": "us-central1-b"
+  }
+]
+```
+
+```bash
+$ convox rack params set additional_node_groups_config=/path/to/arm-pools.json -r rackName
+Updating parameters... OK
+```
+
+### Services
+
+GKE taints every Arm node with `kubernetes.io/arch=arm64:NoSchedule` and adds the matching toleration only to Pods that select `kubernetes.io/arch: arm64`. A Service on an Arm pool selects both the pool's label and the architecture:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    nodeSelectorLabels:
+      convox.io/label: arm
+      kubernetes.io/arch: arm64
+```
+
+With `convox.io/label` alone the Service's Pods stay Pending. Other Pods stay off Arm nodes, including containerized Resources and every Rack service except Fluentd, which runs on every node of either architecture.
+
+`convox run` places a Process with the Service's `nodeSelectorLabels`. A `--node-labels` value that targets an Arm pool must also include `kubernetes.io/arch=arm64`.
+
+### Builds
+
+Set [`BuildArch`](/configuration/app-parameters/aws/BuildArch) so the App's image is built for arm64:
+
+```bash
+$ convox apps params set BuildArch=arm64 -a myapp
+Updating parameters... OK
+```
+
+The Build runs on an x86 node under emulation. To build natively on the Arm pool, also set [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) with both labels:
+
+```bash
+$ convox apps params set BuildLabels=convox.io/label=arm,kubernetes.io/arch=arm64 BuildArch=arm64 -a myapp
+Updating parameters... OK
+```
+
+Without `kubernetes.io/arch=arm64` in `BuildLabels` the build Pod stays Pending. GCP Racks have no build node groups.
+
+[`convox builds import-image`](/reference/cli/builds-import-image) copies the `linux/arm64` image from a multi-architecture source for an App with `BuildArch=arm64`.
+
 ## Node Pool Identification
 
 ### Using the `id` Field
@@ -206,7 +297,7 @@ services:
       convox.io/label: app-workers
 ```
 
-This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
+This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`. A Service on an Arm pool also selects `kubernetes.io/arch: arm64`; see [Arm Node Pools](#arm-node-pools).
 
 ## Additional Information
 When using dedicated node pools (with `dedicated: true`), only services with matching node selector labels will be scheduled on those nodes. This provides strong isolation for workloads with specific requirements.

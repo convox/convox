@@ -8,7 +8,7 @@ url: /configuration/rack-parameters/aws/syslog
 # syslog
 
 ## Description
-The `syslog` parameter sets the endpoint Fluentd forwards logs to, for example `tcp+tls://example.org:1234`. The URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out. Any other scheme, such as `udp+tls`, forwards nothing.
+The `syslog` parameter sets the endpoint Fluentd forwards logs to, for example `tcp+tls://example.org:1234`.
 
 Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver, from each node's Fluentd pod. These lines are not forwarded:
 
@@ -24,6 +24,17 @@ Fluentd forwards the container output of every App's Services, Timers, `convox r
 
 ## Default Value
 The default value for `syslog` is an empty string. When set to an empty string, syslog forwarding is not enabled.
+
+## Accepted Values
+A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas, and each receives every line; the Console form takes one URL.
+
+The CLI rejects any other value:
+
+```text
+ERROR: param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got "udp+tls://logs.example.com:6514")
+```
+
+`--force` does not bypass the check, which requires CLI 3.25.12 or later. A value set with an older CLI or through `convox rack install` is not checked, and one with another scheme, such as `udp+tls`, forwards nothing.
 
 ## Use Cases
 - **Centralized Logging**: Forward logs to a centralized syslog server for better log management and analysis.

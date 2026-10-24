@@ -83,11 +83,11 @@ Proxying localhost:5432 to host.name:port
 ### Exporting Data from a Resource
 ```bash
 $ convox resources export geodatabase -f /tmp/db.sql
-Exporting data from geodatabase... OK
+Exporting resource data... OK
 ```
 
 ### Importing Data to a Resource
 ```bash
 $ convox resources import geodatabase -f /tmp/db.sql
-Importing data to geodatabase... OK
+Importing resource data... OK
 ```

@@ -29,4 +29,4 @@ This command sets the specified parameter to the given value.
 
 - [Amazon Web Services (AWS)](/configuration/app-parameters/aws)
 
-App parameters are implemented in provider-agnostic Rack code, so the same set applies on Racks for every provider, not only AWS. Use the AWS page above as the reference for all of them. Some of the Rack parameters they interact with, such as [`build_node_enabled`](/configuration/rack-parameters/aws/build_node_enabled), are AWS-specific.
+App parameters are implemented in provider-agnostic Rack code, so the same set applies on Racks for every provider, not only AWS. Use the AWS page above as the reference for all of them. Some of the Rack parameters they interact with, such as [`build_node_enabled`](/configuration/rack-parameters/aws/build_node_enabled), are AWS-specific. On other providers `BuildArch` sets only the image platform, and only `BuildLabels` places a Build on particular nodes.

@@ -26,7 +26,7 @@ To set the memory request for build pods:
 
 ```bash
 $ convox apps params set BuildMem=2048 -a <app>
-Setting BuildMem... OK
+Updating parameters... OK
 ```
 
 This configuration allocates 2048MB (2GB) of memory to build pods for the specified application.
@@ -36,7 +36,6 @@ To view the current BuildMem setting:
 
 ```bash
 $ convox apps params -a <app>
-NAME         VALUE
 BuildMem     2048
 ```
 
@@ -47,7 +46,7 @@ Sets the CPU request for build pods:
 
 ```bash
 $ convox apps params set BuildCpu=500 -a <app>
-Setting BuildCpu... OK
+Updating parameters... OK
 ```
 
 ### BuildLabels
@@ -55,7 +54,7 @@ Directs build pods to specific node groups:
 
 ```bash
 $ convox apps params set BuildLabels=convox.io/label=app-build -a <app>
-Setting BuildLabels... OK
+Updating parameters... OK
 ```
 
 ## Sizing Guidance

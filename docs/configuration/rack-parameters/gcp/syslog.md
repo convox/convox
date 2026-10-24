@@ -13,6 +13,17 @@ The `syslog` parameter specifies the endpoint to forward logs to a syslog server
 ## Default Value
 The default value for `syslog` is `""`.
 
+## Accepted Values
+A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas, and each receives every line; the Console form takes one URL.
+
+The CLI rejects any other value:
+
+```text
+ERROR: param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got "udp+tls://logs.example.com:6514")
+```
+
+`--force` does not bypass the check, which requires CLI 3.25.12 or later. A value set with an older CLI or through `convox rack install` is not checked, and one with another scheme, such as `udp+tls`, forwards nothing.
+
 ## Use Cases
 - **Centralized Logging**: Forward logs to a central syslog server for easier monitoring and analysis.
 - **Compliance**: Meet compliance requirements by ensuring all logs are collected and stored in a central location.
@@ -28,7 +39,6 @@ The change rolls the Fluentd pods on every node.
 ## Additional Information
 When set to `""`, syslog forwarding is not enabled. Ensure that the syslog endpoint is reachable and configured to receive logs from your Convox Rack.
 
-- **Scheme and port:** the URL scheme is `tcp`, `tcp+tls` or `udp`, and the port defaults to `514` when the URL leaves it out. Any other scheme, such as `udp+tls`, forwards nothing.
 - **What is forwarded:** Fluentd forwards the container output of every App's Services, Timers, `convox run` Processes and Builds, and of the Rack's own system Pods such as the API, router and resolver. It does not collect containerized Resources such as `postgres` or `redis`, Kubernetes add-ons such as CoreDNS, or a Service whose name starts with `fluentd` or `cloudwatch-agent`. The Rack's own event lines, such as deploy state changes, are written to Elasticsearch directly and are not forwarded. Every router line, access lines included, is forwarded.
 - **Message format:** each line is sent with facility `user` and severity `info`. The syslog hostname is `<rack>.<app>` and the tag is `<type>/<name>/<pod>`, cut to 32 characters: `service/web/<pod>` for a Service, `timer/<timer>/<pod>` for a Timer, and `process/<service>/<pod>` for a `convox run` Process. Over `tcp` and `tcp+tls`, a line of up to 16,384 bytes arrives whole. Over `udp`, each message, header and tag included, is cut at 1,024 bytes.
 - **TLS:** from Rack version `3.25.11`, Fluentd verifies a `tcp+tls` endpoint's certificate against public certificate authorities. For an endpoint with a self-signed or private-CA certificate, set [`syslog_tls_verify`](/configuration/rack-parameters/gcp/syslog_tls_verify) to `false`.

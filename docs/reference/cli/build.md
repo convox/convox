@@ -35,13 +35,10 @@ Create a build
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```
@@ -136,6 +133,7 @@ The source directory is never uploaded. The image push goes to `api.<rack domain
 
 - Docker must be installed and running on the machine executing the build
 - Docker on the machine must reach `api.<rack domain>` over HTTPS, including when the CLI reaches the Rack through the Console
+- On GCP, Rack version 3.25.12 or later; the CLI version does not matter
 
 #### Example
 
@@ -165,13 +163,10 @@ You can pass env vars that will only exist at build time.
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Build:   BABCDEFGHI
     Release: RABCDEFGHI
 ```

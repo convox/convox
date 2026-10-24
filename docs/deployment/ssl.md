@@ -6,9 +6,9 @@ url: /deployment/ssl
 ---
 # SSL
 
-Convox will automatically generate a valid SSL certificate for your service using Let's Encrypt. By default, Convox handles SSL certificate generation via HTTP-01 and email validation methods.
+Convox will automatically generate a valid SSL certificate for your service using Let's Encrypt. Let's Encrypt validates domain ownership with the HTTP-01 challenge, or with DNS-01 for domains covered by a [DNS-01 solver](#advanced-ssl-configuration-lets-encrypt-dns-01-challenge-with-route53-aws) you configure.
 
-If you specify a custom `domain:` attribute for your service, Convox will automatically generate and validate an SSL certificate using Let's Encrypt's default HTTP-01 challenge. You may also receive an email for domain ownership verification during this process.
+If you specify a custom `domain:` attribute for your service, Convox will automatically generate and validate an SSL certificate using Let's Encrypt's default HTTP-01 challenge. Validation does not involve email.
 
 ## Pre-generate your certificate
 
@@ -19,7 +19,7 @@ $ convox certs generate "myapp.example.org" --issuer letsencrypt
 Generating certificate... OK, cert-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-This command will initiate the HTTP-01 challenge or email verification for domain ownership, allowing the certificate to be issued and ready for use during deployment. For wildcard certificates, see [Wildcard Certificates and Reuse](#wildcard-certificates-and-reuse) below (requires DNS-01 validation).
+This command will initiate the HTTP-01 challenge for domain ownership, allowing the certificate to be issued and ready for use during deployment. For wildcard certificates, see [Wildcard Certificates and Reuse](#wildcard-certificates-and-reuse) below (requires DNS-01 validation).
 
 ## Certificate Management
 

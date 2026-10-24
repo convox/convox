@@ -10,7 +10,15 @@ Import a prebuilt container image into a new Build. The Rack pulls the image fro
 
 This command requires a `convox.yml` manifest to define the App's Services. By default it reads `convox.yml` from the current directory.
 
-When the source image is a multi-architecture index, the Rack copies the image for the architecture of the node running the Rack API. It copies every platform the index publishes on an AWS Rack with Karpenter enabled that builds multi-architecture images, and from Rack version `3.25.9` on an AWS Karpenter Rack whose `node_type`, or `build_node_type` with `build_node_enabled=true`, is a different architecture from `karpenter_arch`. A source image published for a single platform is copied as it is. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
+When the source image is a multi-architecture index, the platform the Rack copies depends on the Rack and the App. The first matching row applies:
+
+| Rack and App | Platform copied |
+|--------------|-----------------|
+| AWS Rack with Karpenter enabled that builds multi-architecture images, or, from Rack version `3.25.9`, whose `node_type` (or `build_node_type` with `build_node_enabled=true`) is a different architecture from `karpenter_arch` | Every platform the index publishes, whatever [`BuildArch`](/configuration/app-parameters/aws/BuildArch) is |
+| App with `BuildArch` set, on Rack version `3.25.12` or later | `linux/<BuildArch>` |
+| App without `BuildArch` | The architecture of the node running the Rack API |
+
+A source image published for a single platform is copied as it is, whatever `BuildArch` is, and its Processes fail with an exec format error on nodes of another architecture. A multi-architecture source that does not publish the `BuildArch` platform fails the import. An invalid `BuildArch` value fails the import before any image is copied, with `invalid BuildArch: x86, must be amd64 or arm64`. See [Architecture Selection and Mixed-Architecture Racks](/configuration/scaling/karpenter#architecture-selection-and-mixed-architecture-racks).
 
 ### Usage
 ```bash

@@ -19,6 +19,7 @@ The default value for `additional_node_groups_config` is an empty array.
 - **Workload-Specific Optimization**: Create node pools tailored to specific workload requirements (e.g., CPU-intensive, memory-intensive, GPU, or batch processing workloads).
 - **Cost Optimization**: Configure certain node pools to use Spot VMs for non-critical workloads while maintaining regular VMs for mission-critical services.
 - **Isolation**: Segregate workloads by dedicating specific node pools to particular services.
+- **Arm Workloads**: Run Services on Arm VM sizes next to the x86 default node pool. See [Arm Node Pools](#arm-node-pools).
 - **Resource Efficiency**: Run different workloads on appropriately sized VMs for optimal resource utilization and cost efficiency.
 
 ## Configuration Format
@@ -153,9 +154,66 @@ services:
 
 This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
 
-## Architecture Compatibility
+## Arm Node Pools
 
-Convox on Azure requires x86-based VM SKUs. ARM-based VM SKUs are not supported. All node pools must use x86 VM SKUs to match the rack's [node_type](/configuration/rack-parameters/azure/node_type).
+Arm node pools run next to the x86 default node pool on Rack version 3.25.12 or later. [`node_type`](/configuration/rack-parameters/azure/node_type#cpu-architecture) must stay an x86 VM size, and Arm capacity is added here. The CLI treats a VM size with a `p` after the vCPU count as Arm, such as `Standard_D4ps_v5`, `Standard_E4pds_v5` or `Standard_B2pts_v2`.
+
+Arm VM families have their own vCPU quota in each region, and it is often 0. Request quota for the family in the Rack's region before you add the pool.
+
+Give each Arm pool `dedicated: true` and a `label`:
+
+```json
+[
+  {
+    "id": 202,
+    "type": "Standard_D4ps_v5",
+    "label": "arm",
+    "dedicated": true,
+    "min_size": 1,
+    "max_size": 2
+  }
+]
+```
+
+```bash
+$ convox rack params set additional_node_groups_config=/path/to/arm-pools.json -r rackName
+Updating parameters... OK
+```
+
+The pool's nodes carry the label `convox.io/label=arm` and the taint `dedicated-node=arm:NoSchedule`, so Pods that do not select the label stay off it. Without `dedicated: true`, CLI 3.25.12 or later accepts the entry and prints:
+
+```
+WARNING: additional_node_groups_config type Standard_D4ps_v5 is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.
+```
+
+Pods with no node selector can then schedule on the Arm nodes, and a Pod whose image has no arm64 variant fails to start with `exec format error`. Three of the default containerized Resource images have no arm64 variant; see [Resource](/reference/primitives/app/resource#containerized).
+
+A Service on the pool selects its label:
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    nodeSelectorLabels:
+      convox.io/label: arm
+```
+
+Set [`BuildArch`](/configuration/app-parameters/aws/BuildArch) so the App's image is built for arm64:
+
+```bash
+$ convox apps params set BuildArch=arm64 -a myapp
+Updating parameters... OK
+```
+
+A Build that lands on an x86 node runs under emulation. To build natively on the Arm pool, also point [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) at it:
+
+```bash
+$ convox apps params set BuildLabels=convox.io/label=arm BuildArch=arm64 -a myapp
+Updating parameters... OK
+```
+
+[`convox builds import-image`](/reference/cli/builds-import-image) copies the `linux/arm64` image from a multi-architecture source for an App with `BuildArch=arm64`. For Arm build pools, see [`additional_build_groups_config`](/configuration/rack-parameters/azure/additional_build_groups_config#arm-build-pools).
 
 ## Additional Information
 When using dedicated node pools (with `dedicated: true`), only services with matching node selector labels will be scheduled on those nodes. This provides strong isolation for workloads with specific requirements.
