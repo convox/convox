@@ -74,7 +74,7 @@ spec:
       {{ end }}
       containers:
       - name: postgres
-        image: {{ yamlScalar (coalesce .Image (printf "postgres:%s" (coalesce (index .Parameters "version") "10.5"))) }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432

@@ -2911,7 +2911,7 @@ spec:
           value: app
         - name: MYSQL_ROOT_PASSWORD
           value: abc123
-        image: mysql:5.7.23
+        image: mysql:8.4
         imagePullPolicy: IfNotPresent
         name: mysql
         ports:
@@ -6204,7 +6204,7 @@ spec:
           value: app
         - name: MYSQL_ROOT_PASSWORD
           value: abc123
-        image: mysql:5.7.23
+        image: mysql:8.4
         imagePullPolicy: IfNotPresent
         name: mysql
         ports:
