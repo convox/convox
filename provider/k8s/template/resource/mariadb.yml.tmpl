@@ -73,7 +73,7 @@ spec:
       {{ end }}
       containers:
       - name: mariadb
-        image: {{ yamlScalar (coalesce .Image (printf "mariadb:%s" (coalesce (index .Parameters "version") "10.6.0"))) }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3306

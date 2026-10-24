@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os/exec"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -63,7 +65,7 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 
 	switch r.Type {
 	case "mariadb", "rds-mariadb", "mysql", "rds-mysql":
-		return resourceExportMysql(u)
+		return resourceExportMysql(r.Type, u)
 	case "postgis", "postgres", "rds-postgres":
 		return resourceExportPostgres(u)
 	default:
@@ -139,7 +141,7 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	}
 
 	switch rr.Type {
-	case "mariadb", "rds-maridadb", "mysql", "rds-mysql":
+	case "mariadb", "rds-mariadb", "mysql", "rds-mysql":
 		return resourceImportMysql(rr, r)
 	case "postgis", "postgres", "rds-postgres":
 		return resourceImportPostgres(rr, r)
@@ -422,17 +424,34 @@ func resourceConsoleCommand(rw io.ReadWriter, opts structs.ResourceConsoleOption
 func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
 	defer w.Close()
 
+	var stderr bytes.Buffer
+
 	cmd := exec.Command(command, args...)
 
 	cmd.Stdout = w
-	cmd.Stderr = w
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(w, "ERROR: could not export: %v\n", err)
+		msg := err.Error()
+		if s := strings.TrimSpace(stderr.String()); s != "" {
+			msg += ": " + s
+		}
+		fmt.Fprintf(w, "ERROR: could not export: %s\n", msg)
 	}
 }
 
-func resourceExportMysql(url string) (io.ReadCloser, error) {
+func mysqldumpArgs(resourceType string, cn *resourceConnection) []string {
+	args := []string{"-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password)}
+
+	switch resourceType {
+	case "mariadb", "rds-mariadb":
+		args = append(args, "--column-statistics=0")
+	}
+
+	return append(args, cn.Database)
+}
+
+func resourceExportMysql(resourceType, url string) (io.ReadCloser, error) {
 	cn, err := parseResourceURL(url)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -440,7 +459,7 @@ func resourceExportMysql(url string) (io.ReadCloser, error) {
 
 	rr, ww := io.Pipe()
 
-	go resourceExportCommand(ww, "mysqldump", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), cn.Database)
+	go resourceExportCommand(ww, "mysqldump", mysqldumpArgs(resourceType, cn)...)
 
 	return rr, nil
 }

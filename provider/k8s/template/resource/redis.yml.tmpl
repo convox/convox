@@ -54,7 +54,7 @@ spec:
       {{ end }}
       containers:
       - name: redis
-        image: {{ yamlScalar (coalesce .Image (printf "redis:%s" (coalesce (index .Parameters "version") "4.0.10"))) }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379

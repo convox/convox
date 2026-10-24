@@ -119,9 +119,17 @@ func goldenCases(p *Provider, m *manifest.Manifest, a *structs.App) []goldenCase
 	conn := provisioner.ConnectionInfo{Host: "h.rds.amazonaws.com", Port: "5432", UserName: "app", Password: "p@ss&w:rd/x", Database: "app"} //nolint:gosec // template fixture exercising special characters
 	for _, res := range m.Resources {
 		if res.IsContainerizedResource() {
+			img := res.Image
+			if img == "" {
+				v := res.Options["version"]
+				if v == "" {
+					v = resourceDefaultImages[res.Type].defaultVersion
+				}
+				img = resourceImage("", res.Type, v)
+			}
 			cs = append(cs, goldenCase{"resource " + res.Name, "resource/" + res.Type, map[string]interface{}{
 				"App": a.Name, "Namespace": ns, "Name": res.Name, "Parameters": res.Options, "Password": "abc123", "Rack": "rack",
-				"Image": res.Image, "DockerHubAuth": true,
+				"Image": img, "DockerHubAuth": true,
 			}})
 		}
 		cs = append(cs, goldenCase{"masked " + res.Name, "resource/masked", map[string]interface{}{

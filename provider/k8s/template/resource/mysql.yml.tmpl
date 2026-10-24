@@ -73,7 +73,7 @@ spec:
       {{ end }}
       containers:
       - name: mysql
-        image: {{ yamlScalar (coalesce .Image (printf "mysql:%s" (coalesce (index .Parameters "version") "5.7.23"))) }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3306

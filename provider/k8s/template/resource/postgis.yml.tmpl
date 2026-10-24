@@ -74,7 +74,7 @@ spec:
       {{ end }}
       containers:
       - name: postgis
-        image: {{ yamlScalar (coalesce .Image (printf "postgis/postgis:%s" (coalesce (index .Parameters "version") "10-3.2"))) }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
