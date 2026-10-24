@@ -22,7 +22,7 @@ Start an application for local development
 | `--external` | `-e` | Build the image with Docker on this machine and push it to the Rack. On GCP, requires Rack version 3.25.12 or later |
 | `--generation` | `-g` | Generation |
 | `--no-build` | | Skip building |
-| `--no-cache` | | Build without the layer cache. A build on the Rack requires CLI 3.25.12 or later and Rack version 3.25.11 or later; earlier versions build with the cache. With `--external` it applies to the local build on any version |
+| `--no-cache` | | Build without the layer cache. A Build on the Rack requires CLI 3.25.12 or later and Rack version 3.25.11 or later; earlier versions build with the cache. With `--external` it applies to the local build on any version |
 | `--no-sync` | | Do not sync local changes into running containers |
 ### Examples
 ```bash

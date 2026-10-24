@@ -50,10 +50,10 @@ synchronized.
 
 | Flag | Description |
 |------|-------------|
-| `--external`, `-e` | Build the image with Docker on this machine and push it to the Rack instead of building on the Rack |
+| `--external`, `-e` | Build the image with Docker on this machine and push it to the Rack instead of building on the Rack. On GCP, requires Rack version 3.25.12 or later |
 | `--manifest` | Specify an alternate manifest file (default: `convox.yml`) |
 | `--no-build` | Skip the build step and use the existing image |
-| `--no-cache` | Build without the layer cache. A build on the Rack requires CLI 3.25.12 or later and Rack version 3.25.11 or later; earlier versions build with the cache. With `--external` it applies to the local build on any version |
+| `--no-cache` | Build without the layer cache. A Build on the Rack requires CLI 3.25.12 or later and Rack version 3.25.11 or later; earlier versions build with the cache. With `--external` it applies to the local build on any version |
 | `--no-sync` | Disable file synchronization |
 
 ## Development Target

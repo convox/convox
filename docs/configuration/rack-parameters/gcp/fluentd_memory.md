@@ -20,7 +20,7 @@ A whole number of `Mi` or `Gi` with no leading zero, such as `200Mi`, `512Mi` or
 ERROR: param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi
 ```
 
-`--force` does not bypass the check, which requires CLI 3.25.12 or later. The Console form accepts the same values. A value in another form set with an older CLI or through `convox rack install`, such as `2.5Gi`, still sets the memory limit, but Fluentd sizes its buffers as for `200Mi` until the value is set again in `Mi` or `Gi`.
+`--force` does not bypass the check, which requires CLI 3.25.12 or later. The Console form accepts the same values. A value in another form set with an older CLI or through `convox rack install`, such as `2.5Gi`, still sets the memory limit, but Fluentd sizes its buffers as for `200Mi` until the value is set again as a whole number of `Mi` or `Gi`.
 
 ## Use Cases
 - **Output outages and bursts**: Fluentd sizes the buffer for lines it has not yet delivered from this value. A larger value lets it absorb a longer Elasticsearch outage or a bigger burst before it pauses reading container logs.

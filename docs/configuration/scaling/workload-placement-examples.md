@@ -246,7 +246,7 @@ This example sets up an x86 primary rack with ARM worker nodes and ARM build nod
    $ convox deploy -a myapp
    ```
 
-With `build_node_enabled=true`, the build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM image. Without dedicated build nodes the build Pod is unconstrained, but `BuildArch` still pins the produced image to arm64, so a build that lands on an x86 node is emulated rather than native. The resulting Pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`).
+With `build_node_enabled=true`, the build runs on an ARM build node (via `BuildArch=arm64`), producing a native ARM image. Without dedicated build nodes the build Pod is unconstrained, but `BuildArch` still pins the produced image to arm64, so a Build that lands on an x86 node is emulated rather than native. The resulting Pods run on the dedicated ARM worker nodes (via `nodeSelectorLabels`).
 
 An App without `BuildArch` gets no architecture constraint on its build Pod, so its Build can land on an ARM build node and produce an arm64-only image that fails on x86 nodes. Once the Rack has build nodes of both architectures, set `BuildArch` on every App.
 
@@ -259,7 +259,7 @@ An App without `BuildArch` gets no architecture constraint on its build Pod, so 
 
 For full `BuildArch` parameter details, see [BuildArch](/configuration/app-parameters/aws/BuildArch).
 
-### Mixed ARM/x86 Architecture on GCP and Azure
+### Mixed Arm/x86 Architecture on GCP and Azure
 
 Arm node groups on GCP and Azure need Rack version 3.25.12 or later, and the setup differs from AWS. `build_node_enabled` does not exist on either provider, so `BuildArch` sets only the image platform and `BuildLabels` places the Build.
 

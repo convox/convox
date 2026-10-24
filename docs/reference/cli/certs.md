@@ -217,9 +217,9 @@ After the table, the command prints the number of records with a count for each 
 | Line | Printed when |
 | ---- | ------------ |
 | `<zone> is a Route 53 zone in this AWS account. To have the rack add its records: convox rack params set Route53CertificateValidation=Yes` | `Route53CertificateValidation` is off and the zone is a Route 53 hosted zone in the Rack's AWS account |
-| `N certificates are still being prepared, run again in a few minutes` | Some certificates' records are not available yet |
+| `N certificates are still being prepared, run again in a few minutes` (`1 certificate is still being prepared` for one) | Some certificates' records are not available yet |
 | `<id>: <error>` | Getting a certificate's records failed |
-| `<id>, <id> use email validation but are not used by this rack, so it leaves them alone` | Email-validated certificates in the account are not used by this Rack |
+| `<id>, <id> use email validation but are not used by this rack, so it leaves them alone` (`<id> uses ... so it leaves it alone` for one) | Email-validated certificates in the account are not used by this Rack |
 | `When every record shows ok: convox certs migrate --wait` | Any record is not `ok` |
 
 ## certs migrate

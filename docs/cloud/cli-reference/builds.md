@@ -115,4 +115,4 @@ $ convox cloud builds logs BABCDEFGHI -a myapp -i production
 ...
 ```
 
-With CLI 3.25.12 or later, a read that ends before the end of the Build's output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0.
+With CLI 3.25.12 or later, a read that ends before the end of the Build's output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0, so scripts can tell a complete read from a cut one.

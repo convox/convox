@@ -16,7 +16,7 @@ The `BuildArch` app parameter pins an App's built image to a single CPU architec
 |:-------|:-------------|
 | The image is built for `linux/<arch>` | Every provider, on any Build the Rack runs, including `--development` Builds from Rack version `3.25.9`. Not applied to `--external` Builds, which run on your own machine |
 | The build pod is restricted to a build node of that architecture | Only on AWS, when the Rack has `build_node_enabled=true` |
-| [`convox builds import-image`](/reference/cli/builds-import-image) copies `linux/<arch>` from a multi-architecture source image | Every provider, from Rack version `3.25.12`. Not applied on an AWS Karpenter Rack that builds multi-architecture images or pins Builds, where an import copies every platform |
+| [`convox builds import-image`](/reference/cli/builds-import-image) copies `linux/<arch>` from a multi-architecture source image | Every provider, on Rack version `3.25.12` or later. Not applied on an AWS Karpenter Rack that builds multi-architecture images or pins Builds, where an import copies every platform |
 
 `BuildArch` takes effect on Racks running 3.25.3 or later. On earlier Racks the CLI accepts the value and the Rack discards it: the parameter is not stored, `convox apps params` does not list it, and Builds are unaffected.
 
@@ -42,7 +42,7 @@ By default, `BuildArch` is not set. The App inherits the Rack's build architectu
 | `amd64` | x86/Intel/AMD | `t3.medium`, `c5.xlarge`, `m5.large` |
 | `arm64` | ARM/Graviton | `t4g.medium`, `c7g.xlarge`, `m7g.large` |
 
-Any other value is accepted when you set it and rejected when you start a Build or, from Rack version `3.25.12`, an import. `convox apps params set BuildArch=x86 -a my-app` succeeds, and the next `convox build` or `convox builds import-image` fails immediately, before any build pod runs or any image is copied, with:
+Any other value is accepted when you set it and rejected when you start a Build or, on Rack version `3.25.12` or later, an import. `convox apps params set BuildArch=x86 -a my-app` succeeds, and the next `convox build` or `convox builds import-image` fails immediately, before any build pod runs or any image is copied, with:
 
 ```
 invalid BuildArch: x86, must be amd64 or arm64
