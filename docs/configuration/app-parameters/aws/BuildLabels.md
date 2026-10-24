@@ -91,7 +91,7 @@ A `BuildLabels` value that matches no node in the cluster does not fail the Buil
 
 | Rack configuration | Behavior |
 |--------------------|----------|
-| Target is an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entry with `dedicated: true` | The build pod tolerates the group's taint and runs there, from Rack version `3.25.12`. On earlier Racks it stays `Pending` |
+| Target is an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entry with `dedicated: true` | The build pod tolerates the group's taint and runs there, on Rack version `3.25.12` or later. On earlier Racks it stays `Pending` |
 | AWS with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled) | Build pods also require the `convox-build=true` label that only build nodes carry, so `BuildLabels` chooses among build nodes. A value that names an additional node group leaves the build pod `Pending` |
 | GCP, target is an Arm node pool | The value must also include `kubernetes.io/arch=arm64`, or the build pod stays `Pending`. See [Arm Node Pools](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) |
 

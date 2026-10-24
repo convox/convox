@@ -26,7 +26,7 @@ Fluentd forwards the container output of every App's Services, Timers, `convox r
 The default value for `syslog` is an empty string. When set to an empty string, syslog forwarding is not enabled.
 
 ## Accepted Values
-A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas, and each receives every line; the Console form takes one URL.
+A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas with no spaces, and each receives every line; the Console form takes one URL.
 
 The CLI rejects any other value:
 

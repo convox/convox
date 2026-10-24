@@ -6,7 +6,7 @@ url: /reference/cli/racks
 ---
 # racks
 
-The `convox racks` command lists the Racks accessible from your current Console login and the Racks in the CLI's `racks` settings directory: Racks installed from this machine with Terraform, and Racks saved there by URL. From CLI 3.25.12, a symlink to a Rack directory there is listed the same as the directory. Each Rack is shown with its provider and status. Use `convox switch` to change the active Rack.
+The `convox racks` command lists the Racks accessible from your current Console login and the Racks in the CLI's `racks` settings directory: Racks installed from this machine with Terraform, and Racks saved there by URL. With CLI 3.25.12 or later, a symlink to a Rack directory there is listed the same as the directory. Each Rack is shown with its provider and status. Use `convox switch` to change the active Rack.
 
 ## racks
 

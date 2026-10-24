@@ -17,7 +17,7 @@ The following parameters are available for configuring your Convox applications 
 | [BuildCpu](/configuration/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
 | [BuildMem](/configuration/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
 
-> **Warning**: When configuring `BuildLabels`, ensure that the specified labels match a node group defined in the [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameter. If the labels don't match any node, build pods remain Pending and the Build does not complete until you cancel it.
+> **Warning**: When configuring `BuildLabels`, ensure that the specified labels match a node group defined in the [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameter. With `build_node_enabled=true`, only build node groups qualify. If the labels don't match any node, build pods remain Pending and the Build does not complete until you cancel it.
 
 These application-specific parameters complement the rack-level configuration available through [Rack Parameters](/configuration/rack-parameters/aws), providing fine-grained control over your application deployments.
 

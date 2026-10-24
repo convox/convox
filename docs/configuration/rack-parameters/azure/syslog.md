@@ -14,7 +14,7 @@ The `syslog` parameter specifies the endpoint to forward logs to a syslog server
 The default value for `syslog` is `""`.
 
 ## Accepted Values
-A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas, and each receives every line; the Console form takes one URL.
+A URL made of `tcp://`, `tcp+tls://` or `udp://` (lowercase), a host name or IPv4 address, and an optional `:<port>`, such as `tcp+tls://logs.example.com:6514`. The port defaults to `514` when the URL leaves it out. From the CLI, several endpoints can be given separated by commas with no spaces, and each receives every line; the Console form takes one URL.
 
 The CLI rejects any other value:
 

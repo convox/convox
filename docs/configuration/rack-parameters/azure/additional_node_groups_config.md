@@ -186,7 +186,7 @@ The pool's nodes carry the label `convox.io/label=arm` and the taint `dedicated-
 WARNING: additional_node_groups_config type Standard_D4ps_v5 is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.
 ```
 
-Pods with no node selector can then schedule on the Arm nodes, and a Pod whose image has no arm64 variant fails to start with `exec format error`. Three of the default containerized Resource images have no arm64 variant; see [Resource](/reference/primitives/app/resource#containerized).
+Pods with no node selector can then schedule on the Arm nodes, and a Pod whose image has no arm64 variant fails to start, with `exec format error` or an image pull error. Builds can run there too, and a Build of an App without `BuildArch` then produces an arm64-only image whose Processes fail on x86 nodes. Three of the default containerized Resource images have no arm64 variant; see [Resource](/reference/primitives/app/resource#containerized).
 
 A Service on the pool selects its label:
 

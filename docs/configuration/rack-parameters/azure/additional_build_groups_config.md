@@ -81,7 +81,7 @@ Updating parameters... OK
 
 ## Arm Build Pools
 
-From Rack version 3.25.12, a build pool can use an Arm VM size, such as `Standard_D4ps_v5`. Build pools have no `dedicated` key, so any App's Build can run on an Arm build pool while the pool has nodes. When a Build of an App without the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter runs there, it produces an arm64-only image, and that App's Processes then fail on x86 nodes. Set `BuildArch` on every App on the Rack before you add an Arm build pool.
+On Rack version 3.25.12 or later, a build pool can use an Arm VM size, such as `Standard_D4ps_v5`. Build pools have no `dedicated` key, so any App's Build can run on an Arm build pool. When a Build of an App without the [`BuildArch`](/configuration/app-parameters/aws/BuildArch) app parameter runs there, it produces an arm64-only image, and that App's Processes then fail on x86 nodes. Set `BuildArch` on every App on the Rack before you add an Arm build pool.
 
 CLI 3.25.12 or later accepts an Arm build pool and prints:
 
