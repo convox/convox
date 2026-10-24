@@ -57,7 +57,7 @@ locals {
     high_availability                    = "true"
     idle_timeout                         = "4"
     image                                = "convox/convox"
-    k8s_version                          = "1.35"
+    k8s_version                          = "1.36"
     max_on_demand_count                  = "100"
     min_on_demand_count                  = "3"
     name                                 = ""

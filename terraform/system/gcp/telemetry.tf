@@ -49,7 +49,7 @@ locals {
     gpu_observability_chart_version = "4.8.1"
     gpu_observability_enable        = "false"
     image                           = "convox/convox"
-    k8s_version                     = "1.35"
+    k8s_version                     = "1.36"
     name                            = ""
     nginx_additional_config         = ""
     node_disk                       = "100"
