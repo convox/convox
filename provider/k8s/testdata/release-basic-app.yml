@@ -228,7 +228,7 @@ spec:
           value: 6630abdb8bba553e3e48555e302e51
         - name: PGDATA
           value: /var/lib/postgresql/data/data
-        image: postgres:10.5
+        image: postgres:16-trixie
         imagePullPolicy: IfNotPresent
         name: postgres
         ports:
@@ -348,7 +348,7 @@ spec:
           value: 6630abdb8bba553e3e48555e302e51
         - name: PGDATA
           value: /var/lib/postgresql/data/data
-        image: postgres:10.5
+        image: postgres:16-trixie
         imagePullPolicy: IfNotPresent
         name: postgres
         ports:
@@ -484,7 +484,7 @@ spec:
           value: app
         - name: MYSQL_ROOT_PASSWORD
           value: 6630abdb8bba553e3e48555e302e51
-        image: mysql:5.7.23
+        image: mysql:8.4
         imagePullPolicy: IfNotPresent
         name: mysql
         ports:

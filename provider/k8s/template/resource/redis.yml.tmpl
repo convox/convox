@@ -54,7 +54,7 @@ spec:
       {{ end }}
       containers:
       - name: redis
-        image: {{ if not .Image }}redis:{{ coalesce (index .Parameters "version") "4.0.10" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379

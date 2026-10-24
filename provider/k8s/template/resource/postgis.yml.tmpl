@@ -74,7 +74,7 @@ spec:
       {{ end }}
       containers:
       - name: postgis
-        image: {{ if not .Image }}postgis/postgis:{{ coalesce (index .Parameters "version") "10-3.2" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
