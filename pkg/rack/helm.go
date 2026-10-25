@@ -18,8 +18,8 @@ import (
 
 const helmReleaseType = "helm.sh/release.v1"
 
-// Only clear releases pending longer than a live helm op could be: the system
-// releases pin timeout=600, so a fresh pending secret may be an in-flight apply.
+// Only clear releases pending longer than most live helm ops: system releases time
+// out within 600s (contour 3600s), so a fresh pending secret may be an in-flight apply.
 const helmStuckMinAge = 15 * time.Minute
 
 var helmPendingStatuses = map[string]bool{
