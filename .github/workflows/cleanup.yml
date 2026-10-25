@@ -5,6 +5,9 @@ on:
     - cron:  '0 2/24 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   cleanup-aws:
     runs-on: ubuntu-22.04
@@ -14,7 +17,9 @@ jobs:
         provider: [aws]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: AWS secrets
         run: ci/secrets.sh
         env:
@@ -25,9 +30,9 @@ jobs:
       - name: System dependencies
         run: ci/dependencies.sh
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.24'
+          go-version-file: ci/go.mod
       - name: Cache / download Go modules
         working-directory: ci
         run: go mod download
@@ -45,7 +50,9 @@ jobs:
       fail-fast: false
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: do secrets
         run: ci/secrets.sh
         env:

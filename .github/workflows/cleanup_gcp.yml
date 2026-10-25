@@ -5,6 +5,9 @@ on:
     - cron:  '0 2/24 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   cleanup-gcp:
     runs-on: ubuntu-latest
@@ -12,7 +15,9 @@ jobs:
       fail-fast: false
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: gcp secrets
         run: ci/secrets.sh
         env:
