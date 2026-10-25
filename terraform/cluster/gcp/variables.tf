@@ -40,7 +40,7 @@ variable "gpu_observability_enable" {
 
 variable "gpu_observability_chart_version" {
   type    = string
-  default = "4.8.1"
+  default = "4.8.4"
 }
 
 variable "dcgm_scrape_interval" {

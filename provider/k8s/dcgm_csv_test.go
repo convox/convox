@@ -15,19 +15,19 @@ import (
 // terraform/cluster/aws/variables.tf::gpu_observability_chart_version
 // (default value). The whitelist below is the set of DCGM exporter
 // counter names recognized by THIS chart version's runtime binary
-// (dcgm-exporter image bundled with chart 4.8.1 = nvidia/k8s/dcgm-exporter:4.5.2-4.8.1).
+// (dcgm-exporter image bundled with chart 4.8.4 = nvidia/k8s/dcgm-exporter:4.6.1-4.8.4).
 //
 // When the chart version bumps, both this constant AND the whitelist
 // below MUST update in lockstep. The chart-bump checklist at
 // docs/configuration/rack-parameters/aws/gpu_observability_chart_version.md
 // is now CI-enforced via TestDcgmExporterCSV_ChartVersionPin below.
-const dcgmExporterChartVersion = "4.8.1"
+const dcgmExporterChartVersion = "4.8.4"
 
 // validDCGMFields is the set of DCGM exporter counter field names
-// valid for chart 4.8.1's runtime binary. Derived from NVIDIA's
+// valid for chart 4.8.4's runtime binary. Derived from NVIDIA's
 // upstream etc/dcgm-exporter/default-counters.csv (the chart's bundled
 // allowed-fields list) plus the binary's internal counter enum (see
-// go-dcgm v4.5 pkg/dcgm/const_fields.go for the canonical name → ID map).
+// go-dcgm v1.4611.2 pkg/dcgm/const_fields.go for the canonical name → ID map).
 //
 // The list deliberately INCLUDES fields the rack's override CSV does
 // not currently enable — having a permissive whitelist that matches

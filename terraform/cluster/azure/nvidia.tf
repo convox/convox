@@ -8,7 +8,7 @@ resource "helm_release" "nvidia_device_plugin" {
   name       = "nvidia-device-plugin"
   repository = "https://nvidia.github.io/k8s-device-plugin"
   chart      = "nvidia-device-plugin"
-  version    = "0.17.1"
+  version    = "0.20.1"
   namespace  = "kube-system"
 
   values = [
@@ -30,6 +30,9 @@ resource "helm_release" "nvidia_device_plugin" {
             }
           })
         }
+      }
+      mps = {
+        enableHostPID = false
       }
       affinity = {
         nodeAffinity = {

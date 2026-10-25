@@ -234,7 +234,7 @@ locals {
     fluentd_memory                            = "200Mi"
     gpu_metrics_max_concurrent                = "10"
     gpu_metrics_max_pods                      = "100"
-    gpu_observability_chart_version           = "4.8.1"
+    gpu_observability_chart_version           = "4.8.4"
     gpu_observability_enable                  = "false"
     gpu_tag_enable                            = "false"
     grafana_dashboard_var_app                 = "app"

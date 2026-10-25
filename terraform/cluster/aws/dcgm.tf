@@ -32,7 +32,7 @@ resource "helm_release" "dcgm_exporter" {
   repository = "https://nvidia.github.io/dcgm-exporter/helm-charts"
   chart      = "dcgm-exporter"
   # Default must match variables.tf; drift asserted by TestCoalesceLiteralsMatchTFDefaults.
-  version   = coalesce(var.gpu_observability_chart_version, "4.8.1")
+  version   = coalesce(var.gpu_observability_chart_version, "4.8.4")
   namespace = "kube-system"
 
   values = [

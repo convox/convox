@@ -100,9 +100,9 @@ Groups:
         description: "Installs the NVIDIA DCGM exporter, which collects GPU telemetry from the NVIDIA GPU nodes in your rack. &l Metrics are served on port 9400 through a dcgm-exporter service in the kube-system namespace and are also advertised with prometheus.io pod annotations. &l &l Convox does not install a Prometheus on GCP, so point a Prometheus you run yourself at the exporter to collect the metrics. &l"
         sideNote: "Only has an effect when your rack includes NVIDIA GPU machines."
       - name: gpu_observability_chart_version
-        default: "4.8.1"
+        default: "null"
         type: string
-        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. The default, &i 4.8.1 &i, fits most setups; change it only to match a specific GPU driver."
+        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. Leave empty to use the version that ships with the Rack release; set it only to match a specific GPU driver."
         sideNote: "Only takes effect when GPU metrics collection is enabled."
       - name: dcgm_scrape_interval
         default: 15s

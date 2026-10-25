@@ -130,7 +130,7 @@ variable "gpu_observability_enable" {
 
 variable "gpu_observability_chart_version" {
   type        = string
-  default     = "4.8.1"
+  default     = "4.8.4"
   description = "Pin the nvidia/dcgm-exporter Helm chart version. Default tracked by TestCoalesceLiteralsMatchTFDefaults."
 }
 
