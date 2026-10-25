@@ -46,7 +46,7 @@ locals {
     docker_hub_username             = ""
     elasticsearch_disk              = "5Gi"
     fluentd_memory                  = "200Mi"
-    gpu_observability_chart_version = "4.8.1"
+    gpu_observability_chart_version = "4.8.4"
     gpu_observability_enable        = "false"
     image                           = "convox/convox"
     k8s_version                     = "1.35"

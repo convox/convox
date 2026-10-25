@@ -26,12 +26,12 @@ const (
 	GpuTotalPowerCluster   = `sum(DCGM_FI_DEV_POWER_USAGE)`
 	GpuAllocatedCount      = `sum(DCGM_FI_DEV_FB_USED > 0)`
 	GpuTotalCount          = `count(DCGM_FI_DEV_FB_FREE)`
-	GpuTopThrottleReasons  = `topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, Hostname)`
+	GpuTopThrottleReasons  = `topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, hostname)`
 	GpuTempHeatmap         = `DCGM_FI_DEV_GPU_TEMP`
 	// ===== END SECTION: Cluster-aggregate DCGM =====
 
 	// ===== SECTION: Health per-GPU DCGM =====
-	GpuXidErrorRateByGpu    = `sum by (UUID, Hostname) (rate(DCGM_FI_DEV_XID_ERRORS[5m]))`
+	GpuXidErrorRateByGpu    = `sum by (UUID, hostname) (rate(DCGM_FI_DEV_XID_ERRORS[5m]))`
 	GpuEccDbeTotalByGpu     = `DCGM_FI_DEV_ECC_DBE_VOL_TOTAL`
 	GpuEccSbeRateByGpu      = `sum by (UUID) (rate(DCGM_FI_DEV_ECC_SBE_VOL_TOTAL[1h]))`
 	GpuNvlinkReplayByGpu    = `sum by (UUID, link) (rate(DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL[5m]))`

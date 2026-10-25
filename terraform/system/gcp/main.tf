@@ -45,7 +45,7 @@ module "cluster" {
   preemptible                     = var.preemptible
   project_id                      = module.project.id
   gpu_observability_enable        = var.gpu_observability_enable
-  gpu_observability_chart_version = var.gpu_observability_chart_version
+  gpu_observability_chart_version = var.gpu_observability_chart_version == "4.8.1" ? "" : var.gpu_observability_chart_version # 4.8.1 is the old default that Console stored at install
   dcgm_scrape_interval            = var.dcgm_scrape_interval
 }
 

@@ -799,7 +799,7 @@ var clearableParams = map[string]bool{
 	// default (`24h`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
 	"prometheus_gpu_metrics_retention": true,
 	// DCGM exporter Helm version override — empty falls back to TF default
-	// ("4.8.1") via coalesce() guard in cluster/aws/dcgm.tf.
+	// ("4.8.4") via coalesce() guard in cluster/aws/dcgm.tf.
 	"gpu_observability_chart_version": true,
 	// DCGM scrape interval — empty falls back to TF default (`15s`). Range 15s-300s.
 	// Process-config: read by Console3 monitoring worker which writes to Prometheus
