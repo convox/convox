@@ -1,3 +1,8 @@
+locals {
+  contour_chart_version   = "0.8.0"
+  contour_envoy_image_tag = "v1.38.8@sha256:9b6dd34943ea3bd431986e6bb1c56b4f63d2ab8bf2d74bfef7fae96101b62274"
+}
+
 resource "null_resource" "contour_cleanup" {
   count = var.router_type == "contour" ? 1 : 0
 
@@ -26,9 +31,9 @@ resource "helm_release" "contour" {
   namespace        = var.namespace
   repository       = "https://projectcontour.github.io/helm-charts/"
   chart            = "contour"
-  version          = "0.5.0"
+  version          = local.contour_chart_version
   create_namespace = false
-  timeout          = 600
+  timeout          = 3600
   wait             = true
 
   set {
@@ -59,6 +64,11 @@ resource "helm_release" "contour" {
   set {
     name  = "envoy.service.externalTrafficPolicy"
     value = ""
+  }
+
+  set {
+    name  = "envoy.image.tag"
+    value = local.contour_envoy_image_tag
   }
 
   set {
@@ -208,9 +218,9 @@ resource "helm_release" "contour_internal" {
   namespace        = var.namespace
   repository       = "https://projectcontour.github.io/helm-charts/"
   chart            = "contour"
-  version          = "0.5.0"
+  version          = local.contour_chart_version
   create_namespace = false
-  timeout          = 600
+  timeout          = 3600
   wait             = true
 
   set {
@@ -241,6 +251,11 @@ resource "helm_release" "contour_internal" {
   set {
     name  = "envoy.service.externalTrafficPolicy"
     value = ""
+  }
+
+  set {
+    name  = "envoy.image.tag"
+    value = local.contour_envoy_image_tag
   }
 
   set {
