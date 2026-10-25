@@ -15,9 +15,10 @@ func TestCertManagerCurrent(t *testing.T) {
 	}{
 		{"no deployment", nil, false},
 		{"v1.10", []string{"quay.io/jetstack/cert-manager-controller:v1.10.2"}, false},
-		{"v1.21.1", []string{CERT_MANAGER_IMAGE}, true},
+		{"current", []string{CERT_MANAGER_IMAGE}, true},
+		{"3.25.12 install", []string{"quay.io/jetstack/cert-manager-controller:v1.21.1"}, false},
 		{"digest", []string{"quay.io/jetstack/cert-manager-controller@sha256:abc"}, false},
-		{"registry port", []string{"registry.example.com:5000/jetstack/cert-manager-controller:v1.21.1"}, false},
+		{"registry port", []string{"registry.example.com:5000/jetstack/cert-manager-controller:v1.21.3"}, false},
 		{"sidecar", []string{"busybox:latest", CERT_MANAGER_IMAGE}, true},
 	} {
 		t.Run(c.name, func(t *testing.T) {

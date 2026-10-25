@@ -1443,6 +1443,7 @@ func TestRenderTemplateCertManager(t *testing.T) {
 	p.templater = templater.New(template.TemplatesFS)
 
 	role := "arn:aws:iam::123456789012:role/my-rack-cert-manager"
+	tag := CERT_MANAGER_IMAGE[strings.LastIndex(CERT_MANAGER_IMAGE, ":")+1:]
 
 	for _, c := range []struct {
 		name      string
@@ -1467,9 +1468,10 @@ func TestRenderTemplateCertManager(t *testing.T) {
 
 			require.Equal(t, 46, strings.Count(out, "\n---\n"))
 
-			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-cainjector:v1.21.1"))
+			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-cainjector:"+tag))
 			require.Equal(t, 1, strings.Count(out, "image: "+CERT_MANAGER_IMAGE), "certManagerCurrent compares this image, so the constant and the template must agree")
-			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-webhook:v1.21.1"))
+			require.Equal(t, 1, strings.Count(out, "image: quay.io/jetstack/cert-manager-webhook:"+tag))
+			require.Equal(t, 1, strings.Count(out, "--acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:"+tag))
 
 			require.Equal(t, 1, strings.Count(out, "--certificate-request-minimum-backoff-duration=5m"))
 
