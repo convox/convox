@@ -13,13 +13,14 @@ RUN make $GOPATH/bin/build
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.28.0-rootless as rootless
+FROM moby/buildkit:v0.34.1-rootless@sha256:f68752a5a94acfcdad2d07867b7075601a421638e17fc5f28efc1c814d0c4f89 AS rootless
 
 USER root
 
-# skopeo version pin — see Dockerfile:54 comment block for cadence policy. Alpine
-# version may differ from Ubuntu's; both must be bumped together when policy fires.
-RUN apk add --no-cache --upgrade ca-certificates-bundle && apk add skopeo=1.20.1-r0 --update
+# skopeo version pin: see the skopeo comment in Dockerfile for the bump policy. The
+# Alpine version differs from Ubuntu's; bump both together when the policy fires.
+RUN apk upgrade --no-cache && apk add --no-cache skopeo=1.20.1-r0 && \
+  rm /usr/bin/buildkit-cni-bridge /usr/bin/buildkit-cni-firewall /usr/bin/buildkit-cni-host-local /usr/bin/buildkit-cni-loopback
 
 COPY --from=package /go/bin/build /usr/bin
 
@@ -34,10 +35,11 @@ ENTRYPOINT [ "./buildctl-daemonless.sh" ]
 
 ###########################################################################################
 
-FROM moby/buildkit:v0.28.0 as privileged
+FROM moby/buildkit:v0.34.1@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c AS privileged
 
-# skopeo version pin — see Dockerfile:54 comment block for cadence policy.
-RUN apk add --no-cache --upgrade ca-certificates-bundle && apk add skopeo=1.20.1-r0 --update
+# skopeo version pin: see the skopeo comment in Dockerfile.
+RUN apk upgrade --no-cache && apk add --no-cache skopeo=1.20.1-r0 && \
+  rm /usr/bin/buildkit-cni-bridge /usr/bin/buildkit-cni-firewall /usr/bin/buildkit-cni-host-local /usr/bin/buildkit-cni-loopback
 
 COPY --from=package /go/bin/build /usr/bin
 
