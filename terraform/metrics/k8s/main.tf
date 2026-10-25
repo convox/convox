@@ -166,7 +166,7 @@ resource "kubernetes_deployment" "metrics" {
 
         container {
           name              = "metrics-server"
-          image             = "registry.k8s.io/metrics-server/metrics-server:v0.7.2"
+          image             = "registry.k8s.io/metrics-server/metrics-server:v0.9.0@sha256:d9862115e7c7881280d3d75ca26bda8ffc0fc213315979575bf23ce9826205c0"
           image_pull_policy = "IfNotPresent"
           args = [
             "--cert-dir=/tmp",
@@ -181,6 +181,31 @@ resource "kubernetes_deployment" "metrics" {
             run_as_non_root            = true
             run_as_user                = 1000
             allow_privilege_escalation = false
+
+            capabilities {
+              drop = ["ALL"]
+            }
+          }
+
+          readiness_probe {
+            http_get {
+              path   = "/readyz"
+              port   = 10250
+              scheme = "HTTPS"
+            }
+            initial_delay_seconds = 20
+            period_seconds        = 10
+            failure_threshold     = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path   = "/livez"
+              port   = 10250
+              scheme = "HTTPS"
+            }
+            period_seconds    = 10
+            failure_threshold = 3
           }
 
           port {
