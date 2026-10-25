@@ -150,7 +150,7 @@ variable "karpenter_system_node_min_count_per_az" {
 
 variable "karpenter_version" {
   type    = string
-  default = "1.13.1"
+  default = "1.14.3"
 }
 
 variable "karpenter_instance_families" {
