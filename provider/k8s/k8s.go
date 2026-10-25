@@ -55,7 +55,7 @@ import (
 )
 
 const (
-	CERT_MANAGER_IMAGE     = "quay.io/jetstack/cert-manager-controller:v1.21.1"
+	CERT_MANAGER_IMAGE     = "quay.io/jetstack/cert-manager-controller:v1.21.3"
 	CERT_MANAGER_MIN_MINOR = 30
 	CERT_MANAGER_NAMESPACE = "cert-manager"
 )
