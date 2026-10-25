@@ -35,7 +35,7 @@ Each dashboard exposes the standard Grafana template variables:
 - `$namespace` — convox app's K8s namespace (e.g. `myrack-myapp`)
 - `$service` — convox service inside the app
 - `$gpu_uuid` — DCGM `UUID` for per-GPU drilldowns
-- `$node` — K8s node name (DCGM `Hostname` or kubelet `node`)
+- `$node` — K8s node name (DCGM `hostname` or kubelet `node`)
 
 ## Console GPU view deep-link
 

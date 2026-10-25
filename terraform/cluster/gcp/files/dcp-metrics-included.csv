@@ -1,6 +1,6 @@
 # Convox-authored DCGM exporter metrics file.
 #
-# Adapted from NVIDIA dcgm-exporter chart 4.8.1's etc/dcp-metrics-included.csv
+# Adapted from NVIDIA dcgm-exporter chart 4.8.4's etc/dcp-metrics-included.csv
 # (Apache 2.0). Adds the 9 fields Convox GPU observability dashboards require
 # which the chart's stock default-counters.csv leaves disabled or absent:
 #
@@ -16,7 +16,7 @@
 #   - DCGM_FI_DEV_XID_ERRORS              (D5 panels 1+2; explicitly enabled
 #     here to guarantee emission across chart versions)
 #
-# Chart 4.8.1's default-counters.csv exposes only 20 DCGM_FI_* fields;
+# Chart 4.8.4's default-counters.csv exposes 26 DCGM_FI_* fields;
 # this override adds the 9 fields above plus the upstream profiling set.
 #
 # Format: comma-separated DCGM FIELD, Prometheus type, help message. Comment
@@ -38,7 +38,7 @@ DCGM_FI_DEV_GPU_TEMP,    gauge, GPU temperature (in C).
 
 # Power
 DCGM_FI_DEV_POWER_USAGE,              gauge, Power draw (in W).
-DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION, counter, Total energy consumption since boot (in mJ).
+DCGM_FI_DEV_TOTAL_ENERGY_CONSUMPTION, counter, Total energy consumption since the driver was last reloaded (in mJ).
 
 # PCIE
 DCGM_FI_DEV_PCIE_REPLAY_COUNTER, counter, Total number of PCIe retries.
@@ -64,7 +64,7 @@ DCGM_FI_DEV_ECC_DBE_VOL_TOTAL, counter, Total number of double-bit volatile ECC 
 
 # NVLink (D5 panel 5)
 DCGM_FI_DEV_NVLINK_REPLAY_ERROR_COUNT_TOTAL, counter, Total number of NVLink retries.
-DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL,          counter, Total number of NVLink bandwidth counters for all lanes.
+DCGM_FI_DEV_NVLINK_BANDWIDTH_TOTAL,          gauge, Aggregate NVLink throughput across all lanes (in MB/s).
 
 # Remapped rows
 DCGM_FI_DEV_UNCORRECTABLE_REMAPPED_ROWS, counter, Number of remapped rows for uncorrectable errors.

@@ -212,7 +212,7 @@ module "cluster" {
   nvidia_device_plugin_enable             = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas     = var.nvidia_device_time_slicing_replicas
   gpu_observability_enable                = var.gpu_observability_enable
-  gpu_observability_chart_version         = var.gpu_observability_chart_version
+  gpu_observability_chart_version         = var.gpu_observability_chart_version == "4.8.1" ? "" : var.gpu_observability_chart_version # 4.8.1 is the old default that Console stored at install
   dcgm_scrape_interval                    = var.dcgm_scrape_interval
   private                                 = var.private
   private_subnets_ids                     = compact(split(",", var.private_subnets_ids))

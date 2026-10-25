@@ -375,9 +375,9 @@ Groups:
           Prometheus chart via Console mutation. Without Convox Console, DCGM emits
           metrics with no scraper.
       - name: gpu_observability_chart_version
-        default: "4.8.1"
+        default: "null"
         type: string
-        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. The default, &i 4.8.1 &i, fits most setups; change it only to match a specific GPU driver."
+        description: "Version of the NVIDIA GPU metrics collector (the DCGM exporter) that Convox installs. Leave empty to use the version that ships with the Rack release; set it only to match a specific GPU driver."
         sideNote: "Only takes effect when GPU metrics collection is enabled."
       - name: prometheus_gpu_metrics_chart_version
         default: "27.9.0"

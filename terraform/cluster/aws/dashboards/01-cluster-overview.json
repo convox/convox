@@ -61,7 +61,7 @@
       "options": {"calculate": false, "cellGap": 1, "color": {"exponent": 0.5, "fill": "dark-orange", "mode": "scheme", "reverse": false, "scale": "exponential", "scheme": "Turbo", "steps": 64}, "filterValues": {"le": 1e-9}, "legend": {"show": true}, "rowsFrame": {"layout": "auto"}, "tooltip": {"show": true, "yHistogram": false}, "yAxis": {"axisPlacement": "left", "reverse": false}},
       "pluginVersion": "10.4.2",
       "targets": [
-        {"_source": "GpuTempHeatmap", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_GPU_TEMP", "format": "heatmap", "legendFormat": "{{Hostname}}/{{UUID}}", "refId": "A"}
+        {"_source": "GpuTempHeatmap", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "DCGM_FI_DEV_GPU_TEMP", "format": "heatmap", "legendFormat": "{{hostname}}/{{UUID}}", "refId": "A"}
       ],
       "title": "GPU Temperature Heatmap",
       "type": "heatmap"
@@ -75,7 +75,7 @@
       "options": {"showHeader": true},
       "pluginVersion": "10.4.2",
       "targets": [
-        {"_source": "GpuTopThrottleReasons", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, Hostname)", "format": "table", "instant": true, "refId": "A"}
+        {"_source": "GpuTopThrottleReasons", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "topk(5, max_over_time((DCGM_FI_DEV_CLOCKS_EVENT_REASONS != 0)[5m:30s])) by (UUID, hostname)", "format": "table", "instant": true, "refId": "A"}
       ],
       "title": "Top Throttle Reasons",
       "type": "table"
