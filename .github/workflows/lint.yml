@@ -1,16 +1,21 @@
 name: lint
 on: pull_request
 
+permissions:
+  contents: read
+
 jobs:
   telemetry-manifest-check:
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
-        uses: actions/checkout@v4
-      - name: setup go
-        uses: actions/setup-go@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          go-version: "1.26"
+          persist-credentials: false
+      - name: setup go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
           cache: false
       - name: telemetry manifests match variables
         run: make lint-telemetry
@@ -19,18 +24,19 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: setup go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
           cache: false
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           # pinned: the action's "latest" can resolve to a go1.24-built v1 binary that rejects a
           # go 1.25 module. Bump this when go.mod's toolchain minor version exceeds the linter's build go.
@@ -42,16 +48,18 @@ jobs:
     continue-on-error: true
     steps:
       - name: checkout
-        uses: actions/checkout@v4
-      - name: setup go
-        uses: actions/setup-go@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          go-version: "1.26"
+          persist-credentials: false
+      - name: setup go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
           cache: false
       - name: Install libudev-dev
         run: sudo apt-get update && sudo apt-get install -y libudev-dev
       - name: install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
       - name: govulncheck
         run: govulncheck ./...
 
@@ -59,13 +67,17 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: setup terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_wrapper: false
       - name: setup tflint
-        uses: terraform-linters/setup-tflint@v4
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.65.0
       - name: init tflint
         run: tflint --init
       - name: terraform validate
@@ -86,7 +98,9 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: terraform fleet floor
         run: |
           grep -vE '^[[:space:]]*(#|$)' .github/fleet-floor-patterns > "$RUNNER_TEMP/fleet-floor-patterns"
@@ -113,8 +127,22 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: install checkov
-        run: pip install checkov
+        run: pip install checkov==3.3.30
       - name: checkov
         run: checkov -d terraform --framework terraform --config-file .checkov.yml
+
+  workflow-lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: zizmor
+        run: docker run --rm -v "$PWD:/src:ro" ghcr.io/zizmorcore/zizmor:1.31.1@sha256:42d409dbb851d4c5d35a058cf042b828bea1e3f2884378c526eb0974780e18d9 --offline /src/.github/workflows
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo:ro" -w /repo rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color=false
