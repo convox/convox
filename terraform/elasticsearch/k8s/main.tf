@@ -29,7 +29,7 @@ resource "kubernetes_config_map" "elasticsearch" {
 
   data = {
     "elasticsearch.yml" = file("${path.module}/elasticsearch.yml")
-    "ES_JAVA_OPTS"      = "-Xms512m -Xmx512m"
+    "ES_JAVA_OPTS"      = "-Xms512m -Xmx512m -Dlog4j2.formatMsgNoLookups=true"
   }
 }
 
@@ -62,6 +62,10 @@ resource "kubernetes_stateful_set" "elasticsearch" {
         labels = {
           service = "elasticsearch"
         }
+
+        annotations = {
+          "convox.com/config-sha256" = sha256(jsonencode(kubernetes_config_map.elasticsearch.data))
+        }
       }
 
       spec {
@@ -92,7 +96,7 @@ resource "kubernetes_stateful_set" "elasticsearch" {
 
         init_container {
           name              = "init-sysctl"
-          image             = "busybox"
+          image             = "busybox:1.38.0@sha256:fd7dc98638c8e305f4dc34e979f1c0fdfdcaeb0fbf8fcff77ae834b6da3d7e6e"
           image_pull_policy = "IfNotPresent"
           command           = ["sysctl", "-w", "vm.max_map_count=262144"]
 
@@ -143,7 +147,6 @@ resource "kubernetes_stateful_set" "elasticsearch" {
           }
 
           security_context {
-            privileged  = true
             run_as_user = 1000
 
             capabilities {
