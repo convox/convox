@@ -469,6 +469,8 @@ func (p *Provider) Start() error {
 
 	go p.runNetworkPolicyReconciler(p.ctx)
 
+	go p.runRegistryPullReconciler(p.ctx)
+
 	go common.Tick(1*time.Hour, p.heartbeat)
 
 	go p.startApiProxy()

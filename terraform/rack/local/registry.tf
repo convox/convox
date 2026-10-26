@@ -53,12 +53,27 @@ resource "kubernetes_deployment" "registry" {
 
         container {
           name              = "system"
-          image             = "registry:2"
+          image             = module.k8s.registry_image
           image_pull_policy = "IfNotPresent"
+
+          env {
+            name  = "REGISTRY_HTTP_DEBUG_ADDR"
+            value = ""
+          }
 
           env {
             name  = "REGISTRY_HTTP_SECRET"
             value = random_string.secret.result
+          }
+
+          env {
+            name  = "REGISTRY_LOG_LEVEL"
+            value = "info"
+          }
+
+          env {
+            name  = "REGISTRY_STORAGE_DELETE_ENABLED"
+            value = "false"
           }
 
           port {
