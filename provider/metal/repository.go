@@ -4,7 +4,14 @@ import (
 	"fmt"
 
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
 )
+
+var _ k8s.RegistryPullEngine = (*Provider)(nil)
+
+func (p *Provider) RegistryPullCredentials() (string, string, string) {
+	return p.Registry, "docker", p.Secret
+}
 
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
 	return "docker", p.Secret, nil

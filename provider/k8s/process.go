@@ -1156,6 +1156,14 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 		}
 	}
 
+	if !opts.IsBuild && p.hasRegistryPullCredentials() {
+		if err := p.ensureRegistryPullSecret(p.ctx, ns); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: registryPullSecretName})
+	}
+
 	if opts.Volumes != nil && opts.UseServiceVolume == nil {
 		var vs []string
 

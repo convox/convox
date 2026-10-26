@@ -26,3 +26,7 @@ type Engine interface {
 	SystemHost() string
 	SystemStatus() (string, error)
 }
+
+type RegistryPullEngine interface {
+	RegistryPullCredentials() (server, username, password string)
+}

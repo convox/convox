@@ -685,6 +685,52 @@ timers:
 	}
 }
 
+func TestRenderRegistryPullSecret(t *testing.T) {
+	want := []interface{}{
+		map[string]interface{}{"name": "docker-hub-authentication"},
+		map[string]interface{}{"name": "convox-test-app-web-pull-ghcr-io"},
+		map[string]interface{}{"name": registryPullSecretName},
+	}
+
+	renderedPullSecrets := func(t *testing.T, src, template, kind, name string, path ...string) interface{} {
+		t.Helper()
+		p, params := gpuTemplateFixture(t, src)
+		params["DockerHubAuth"] = true
+		params["ImagePullSecretNames"] = []string{"convox-test-app-web-pull-ghcr-io"}
+		params["RegistryAuth"] = true
+		data, err := p.RenderTemplate(template, params)
+		require.NoError(t, err)
+		doc := findRenderedDocument(t, splitYamlDocuments(t, string(data)), kind, name)
+		return nestedMap(t, doc, path...)["imagePullSecrets"]
+	}
+
+	web := `services:
+  web:
+    build: .
+timers:
+  nightly:
+    schedule: "0 0 * * ? *"
+    command: "echo hi"
+    service: web
+`
+	require.Equal(t, want, renderedPullSecrets(t, web, "app/service", "Deployment", "web", "spec", "template", "spec"))
+	require.Equal(t, want, renderedPullSecrets(t, web, "app/timer", "CronJob", "timer-nightly", "spec", "jobTemplate", "spec", "template", "spec"))
+
+	agent := `services:
+  web:
+    build: .
+    agent: true
+`
+	require.Equal(t, want, renderedPullSecrets(t, agent, "app/service", "DaemonSet", "web", "spec", "template", "spec"))
+
+	p, params := gpuTemplateFixture(t, web)
+	params["RegistryAuth"] = true
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+	doc := findRenderedDocument(t, splitYamlDocuments(t, string(data)), "Deployment", "web")
+	require.Equal(t, []interface{}{map[string]interface{}{"name": registryPullSecretName}}, nestedMap(t, doc, "spec", "template", "spec")["imagePullSecrets"])
+}
+
 func TestRenderTimerTerminationGrace(t *testing.T) {
 	set := `services:
   worker:
