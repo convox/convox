@@ -224,6 +224,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			}
 		}
 
+		if err := p.ensureRegistryPullSecret(p.ctx, p.AppNamespace(app)); err != nil {
+			return errors.WithStack(err)
+		}
+
 		// balancers
 		for _, b := range m.Balancers {
 			data, err := p.releaseTemplateBalancer(a, r, b, m.Labels)
@@ -1280,6 +1284,7 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			"TriggersOverrideActive": triggersOverride[s.Name],
 			"DockerHubAuth":          p.hasDockerHubAuth(),
 			"ImagePullSecretNames":   ipsNames,
+			"RegistryAuth":           p.hasRegistryPullCredentials(),
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
@@ -1422,6 +1427,7 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 		"Timer":                t,
 		"DockerHubAuth":        p.hasDockerHubAuth(),
 		"ImagePullSecretNames": imagePullSecretNames(a.Name, s.Name, s.ImagePullSecrets),
+		"RegistryAuth":         p.hasRegistryPullCredentials(),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {

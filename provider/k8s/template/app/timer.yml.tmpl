@@ -127,13 +127,16 @@ spec:
             {{ end }}
             {{ end }}
           {{ end }}
-          {{ if or .DockerHubAuth .ImagePullSecretNames }}
+          {{ if or .DockerHubAuth .ImagePullSecretNames .RegistryAuth }}
           imagePullSecrets:
           {{ if .DockerHubAuth }}
           - name: docker-hub-authentication
           {{ end }}
           {{ range .ImagePullSecretNames }}
           - name: {{ . }}
+          {{ end }}
+          {{ if .RegistryAuth }}
+          - name: convox-registry-authentication
           {{ end }}
           {{ end }}
           terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
