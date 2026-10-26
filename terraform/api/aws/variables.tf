@@ -169,11 +169,6 @@ variable "keda_enable" {
   default = false
 }
 
-variable "metrics_scraper_host" {
-  default = ""
-  type    = string
-}
-
 variable "name" {
   type = string
 }
