@@ -754,6 +754,7 @@ var clearableParams = map[string]bool{
 	"key_pair_name":               true,
 	"nginx_additional_config":     true,
 	"karpenter_build_imds_tokens": true,
+	"nginx_image":                 true,
 	// Credentials — clear means "remove auth"
 	"docker_hub_username": true,
 	"docker_hub_password": true,

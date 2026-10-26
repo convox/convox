@@ -1,3 +1,8 @@
+variable "docker_hub_authentication" {
+  type    = string
+  default = null
+}
+
 variable "env" {
   default = {}
 }

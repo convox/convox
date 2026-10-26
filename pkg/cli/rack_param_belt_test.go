@@ -115,6 +115,9 @@ func TestParamGroupsCoverage(t *testing.T) {
 // jsonConfigCarveouts are clearable but NOT in preserveEmpty because the
 // CLI base64-encodes them before writeVars runs (so empty stripping is a
 // no-op for those keys regardless of preserveEmpty membership).
+//
+// clearToModuleDefault are clearable and must stay OUT of preserveEmpty:
+// writeVars drops the empty value, so the module default renders.
 func TestClearableMatchesPreserveEmpty(t *testing.T) {
 	preserveEmpty := rack.PreserveEmptyParams()
 	jsonConfigCarveouts := map[string]bool{
@@ -124,12 +127,23 @@ func TestClearableMatchesPreserveEmpty(t *testing.T) {
 		"karpenter_config":                      true,
 		"karpenter_node_overlays_config":        true,
 	}
+	clearToModuleDefault := map[string]bool{
+		"nginx_image": true,
+	}
 	for k := range clearableParams {
-		if jsonConfigCarveouts[k] {
+		if jsonConfigCarveouts[k] || clearToModuleDefault[k] {
 			continue
 		}
 		if !preserveEmpty[k] {
 			t.Errorf("clearable param %q (rack.go) missing from preserveEmpty (terraform.go)", k)
+		}
+	}
+	for k := range clearToModuleDefault {
+		if !clearableParams[k] {
+			t.Errorf("clearToModuleDefault entry %q missing from clearableParams (rack.go)", k)
+		}
+		if preserveEmpty[k] {
+			t.Errorf("clearable param %q must not be in preserveEmpty (terraform.go): a stored empty value reaches an older release's image = \"\" on downgrade", k)
 		}
 	}
 	for k := range preserveEmpty {

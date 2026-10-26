@@ -296,7 +296,7 @@ locals {
     name                                      = ""
     network_policy_enable                     = "false"
     nginx_additional_config                   = ""
-    nginx_image                               = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
+    nginx_image                               = ""
     nlb_security_group                        = ""
     node_capacity_type                        = "on_demand"
     node_disk                                 = "20"
