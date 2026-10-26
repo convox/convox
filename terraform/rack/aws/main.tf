@@ -54,7 +54,6 @@ module "api" {
   cost_tracking_history_days                = var.cost_tracking_history_days
   seccomp_default_enabled                   = var.seccomp_default_enabled
   high_availability                         = var.high_availability
-  metrics_scraper_host                      = module.metrics.metrics_scraper_host
   image                                     = var.image
   karpenter_enabled                         = var.karpenter_enabled
   system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled

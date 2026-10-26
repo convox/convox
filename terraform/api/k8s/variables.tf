@@ -98,11 +98,6 @@ variable "labels" {
   default = {}
 }
 
-variable "metrics_scraper_host" {
-  default = ""
-  type    = string
-}
-
 variable "prometheus_url" {
   type    = string
   default = ""

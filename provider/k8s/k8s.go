@@ -213,7 +213,7 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
-	ms := NewMetricScraperClient(kc, os.Getenv("METRICS_SCRAPER_HOST"))
+	ms := NewMetricScraperClient(kc, mc)
 
 	pc, err := NewPrometheusClient(os.Getenv("PROMETHEUS_URL"))
 	if err != nil {
@@ -466,6 +466,10 @@ func (p *Provider) Start() error {
 	go p.runOrphanedPodReaper(p.ctx)
 
 	go p.runPodImdsBlockReconciler(p.ctx)
+
+	if p.Provider == "aws" {
+		go p.MetricScraper.Run(p.ctx)
+	}
 
 	go p.runNetworkPolicyReconciler(p.ctx)
 
