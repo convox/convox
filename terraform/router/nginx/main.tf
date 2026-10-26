@@ -1,4 +1,7 @@
 locals {
+  default_nginx_image = "convox/ingress-nginx:1.15.1-1@sha256:40b907401d849828ea5645b258b68dc4afe1b8f329130a0043541c7fe1bb395b"
+  nginx_image         = var.nginx_image != "" ? var.nginx_image : local.default_nginx_image
+
   additional_config_str = try(base64decode(var.nginx_additional_config), var.nginx_additional_config)
   additional_config_map = local.additional_config_str != "" ? {
     for item in split(",", local.additional_config_str) :
@@ -294,7 +297,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
 
         container {
           name  = "system"
-          image = var.nginx_image
+          image = local.nginx_image
           args = [
             "/nginx-ingress-controller",
             "--watch-ingress-without-class=true",
@@ -491,9 +494,16 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           }
         }
 
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
+          }
+        }
+
         container {
           name  = "system"
-          image = var.nginx_image
+          image = local.nginx_image
           args = [
             "/nginx-ingress-controller",
             "--watch-ingress-without-class=false",

@@ -574,7 +574,7 @@ variable "node_type" {
 
 variable "nginx_image" {
   type    = string
-  default = "registry.k8s.io/ingress-nginx/controller:v1.12.6@sha256:c371fbf42b4f23584ce879d99303463131f4f31612f0875482b983354eeca7e6"
+  default = ""
 }
 
 variable "nginx_additional_config" {
