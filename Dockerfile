@@ -14,7 +14,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://dl.k8s.io/release/v1.35.0/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://dl.k8s.io/release/v1.35.9/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 RUN curl -Ls https://github.com/mattgreen/watchexec/releases/download/1.8.6/watchexec-1.8.6-x86_64-unknown-linux-gnu.tar.gz | \
@@ -51,7 +51,6 @@ RUN make package build compress
 
 FROM ubuntu:24.04
 
-ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 # skopeo version pin — bump in lockstep with: (a) annual review (Convox release
@@ -60,14 +59,13 @@ ARG KUBECTL_ARCH=amd64
 # pinned version must be present in the active Ubuntu repository before
 # updating; check with `apt-cache madison skopeo` on the chosen base.
 # skipcq: DOK-DL3008, DOK-DL3015
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get -qq update && apt-get -qq -y upgrade && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3 && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
-  tar -C /usr/bin --strip-components 1 -xz
-
-RUN curl -Ls https://dl.k8s.io/release/v1.35.0/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN u=https://dl.k8s.io/release/v1.35.9/bin/linux/$KUBECTL_ARCH/kubectl && \
+  curl -fsSL "$u" -o /usr/bin/kubectl && \
+  echo "$(curl -fsSL "$u.sha256")  /usr/bin/kubectl" | sha256sum -c - && \
   chmod +x /usr/bin/kubectl
 
 ENV DEVELOPMENT=false
