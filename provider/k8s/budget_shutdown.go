@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -276,21 +277,28 @@ func (p *Provider) applyPausedReplicasAnnotation(ctx context.Context, ns, name s
 			return nil
 		}
 	}
-	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:"0"}}}`, structs.KedaPausedReplicasAnnotation))
-	_, err = patchDynamicWithRetry(ctx, p.DynamicClient, scaledObjectGVR, ns, name, types.MergePatchType, patch)
-	return errors.WithStack(err)
+	return p.patchPausedReplicasAnnotation(ctx, so, ns, name, "0")
 }
 
 func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name string) error {
-	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
+	so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
 	if err != nil {
 		if ae.IsNotFound(err) {
 			return nil
 		}
 		return errors.WithStack(err)
 	}
-	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:null}}}`, structs.KedaPausedReplicasAnnotation))
-	_, err = patchDynamicWithRetry(ctx, p.DynamicClient, scaledObjectGVR, ns, name, types.MergePatchType, patch)
+	return p.patchPausedReplicasAnnotation(ctx, so, ns, name, nil)
+}
+
+func (p *Provider) patchPausedReplicasAnnotation(ctx context.Context, so *unstructured.Unstructured, ns, name string, value interface{}) error {
+	patch := map[string]interface{}{"metadata": map[string]interface{}{"annotations": map[string]interface{}{structs.KedaPausedReplicasAnnotation: value}}}
+	setKedaHPAName(patch, so, name)
+	data, err := json.Marshal(patch)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	_, err = patchDynamicWithRetry(ctx, p.DynamicClient, scaledObjectGVR, ns, name, types.MergePatchType, data)
 	return errors.WithStack(err)
 }
 

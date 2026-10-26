@@ -226,6 +226,17 @@ func (p *Provider) applyTriggersHPA(ns, service string, opts structs.ServiceTrig
 	return errors.WithStack(err)
 }
 
+func setKedaHPAName(dst map[string]interface{}, current *unstructured.Unstructured, service string) bool {
+	name := manifest.KedaHPAName(service)
+	if name == "" {
+		return false
+	}
+	if n, _, _ := unstructured.NestedString(current.Object, "spec", "advanced", "horizontalPodAutoscalerConfig", "name"); n != "" {
+		return false
+	}
+	return unstructured.SetNestedField(dst, name, "spec", "advanced", "horizontalPodAutoscalerConfig", "name") == nil
+}
+
 func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.ServiceTriggersOptions) error {
 	promURL := strings.TrimSpace(os.Getenv("PROMETHEUS_URL"))
 
@@ -302,6 +313,7 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 				},
 			},
 		}
+		setKedaHPAName(so.Object, so, service)
 		_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Create(context.TODO(), so, am.CreateOptions{})
 		return errors.WithStack(err)
 	}
@@ -311,6 +323,7 @@ func (p *Provider) applyTriggersKEDA(app, ns, service string, opts structs.Servi
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Min), "spec", "minReplicaCount")
 	_ = unstructured.SetNestedField(existing.Object, int64(opts.Max), "spec", "maxReplicaCount")
 	_ = unstructured.SetNestedSlice(existing.Object, triggers, "spec", "triggers")
+	setKedaHPAName(existing.Object, existing, service)
 	labels, _, _ := unstructured.NestedStringMap(existing.Object, "metadata", "labels")
 	if _, ok := labels["atom"]; ok {
 		delete(labels, "atom")
@@ -827,6 +840,7 @@ func (p *Provider) patchKEDAThreshold(app, ns, service, triggerType string, thre
 	if err := unstructured.SetNestedSlice(obj.Object, triggers, "spec", "triggers"); err != nil {
 		return errors.WithStack(err)
 	}
+	setKedaHPAName(obj.Object, obj, service)
 	soLabels, _, _ := unstructured.NestedStringMap(obj.Object, "metadata", "labels")
 	if _, ok := soLabels["atom"]; ok {
 		delete(soLabels, "atom")
@@ -863,11 +877,15 @@ func (p *Provider) stripAtomLabelFromOverrideCRD(app, service, crd string) {
 			return
 		}
 		labels, _, _ := unstructured.NestedStringMap(so.Object, "metadata", "labels")
-		if _, ok := labels["atom"]; !ok {
+		_, hasAtom := labels["atom"]
+		named := setKedaHPAName(so.Object, so, service)
+		if !hasAtom && !named {
 			return
 		}
-		delete(labels, "atom")
-		_ = unstructured.SetNestedStringMap(so.Object, labels, "metadata", "labels")
+		if hasAtom {
+			delete(labels, "atom")
+			_ = unstructured.SetNestedStringMap(so.Object, labels, "metadata", "labels")
+		}
 		if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Update(context.TODO(), so, am.UpdateOptions{}); err != nil {
 			fmt.Printf("ns=service at=strip-atom-label-so app=%s service=%s err=%v\n", app, service, err)
 		}
