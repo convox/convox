@@ -65,8 +65,9 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name      = var.name
-  namespace = module.k8s.namespace
-  release   = var.release
-  whitelist = var.whitelist
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  release                   = var.release
+  whitelist                 = var.whitelist
 }

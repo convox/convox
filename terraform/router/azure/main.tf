@@ -3,9 +3,6 @@ locals {
     System = "convox"
     Rack   = var.name
   })
-
-  default_nginx_image = "registry.k8s.io/ingress-nginx/controller:v1.12.0@sha256:e6b8de175acda6ca913891f0f727bca4527e797d52688cbe9fec9040d6f6b6fa"
-  nginx_image         = var.nginx_image != "" ? var.nginx_image : local.default_nginx_image
 }
 
 module "nginx" {
@@ -17,7 +14,7 @@ module "nginx" {
 
   docker_hub_authentication = var.docker_hub_authentication
   namespace                 = var.namespace
-  nginx_image               = local.nginx_image
+  nginx_image               = var.nginx_image
   nginx_additional_config   = var.nginx_additional_config
   rack                      = var.name
   replicas_max              = var.high_availability ? 10 : 1
