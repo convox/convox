@@ -541,6 +541,50 @@ func TestKedaScaledObject_FromParamsTriggers(t *testing.T) {
 	require.Nil(t, obj.Spec.Triggers[0].AuthenticationRef, "prometheus trigger not AWS - no auth attach")
 }
 
+func TestKedaHPAName(t *testing.T) {
+	require.Equal(t, "", manifest.KedaHPAName(strings.Repeat("a", 54)))
+	for _, n := range []int{55, 63} {
+		got := manifest.KedaHPAName(strings.Repeat("a", n))
+		require.Len(t, got, 63)
+		require.Regexp(t, `^keda-hpa-a{45}-[0-9a-f]{8}$`, got)
+	}
+	prefix := strings.Repeat("a", 45)
+	require.NotEqual(t, manifest.KedaHPAName(prefix+"-one-worker"), manifest.KedaHPAName(prefix+"-two-worker"))
+}
+
+func TestKedaScaledObject_HPAName(t *testing.T) {
+	long := strings.Repeat("a", 55)
+	params := func(name string) manifest.KedaScaledObjectParameters {
+		return manifest.KedaScaledObjectParameters{
+			MinCount:    1,
+			MaxCount:    5,
+			ServiceName: name,
+			Namespace:   "ns",
+			Triggers:    []kedav1alpha1.ScaleTriggers{{Type: "cpu", Name: "convox-cpu"}},
+		}
+	}
+
+	short := manifest.Service{Name: "web"}
+	require.Nil(t, short.KedaScaledObject(params("web")).Spec.Advanced)
+
+	userAdv := &kedav1alpha1.AdvancedConfig{RestoreToOriginalReplicaCount: true}
+	shortKeda := manifest.Service{Name: "web", Scale: manifest.ServiceScale{Keda: &manifest.ServiceScaleKeda{Advanced: userAdv}}}
+	require.Same(t, userAdv, shortKeda.KedaScaledObject(params("web")).Spec.Advanced)
+
+	auto := manifest.Service{Name: long}
+	require.Equal(t, manifest.KedaHPAName(long), auto.KedaScaledObject(params(long)).Spec.Advanced.HorizontalPodAutoscalerConfig.Name)
+
+	longKeda := manifest.Service{Name: long, Scale: manifest.ServiceScale{Keda: &manifest.ServiceScaleKeda{Advanced: userAdv}}}
+	so := longKeda.KedaScaledObject(params(long))
+	require.Equal(t, manifest.KedaHPAName(long), so.Spec.Advanced.HorizontalPodAutoscalerConfig.Name)
+	require.True(t, so.Spec.Advanced.RestoreToOriginalReplicaCount)
+	require.Nil(t, userAdv.HorizontalPodAutoscalerConfig, "manifest advanced block must not be mutated")
+
+	custom := &kedav1alpha1.AdvancedConfig{HorizontalPodAutoscalerConfig: &kedav1alpha1.HorizontalPodAutoscalerConfig{Name: "my-hpa"}}
+	longKeda.Scale.Keda.Advanced = custom
+	require.Equal(t, "my-hpa", longKeda.KedaScaledObject(params(long)).Spec.Advanced.HorizontalPodAutoscalerConfig.Name)
+}
+
 func TestValidateRejectsNaNThreshold(t *testing.T) {
 	m := &manifest.Manifest{
 		Services: []manifest.Service{{

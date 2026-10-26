@@ -512,6 +512,137 @@ func TestServiceTriggersEnable_KEDAUpdate_PreservesAdvancedFields(t *testing.T) 
 	})
 }
 
+func TestServiceTriggersEnable_KedaPath_LongServiceNameSetsHPAName(t *testing.T) {
+	opts := structs.ServiceTriggersOptions{
+		Min: 1, Max: 5,
+		Triggers: []structs.TriggerSpec{
+			{Type: "cpu", Threshold: 70},
+			{Type: "queueDepth", Threshold: 50},
+		},
+	}
+	userNamed := scaledObjectUnstructured("rack1-app1", longServiceName, 1, 3)
+	require.NoError(t, unstructured.SetNestedField(userNamed.Object, "my-hpa", "spec", "advanced", "horizontalPodAutoscalerConfig", "name"))
+
+	tests := []struct {
+		name     string
+		service  string
+		existing *unstructured.Unstructured
+		want     string
+	}{
+		{"short create", "web", nil, ""},
+		{"long create", longServiceName, nil, manifest.KedaHPAName(longServiceName)},
+		{"long update", longServiceName, scaledObjectUnstructured("rack1-app1", longServiceName, 1, 3), manifest.KedaHPAName(longServiceName)},
+		{"long update keeps user name", longServiceName, userNamed, "my-hpa"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, _ := p.Cluster.(*kfake.Clientset)
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+				seedDeployment(t, kk, "rack1-app1", tc.service, 1)
+				p.IsKedaEnabled = true
+				t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
+				objs := []runtime.Object{}
+				if tc.existing != nil {
+					objs = append(objs, tc.existing.DeepCopy())
+				}
+				p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(), objs...)
+
+				require.NoError(t, p.ServiceTriggersEnable("app1", tc.service, opts, "alice"))
+
+				adv := scaledObjectAdvanced(t, p, "rack1-app1", tc.service)
+				if tc.want == "" {
+					require.Nil(t, adv)
+					return
+				}
+				hpaName, _, _ := unstructured.NestedString(adv, "horizontalPodAutoscalerConfig", "name")
+				require.Equal(t, tc.want, hpaName)
+			})
+		})
+	}
+}
+
+func TestServiceTriggersThresholdSet_KEDA_LongServiceNameSetsHPAName(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", longServiceName, 1)
+		p.IsKedaEnabled = true
+		t.Setenv("PROMETHEUS_URL", "http://prometheus:9090")
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		opts := structs.ServiceTriggersOptions{
+			Min: 1, Max: 5,
+			Triggers: []structs.TriggerSpec{
+				{Type: "cpu", Threshold: 70},
+				{Type: "queueDepth", Threshold: 50},
+			},
+		}
+		require.NoError(t, p.ServiceTriggersEnable("app1", longServiceName, opts, "alice"))
+
+		so, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), longServiceName, am.GetOptions{})
+		require.NoError(t, err)
+		unstructured.RemoveNestedField(so.Object, "spec", "advanced")
+		_, err = p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Update(context.TODO(), so, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, p.ServiceTriggersThresholdSet("app1", longServiceName, "cpu", 80, "alice"))
+
+		hpaName, _, _ := unstructured.NestedString(scaledObjectAdvanced(t, p, "rack1-app1", longServiceName), "horizontalPodAutoscalerConfig", "name")
+		require.Equal(t, manifest.KedaHPAName(longServiceName), hpaName)
+	})
+}
+
+func TestStripAtomLabelFromOverrideCRD_KEDA_LongServiceNameSetsHPAName(t *testing.T) {
+	tests := []struct {
+		name     string
+		service  string
+		atom     bool
+		wantName string
+	}{
+		{"short without atom label is untouched", "web", false, ""},
+		{"long without atom label gets the name", longServiceName, false, manifest.KedaHPAName(longServiceName)},
+		{"long with atom label gets both", longServiceName, true, manifest.KedaHPAName(longServiceName)},
+		{"short with atom label loses the label", "web", true, ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				so := scaledObjectUnstructured("rack1-app1", tc.service, 1, 3)
+				labels := map[string]interface{}{"custom": "keep"}
+				if tc.atom {
+					labels["atom"] = "rack1-app1"
+				}
+				require.NoError(t, unstructured.SetNestedField(so.Object, labels, "metadata", "labels"))
+				dyn := fake.NewSimpleDynamicClient(newDynamicScheme(), so)
+				p.DynamicClient = dyn
+
+				k8s.StripAtomLabelFromOverrideCRDForTest(p, "app1", tc.service)
+
+				updates := 0
+				for _, a := range dyn.Actions() {
+					if a.GetVerb() == "update" {
+						updates++
+					}
+				}
+				if tc.atom || tc.wantName != "" {
+					require.Equal(t, 1, updates)
+				} else {
+					require.Equal(t, 0, updates)
+				}
+
+				got, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), tc.service, am.GetOptions{})
+				require.NoError(t, err)
+				hpaName, _, _ := unstructured.NestedString(got.Object, "spec", "advanced", "horizontalPodAutoscalerConfig", "name")
+				require.Equal(t, tc.wantName, hpaName)
+				gotLabels, _, _ := unstructured.NestedStringMap(got.Object, "metadata", "labels")
+				require.NotContains(t, gotLabels, "atom")
+				require.Equal(t, "keep", gotLabels["custom"])
+			})
+		})
+	}
+}
+
 func TestServiceTriggersEnable_KedaPath_AnnotationPatchFails_RollsBackSO(t *testing.T) {
 	// Symmetric to the HPA-path rollback test: KEDA path must
 	// best-effort delete the just-created SO when annotation patch

@@ -392,6 +392,38 @@ func TestRestore_KedaServiceWithoutFlagSet_ClearsAnnotation(t *testing.T) {
 	})
 }
 
+func TestPausedReplicasAnnotationPatches_LongServiceNameSetsHPAName(t *testing.T) {
+	for _, name := range []string{"ml-svc", longServiceName} {
+		for _, value := range []string{`"0"`, `null`} {
+			testProvider(t, func(p *k8s.Provider) {
+				dyn := dynamicfake.NewSimpleDynamicClient(budgetShutdownDynamicScheme())
+				p.DynamicClient = dyn
+				makeScaledObject(t, p, "rack1-app1", name)
+
+				if value == "null" {
+					require.NoError(t, k8s.ClearPausedReplicasAnnotationForTest(p, "rack1-app1", name))
+				} else {
+					require.NoError(t, k8s.ApplyPausedReplicasAnnotationForTest(p, "rack1-app1", name))
+				}
+
+				patches := []string{}
+				for _, a := range dyn.Actions() {
+					if pa, ok := a.(interface{ GetPatch() []byte }); ok {
+						patches = append(patches, string(pa.GetPatch()))
+					}
+				}
+				require.Len(t, patches, 1)
+				annotation := `{"metadata":{"annotations":{"autoscaling.keda.sh/paused-replicas":` + value + `}}`
+				if name == "ml-svc" {
+					require.Equal(t, annotation+"}", patches[0])
+					return
+				}
+				require.Equal(t, annotation+`,"spec":{"advanced":{"horizontalPodAutoscalerConfig":{"name":"`+manifest.KedaHPAName(name)+`"}}}}`, patches[0])
+			})
+		}
+	}
+}
+
 // TestBudgetShutdown_StateAnnotationCorrupt_FiresFailedReasonStateCorrupt
 // verifies that malformed JSON produces a parse error on read.
 func TestBudgetShutdown_StateAnnotationCorrupt_FiresFailedReasonStateCorrupt(t *testing.T) {
