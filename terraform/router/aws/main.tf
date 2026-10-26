@@ -70,6 +70,10 @@ resource "kubernetes_config_map" "nginx-configuration" {
       "allow-snippet-annotations" = "true"
       "annotations-risk-level"    = "Critical"
     },
+    {
+      # with use-proxy-protocol and use-forwarded-headers, ingress-nginx 1.13+ renders "real_ip_header proxy_protocol"
+      "forwarded-for-proxy-protocol-header" = "proxy_protocol"
+    },
     local.additional_config_map,
   )
 
