@@ -2,34 +2,48 @@ package k8s
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
+	metricsclientset "k8s.io/metrics/pkg/client/clientset/versioned"
 )
 
-type MetricScraperClient struct {
-	c        *http.Client
-	cluster  kubernetes.Interface
-	host     string
-	provider *Provider
+const (
+	rackMetricsInterval = 30 * time.Second
+	rackMetricsTimeout  = 10 * time.Second
+	rackMetricsWindow   = 3 * time.Hour
+)
+
+type rackMetricsSample struct {
+	time time.Time
+	cpu  float64
+	mem  float64
 }
 
-func NewMetricScraperClient(cluster kubernetes.Interface, host string) *MetricScraperClient {
+type MetricScraperClient struct {
+	cluster  kubernetes.Interface
+	metrics  metricsclientset.Interface
+	provider *Provider
+	now      func() time.Time
+	running  atomic.Bool
+
+	mu      sync.RWMutex
+	samples []rackMetricsSample
+}
+
+func NewMetricScraperClient(cluster kubernetes.Interface, metrics metricsclientset.Interface) *MetricScraperClient {
 	return &MetricScraperClient{
-		c: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-		cluster:  cluster,
-		host:     host,
-		provider: nil,
+		cluster: cluster,
+		metrics: metrics,
+		now:     time.Now,
 	}
 }
 
@@ -38,8 +52,18 @@ func (m *MetricScraperClient) SetProvider(p *Provider) {
 }
 
 func (m *MetricScraperClient) ListNodes() (*corev1.NodeList, error) {
-	if m.provider != nil {
-		return m.provider.ListNodesFromInformer("")
+	if m.provider != nil && m.provider.nodeInformer != nil {
+		ns, err := m.provider.nodeInformer.Lister().List(labels.Everything())
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		nl := &corev1.NodeList{Items: make([]corev1.Node, len(ns))}
+		for i := range ns {
+			nl.Items[i] = *ns[i]
+		}
+
+		return nl, nil
 	}
 
 	ns, err := m.cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
@@ -50,92 +74,123 @@ func (m *MetricScraperClient) ListNodes() (*corev1.NodeList, error) {
 	return ns, nil
 }
 
+func (m *MetricScraperClient) Run(ctx context.Context) {
+	m.running.Store(true)
+	m.tick(ctx)
+
+	t := time.NewTicker(rackMetricsInterval)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			m.tick(ctx)
+		}
+	}
+}
+
+func (m *MetricScraperClient) tick(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("ns=metrics at=error kind=panic_recovered recovered=%v\n", r)
+		}
+	}()
+
+	m.prune()
+
+	if err := m.sample(ctx); err != nil {
+		fmt.Printf("ns=metrics at=sample error=%q\n", err)
+	}
+}
+
+func (m *MetricScraperClient) prune() {
+	cutoff := m.now().Add(-rackMetricsWindow)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	i := 0
+	for i < len(m.samples) && !m.samples[i].time.After(cutoff) {
+		i++
+	}
+	m.samples = m.samples[i:]
+}
+
+func (m *MetricScraperClient) sample(ctx context.Context) error {
+	ns, err := m.ListNodes()
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, rackMetricsTimeout)
+	defer cancel()
+
+	nms, err := m.metrics.MetricsV1beta1().NodeMetricses().List(ctx, am.ListOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	usage := map[string]corev1.ResourceList{}
+	for i := range nms.Items {
+		usage[nms.Items[i].Name] = nms.Items[i].Usage
+	}
+
+	var cpu, mem, cpuAllocatable, memAllocatable int64
+	for i := range ns.Items {
+		u, ok := usage[ns.Items[i].Name]
+		if !ok {
+			continue
+		}
+		cpu += u.Cpu().MilliValue()
+		mem += u.Memory().Value()
+		cpuAllocatable += ns.Items[i].Status.Allocatable.Cpu().MilliValue()
+		memAllocatable += ns.Items[i].Status.Allocatable.Memory().Value()
+	}
+
+	if cpuAllocatable == 0 || memAllocatable == 0 {
+		return errors.Errorf("no metrics for %d nodes", len(ns.Items))
+	}
+
+	s := rackMetricsSample{
+		time: m.now().UTC().Truncate(time.Second),
+		cpu:  caculatePercentage(float64(cpu), float64(cpuAllocatable)),
+		mem:  caculatePercentage(float64(mem), float64(memAllocatable)),
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.samples = append(m.samples, s)
+
+	return nil
+}
+
+func (m *MetricScraperClient) series() (*structs.Metric, *structs.Metric) {
+	cpum := &structs.Metric{Name: "cluster:cpu:utilization"}
+	memm := &structs.Metric{Name: "cluster:mem:utilization"}
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, s := range m.samples {
+		cpum.Values = append(cpum.Values, structs.MetricValue{Average: s.cpu, Count: 1, Maximum: s.cpu, Minimum: s.cpu, Sum: s.cpu, Time: s.time})
+		memm.Values = append(memm.Values, structs.MetricValue{Average: s.mem, Count: 1, Maximum: s.mem, Minimum: s.mem, Sum: s.mem, Time: s.time})
+	}
+
+	return cpum, memm
+}
+
 func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (structs.Metrics, error) {
-	if m.host == "" {
+	if !m.running.Load() {
 		return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 	}
 
-	ns, err := m.ListNodes()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	cpum, memm := m.series()
 
-	nodeNames := []string{}
-	var cpuAllocatable, memAllocatable float64
-	for _, n := range ns.Items {
-		nodeNames = append(nodeNames, n.ObjectMeta.Name)
-		cpuAllocatable += float64(n.Status.Allocatable.Cpu().MilliValue())
-		memAllocatable += float64(n.Status.Allocatable.Memory().Value())
-	}
-
-	cpus, err := m.GetNodesMetrics(strings.Join(nodeNames, ","), structs.ScraperMetricTypeCpu)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if len(cpus.Items) == 0 {
+	if len(cpum.Values) == 0 {
 		return nil, structs.ErrNotImplemented("metrics unavailable")
-	}
-
-	// summation of all nodes metrics represent the rack metrics
-	// aggregate all metric points into cpuMps
-	cpuMps := cpus.Items[0].MetricPoints
-
-	for i := 1; i < len(cpus.Items); i++ {
-		for j, d := range cpus.Items[i].MetricPoints {
-			// only consider first len(cpuMps) metrics points from other nodes
-			if j < len(cpuMps) {
-				cpuMps[j].Value += d.Value
-			}
-		}
-	}
-
-	cpum := &structs.Metric{
-		Name: "cluster:cpu:utilization",
-	}
-	for _, d := range cpuMps {
-		p := caculatePercentage(float64(d.Value), cpuAllocatable)
-		cpum.Values = append(cpum.Values, structs.MetricValue{
-			Average: p,
-			Count:   1,
-			Maximum: p,
-			Minimum: p,
-			Sum:     p,
-			Time:    d.Timestamp,
-		})
-	}
-
-	mems, err := m.GetNodesMetrics(strings.Join(nodeNames, ","), structs.ScraperMetricTypeMem)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	// summation of all nodes metrics represent the rack metrics
-	// aggregate all metric points into memMps
-	memMps := mems.Items[0].MetricPoints
-
-	for i := 1; i < len(mems.Items); i++ {
-		for j, d := range mems.Items[i].MetricPoints {
-			// only consider first len(memMps) metrics points from other nodes
-			if j < len(memMps) {
-				memMps[j].Value += d.Value
-			}
-		}
-	}
-
-	memm := &structs.Metric{
-		Name: "cluster:mem:utilization",
-	}
-	for _, d := range memMps {
-		p := caculatePercentage(float64(d.Value), memAllocatable)
-		memm.Values = append(memm.Values, structs.MetricValue{
-			Average: p,
-			Count:   1,
-			Maximum: p,
-			Minimum: p,
-			Sum:     p,
-			Time:    d.Timestamp,
-		})
 	}
 
 	if opts.Period != nil {
@@ -148,28 +203,4 @@ func (m *MetricScraperClient) GetRackMetrics(opts structs.MetricsOptions) (struc
 	}
 
 	return structs.Metrics{*cpum, *memm}, nil
-}
-
-// nodeNames: single or comma seperated node names
-func (m *MetricScraperClient) GetNodesMetrics(nodeNames string, metricType structs.ScraperMetricType) (*structs.ScraperMetricList, error) {
-	if m.host == "" {
-		return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
-	}
-
-	resp, err := m.c.Get(fmt.Sprintf("%s/api/v1/dashboard/nodes/%s/metrics/%s/data", m.host, nodeNames, metricType))
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.WithStack(fmt.Errorf("failed to get node metrics"))
-	}
-
-	data := &structs.ScraperMetricList{}
-	if err := json.NewDecoder(resp.Body).Decode(data); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return data, nil
 }
