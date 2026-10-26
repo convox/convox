@@ -357,6 +357,14 @@ func ApplyPausedReplicasAnnotationForTest(p *Provider, ns, name string) error {
 	return p.applyPausedReplicasAnnotation(context.Background(), ns, name)
 }
 
+func ClearPausedReplicasAnnotationForTest(p *Provider, ns, name string) error {
+	return p.clearPausedReplicasAnnotation(context.Background(), ns, name)
+}
+
+func StripAtomLabelFromOverrideCRDForTest(p *Provider, app, service string) {
+	p.stripAtomLabelFromOverrideCRD(app, service, TriggersCRDKeda)
+}
+
 // WriteBudgetShutdownStateAnnotationForTest exposes the writer for tests
 // that need to seed an annotation for restore/GC scenarios.
 func WriteBudgetShutdownStateAnnotationForTest(p *Provider, app string, s *structs.AppBudgetShutdownState) error {

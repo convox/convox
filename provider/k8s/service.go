@@ -769,7 +769,7 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 		return true, nil
 	}
 
-	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	so, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	hasScaledObject := getErr == nil
 	// NoMatchError = KEDA CRD absent; treat same as not-found.
 	if getErr != nil && !kerr.IsNotFound(getErr) && !meta.IsNoMatchError(getErr) {
@@ -794,6 +794,7 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 		spec["maxReplicaCount"] = *opts.Max
 	}
 	patch := map[string]interface{}{"spec": spec}
+	setKedaHPAName(patch, so, name)
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
 		return false, errors.WithStack(err)
@@ -812,7 +813,7 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool, err error) {
 	ns := p.AppNamespace(app)
 
-	_, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	so, getErr := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
 	if kerr.IsNotFound(getErr) {
 		return false, nil
 	}
@@ -830,6 +831,7 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 			"maxReplicaCount": count,
 		},
 	}
+	setKedaHPAName(patch, so, name)
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
 		return false, errors.WithStack(err)

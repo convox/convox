@@ -379,6 +379,38 @@ func TestServiceUpdateCountPatchesScaledObject(t *testing.T) {
 	})
 }
 
+var longServiceName = strings.Repeat("w", 58)
+
+func scaledObjectAdvanced(t *testing.T, p *k8s.Provider, ns, name string) map[string]interface{} {
+	t.Helper()
+	so, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	require.NoError(t, err)
+	adv, _, _ := unstructured.NestedMap(so.Object, "spec", "advanced")
+	return adv
+}
+
+func TestServiceUpdateScaledObjectPatchesSetLongHPAName(t *testing.T) {
+	for _, name := range []string{"web", longServiceName} {
+		for _, opts := range []structs.ServiceUpdateOptions{{Min: options.Int(2), Max: options.Int(6)}, {Count: options.Int(3)}} {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, _ := p.Cluster.(*kfake.Clientset)
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+				seedDeployment(t, kk, "rack1-app1", name, 2)
+				so := scaledObjectUnstructured("rack1-app1", name, 1, 5)
+				require.NoError(t, unstructured.SetNestedField(so.Object, true, "spec", "advanced", "restoreToOriginalReplicaCount"))
+				p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(), so)
+
+				require.NoError(t, p.ServiceUpdate("app1", name, opts))
+
+				adv := scaledObjectAdvanced(t, p, "rack1-app1", name)
+				require.Equal(t, true, adv["restoreToOriginalReplicaCount"])
+				hpaName, _, _ := unstructured.NestedString(adv, "horizontalPodAutoscalerConfig", "name")
+				require.Equal(t, manifest.KedaHPAName(name), hpaName)
+			})
+		}
+	}
+}
+
 func TestKedaScaledObjectFromAutoscale(t *testing.T) {
 	svc := manifest.Service{Name: "vllm"}
 	svc.Scale.Autoscale = &manifest.ServiceAutoscale{

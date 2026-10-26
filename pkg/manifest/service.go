@@ -633,6 +633,20 @@ func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alp
 		so.Spec.PollingInterval = ss.Scale.Autoscale.PollingInterval
 	}
 
+	if name := KedaHPAName(params.ServiceName); name != "" {
+		adv := &kedav1alpha1.AdvancedConfig{}
+		if so.Spec.Advanced != nil {
+			adv = so.Spec.Advanced.DeepCopy()
+		}
+		if adv.HorizontalPodAutoscalerConfig == nil {
+			adv.HorizontalPodAutoscalerConfig = &kedav1alpha1.HorizontalPodAutoscalerConfig{}
+		}
+		if adv.HorizontalPodAutoscalerConfig.Name == "" {
+			adv.HorizontalPodAutoscalerConfig.Name = name
+		}
+		so.Spec.Advanced = adv
+	}
+
 	auth := ss.DefaultTriggerAuthentionIfAws(params.Namespace)
 	if auth != nil {
 		for i := range so.Spec.Triggers {
@@ -650,6 +664,15 @@ func (ss Service) KedaScaledObject(params KedaScaledObjectParameters) *kedav1alp
 	}
 
 	return &so
+}
+
+// KedaHPAName returns an HPA name for services whose default keda-hpa-<service> name exceeds 63 characters, or "" when the default fits.
+func KedaHPAName(service string) string {
+	if len("keda-hpa-"+service) <= 63 {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(service))
+	return fmt.Sprintf("keda-hpa-%s-%x", service[:45], sum[:4])
 }
 
 func (ss Service) DefaultTriggerAuthentionIfAws(namespace string) *kedav1alpha1.TriggerAuthentication {
@@ -722,8 +745,6 @@ func (vpa *VPA) Validate() error {
 	if !match {
 		return fmt.Errorf("vpa.updateMode must be one of these values: %s", strings.Join(allowedModes, ", "))
 	}
-
-	fmt.Println(vpa.CpuOnly, vpa.MemOnly)
 
 	if vpa.CpuOnly != nil && vpa.MemOnly != nil && *vpa.CpuOnly && *vpa.MemOnly {
 		return fmt.Errorf("vpa.cpuOnly and vpa.memOnly cannot both be true")
