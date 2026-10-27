@@ -1350,12 +1350,15 @@ func TestRenderTemplateServiceSpreadAcrossNodes(t *testing.T) {
 	minDomains := int32(2)
 	honor := ac.NodeInclusionPolicyHonor
 
-	zone := func(maxSkew int32) ac.TopologySpreadConstraint {
+	// Only the new ReplicaSet's pods count (pod-template-hash), so a rollout spreads the new pods across zones instead
+	// of filling the zones the old pods leave thin. StatefulSet pods have no pod-template-hash.
+	zone := func(maxSkew int32, matchLabelKeys []string) ac.TopologySpreadConstraint {
 		return ac.TopologySpreadConstraint{
 			MaxSkew:           maxSkew,
 			TopologyKey:       "topology.kubernetes.io/zone",
 			WhenUnsatisfiable: ac.ScheduleAnyway,
 			LabelSelector:     selector,
+			MatchLabelKeys:    matchLabelKeys,
 		}
 	}
 	softHostname := ac.TopologySpreadConstraint{
@@ -1411,18 +1414,29 @@ func TestRenderTemplateServiceSpreadAcrossNodes(t *testing.T) {
 		{
 			name:        "balanced",
 			body:        "    spreadAcrossNodes: balanced\n",
-			constraints: []ac.TopologySpreadConstraint{zone(5), hardHostname(podTemplateHash)},
+			constraints: []ac.TopologySpreadConstraint{zone(5, podTemplateHash), hardHostname(podTemplateHash)},
 		},
 		{
 			name:        "balanced with spreadAcrossZones",
 			body:        "    spreadAcrossNodes: balanced\n    spreadAcrossZones: true\n",
-			constraints: []ac.TopologySpreadConstraint{zone(1), hardHostname(podTemplateHash)},
+			constraints: []ac.TopologySpreadConstraint{zone(1, podTemplateHash), hardHostname(podTemplateHash)},
 		},
 		{
 			name:        "balanced stateful",
 			body:        "    spreadAcrossNodes: balanced\n" + stateful,
 			statefulSet: true,
-			constraints: []ac.TopologySpreadConstraint{zone(5), hardHostname(nil)},
+			constraints: []ac.TopologySpreadConstraint{zone(5, nil), hardHostname(nil)},
+		},
+		{
+			name:        "spreadAcrossZones",
+			body:        "    spreadAcrossZones: true\n",
+			constraints: []ac.TopologySpreadConstraint{zone(1, podTemplateHash), softHostname},
+		},
+		{
+			name:        "spreadAcrossZones stateful",
+			body:        "    spreadAcrossZones: true\n" + stateful,
+			statefulSet: true,
+			constraints: []ac.TopologySpreadConstraint{zone(1, nil), softHostname},
 		},
 		{
 			name:     "one-per-node",
@@ -1443,7 +1457,7 @@ func TestRenderTemplateServiceSpreadAcrossNodes(t *testing.T) {
 		{
 			name:        "one-per-node with spreadAcrossZones",
 			body:        "    spreadAcrossNodes: one-per-node\n    spreadAcrossZones: true\n",
-			constraints: []ac.TopologySpreadConstraint{zone(1), softHostname},
+			constraints: []ac.TopologySpreadConstraint{zone(1, podTemplateHash), softHostname},
 			affinity:    &ac.Affinity{PodAntiAffinity: antiAffinity(podTemplateHash)},
 		},
 	}
