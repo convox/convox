@@ -113,6 +113,10 @@ spec:
             app: {{.App.Name}}
             service: {{.Service.Name}}
             type: service
+        {{ if not .Service.Stateful }}
+        matchLabelKeys:
+        - pod-template-hash
+        {{ end }}
       {{ if eq .Service.SpreadAcrossNodes "balanced" }}
       - maxSkew: 1
         minDomains: 2
