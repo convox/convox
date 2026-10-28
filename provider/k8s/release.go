@@ -1011,8 +1011,13 @@ func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment
 		"DockerHubAuth": p.hasDockerHubAuth(),
 	}
 
-	if r.Image == "" && p.EcrDockerHubCachePrefix != "" {
-		if img := ecrCachedResourceImage(p.EcrDockerHubCachePrefix, r.Type, r.Options); img != "" {
+	if r.Image == "" {
+		version, err := p.resourceVersion(a.Name, r)
+		if err != nil {
+			return nil, err
+		}
+
+		if img := resourceImage(p.EcrDockerHubCachePrefix, r.Type, version); img != "" {
 			params["Image"] = img
 		}
 	}
@@ -1918,26 +1923,26 @@ var resourceDefaultImages = map[string]struct {
 	image          string
 	defaultVersion string
 	isLibrary      bool
+	hasData        bool
 }{
-	"redis":     {image: "redis", defaultVersion: "4.0.10", isLibrary: true},
-	"postgres":  {image: "postgres", defaultVersion: "10.5", isLibrary: true},
-	"mysql":     {image: "mysql", defaultVersion: "5.7.23", isLibrary: true},
-	"mariadb":   {image: "mariadb", defaultVersion: "10.6.0", isLibrary: true},
-	"memcached": {image: "memcached", defaultVersion: "1.4.34", isLibrary: true},
-	"postgis":   {image: "postgis/postgis", defaultVersion: "10-3.2", isLibrary: false},
+	"redis":     {image: "redis", defaultVersion: "8", isLibrary: true},
+	"postgres":  {image: "postgres", defaultVersion: "16-trixie", isLibrary: true, hasData: true},
+	"mysql":     {image: "mysql", defaultVersion: "8.4", isLibrary: true, hasData: true},
+	"mariadb":   {image: "mariadb", defaultVersion: "11.4", isLibrary: true, hasData: true},
+	"memcached": {image: "memcached", defaultVersion: "1.6", isLibrary: true},
+	"postgis":   {image: "postgis/postgis", defaultVersion: "16-3.6", hasData: true},
 }
 
-// ecrCachedResourceImage returns the ECR pull-through cache URL for a resource's Docker Hub image.
+// resourceImage returns a resource's Docker Hub image, through the ECR pull-through cache when prefix is set.
 // Returns empty string if the resource type is not recognized.
-func ecrCachedResourceImage(prefix, resourceType string, options map[string]string) string {
+func resourceImage(prefix, resourceType, version string) string {
 	info, ok := resourceDefaultImages[resourceType]
 	if !ok {
 		return ""
 	}
 
-	version := info.defaultVersion
-	if v, ok := options["version"]; ok && v != "" {
-		version = v
+	if prefix == "" {
+		return fmt.Sprintf("%s:%s", info.image, version)
 	}
 
 	imagePath := info.image
@@ -1946,6 +1951,64 @@ func ecrCachedResourceImage(prefix, resourceType string, options map[string]stri
 	}
 
 	return fmt.Sprintf("%s/%s:%s", strings.TrimRight(prefix, "/"), imagePath, version)
+}
+
+func resourceVersionFromImage(resourceType, image string) string {
+	info, ok := resourceDefaultImages[resourceType]
+	if !ok {
+		return ""
+	}
+
+	image, _, _ = strings.Cut(image, "@")
+
+	i := strings.LastIndex(image, ":")
+	if i < 0 || i < strings.LastIndex(image, "/") {
+		return ""
+	}
+
+	if repo := image[:i]; repo != info.image && !strings.HasSuffix(repo, "/"+info.image) {
+		return ""
+	}
+
+	return image[i+1:]
+}
+
+func (p *Provider) resourceVersion(app string, r manifest.Resource) (string, error) {
+	info, ok := resourceDefaultImages[r.Type]
+	if !ok {
+		return "", nil
+	}
+
+	if v := r.Options["version"]; v != "" {
+		return v, nil
+	}
+
+	ns := p.AppNamespace(app)
+	name := fmt.Sprintf("resource-%s", nameFilter(r.Name))
+
+	d, err := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{})
+	switch {
+	case kerr.IsNotFound(err):
+	case err != nil:
+		return "", errors.WithStack(err)
+	case len(d.Spec.Template.Spec.Containers) > 0:
+		if v := resourceVersionFromImage(r.Type, d.Spec.Template.Spec.Containers[0].Image); v != "" {
+			return v, nil
+		}
+	}
+
+	if !info.hasData {
+		return info.defaultVersion, nil
+	}
+
+	// a newer default would start on the existing data, and mariadb upgrades it in place
+	if _, err := p.Cluster.CoreV1().PersistentVolumeClaims(ns).Get(context.TODO(), name, am.GetOptions{}); err == nil {
+		return "", structs.ErrBadRequest("resource %s has existing data but its running version is unknown, set options.version in convox.yml", r.Name)
+	} else if !kerr.IsNotFound(err) {
+		return "", errors.WithStack(err)
+	}
+
+	return info.defaultVersion, nil
 }
 
 // requireCostTrackingForManifestBudget rejects a manifest budget block whose
