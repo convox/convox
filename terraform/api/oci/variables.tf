@@ -1,0 +1,74 @@
+variable "buildkit_enabled" {
+  default = false
+}
+
+variable "cluster" {
+  type = string
+}
+
+variable "compartment_ocid" {
+  type = string
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
+variable "docker_hub_authentication" {
+  type = string
+}
+
+variable "domain" {
+  type = string
+}
+
+variable "high_availability" {
+  default = true
+}
+
+variable "image" {
+  type = string
+}
+
+variable "name" {
+  type = string
+}
+
+variable "rack_name" {
+  default = ""
+  type    = string
+}
+
+variable "namespace" {
+  type = string
+}
+
+variable "region" {
+  type = string
+}
+
+variable "release" {
+  type = string
+}
+
+variable "resolver" {
+  type = string
+}
+
+variable "router" {
+  type = string
+}
+
+variable "syslog" {
+  default = ""
+}
+
+variable "tenancy_ocid" {
+  type = string
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}
