@@ -35,6 +35,7 @@ module "api" {
   rack_name                 = var.rack_name
   namespace                 = module.k8s.namespace
   release                   = var.release
+  private_api               = var.private_api
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
   router_log_redact_params  = var.router_log_redact_params
