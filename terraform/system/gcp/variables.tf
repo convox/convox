@@ -35,6 +35,11 @@ variable "elasticsearch_disk" {
   default = "5Gi"
 }
 
+variable "filestore_enable" {
+  type    = bool
+  default = false
+}
+
 variable "image" {
   default = "convox/convox"
 }
