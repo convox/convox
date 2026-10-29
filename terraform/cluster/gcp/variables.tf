@@ -3,6 +3,11 @@ variable "additional_node_groups" {
   default = []
 }
 
+variable "filestore_enable" {
+  type    = bool
+  default = false
+}
+
 variable "k8s_version" {
   type    = string
   default = "1.35"

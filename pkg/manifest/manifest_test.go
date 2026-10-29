@@ -1332,3 +1332,189 @@ func TestVolumeOptionAzureFilesValidate(t *testing.T) {
 	}
 	require.NoError(t, vo.Validate())
 }
+
+func TestVolumeGcpFilestoreValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		vol     manifest.VolumeGcpFilestore
+		wantErr string
+	}{
+		{
+			name: "valid",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+		},
+		{
+			name: "missing id",
+			vol: manifest.VolumeGcpFilestore{
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "gcpFilestore.id is required",
+		},
+		{
+			name: "invalid id format",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "My Volume/data",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "gcpFilestore.id must match ^[a-z][a-z0-9-]*$",
+		},
+		{
+			name: "missing mountPath",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+			},
+			wantErr: "gcpFilestore.mountPath is required",
+		},
+		{
+			name: "relative mountPath",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "mnt/../data",
+			},
+			wantErr: "gcpFilestore.mountPath must be an absolute path with no . or .. segments",
+		},
+		{
+			name: "id too long",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "a" + strings.Repeat("b", 53),
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "gcpFilestore.id must be 53 characters or fewer",
+		},
+		{
+			name: "invalid accessMode",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "Invalid",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "gcpFilestore.accessMode must be one of these values: ReadOnlyMany, ReadWriteMany, ReadWriteOnce",
+		},
+		{
+			name: "valid with capacity",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				Capacity:   "2560Gi",
+			},
+		},
+		{
+			name: "invalid capacity format",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				Capacity:   "banana",
+			},
+			wantErr: "gcpFilestore.capacity is invalid: banana",
+		},
+		{
+			name: "capacity below minimum",
+			vol: manifest.VolumeGcpFilestore{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				Capacity:   "100Gi",
+			},
+			wantErr: "gcpFilestore.capacity must be at least 1Ti (Filestore instance minimum)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.vol.Validate()
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestVolumeOptionGcpFilestoreValidate(t *testing.T) {
+	vo := manifest.VolumeOption{
+		GcpFilestore: &manifest.VolumeGcpFilestore{
+			Id:         "shared",
+			AccessMode: "ReadWriteMany",
+			MountPath:  "/data",
+		},
+	}
+	require.NoError(t, vo.Validate())
+}
+
+func TestServiceGcpFilestoreIds(t *testing.T) {
+	tests := []struct {
+		name    string
+		service string
+		wantErr string
+	}{
+		{
+			name: "ids must be unique",
+			service: `volumeOptions:
+      - gcpFilestore:
+          id: data
+          accessMode: ReadWriteMany
+          mountPath: /data
+      - gcpFilestore:
+          id: data
+          accessMode: ReadWriteMany
+          mountPath: /backup`,
+			wantErr: "duplicate gcpFilestore id data",
+		},
+		{
+			name: "init container may mount a declared volume",
+			service: `initContainer:
+      image: busybox
+      volumeOptions:
+        - gcpFilestore:
+            id: data
+            accessMode: ReadWriteMany
+            mountPath: /data
+    volumeOptions:
+      - gcpFilestore:
+          id: data
+          accessMode: ReadWriteMany
+          mountPath: /data`,
+		},
+		{
+			name: "init container volume must be declared",
+			service: `initContainer:
+      image: busybox
+      volumeOptions:
+        - gcpFilestore:
+            id: other
+            accessMode: ReadWriteMany
+            mountPath: /data
+    volumeOptions:
+      - gcpFilestore:
+          id: data
+          accessMode: ReadWriteMany
+          mountPath: /data`,
+			wantErr: "initContainer gcpFilestore id other is not declared in volumeOptions",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, err := manifest.Load([]byte("services:\n  web:\n    "+tt.service+"\n"), map[string]string{})
+			require.NoError(t, err)
+			err = m.Validate()
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}

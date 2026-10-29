@@ -256,6 +256,13 @@ spec:
             - name: efs-{{ .Id }}
               mountPath: {{ .MountPath }}
             {{ end }}
+            {{ with .GcpFilestore }}
+            - name: filestore-{{ .Id }}
+              mountPath: {{ json .MountPath }}
+              {{ if eq .AccessMode "ReadOnlyMany" }}
+              readOnly: true
+              {{ end }}
+            {{ end }}
             {{ end }}
           volumes:
           - name: ca
@@ -291,6 +298,11 @@ spec:
           - name: efs-{{ .Id }}
             persistentVolumeClaim:
               claimName: efs-{{$.Service.Name}}-{{.Id}}
+          {{ end }}
+          {{ with .GcpFilestore }}
+          - name: filestore-{{ .Id }}
+            persistentVolumeClaim:
+              claimName: filestore-{{$.Service.Name}}-{{.Id}}
           {{ end }}
           {{ end }}
           {{ range $.Service.ConfigMounts }}

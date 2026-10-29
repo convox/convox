@@ -1,0 +1,23 @@
+{{ range .Service.VolumeOptions }}
+{{ with .GcpFilestore }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: filestore-{{$.Service.Name}}-{{.Id}}
+  namespace: {{$.Namespace}}
+  labels:
+    system: convox
+    {{ range keyValue $.Service.Labels }}
+    {{.Key}}: "{{.Value}}"
+    {{ end }}
+spec:
+  accessModes:
+    - {{.AccessMode}}
+  storageClassName: filestore-rwx
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: {{ if .Capacity }}{{.Capacity}}{{ else }}1Ti{{ end }}
+{{ end }}
+{{ end }}

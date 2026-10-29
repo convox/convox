@@ -8,6 +8,15 @@ Groups:
         regex: ^[a-z]+-[a-z]+\d+$
         description: GCP region where the rack will be deployed. See
           (GCP regions)[https://cloud.google.com/about/locations] for available options.
+  - name: Storage
+    order: 3
+    params:
+      - name: filestore_enable
+        default: "false"
+        type: boolean
+        description: Enable Google Cloud Filestore NFS volumes for shared persistent
+          storage across service replicas. Enables the GKE Filestore CSI driver and
+          creates an NFS StorageClass.
   - name: Security & Compliance
     order: 2
     params:

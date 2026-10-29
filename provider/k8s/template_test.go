@@ -1530,3 +1530,64 @@ func TestRenderTemplateCertManager(t *testing.T) {
 		})
 	}
 }
+
+const filestoreManifest = `services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - gcpFilestore:
+          id: shared
+          accessMode: ReadWriteMany
+          mountPath: /mnt/shared
+          capacity: "2560Gi"
+      - gcpFilestore:
+          id: models
+          accessMode: ReadOnlyMany
+          mountPath: /mnt/models
+timers:
+  nightly:
+    schedule: "0 0 * * ? *"
+    command: "echo hi"
+    service: web
+`
+
+func TestRenderServiceGcpFilestore(t *testing.T) {
+	p, params := gpuTemplateFixture(t, filestoreManifest)
+	data, err := p.RenderTemplate("app/service", params)
+	require.NoError(t, err)
+	rendered := string(data)
+	require.Contains(t, rendered, "- name: filestore-shared")
+	require.Contains(t, rendered, "mountPath: /mnt/shared")
+	require.Contains(t, rendered, "claimName: filestore-web-shared")
+	require.Regexp(t, `name: filestore-models\s+readOnly: true`, rendered)
+	require.NotRegexp(t, `name: filestore-shared\s+readOnly: true`, rendered)
+}
+
+func TestRenderTimerGcpFilestore(t *testing.T) {
+	p, params := gpuTemplateFixture(t, filestoreManifest)
+	data, err := p.RenderTemplate("app/timer", params)
+	require.NoError(t, err)
+	rendered := string(data)
+	require.Contains(t, rendered, "mountPath: /mnt/shared")
+	require.Contains(t, rendered, "claimName: filestore-web-shared")
+	require.Regexp(t, `name: filestore-models\s+readOnly: true`, rendered)
+}
+
+func TestReleaseTemplateFilestore(t *testing.T) {
+	p, params := gpuTemplateFixture(t, filestoreManifest)
+	a := params["App"].(*structs.App)
+	s := params["Service"].(manifest.Service)
+
+	_, err := p.releaseTemplateFilestore(a, &s)
+	require.EqualError(t, err, "gcpFilestore volumes require the filestore_enable rack parameter")
+
+	p.FilestoreEnabled = "true"
+	data, err := p.releaseTemplateFilestore(a, &s)
+	require.NoError(t, err)
+	rendered := string(data)
+	require.Contains(t, rendered, "name: filestore-web-shared")
+	require.Contains(t, rendered, "storageClassName: filestore-rwx")
+	require.Contains(t, rendered, "- ReadWriteMany")
+	require.Contains(t, rendered, "storage: 2560Gi")
+}

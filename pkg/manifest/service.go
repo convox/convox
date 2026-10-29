@@ -144,6 +144,7 @@ type VolumeOption struct {
 	AwsEfs                *VolumeAwsEfs                `yaml:"awsEfs,omitempty"`
 	AzureFiles            *VolumeAzureFiles            `yaml:"azureFiles,omitempty"`
 	PersistentVolumeClaim *VolumePersistentVolumeClaim `yaml:"persistentVolumeClaim,omitempty"`
+	GcpFilestore          *VolumeGcpFilestore          `yaml:"gcpFilestore,omitempty"`
 }
 
 func (v VolumeOption) Validate() error {
@@ -164,6 +165,11 @@ func (v VolumeOption) Validate() error {
 	}
 	if v.PersistentVolumeClaim != nil {
 		if err := v.PersistentVolumeClaim.Validate(); err != nil {
+			return err
+		}
+	}
+	if v.GcpFilestore != nil {
+		if err := v.GcpFilestore.Validate(); err != nil {
 			return err
 		}
 	}
@@ -314,6 +320,55 @@ func (v VolumeAzureFiles) Validate() error {
 		minQty := resource.MustParse("100Gi")
 		if qty.Cmp(minQty) < 0 {
 			return fmt.Errorf("azureFiles.shareSize must be at least 100Gi (Azure Premium NFS minimum)")
+		}
+	}
+
+	return nil
+}
+
+type VolumeGcpFilestore struct {
+	Id string `yaml:"id"`
+
+	AccessMode string `yaml:"accessMode,omitempty"`
+	Capacity   string `yaml:"capacity,omitempty"`
+	MountPath  string `yaml:"mountPath"`
+}
+
+func (v VolumeGcpFilestore) Validate() error {
+	if v.Id == "" {
+		return fmt.Errorf("gcpFilestore.id is required")
+	}
+	if !NameValidator.MatchString(v.Id) {
+		return fmt.Errorf("gcpFilestore.id must match %s", NameValidator.String())
+	}
+	if len(v.Id) > 53 {
+		return fmt.Errorf("gcpFilestore.id must be 53 characters or fewer")
+	}
+	if v.MountPath == "" {
+		return fmt.Errorf("gcpFilestore.mountPath is required")
+	}
+	if !path.IsAbs(v.MountPath) || path.Clean(v.MountPath) != strings.TrimSuffix(v.MountPath, "/") {
+		return fmt.Errorf("gcpFilestore.mountPath must be an absolute path with no . or .. segments")
+	}
+
+	allowedModes := []string{
+		PVCAccessModeReadOnlyMany,
+		PVCAccessModeReadWriteMany,
+		PVCAccessModeReadWriteOnce,
+	}
+
+	if !containsInStringSlice(allowedModes, v.AccessMode) {
+		return fmt.Errorf("gcpFilestore.accessMode must be one of these values: %s", strings.Join(allowedModes, ", "))
+	}
+
+	if v.Capacity != "" {
+		qty, err := resource.ParseQuantity(v.Capacity)
+		if err != nil {
+			return fmt.Errorf("gcpFilestore.capacity is invalid: %s", v.Capacity)
+		}
+		minQty := resource.MustParse("1Ti")
+		if qty.Cmp(minQty) < 0 {
+			return fmt.Errorf("gcpFilestore.capacity must be at least 1Ti (Filestore instance minimum)")
 		}
 	}
 

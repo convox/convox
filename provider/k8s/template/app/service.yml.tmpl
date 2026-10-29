@@ -293,6 +293,13 @@ spec:
         - name: pvc-{{ .Id }}
           mountPath: {{ json .MountPath }}
         {{ end }}
+        {{ with .GcpFilestore }}
+        - name: filestore-{{ .Id }}
+          mountPath: {{ json .MountPath }}
+          {{ if eq .AccessMode "ReadOnlyMany" }}
+          readOnly: true
+          {{ end }}
+        {{ end }}
         {{ end }}
         {{ range .Service.InitContainer.ConfigMounts }}
         - name: cfg-{{ .Id }}
@@ -520,6 +527,13 @@ spec:
           readOnly: true
           {{ end }}
         {{ end }}
+        {{ with .GcpFilestore }}
+        - name: filestore-{{ .Id }}
+          mountPath: {{ json .MountPath }}
+          {{ if eq .AccessMode "ReadOnlyMany" }}
+          readOnly: true
+          {{ end }}
+        {{ end }}
         {{ end }}
       volumes:
       - name: ca
@@ -559,6 +573,11 @@ spec:
       - name: azurefiles-{{ .Id }}
         persistentVolumeClaim:
           claimName: azurefiles-{{$.Service.Name}}-{{.Id}}
+      {{ end }}
+      {{ with .GcpFilestore }}
+      - name: filestore-{{ .Id }}
+        persistentVolumeClaim:
+          claimName: filestore-{{$.Service.Name}}-{{.Id}}
       {{ end }}
       {{ end }}
       {{ range $.Service.ConfigMounts }}
