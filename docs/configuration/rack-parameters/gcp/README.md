@@ -22,6 +22,7 @@ The following parameters are available for configuring your Convox rack on Googl
 | [docker_hub_password](/configuration/rack-parameters/gcp/docker_hub_password) | Docker Hub access token for authenticated image pulls. |
 | [docker_hub_username](/configuration/rack-parameters/gcp/docker_hub_username) | Docker Hub username for authenticated image pulls. |
 | [elasticsearch_disk](/configuration/rack-parameters/gcp/elasticsearch_disk) | Size of each Elasticsearch log volume, which sets how much log history the Rack keeps. |
+| [filestore_enable](/configuration/rack-parameters/gcp/filestore_enable)   | Enables Google Cloud Filestore NFS volumes for shared persistent storage. |
 | [fluentd_memory](/configuration/rack-parameters/gcp/fluentd_memory)       | Configures memory allocation for the Fluentd log collector DaemonSet.     |
 | [gpu_observability_chart_version](/configuration/rack-parameters/gcp/gpu_observability_chart_version) | Pins the Helm chart version for the NVIDIA DCGM exporter. |
 | [gpu_observability_enable](/configuration/rack-parameters/gcp/gpu_observability_enable) | Installs the NVIDIA DCGM exporter to emit GPU telemetry for a Prometheus you run yourself. |

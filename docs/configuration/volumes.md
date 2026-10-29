@@ -157,6 +157,58 @@ Azure Files volumes are ideal for:
 - **ML Model Storage**: Store large model weights on a shared NFS volume accessible by all replicas without downloading on each startup.
 - **Content Management Systems**: Allows multiple editors to access and modify shared content.
 
+## Google Cloud Filestore Volumes
+
+> GCP only. Requires the [filestore_enable](/configuration/rack-parameters/gcp/filestore_enable) rack parameter.
+
+Google Cloud Filestore provides managed NFS storage that multiple Convox services can access simultaneously. Each `gcpFilestore` volume provisions its own Filestore instance through the GKE Filestore CSI driver, connected to the rack's VPC.
+
+### Supported Access Modes
+
+- **ReadWriteOnce (RWO)**: Single-service write operations.
+- **ReadOnlyMany (ROM)**: Multiple-service read operations. Suitable for distributing read-only content like model weights.
+- **ReadWriteMany (RWM)**: Multi-service read/write operations. Useful for shared file access among multiple services.
+
+### Enabling Filestore Volumes
+
+```bash
+convox rack params set filestore_enable=true -r rackName
+```
+
+### Configuring Filestore Volumes in convox.yml
+
+```yaml
+services:
+  web:
+    build: .
+    port: 3000
+    volumeOptions:
+      - gcpFilestore:
+          id: "shared-data"
+          accessMode: ReadWriteMany
+          mountPath: "/mnt/data/"
+      - gcpFilestore:
+          id: "models"
+          accessMode: ReadOnlyMany
+          mountPath: "/mnt/models/"
+          capacity: "2Ti"
+```
+
+- **gcpFilestore.id**: A unique identifier for the volume.
+- **gcpFilestore.accessMode**: Specifies ReadWriteMany, ReadOnlyMany, or ReadWriteOnce.
+- **gcpFilestore.mountPath**: Defines the mount point for the volume inside the service.
+- **gcpFilestore.capacity**: (Optional) The size of the Filestore instance. Defaults to 1Ti, the minimum for the basic HDD tier.
+
+### Cost and Lifecycle
+
+Every `gcpFilestore` volume is a separately billed basic HDD Filestore instance, sized to at least 1TiB. Volumes are deleted along with their data when the service or app that owns them is removed.
+
+Remove all `gcpFilestore` volumes before setting `filestore_enable=false`. Disabling the parameter removes the CSI driver and StorageClass, so existing volumes can no longer be mounted.
+
+### Limitations
+
+NFS file locking is not supported. The rack's VPC has no firewall rule that lets Filestore reach the lock ports on nodes, so lock calls such as `flock` over NFS can hang.
+
 ## AWS EFS Volumes
 
 > AWS only. Requires the [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable) rack parameter. On a Rack installed with `private=false`, requires Rack version `3.25.6` or later.
