@@ -224,7 +224,7 @@ func TestBuildCreate(t *testing.T) {
 			AppName:     "app1",
 			AppNameList: "app1",
 			Namespace:   "rack1-app1",
-			BuildName:   "build1",
+			BuildName:   "object://app1/build1.tgz",
 			Response:    &structs.Build{Id: "BUILD1", App: "", Description: "foo", Entrypoint: "", Logs: "", Manifest: "services:\n  web:\n    build: .\n    port: 5000\n", Process: "", Release: "", Reason: "", Repository: "", Status: "", Started: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Ended: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), Tags: map[string]string(nil)},
 			Err:         nil,
 		},
@@ -364,6 +364,130 @@ func TestBuildCreateNoCache(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, pods.Items, 1)
 				assert.Equal(t, []string{"build", "-method", "tgz", "-cache", test.Cache}, pods.Items[0].Spec.Containers[0].Args)
+			})
+		})
+	}
+}
+
+func TestBuildCreateSource(t *testing.T) {
+	tests := []struct {
+		Name     string
+		Url      string
+		Manifest *string
+		External bool
+		Err      string
+	}{
+		{Name: "Object", Url: "object://app1/x.tgz"},
+		{Name: "ManifestEmpty", Url: "object://app1/x.tgz", Manifest: options.String("")},
+		{Name: "ManifestSubdir", Url: "object://app1/x.tgz", Manifest: options.String("sub/convox.yml")},
+		{Name: "ManifestRooted", Url: "object://app1/x.tgz", Manifest: options.String("/convox.yml")},
+		{Name: "External", External: true, Manifest: options.String("../convox.yml")},
+		{Name: "Dir", Url: "dir:///proc/self", Err: "invalid build source: dir:///proc/self"},
+		{Name: "Empty", Err: "invalid build source: "},
+		{Name: "Http", Url: "http://example.org/x.tgz", Err: "invalid build source: http://example.org/x.tgz"},
+		{Name: "ManifestParent", Url: "object://app1/x.tgz", Manifest: options.String("../../proc/self/environ"), Err: "invalid manifest: ../../proc/self/environ"},
+		{Name: "ManifestRootedParent", Url: "object://app1/x.tgz", Manifest: options.String("/../convox.yml"), Err: "invalid manifest: /../convox.yml"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+				_, err := p.BuildCreate("app1", test.Url, structs.BuildCreateOptions{External: options.Bool(test.External), Manifest: test.Manifest})
+				if test.Err == "" {
+					require.NoError(t, err)
+					return
+				}
+				require.EqualError(t, err, test.Err)
+
+				bs, err := p.Convox.ConvoxV1().Builds("rack1-app1").List(am.ListOptions{})
+				require.NoError(t, err)
+				assert.Empty(t, bs.Items)
+			})
+		})
+	}
+}
+
+func TestBuildCreateEmptyManifest(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
+		aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		_, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{
+			BuildArgs: &[]string{"X=1 -manifest ../../proc/self/environ"},
+			Manifest:  options.String(""),
+		})
+		require.NoError(t, err)
+
+		pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, pods.Items, 1)
+
+		for _, e := range pods.Items[0].Spec.Containers[0].Env {
+			if e.Name == "BUILD_MANIFEST" {
+				assert.Equal(t, "convox.yml", e.Value)
+				return
+			}
+		}
+		t.Fatal("BUILD_MANIFEST not set")
+	})
+}
+
+func TestBuildCreateVarRefs(t *testing.T) {
+	tests := []struct {
+		Name string
+		Tid  bool
+		Ref  string
+	}{
+		{Name: "SingleTenant", Tid: false, Ref: "$(RACK_URL)"},
+		{Name: "Tid", Tid: true, Ref: "$$(RACK_URL)"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.FeatureGates = map[string]bool{options.FeatureGateTid: test.Tid}
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Status", "rack1-app1", "app").Return("Creating", "R1234567", nil)
+
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+				_, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{
+					BuildArgs: &[]string{"X=$(RACK_URL)"},
+					GitSha:    options.String("$(RACK_URL)"),
+					Manifest:  options.String("$(RACK_URL).yml"),
+				})
+				require.NoError(t, err)
+
+				pods, err := kk.CoreV1().Pods(p.ProcessBuildNamespaceForTest("app1")).List(context.TODO(), am.ListOptions{})
+				require.NoError(t, err)
+				require.Len(t, pods.Items, 1)
+
+				c := pods.Items[0].Spec.Containers[0]
+				assert.Contains(t, c.Args, "X="+test.Ref)
+
+				envs := map[string]string{}
+				for _, e := range c.Env {
+					envs[e.Name] = e.Value
+				}
+				assert.Equal(t, test.Ref, envs["BUILD_GIT_SHA"])
+				assert.Equal(t, test.Ref+".yml", envs["BUILD_MANIFEST"])
 			})
 		})
 	}
