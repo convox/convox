@@ -1576,8 +1576,10 @@ func TestRenderTimerGcpFilestore(t *testing.T) {
 
 func TestReleaseTemplateFilestore(t *testing.T) {
 	p, params := gpuTemplateFixture(t, filestoreManifest)
-	a := params["App"].(*structs.App)
-	s := params["Service"].(manifest.Service)
+	a, ok := params["App"].(*structs.App)
+	require.True(t, ok)
+	s, ok := params["Service"].(manifest.Service)
+	require.True(t, ok)
 
 	_, err := p.releaseTemplateFilestore(a, &s)
 	require.EqualError(t, err, "gcpFilestore volumes require the filestore_enable rack parameter")
