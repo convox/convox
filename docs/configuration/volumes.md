@@ -207,7 +207,7 @@ Remove all `gcpFilestore` volumes before setting `filestore_enable=false`. Disab
 
 ### Limitations
 
-NFS file locking is not supported. The rack's VPC has no firewall rule that lets Filestore reach the lock ports on nodes, so lock calls such as `flock` over NFS can hang.
+NFS file locks work, but a lock released by one node can take up to about 30 seconds to pass to a process waiting on another node. The rack's VPC has no firewall rule that lets Filestore notify nodes when a lock is free, so waiting clients poll for it instead.
 
 ## AWS EFS Volumes
 
