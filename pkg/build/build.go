@@ -101,7 +101,7 @@ func (bb *Build) buildEnvs() (map[string]string, error) {
 		parts := strings.SplitN(v, "=", 2)
 		if len(parts) != 2 {
 			if len(parts) == 1 {
-				if os.Getenv(parts[0]) != "" {
+				if passthroughBuildArg(parts[0]) && os.Getenv(parts[0]) != "" {
 					env[parts[0]] = os.Getenv(parts[0])
 				}
 				continue
@@ -112,6 +112,17 @@ func (bb *Build) buildEnvs() (map[string]string, error) {
 	}
 
 	return env, nil
+}
+
+func passthroughBuildArg(name string) bool {
+	if os.Getenv("CONVOX_TID") == "" {
+		return true
+	}
+	switch name {
+	case "BUILD_APP", "BUILD_DEVELOPMENT", "BUILD_GENERATION", "BUILD_GIT_SHA", "BUILD_ID", "BUILD_MANIFEST", "BUILD_RACK":
+		return true
+	}
+	return false
 }
 
 func (bb *Build) execute() error {

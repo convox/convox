@@ -43,6 +43,14 @@ func (*Provider) buildPrivileged(provider string) bool {
 	return strings.Contains("do gcp aws azure local", provider) // skipcq
 }
 
+// escapeVarRefs keeps Kubernetes from expanding $(VAR) in a build pod arg or env value on a tid rack.
+func (p *Provider) escapeVarRefs(s string) string {
+	if !p.FeatureGates[options.FeatureGateTid] {
+		return s
+	}
+	return strings.ReplaceAll(s, "$", "$$")
+}
+
 func (p *Provider) BuildCancel(app, id string) error {
 	b, err := p.BuildGet(app, id)
 	if k8serrors.IsNotFound(err) {
@@ -104,6 +112,17 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		return nil, errors.WithStack(err)
 	}
 
+	manifestPath := common.CoalesceString(common.DefaultString(opts.Manifest, ""), "convox.yml")
+
+	if !common.DefaultBool(opts.External, false) {
+		if !strings.HasPrefix(url, "object://") {
+			return nil, structs.ErrBadRequest("invalid build source: %s", url)
+		}
+		if !filepath.IsLocal(strings.TrimLeft(manifestPath, "/")) {
+			return nil, structs.ErrBadRequest("invalid manifest: %s", manifestPath)
+		}
+	}
+
 	b := structs.NewBuild(app)
 
 	b.Description = common.DefaultString(opts.Description, "")
@@ -142,7 +161,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		"BUILD_DEVELOPMENT":               fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
 		"BUILD_GENERATION":                "2",
 		"BUILD_ID":                        b.Id,
-		"BUILD_MANIFEST":                  common.DefaultString(opts.Manifest, "convox.yml"),
+		"BUILD_MANIFEST":                  manifestPath,
 		"BUILD_RACK":                      p.Name,
 		"BUILD_URL":                       url,
 		"BUILD_GIT_SHA":                   b.GitSha,
@@ -171,7 +190,7 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 			if len(strings.SplitN(v, "=", 2)) > 2 {
 				return nil, structs.ErrBadRequest("invalid build args:%s", v)
 			}
-			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
+			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, p.escapeVarRefs(v))
 		}
 	}
 
@@ -217,6 +236,10 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		psOpts.Volumes = map[string]string{
 			p.Socket: "/var/run/docker.sock",
 		}
+	}
+
+	for k, v := range env {
+		env[k] = p.escapeVarRefs(v)
 	}
 
 	ps, err := p.ProcessRun(app, "build", psOpts)

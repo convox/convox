@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/convox/convox/pkg/build"
@@ -800,6 +801,18 @@ func TestBuildImageManifestCache(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestBuildPathOutsideSource(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "convox.yml"), []byte("services:\n  web:\n    build:\n      path: ../../../../root/.docker\n      manifest: config.json\n"), 0600))
+
+	testBuild(t, build.Options{App: "app1", Id: "build1"}, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+		p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil)
+		p.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
+
+		require.EqualError(t, bkEngine.Build(b, dir), "build path is outside the source: ../../../../root/.docker")
+	})
 }
 
 func TestBuildCacheProvider(t *testing.T) {
