@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"path"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -127,11 +129,16 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 }
 
 func (p *Provider) objectKey(app, key string) string {
+	if tid := p.ContextTID(); tid != "" {
+		// The S3 client cleans the request path, so dot segments left in the key would resolve outside the prefix.
+		clean := strings.TrimPrefix(path.Clean("/"+key), "/")
+		if clean != "" && strings.HasSuffix(key, "/") {
+			clean += "/"
+		}
+		return fmt.Sprintf("%s-%s/%s", tid, app, clean)
+	}
 	if app == "" || app == "x-undefined-app-x" {
 		return key
-	}
-	if p.ContextTID() != "" {
-		return fmt.Sprintf("%s-%s/%s", p.ContextTID(), app, key)
 	}
 	return fmt.Sprintf("%s/%s", app, key)
 }
