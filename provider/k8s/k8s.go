@@ -82,6 +82,7 @@ type Provider struct {
 	DynamicClient                       dynamic.Interface
 	EfsFileSystemId                     string
 	AzureFilesEnabled                   string
+	FilestoreEnabled                    string
 	Engine                              Engine
 	Image                               string
 	JwtMngr                             *jwt.JwtManager
@@ -241,6 +242,7 @@ func FromEnv() (*Provider, error) {
 		DynamicClient:                    dc,
 		EfsFileSystemId:                  os.Getenv("EFS_FILE_SYSTEM_ID"),
 		AzureFilesEnabled:                os.Getenv("AZURE_FILES_ENABLED"),
+		FilestoreEnabled:                 os.Getenv("FILESTORE_ENABLED"),
 		Image:                            os.Getenv("IMAGE"),
 		MetricScraper:                    ms,
 		MetricsClient:                    mc,

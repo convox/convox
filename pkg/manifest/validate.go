@@ -239,10 +239,17 @@ func (m *Manifest) validateServices() []error {
 		}
 
 		claimIds := map[string]bool{}
+		filestoreIds := map[string]bool{}
 
 		for i := range s.VolumeOptions {
 			if err := s.VolumeOptions[i].Validate(); err != nil {
 				errs = append(errs, err)
+			}
+			if fs := s.VolumeOptions[i].GcpFilestore; fs != nil {
+				if filestoreIds[fs.Id] {
+					errs = append(errs, fmt.Errorf("service %s: duplicate gcpFilestore id %s", s.Name, fs.Id))
+				}
+				filestoreIds[fs.Id] = true
 			}
 			claim := s.VolumeOptions[i].PersistentVolumeClaim
 			if claim == nil {
@@ -287,6 +294,9 @@ func (m *Manifest) validateServices() []error {
 		}
 		if s.InitContainer != nil {
 			for i := range s.InitContainer.VolumeOptions {
+				if fs := s.InitContainer.VolumeOptions[i].GcpFilestore; fs != nil && !filestoreIds[fs.Id] {
+					errs = append(errs, fmt.Errorf("service %s: initContainer gcpFilestore id %s is not declared in volumeOptions", s.Name, fs.Id))
+				}
 				claim := s.InitContainer.VolumeOptions[i].PersistentVolumeClaim
 				if claim == nil {
 					continue

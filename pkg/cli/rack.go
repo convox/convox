@@ -132,8 +132,8 @@ var gcpKnownParams = map[string]bool{
 	"additional_node_groups_config": true,
 	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"dcgm_scrape_interval": true, "docker_hub_password": true,
-	"docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
-	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
+	"docker_hub_username": true, "elasticsearch_disk": true, "filestore_enable": true,
+	"fluentd_memory": true, "gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
 	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true, "settings": true,
@@ -624,6 +624,7 @@ var paramGroups = map[string]map[string]bool{
 		"efs_csi_driver_enable":            true,
 		"efs_csi_driver_version":           true,
 		"elasticsearch_disk":               true,
+		"filestore_enable":                 true,
 		"karpenter_node_disk":              true, // dual-listed in karpenter
 		"karpenter_node_volume_iops":       true, // dual-listed in karpenter
 		"karpenter_node_volume_throughput": true, // dual-listed in karpenter
