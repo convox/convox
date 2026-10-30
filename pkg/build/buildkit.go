@@ -89,7 +89,11 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 				return err
 			}
 		} else {
-			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, prev, env); err != nil {
+			path := filepath.Join(dir, build.Build.Path)
+			if rel, err := filepath.Rel(dir, path); err != nil || !filepath.IsLocal(rel) {
+				return fmt.Errorf("build path is outside the source: %s", build.Build.Path)
+			}
+			if err := bk.build(bb, path, build.Build.Manifest, build.Tag, prev, env); err != nil {
 				return err
 			}
 		}
