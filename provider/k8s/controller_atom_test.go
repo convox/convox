@@ -107,3 +107,13 @@ func TestAtomSyncAllLeaderOnly(t *testing.T) {
 	require.NoError(t, a.syncAll())
 	require.Len(t, fa.Actions(), 1)
 }
+
+func TestAtomSyncKicksNetworkPolicy(t *testing.T) {
+	a := testAtomController(afake.NewSimpleClientset())
+	a.provider.NetworkPolicyEnabled = true
+	a.provider.networkPolicyKick = make(chan string, 1)
+
+	require.NoError(t, a.syncAtom(testAtom("Updating", "app-1")))
+	require.Len(t, a.provider.networkPolicyKick, 1, "an applied release must queue its namespace for a network policy pass")
+	require.Equal(t, "rack1-app1", <-a.provider.networkPolicyKick)
+}

@@ -125,6 +125,7 @@ type Provider struct {
 	deploymentInformer informerappsv1.DeploymentInformer
 	buildInformer      cinformer.BuildInformer
 	releaseInformer    cinformer.ReleaseInformer
+	networkPolicyKick  chan string
 
 	RdsProvisioner         *rds.Provisioner
 	ElasticacheProvisioner *elasticache.Provisioner
@@ -272,6 +273,7 @@ func FromEnv() (*Provider, error) {
 		IsKarpenterEnabled:               os.Getenv("KARPENTER_ENABLED") == "true",
 		IsKedaEnabled:                    os.Getenv("KEDA_ENABLED") == "true",
 		IsVpaEnabled:                     os.Getenv("VPA_ENABLED") == "true",
+		networkPolicyKick:                make(chan string, 32),
 	}
 
 	p.DeployProgressDeadline = tuningEnvInt("DEPLOY_PROGRESS_DEADLINE")

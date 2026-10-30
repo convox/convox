@@ -134,6 +134,8 @@ func (a *AtomController) syncAtom(obj *atomv1.Atom) error {
 
 	go a.updateNamespace(obj)
 
+	a.provider.kickNetworkPolicy(obj.Namespace)
+
 	a.startDependency(obj)
 
 	return nil
