@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -661,4 +663,34 @@ func (m *Manifest) validateBudget() []error {
 	}
 
 	return errs
+}
+
+var tenantDeniedIngressAnnotation = regexp.MustCompile(`^nginx\.ingress\.kubernetes\.io/(.+-snippet|canary|canary-.+|auth-url|mirror-.+)$`)
+
+// ValidateTenantIngressAnnotations rejects ingress annotations a tenant may not set on a shared router.
+func (m *Manifest) ValidateTenantIngressAnnotations() error {
+	messages := []string{}
+
+	for i := range m.Services {
+		name := m.Services[i].Name
+
+		for _, a := range m.Services[i].IngressAnnotations {
+			key := strings.TrimSpace(a.Key)
+
+			if len(validation.IsQualifiedName(strings.ToLower(key))) > 0 {
+				messages = append(messages, fmt.Sprintf("service %s: ingressAnnotations key %q is not a valid annotation key", name, a.Key))
+				continue
+			}
+
+			if tenantDeniedIngressAnnotation.MatchString(strings.ToLower(key)) {
+				messages = append(messages, fmt.Sprintf("service %s: ingress annotation %s is not supported on this rack", name, key))
+			}
+		}
+	}
+
+	if len(messages) > 0 {
+		return fmt.Errorf("validation errors:\n%s", strings.Join(messages, "\n"))
+	}
+
+	return nil
 }

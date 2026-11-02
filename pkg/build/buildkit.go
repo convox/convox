@@ -55,6 +55,12 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		return err
 	}
 
+	if os.Getenv("CONVOX_TID") != "" {
+		if err := m.ValidateTenantIngressAnnotations(); err != nil {
+			return err
+		}
+	}
+
 	type build struct {
 		Build manifest.ServiceBuild
 		Image string
