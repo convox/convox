@@ -1,7 +1,9 @@
 package k8s
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -318,4 +320,21 @@ func TestStateLogStorageTenantScoping(t *testing.T) {
 	// a bare tid+app concatenation would collide these two
 	s.Add("ab", "12web", "collide")
 	require.Empty(t, s.Get("ab12", "web"))
+}
+
+func TestPatchSecretObjectLogOmitsData(t *testing.T) {
+	cur := mkStateSecret("app1", "cert-abc", nil, map[string][]byte{"tls.key": []byte("old-key")})
+	p := newTestAwsProvider(cur)
+
+	var buf bytes.Buffer
+	p.logger = logger.NewWriter("ns=test", &buf)
+
+	mod := cur.DeepCopy()
+	mod.Data["tls.key"] = []byte("new-private-key")
+
+	_, err := p.PatchSecretObject(context.Background(), cur, mod, am.PatchOptions{})
+	require.NoError(t, err)
+
+	require.Contains(t, buf.String(), "Patching Secret app1/cert-abc.")
+	require.NotContains(t, buf.String(), base64.StdEncoding.EncodeToString([]byte("new-private-key")))
 }
