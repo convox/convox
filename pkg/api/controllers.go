@@ -192,7 +192,7 @@ func (s *Server) AppLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if _, err := io.Copy(c, v); err != nil {
+	if err := copyLogs(c, v); err != nil {
 		return err
 	}
 
@@ -832,7 +832,7 @@ func (s *Server) BuildLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if _, err := io.Copy(c, v); err != nil {
+	if err := copyLogs(c, v); err != nil {
 		return err
 	}
 
@@ -1436,7 +1436,7 @@ func (s *Server) ProcessLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if _, err := io.Copy(c, v); err != nil {
+	if err := copyLogs(c, v); err != nil {
 		return err
 	}
 
@@ -1981,7 +1981,7 @@ func (s *Server) ServiceLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if _, err := io.Copy(c, v); err != nil {
+	if err := copyLogs(c, v); err != nil {
 		return err
 	}
 
@@ -2182,7 +2182,7 @@ func (s *Server) SystemLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if _, err := io.Copy(c, v); err != nil {
+	if err := copyLogs(c, v); err != nil {
 		return err
 	}
 

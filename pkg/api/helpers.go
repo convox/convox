@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -34,4 +35,37 @@ func contextFrom(c *stdapi.Context) context.Context {
 		ctx = context.WithValue(ctx, structs.ConvoxJwtUserCtxKey, v)
 	}
 	return ctx
+}
+
+// copyLogs stops the stream when the client hangs up. After the stream ends it
+// keeps reading until then: closing with unread input resets the connection.
+func copyLogs(c *stdapi.Context, r io.ReadCloser) error {
+	ws := c.Websocket()
+	gone := make(chan struct{})
+
+	go func() {
+		defer ws.Close()
+
+		ws.SetPingHandler(func(string) error { return nil })
+
+		for {
+			if _, _, err := ws.NextReader(); err != nil {
+				close(gone)
+				r.Close()
+				return
+			}
+		}
+	}()
+
+	_, err := io.Copy(c, r)
+
+	select {
+	case <-gone:
+		return nil
+	default:
+	}
+
+	_ = ws.NetConn().SetReadDeadline(time.Now().Add(5 * time.Minute))
+
+	return err
 }
