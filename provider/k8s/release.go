@@ -170,6 +170,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			return errors.WithStack(err)
 		}
 
+		if p.FeatureGates[options.FeatureGateTid] && id != a.Release {
+			if err := m.ValidateTenantIngressAnnotations(); err != nil {
+				return structs.ErrBadRequest("%s", err)
+			}
+		}
+
 		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
 
 		if a.Release != "" && a.Release != id {
