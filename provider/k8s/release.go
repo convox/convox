@@ -1040,6 +1040,9 @@ func parseWhitelistCIDRs(whitelist string) []string {
 
 func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service) ([]byte, error) {
 	certSecret, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(p.ctx, s.Certificate.Id, am.GetOptions{})
+	if p.FeatureGates[options.FeatureGateTid] && (kerr.IsNotFound(err) || (err == nil && !isConvoxCertificate(certSecret))) {
+		return nil, structs.ErrBadRequest("certificate %s not found", s.Certificate.Id)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1065,6 +1068,14 @@ func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service)
 	}
 
 	return SerializeK8sObjToYaml(secretObj)
+}
+
+func isConvoxCertificate(s *v1.Secret) bool {
+	if s.Type != v1.SecretTypeTLS || s.Labels["system"] != "convox" {
+		return false
+	}
+
+	return s.Labels["type"] == "certificate" || s.Labels["type"] == "letsencrypt-certificate"
 }
 
 func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment, r manifest.Resource) ([]byte, error) {
