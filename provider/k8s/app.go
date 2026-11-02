@@ -54,8 +54,18 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		ns.ObjectMeta.Labels["tid"] = p.ContextTID()
 	}
 
+	if p.PodSecurityStandard != "" {
+		ns.Labels["pod-security.kubernetes.io/"+p.PodSecurityMode] = p.PodSecurityStandard
+	}
+
 	if _, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{}); err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if p.PodImdsBlockEnabled {
+		if err := p.ensureImdsBlockPolicy(context.TODO(), ns.Name); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	a := &structs.App{
@@ -441,7 +451,7 @@ func (p *Provider) ensureBuildNamespace(app string) error {
 
 	_, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{})
 	if err == nil {
-		return nil
+		return p.syncBuildImdsBlock(name)
 	}
 
 	if !ae.IsAlreadyExists(err) {
@@ -460,7 +470,7 @@ func (p *Provider) ensureBuildNamespace(app string) error {
 		return errors.WithStack(fmt.Errorf("build namespace %q collides with an existing namespace; rename the app", name))
 	}
 
-	return nil
+	return p.syncBuildImdsBlock(name)
 }
 
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
