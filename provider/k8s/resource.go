@@ -463,9 +463,7 @@ func resourceImportMysql(rr *structs.Resource, r io.Reader) error {
 
 	cmd.Stdin = r
 
-	data, err := cmd.CombinedOutput()
-	fmt.Printf("string(data): %+v\n", string(data))
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 
@@ -477,9 +475,7 @@ func resourceImportPostgres(rr *structs.Resource, r io.Reader) error {
 
 	cmd.Stdin = r
 
-	data, err := cmd.CombinedOutput()
-	fmt.Printf("string(data): %+v\n", string(data))
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 

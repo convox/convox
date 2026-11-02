@@ -356,7 +356,7 @@ func (p *Provider) PatchSecretObject(ctx context.Context, cur, mod *corev1.Secre
 	if len(patch) == 0 || string(patch) == "{}" {
 		return cur, nil
 	}
-	p.logger.Logf("Patching Secret %s/%s with %s.", cur.Namespace, cur.Name, string(patch))
+	p.logger.Logf("Patching Secret %s/%s.", cur.Namespace, cur.Name)
 	return p.Cluster.CoreV1().Secrets(cur.Namespace).Patch(ctx, cur.Name, types.StrategicMergePatchType, patch, opts)
 }
 
