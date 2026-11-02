@@ -2,18 +2,24 @@ package k8s_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestEnsureBuildNamespaceUnlabeled(t *testing.T) {
@@ -197,6 +203,152 @@ func TestAppCreatePodSecurity(t *testing.T) {
 
 				_, err := p.AppCreate("app1", structs.AppCreateOptions{})
 				require.NoError(t, err)
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+				require.NoError(t, err)
+				if tc.absent {
+					for k := range ns.Labels {
+						assert.NotContains(t, k, "pod-security.kubernetes.io")
+					}
+				} else {
+					assert.Equal(t, tc.standard, ns.Labels["pod-security.kubernetes.io/"+tc.mode])
+				}
+			})
+		})
+	}
+}
+
+func TestEnsureBuildNamespaceImdsBlock(t *testing.T) {
+	cases := []struct {
+		name     string
+		tid      bool
+		param    bool
+		pss      bool
+		existing bool
+		policy   bool
+		want     bool
+	}{
+		{name: "tid-new-namespace", tid: true, param: true, want: true},
+		{name: "tid-existing-namespace", tid: true, param: true, existing: true, want: true},
+		{name: "tid-param-off-removes", tid: true, existing: true, policy: true, want: false},
+		{name: "no-tid-pss-enforce", param: true, pss: true, want: false},
+		{name: "no-tid-param-off-leaves", existing: true, policy: true, want: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.FeatureGates = map[string]bool{options.FeatureGateTid: tc.tid}
+				p.PodImdsBlockEnabled = tc.param
+				if tc.pss {
+					p.PodSecurityStandard = "baseline"
+					p.PodSecurityMode = "enforce"
+				}
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+
+				if tc.existing {
+					_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack1-build-app1", Labels: map[string]string{"name": "app1", "type": "build"}}}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+				if tc.policy {
+					_, err := kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Create(context.TODO(), &networkingv1.NetworkPolicy{ObjectMeta: am.ObjectMeta{Name: "convox-imds-block"}}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+				require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+
+				_, err := kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+				if tc.want {
+					require.NoError(t, err)
+				} else {
+					require.True(t, ae.IsNotFound(err))
+				}
+			})
+		})
+	}
+}
+
+func TestEnsureBuildNamespaceCollisionNoImdsBlock(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+		p.PodImdsBlockEnabled = true
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack1-build-app1", Labels: map[string]string{"type": "app"}}}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.Error(t, p.EnsureBuildNamespaceForTest("app1"))
+
+		_, err = kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+		require.True(t, ae.IsNotFound(err))
+	})
+}
+
+func TestEnsureBuildNamespaceImdsBlockCreateError(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+		p.PodImdsBlockEnabled = true
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		kk.PrependReactor("create", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("boom")
+		})
+
+		require.ErrorContains(t, p.EnsureBuildNamespaceForTest("app1"), "boom")
+	})
+}
+
+func TestEnsureBuildNamespaceImdsBlockRemoveErrorContinues(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		kk.PrependReactor("delete", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("boom")
+		})
+
+		require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+	})
+}
+
+func TestAppCreateImdsBlock(t *testing.T) {
+	cases := []struct {
+		name  string
+		param bool
+	}{
+		{name: "on", param: true},
+		{name: "off", param: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodImdsBlockEnabled = tc.param
+
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once()
+				aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Times(3)
+
+				_, err := p.AppCreate("app1", structs.AppCreateOptions{})
+				require.NoError(t, err)
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				_, err = kk.NetworkingV1().NetworkPolicies("rack1-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+				if tc.param {
+					require.NoError(t, err)
+				} else {
+					require.True(t, ae.IsNotFound(err))
+				}
 			})
 		})
 	}
