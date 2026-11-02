@@ -68,7 +68,7 @@ func Delete(data []byte, args ...string) error {
 func ApplyLabels(data []byte, labels string) ([]byte, error) {
 	ls := parseLabels(labels)
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := atom.SplitDocuments(data)
 
 	for i := range parts {
 		dp, err := applyLabels(parts[i], ls)

@@ -32,7 +32,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: {{ coalesce (index .Parameters "storage") "10" }}Gi
+      storage: {{ yamlScalar (printf "%sGi" (coalesce (index .Parameters "storage") "10")) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -73,7 +73,7 @@ spec:
       {{ end }}
       containers:
       - name: mariadb
-        image: {{ if not .Image }}mariadb:{{ coalesce (index .Parameters "version") "10.6.0" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ yamlScalar (coalesce .Image (printf "mariadb:%s" (coalesce (index .Parameters "version") "10.6.0"))) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3306
@@ -89,17 +89,17 @@ spec:
         resources:
           limits:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
           requests:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
       volumes:
       - name: data

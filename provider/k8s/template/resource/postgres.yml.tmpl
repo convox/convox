@@ -32,7 +32,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: {{ coalesce (index .Parameters "storage") "10" }}Gi
+      storage: {{ yamlScalar (printf "%sGi" (coalesce (index .Parameters "storage") "10")) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -74,7 +74,7 @@ spec:
       {{ end }}
       containers:
       - name: postgres
-        image: {{ if not .Image }}postgres:{{ coalesce (index .Parameters "version") "10.5" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ yamlScalar (coalesce .Image (printf "postgres:%s" (coalesce (index .Parameters "version") "10.5"))) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
@@ -93,17 +93,17 @@ spec:
         resources:
           limits:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
           requests:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
       volumes:
       - name: data

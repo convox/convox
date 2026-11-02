@@ -54,24 +54,24 @@ spec:
       {{ end }}
       containers:
       - name: redis
-        image: {{ if not .Image }}redis:{{ coalesce (index .Parameters "version") "4.0.10" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ yamlScalar (coalesce .Image (printf "redis:%s" (coalesce (index .Parameters "version") "4.0.10"))) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
         resources:
           limits:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
           requests:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
 ---
 apiVersion: v1

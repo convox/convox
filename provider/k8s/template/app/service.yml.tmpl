@@ -7,20 +7,20 @@ metadata:
     type: env
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 type: Opaque
 data:
   {{ range keyValue .Environment }}
-  {{.Key}}: {{ safe (base64 .Value) }}
+  {{ yamlScalar .Key }}: {{ safe (base64 .Value) }}
   {{ end }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
-    {{- if ne (len .Annotations) 0 }}
-    {{- yamlMarshal .Annotations | nindent 4 }}
+    {{- range $k, $v := .Annotations }}
+    {{ yamlQuote $k }}: {{ yamlQuote $v }}
     {{- end }}
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
@@ -28,7 +28,7 @@ metadata:
     service: {{.Service.Name}}
     type: serviceaccount
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 ---
 apiVersion: apps/v1
@@ -47,7 +47,7 @@ metadata:
     type: service
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   selector:
@@ -58,7 +58,7 @@ spec:
       service: {{.Service.Name}}
   {{ if .Service.Stateful }}
   serviceName: {{.Service.Name}}-headless
-  podManagementPolicy: {{ coalesce .Service.PodManagementPolicy "OrderedReady" }}
+  podManagementPolicy: {{ yamlScalar (coalesce .Service.PodManagementPolicy "OrderedReady") }}
   replicas: {{.Replicas}}
   updateStrategy:
     type: RollingUpdate
@@ -81,8 +81,8 @@ spec:
         {{ if .Service.Agent.Enabled }}
         scheduler.alpha.kubernetes.io/critical-pod: ""
         {{ end }}
-        {{- if ne (len .Annotations) 0 }}
-        {{- yamlMarshal .Annotations | nindent 8 }}
+        {{- range $k, $v := .Annotations }}
+        {{ yamlQuote $k }}: {{ yamlQuote $v }}
         {{- end }}
       labels:
         system: convox
@@ -93,7 +93,7 @@ spec:
         release: {{.Release.Id}}
         type: service
         {{ range keyValue .Service.Labels }}
-        {{.Key}}: "{{.Value}}"
+        {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
         {{ end }}
     spec:
       {{ with .Service.SecurityContext.FsGroup }}
@@ -152,10 +152,10 @@ spec:
             nodeSelectorTerms:
             - matchExpressions:
               {{ range keyValue .Service.NodeSelectorLabels }}
-              - key: {{ .Key }}
+              - key: {{ yamlScalar .Key }}
                 operator: In
                 values:
-                - {{ .Value }}
+                - {{ yamlScalar .Value }}
               {{ end }}
           {{ end }}
           {{ if .Service.NodeAffinityLabels }}
@@ -164,10 +164,10 @@ spec:
           - weight: {{ .Weight }}
             preference:
               matchExpressions:
-              - key: {{ .Label }}
+              - key: {{ yamlScalar .Label }}
                 operator: In
                 values:
-                - {{ .Value }}
+                - {{ yamlScalar .Value }}
           {{ end }}
           {{ end }}
         {{ end }}
@@ -202,7 +202,7 @@ spec:
         {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
         - key: "dedicated-node"
           operator: "Equal"
-          value: "{{.Value}}"
+          value: {{ yamlQuote .Value }}
           effect: "NoSchedule"
         {{ end }}
         {{ end }}
@@ -243,7 +243,7 @@ spec:
       - name: docker-hub-authentication
       {{ end }}
       {{ range .ImagePullSecretNames }}
-      - name: {{ . }}
+      - name: {{ yamlScalar . }}
       {{ end }}
       {{ if .RegistryAuth }}
       - name: convox-registry-authentication
@@ -255,7 +255,7 @@ spec:
       {{if .Service.InitContainer }}
       initContainers:
       - name: init
-        image: {{ coalesce .Service.InitContainer.Image (image .App .Service .Release) }}
+        image: {{ yamlScalar (coalesce .Service.InitContainer.Image (image .App .Service .Release)) }}
         {{ with .Service.InitContainer.Command }}
         args:
         {{ range shellsplit . }}
@@ -266,7 +266,7 @@ spec:
         - name: INIT_CONTAINER
           value: "true"
         {{ range $.Resources }}
-        - name: "{{.Env}}"
+        - name: {{ yamlQuote .Env }}
           valueFrom:
             configMapKeyRef:
               name: resource-{{ k8sname .Name }}
@@ -279,15 +279,15 @@ spec:
         {{ range .Service.InitContainer.VolumeOptions }}
         {{ with .EmptyDir }}
         - name: ed-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .AwsEfs }}
         - name: efs-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .AzureFiles }}
         - name: azurefiles-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .PersistentVolumeClaim }}
         - name: pvc-{{ .Id }}
@@ -296,8 +296,8 @@ spec:
         {{ end }}
         {{ range .Service.InitContainer.ConfigMounts }}
         - name: cfg-{{ .Id }}
-          mountPath: "{{ pathJoin .Dir .Filename }}"
-          subPath: "{{ .Filename }}"
+          mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+          subPath: {{ yamlQuote .Filename }}
         {{ end }}
       {{ end }}
       containers:
@@ -314,7 +314,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         {{ range $.Resources }}
-        - name: "{{.Env}}"
+        - name: {{ yamlQuote .Env }}
           valueFrom:
             configMapKeyRef:
               name: resource-{{ k8sname .Name }}
@@ -349,12 +349,12 @@ spec:
         startupProbe:
           {{ if not (eq $.Service.StartupProbe.Path "")}}
           httpGet:
-            path: "{{$.Service.StartupProbe.Path}}"
+            path: {{ yamlQuote $.Service.StartupProbe.Path }}
             port: {{.}}
           {{ end }}
           {{ if not (eq $.Service.StartupProbe.TcpSocketPort "")}}
           tcpSocket:
-            port: {{$.Service.StartupProbe.TcpSocketPort}}
+            port: {{ yamlScalar $.Service.StartupProbe.TcpSocketPort }}
           {{ end }}
           initialDelaySeconds: {{$.Service.StartupProbe.Grace}}
           periodSeconds: {{$.Service.StartupProbe.Interval}}
@@ -365,10 +365,10 @@ spec:
         {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Liveness.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
-            path: "{{$.Service.Liveness.Path}}"
+            path: {{ yamlQuote $.Service.Liveness.Path }}
             port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
             {{ if not (eq $.Service.Liveness.Port.Scheme "") }}
-            scheme: "{{ upper $.Service.Liveness.Port.Scheme }}"
+            scheme: {{ yamlQuote (upper $.Service.Liveness.Port.Scheme) }}
             {{ end }}
           initialDelaySeconds: {{$.Service.Liveness.Grace}}
           periodSeconds: {{$.Service.Liveness.Interval}}
@@ -379,9 +379,9 @@ spec:
         {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not $.Service.Health.Disable) }}
         readinessProbe:
           httpGet:
-            path: "{{$.Service.Health.Path}}"
+            path: {{ yamlQuote $.Service.Health.Path }}
             port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
-            scheme: "{{ upper (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme) }}"
+            scheme: {{ yamlQuote (upper (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme)) }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}
@@ -392,7 +392,7 @@ spec:
           grpc:
             port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
             {{ if not (eq $.Service.Health.GrpcService "") }}
-            service: "{{$.Service.Health.GrpcService}}"
+            service: {{ yamlQuote $.Service.Health.GrpcService }}
             {{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
@@ -403,7 +403,7 @@ spec:
           grpc:
             port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
             {{ if not (eq $.Service.Liveness.GrpcService "") }}
-            service: "{{$.Service.Liveness.GrpcService}}"
+            service: {{ yamlQuote $.Service.Liveness.GrpcService }}
             {{ end }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
@@ -420,7 +420,7 @@ spec:
         {{ range .Service.Ports }}
           - name: port-{{.Port}}
             containerPort: {{.Port}}
-            protocol: {{ upper .Protocol }}
+            protocol: {{ yamlScalar (upper .Protocol) }}
             {{ if $.Service.Agent.Enabled }}
             hostPort: {{.Port}}
             {{ end }}
@@ -473,19 +473,19 @@ spec:
             {{ with .Service.SecurityContext.Capabilities.Drop }}
             drop:
             {{ range . }}
-              - {{ . }}
+              - {{ yamlScalar . }}
             {{ end }}
             {{ end }}
             {{ with .Service.SecurityContext.Capabilities.Add }}
             add:
             {{ range . }}
-              - {{ . }}
+              - {{ yamlScalar . }}
             {{ end }}
             {{ end }}
           {{ end }}
           {{ with .Service.SecurityContext.SeccompProfile }}
           seccompProfile:
-            type: {{ . }}
+            type: {{ yamlScalar . }}
           {{ end }}
         {{ end }}
         volumeMounts:
@@ -493,25 +493,25 @@ spec:
           mountPath: /etc/convox
         {{ range .Service.Volumes }}
         - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-          mountPath: "{{ volumeTo . }}"
+          mountPath: {{ yamlQuote (volumeTo .) }}
         {{ end }}
         {{ range .Service.ConfigMounts }}
         - name: cfg-{{ .Id }}
-          mountPath: "{{ pathJoin .Dir .Filename }}"
-          subPath: "{{ .Filename }}"
+          mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+          subPath: {{ yamlQuote .Filename }}
         {{ end }}
         {{ range .Service.VolumeOptions }}
         {{ with .EmptyDir }}
         - name: ed-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .AwsEfs }}
         - name: efs-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .AzureFiles }}
         - name: azurefiles-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
         {{ end }}
         {{ with .PersistentVolumeClaim }}
         - name: pvc-{{ .Id }}
@@ -541,10 +541,10 @@ spec:
         {{ if or .Medium .SizeLimit }}
         emptyDir:
           {{ if .Medium }}
-          medium: {{ .Medium }}
+          medium: {{ yamlScalar .Medium }}
           {{ end }}
           {{ if .SizeLimit }}
-          sizeLimit: {{ .SizeLimit }}
+          sizeLimit: {{ yamlScalar .SizeLimit }}
           {{ end }}
         {{ else }}
         emptyDir: {}
@@ -567,7 +567,7 @@ spec:
           secretName: cfg-{{ .Id }}
           items:
             - key: app.json
-              path: {{ .Filename }}
+              path: {{ yamlScalar .Filename }}
       {{ end }}
   {{ if .Service.Stateful }}
   volumeClaimTemplates:
@@ -577,14 +577,14 @@ spec:
       name: pvc-{{ .Id }}
     spec:
       accessModes:
-      - {{ coalesce .AccessMode "ReadWriteOnce" }}
+      - {{ yamlScalar (coalesce .AccessMode "ReadWriteOnce") }}
       {{ with .StorageClass }}
       storageClassName: {{ json . }}
       {{ end }}
       volumeMode: Filesystem
       resources:
         requests:
-          storage: {{ .Size }}
+          storage: {{ yamlScalar .Size }}
   {{ end }}
   {{ end }}
   {{ end }}
@@ -599,7 +599,7 @@ metadata:
   labels:
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   scaleTargetRef:
@@ -629,11 +629,11 @@ spec:
   - type: External
     external:
       metric:
-        name: {{ .Name }}
+        name: {{ yamlScalar .Name }}
         selector:
           matchLabels:
             {{ range $k, $v := .MatchLabels }}
-            {{ $k }}: {{ $v }}
+            {{ yamlScalar $k }}: {{ yamlScalar $v }}
             {{ end }}
       target:
         {{ if .AverageValue }}
@@ -658,7 +658,7 @@ metadata:
     rack: {{.Rack}}
     system: convox
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   clusterIP: None
@@ -682,7 +682,7 @@ metadata:
     rack: {{.Rack}}
     system: convox
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   type: ClusterIP
@@ -699,7 +699,7 @@ spec:
     {{ range .Service.Ports }}
     - name: port-{{.Port}}
       port: {{.Port}}
-      protocol: {{ upper .Protocol }}
+      protocol: {{ yamlScalar (upper .Protocol) }}
       targetPort: {{.Port}}
     {{ end }}
 {{ end }}

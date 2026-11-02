@@ -515,7 +515,7 @@ func (c *Client) applyTemplate(namespace string, data []byte, filter string) ([]
 
 	labels := parseLabels(filter)
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := SplitDocuments(data)
 	re := regexp.MustCompile(`^Kind: (extensions\/v1beta|networking\.k8s\.io\/v1beta1)`) // skipcq: GO-C4007
 
 	serverSide := [][]byte{}
@@ -677,7 +677,7 @@ func isRecoverableApplyError(out []byte) bool {
 func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 	cs := []aa.AtomCondition{}
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := SplitDocuments(data)
 
 	for _, p := range parts {
 		var o struct {
@@ -837,4 +837,31 @@ func ParseAtomReleaseCache(cache string) (atomVerion string, relese string) {
 		return parts[0], parts[1]
 	}
 	return "", ""
+}
+
+// SplitDocuments splits a release stream at its document boundaries: a line that is exactly "---", or "---" ending a line that starts with "#".
+func SplitDocuments(data []byte) [][]byte {
+	parts := [][]byte{}
+	start, lineStart := 0, 0
+
+	for i := range data {
+		if data[i] != '\n' {
+			continue
+		}
+
+		line := data[lineStart : i+1]
+
+		switch {
+		case bytes.Equal(line, []byte("---\n")):
+			parts = append(parts, data[start:lineStart])
+			start = i + 1
+		case len(line) > 4 && line[0] == '#' && bytes.HasSuffix(line, []byte("---\n")):
+			parts = append(parts, data[start:i-3])
+			start = i + 1
+		}
+
+		lineStart = i + 1
+	}
+
+	return append(parts, data[start:])
 }
