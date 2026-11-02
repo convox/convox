@@ -61,8 +61,8 @@ locals {
   node_types             = compact([for t in split(",", random_id.node_group.keepers.node_type) : trimspace(t)])
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
 
-  # changing or removing this rolls each node group without a custom AMI onto the newest EKS AMI
-  node_refresh_tags = { NodeRefresh = "20261031" }
+  cluster_node_group_names = [for i in range(var.high_availability ? 3 : 1) : "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[i].availability_zone : data.aws_subnet.public_subnet_details[i].availability_zone}${length(local.node_types) > 1 ? "m" : ""}-${i}${random_id.node_group.hex}"]
+  build_node_group_names   = [for i in range(var.build_node_enabled ? 1 : 0) : "${var.name}-build-${var.private ? data.aws_subnet.private_subnet_details[i].availability_zone : data.aws_subnet.public_subnet_details[i].availability_zone}-${i}${random_id.build_node_group[0].hex}"]
 }
 
 data "aws_availability_zones" "available" {
@@ -170,11 +170,12 @@ resource "aws_eks_node_group" "cluster" {
   )
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = length(local.node_types) > 1 ? local.node_types : null
-  node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}${length(local.node_types) > 1 ? "m" : ""}-${count.index}${random_id.node_group.hex}"
+  node_group_name = local.cluster_node_group_names[count.index]
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
+  release_version = lookup(local.node_ami_release, local.cluster_node_group_names[count.index], null)
 
   labels = var.karpenter_auth_mode ? { "convox.io/system-node" = "true" } : {}
 
@@ -251,11 +252,12 @@ resource "aws_eks_node_group" "cluster-build" {
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
   instance_types  = compact([for t in split(",", random_id.build_node_group[0].keepers.node_type) : trimspace(t)])
-  node_group_name = "${var.name}-build-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
+  node_group_name = local.build_node_group_names[count.index]
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
+  release_version = lookup(local.node_ami_release, local.build_node_group_names[count.index], null)
 
   labels = {
     "convox-build" : "true"
@@ -560,7 +562,7 @@ resource "aws_launch_template" "cluster" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = merge(local.tags, local.node_refresh_tags)
+      tags          = local.tags
     }
   }
 
@@ -602,7 +604,7 @@ resource "aws_launch_template" "cluster-build" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = merge(local.tags, local.node_refresh_tags)
+      tags          = local.tags
     }
   }
 

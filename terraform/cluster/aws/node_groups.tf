@@ -119,6 +119,9 @@ data "aws_ec2_instance_type" "additional_node_type" {
 }
 
 locals {
+  additional_node_group_names       = { for k, r in random_id.additional_node_groups : k => "${var.name}-additional-${k}-${r.hex}" }
+  build_additional_node_group_names = { for k, r in random_id.build_node_additional : k => "${var.name}-build-additional-${k}-${r.hex}" }
+
   additional_node_ami_type = {
     for key, inst in data.aws_ec2_instance_type.additional_node_type : key => (
       (substr(inst.instance_type, 0, 1) == "g" || substr(inst.instance_type, 0, 1) == "p" ||
@@ -140,11 +143,12 @@ resource "aws_eks_node_group" "cluster_additional" {
   ami_type        = random_id.additional_node_groups[each.key].keepers.ami_id != null ? "CUSTOM" : local.additional_node_ami_type[each.key]
   capacity_type   = random_id.additional_node_groups[each.key].keepers.node_capacity_type
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-additional-${each.key}-${random_id.additional_node_groups[each.key].hex}"
+  node_group_name = local.additional_node_group_names[each.key]
   node_role_arn   = random_id.additional_node_groups[each.key].keepers.role_arn
   subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
   tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
   version         = random_id.additional_node_groups[each.key].keepers.ami_id != null ? null : var.k8s_version
+  release_version = random_id.additional_node_groups[each.key].keepers.ami_id != null ? null : lookup(local.node_ami_release, local.additional_node_group_names[each.key], null)
 
   launch_template {
     id      = aws_launch_template.cluster_additional[each.key].id
@@ -221,7 +225,7 @@ resource "aws_launch_template" "cluster_additional" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = merge(each.value.tags == null ? local.tags : merge(local.tags, each.value.tags), random_id.additional_node_groups[each.key].keepers.ami_id == null ? local.node_refresh_tags : {})
+      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
     }
   }
 
@@ -306,11 +310,12 @@ resource "aws_eks_node_group" "build_additional" {
   ami_type        = random_id.build_node_additional[each.key].keepers.ami_id != null ? "CUSTOM" : local.build_node_ami_type[each.key]
   capacity_type   = random_id.build_node_additional[each.key].keepers.capacity_type != null ? random_id.build_node_additional[each.key].keepers.capacity_type : "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-build-additional-${each.key}-${random_id.build_node_additional[each.key].hex}"
+  node_group_name = local.build_additional_node_group_names[each.key]
   node_role_arn   = random_id.build_node_additional[each.key].keepers.role_arn
   subnet_ids      = var.private ? local.private_subnets_ids : local.public_subnets_ids
   tags            = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
   version         = random_id.build_node_additional[each.key].keepers.ami_id != null ? null : var.k8s_version
+  release_version = random_id.build_node_additional[each.key].keepers.ami_id != null ? null : lookup(local.node_ami_release, local.build_additional_node_group_names[each.key], null)
 
   labels = {
     "convox-build" : "true"
@@ -393,7 +398,7 @@ resource "aws_launch_template" "build_additional" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = merge(each.value.tags == null ? local.tags : merge(local.tags, each.value.tags), random_id.build_node_additional[each.key].keepers.ami_id == null ? local.node_refresh_tags : {})
+      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
     }
   }
 
