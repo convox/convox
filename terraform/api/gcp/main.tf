@@ -66,6 +66,7 @@ module "k8s" {
     CERT_MANAGER       = "true"
     ELASTIC_URL        = module.elasticsearch.url
     ELASTICSEARCH_DISK = var.elasticsearch_disk
+    FILESTORE_ENABLED  = tostring(var.filestore_enable)
     KEY                = google_service_account_key.api.private_key
     PROJECT            = data.google_client_config.current.project,
     PROVIDER           = "gcp"

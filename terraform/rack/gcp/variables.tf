@@ -21,6 +21,11 @@ variable "elasticsearch_disk" {
   default = "5Gi"
 }
 
+variable "filestore_enable" {
+  type    = bool
+  default = false
+}
+
 variable "fluentd_memory" {
   type    = string
   default = "200Mi"

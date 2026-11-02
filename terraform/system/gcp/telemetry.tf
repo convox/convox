@@ -12,6 +12,7 @@ locals {
     docker_hub_password             = var.docker_hub_password
     docker_hub_username             = var.docker_hub_username
     elasticsearch_disk              = var.elasticsearch_disk
+    filestore_enable                = var.filestore_enable
     fluentd_memory                  = var.fluentd_memory
     gpu_observability_chart_version = var.gpu_observability_chart_version
     gpu_observability_enable        = var.gpu_observability_enable
@@ -45,6 +46,7 @@ locals {
     docker_hub_password             = ""
     docker_hub_username             = ""
     elasticsearch_disk              = "5Gi"
+    filestore_enable                = "false"
     fluentd_memory                  = "200Mi"
     gpu_observability_chart_version = "4.8.4"
     gpu_observability_enable        = "false"

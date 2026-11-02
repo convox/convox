@@ -50,3 +50,7 @@ output "network" {
 output "nodes_account" {
   value = google_service_account.nodes.email
 }
+
+output "filestore_enable" {
+  value = var.filestore_enable
+}
