@@ -54,11 +54,11 @@ cloud.google.com/go/storage/internal/apiv2/storagepb
 # github.com/Azure/azure-pipeline-go v0.2.2
 ## explicit
 github.com/Azure/azure-pipeline-go/pipeline
-# github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v67.3.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/profiles/latest/storage/mgmt/storage
 github.com/Azure/azure-sdk-for-go/services/operationalinsights/v1/operationalinsights
-github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage
+github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2022-05-01/storage
 github.com/Azure/azure-sdk-for-go/version
 # github.com/Azure/azure-storage-file-go v0.6.0
 ## explicit; go 1.13
@@ -322,8 +322,8 @@ github.com/beorn7/perks/quantile
 # github.com/blang/semver/v4 v4.0.0
 ## explicit; go 1.14
 github.com/blang/semver/v4
-# github.com/cert-manager/cert-manager v1.10.2
-## explicit; go 1.19
+# github.com/cert-manager/cert-manager v1.12.14
+## explicit; go 1.21
 github.com/cert-manager/cert-manager/internal/apis/acme
 github.com/cert-manager/cert-manager/internal/apis/acme/v1alpha2
 github.com/cert-manager/cert-manager/internal/apis/acme/v1alpha3
@@ -527,9 +527,13 @@ github.com/go-jose/go-jose/v4/json
 ## explicit; go 1.18
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
+github.com/go-logr/logr/slogr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
+# github.com/go-logr/zapr v1.3.0
+## explicit; go 1.18
+github.com/go-logr/zapr
 # github.com/go-openapi/jsonpointer v0.21.1
 ## explicit; go 1.20
 github.com/go-openapi/jsonpointer
@@ -664,7 +668,7 @@ github.com/inconshreveable/go-update/internal/osext
 # github.com/inconshreveable/mousetrap v1.1.0
 ## explicit; go 1.18
 github.com/inconshreveable/mousetrap
-# github.com/jmespath/go-jmespath v0.4.0
+# github.com/jmespath/go-jmespath v0.4.1-0.20220621161143-b0104c826a24
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
 # github.com/josharian/intern v1.0.0
@@ -928,6 +932,20 @@ go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
 go.opentelemetry.io/otel/trace/internal/telemetry
 go.opentelemetry.io/otel/trace/noop
+# go.uber.org/multierr v1.11.0
+## explicit; go 1.19
+go.uber.org/multierr
+# go.uber.org/zap v1.27.0
+## explicit; go 1.19
+go.uber.org/zap
+go.uber.org/zap/buffer
+go.uber.org/zap/internal
+go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/internal/color
+go.uber.org/zap/internal/exit
+go.uber.org/zap/internal/pool
+go.uber.org/zap/internal/stacktrace
+go.uber.org/zap/zapcore
 # go.yaml.in/yaml/v2 v2.4.3
 ## explicit; go 1.15
 go.yaml.in/yaml/v2
@@ -1844,6 +1862,18 @@ k8s.io/code-generator/pkg/util
 k8s.io/code-generator/third_party/forked/golang/reflect
 # k8s.io/component-base v0.35.6
 ## explicit; go 1.25.0
+k8s.io/component-base/cli/flag
+k8s.io/component-base/featuregate
+k8s.io/component-base/logs
+k8s.io/component-base/logs/api/v1
+k8s.io/component-base/logs/internal/setverbositylevel
+k8s.io/component-base/logs/json
+k8s.io/component-base/logs/json/register
+k8s.io/component-base/logs/klogflags
+k8s.io/component-base/metrics
+k8s.io/component-base/metrics/legacyregistry
+k8s.io/component-base/metrics/prometheus/feature
+k8s.io/component-base/metrics/prometheusextension
 k8s.io/component-base/version
 # k8s.io/component-helpers v0.35.6
 ## explicit; go 1.25.0
@@ -1868,9 +1898,11 @@ k8s.io/klog/v2/internal/dbg
 k8s.io/klog/v2/internal/serialize
 k8s.io/klog/v2/internal/severity
 k8s.io/klog/v2/internal/sloghandler
+k8s.io/klog/v2/internal/verbosity
 k8s.io/klog/v2/klogr
-# k8s.io/kube-aggregator v0.25.2
-## explicit; go 1.19
+k8s.io/klog/v2/textlogger
+# k8s.io/kube-aggregator v0.29.7
+## explicit; go 1.21
 k8s.io/kube-aggregator/pkg/apis/apiregistration
 k8s.io/kube-aggregator/pkg/apis/apiregistration/v1
 # k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912
@@ -1999,9 +2031,9 @@ sigs.k8s.io/controller-runtime/pkg/webhook/admission
 sigs.k8s.io/controller-runtime/pkg/webhook/admission/metrics
 sigs.k8s.io/controller-runtime/pkg/webhook/conversion
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
-# sigs.k8s.io/gateway-api v0.5.0
-## explicit; go 1.18
-sigs.k8s.io/gateway-api/apis/v1alpha2
+# sigs.k8s.io/gateway-api v0.7.0
+## explicit; go 1.19
+sigs.k8s.io/gateway-api/apis/v1beta1
 # sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730
 ## explicit; go 1.23
 sigs.k8s.io/json
