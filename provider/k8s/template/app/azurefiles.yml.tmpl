@@ -9,15 +9,15 @@ metadata:
   labels:
     system: convox
     {{ range keyValue $.Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   accessModes:
-    - {{.AccessMode}}
+    - {{ yamlScalar .AccessMode }}
   storageClassName: azurefile-csi-nfs
   volumeMode: Filesystem
   resources:
     requests:
-      storage: {{ if .ShareSize }}{{.ShareSize}}{{ else }}100Gi{{ end }}
+      storage: {{ if .ShareSize }}{{ yamlScalar .ShareSize }}{{ else }}100Gi{{ end }}
 {{ end }}
 {{ end }}

@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -158,6 +159,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
 		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if err := validateReleaseIdentifiers(m); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -627,6 +632,67 @@ func balancerScheme(annotations map[string]string) string {
 	}
 
 	return "internet-facing"
+}
+
+var releaseIdentifier = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+func validateReleaseIdentifiers(m *manifest.Manifest) error {
+	type field struct{ name, value string }
+
+	fs := []field{}
+
+	volumes := func(vos []manifest.VolumeOption, cms manifest.ConfigMounts) {
+		for _, vo := range vos {
+			if vo.EmptyDir != nil {
+				fs = append(fs, field{"volume id", vo.EmptyDir.Id})
+			}
+			if vo.AwsEfs != nil {
+				fs = append(fs, field{"volume id", vo.AwsEfs.Id})
+			}
+			if vo.AzureFiles != nil {
+				fs = append(fs, field{"volume id", vo.AzureFiles.Id})
+			}
+			if vo.PersistentVolumeClaim != nil {
+				fs = append(fs, field{"volume id", vo.PersistentVolumeClaim.Id})
+			}
+		}
+		for _, cm := range cms {
+			fs = append(fs, field{"config mount id", cm.Id})
+		}
+	}
+
+	for i := range m.Services {
+		s := &m.Services[i]
+		fs = append(fs, field{"service name", s.Name})
+		volumes(s.VolumeOptions, s.ConfigMounts)
+		if s.InitContainer != nil {
+			volumes(s.InitContainer.VolumeOptions, s.InitContainer.ConfigMounts)
+		}
+	}
+
+	for i := range m.Timers {
+		fs = append(fs, field{"timer name", m.Timers[i].Name})
+	}
+
+	for i := range m.Balancers {
+		fs = append(fs, field{"balancer name", m.Balancers[i].Name})
+	}
+
+	for i := range m.Resources {
+		r := &m.Resources[i]
+		fs = append(fs, field{"resource name", r.Name})
+		if r.IsRds() || r.IsElastiCache() {
+			fs = append(fs, field{"resource type", r.Type})
+		}
+	}
+
+	for _, f := range fs {
+		if f.value != "" && !releaseIdentifier.MatchString(f.value) {
+			return structs.ErrBadRequest("invalid %s: %q", f.name, f.value)
+		}
+	}
+
+	return nil
 }
 
 func (p *Provider) validateBalancerOwnership(app string, bs manifest.Balancers) error {

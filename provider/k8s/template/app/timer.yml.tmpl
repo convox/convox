@@ -4,8 +4,8 @@ kind: ServiceAccount
 metadata:
   annotations:
     convox.com/type: timer
-    {{- if ne (len .Annotations) 0 }}
-    {{- yamlMarshal .Annotations | nindent 4 }}
+    {{- range $k, $v := .Annotations }}
+    {{ yamlQuote $k }}: {{ yamlQuote $v }}
     {{- end }}
   namespace: {{.Namespace}}
   name: timer-{{.Timer.Name}}
@@ -19,8 +19,8 @@ metadata:
   namespace: {{.Namespace}}
   name: timer-{{.Timer.Name}}
 spec:
-  schedule: "{{.Timer.Schedule}}"
-  concurrencyPolicy: {{.Timer.Concurrency}}
+  schedule: {{ yamlQuote .Timer.Schedule }}
+  concurrencyPolicy: {{ yamlScalar .Timer.Concurrency }}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
@@ -36,8 +36,8 @@ spec:
         metadata:
           annotations:
             convox.com/type: timer
-            {{- if ne (len .Annotations) 0 }}
-            {{- yamlMarshal .Annotations | nindent 12 }}
+            {{- range $k, $v := .Annotations }}
+            {{ yamlQuote $k }}: {{ yamlQuote $v }}
             {{- end }}
           labels:
             system: convox
@@ -48,7 +48,7 @@ spec:
             service: {{.Service.Name}}
             type: timer
             {{ range keyValue .Service.Labels }}
-            {{.Key}}: "{{.Value}}"
+            {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
             {{ end }}
         spec:
           {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
@@ -59,10 +59,10 @@ spec:
                 nodeSelectorTerms:
                 - matchExpressions:
                   {{ range keyValue .Service.NodeSelectorLabels }}
-                  - key: {{ .Key }}
+                  - key: {{ yamlScalar .Key }}
                     operator: In
                     values:
-                    - {{ .Value }}
+                    - {{ yamlScalar .Value }}
                   {{ end }}
               {{ end }}
               {{ if .Service.NodeAffinityLabels }}
@@ -71,10 +71,10 @@ spec:
               - weight: {{ .Weight }}
                 preference:
                   matchExpressions:
-                  - key: {{ .Label }}
+                  - key: {{ yamlScalar .Label }}
                     operator: In
                     values:
-                    - {{ .Value }}
+                    - {{ yamlScalar .Value }}
               {{ end }}
               {{ end }}
           {{ end }}
@@ -92,7 +92,7 @@ spec:
             {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
             - key: "dedicated-node"
               operator: "Equal"
-              value: "{{.Value}}"
+              value: {{ yamlQuote .Value }}
               effect: "NoSchedule"
             {{ end }}
             {{ end }}
@@ -133,7 +133,7 @@ spec:
           - name: docker-hub-authentication
           {{ end }}
           {{ range .ImagePullSecretNames }}
-          - name: {{ . }}
+          - name: {{ yamlScalar . }}
           {{ end }}
           {{ if .RegistryAuth }}
           - name: convox-registry-authentication
@@ -161,7 +161,7 @@ spec:
                   fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
             {{ end }}
             {{ range $.Resources }}
-            - name: "{{.Env}}"
+            - name: {{ yamlQuote .Env }}
               valueFrom:
                 configMapKeyRef:
                   name: resource-{{ k8sname .Name }}
@@ -220,19 +220,19 @@ spec:
                 {{ with .Service.SecurityContext.Capabilities.Drop }}
                 drop:
                 {{ range . }}
-                  - {{ . }}
+                  - {{ yamlScalar . }}
                 {{ end }}
                 {{ end }}
                 {{ with .Service.SecurityContext.Capabilities.Add }}
                 add:
                 {{ range . }}
-                  - {{ . }}
+                  - {{ yamlScalar . }}
                 {{ end }}
                 {{ end }}
               {{ end }}
               {{ with .Service.SecurityContext.SeccompProfile }}
               seccompProfile:
-                type: {{ . }}
+                type: {{ yamlScalar . }}
               {{ end }}
             {{ end }}
             volumeMounts:
@@ -240,21 +240,21 @@ spec:
               mountPath: /etc/convox
             {{ range .Service.Volumes }}
             - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-              mountPath: "{{ volumeTo . }}"
+              mountPath: {{ yamlQuote (volumeTo .) }}
             {{ end }}
             {{ range .Service.ConfigMounts }}
             - name: cfg-{{ .Id }}
-              mountPath: "{{ pathJoin .Dir .Filename }}"
-              subPath: "{{ .Filename }}"
+              mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+              subPath: {{ yamlQuote .Filename }}
             {{ end }}
             {{ range .Service.VolumeOptions }}
             {{ with .EmptyDir }}
             - name: ed-{{ .Id }}
-              mountPath: {{ .MountPath }}
+              mountPath: {{ yamlScalar .MountPath }}
             {{ end }}
             {{ with .AwsEfs }}
             - name: efs-{{ .Id }}
-              mountPath: {{ .MountPath }}
+              mountPath: {{ yamlScalar .MountPath }}
             {{ end }}
             {{ end }}
           volumes:
@@ -278,10 +278,10 @@ spec:
             {{ if or .Medium .SizeLimit }}
             emptyDir:
               {{ if .Medium }}
-              medium: {{ .Medium }}
+              medium: {{ yamlScalar .Medium }}
               {{ end }}
               {{ if .SizeLimit }}
-              sizeLimit: {{ .SizeLimit }}
+              sizeLimit: {{ yamlScalar .SizeLimit }}
               {{ end }}
             {{ else }}
             emptyDir: {}
@@ -299,5 +299,5 @@ spec:
               secretName: cfg-{{ .Id }}
               items:
                 - key: app.json
-                  path: {{ .Filename }}
+                  path: {{ yamlScalar .Filename }}
           {{ end }}

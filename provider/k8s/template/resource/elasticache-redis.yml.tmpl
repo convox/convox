@@ -11,10 +11,10 @@ metadata:
     resource: {{.Name}}
     provisioner: elasticache
 data:
-  URL: "redis{{- if .Password -}} s {{- end -}}://{{- if .Password -}} {{.Password}}@ {{- end -}}{{.Host}}:{{.Port}}/0"
+  URL: {{ if .Password }}{{ yamlQuote (printf "rediss://%s@%s:%s/0" .Password .Host .Port) }}{{ else }}{{ yamlQuote (printf "redis://%s:%s/0" .Host .Port) }}{{ end }}
   USER: ""
-  PASS: "{{.Password}}"
-  HOST: "{{.Host}}"
-  PORT: "{{.Port}}"
+  PASS: {{ yamlQuote .Password }}
+  HOST: {{ yamlQuote .Host }}
+  PORT: {{ yamlQuote .Port }}
   NAME: ""
 ---
