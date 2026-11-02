@@ -23,9 +23,9 @@ spec:
        {{ with .Route53 }}
        route53:
          {{ with .HostedZoneID }}
-         hostedZoneID: {{ . }}
+         hostedZoneID: {{ yamlScalar . }}
          {{ end }}
-         region: {{ .Region }}
+         region: {{ yamlScalar .Region }}
          {{ with .Role }}
          role: {{ safe . }}
          {{ end }}

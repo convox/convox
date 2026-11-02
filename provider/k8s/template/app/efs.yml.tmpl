@@ -16,7 +16,7 @@ spec:
     storage: 500Gi
   csi:
     driver: efs.csi.aws.com
-    volumeHandle: {{ .VolumeHandle }}
+    volumeHandle: {{ yamlScalar .VolumeHandle }}
   mountOptions:
   - noresvport
   - rsize=1048576
@@ -25,7 +25,7 @@ spec:
   - timeo=600
   - retrans=2
   persistentVolumeReclaimPolicy: Delete
-  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc-base {{end}}
+  storageClassName: {{ if .StorageClass }} {{ yamlScalar .StorageClass }} {{ else }} efs-sc-base {{end}}
   volumeMode: Filesystem
 ---
 apiVersion: v1
@@ -36,12 +36,12 @@ metadata:
   labels:
     system: convox
     {{ range keyValue $.Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   accessModes:
-    - {{.AccessMode}}
-  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc-base {{end}}
+    - {{ yamlScalar .AccessMode }}
+  storageClassName: {{ if .StorageClass }} {{ yamlScalar .StorageClass }} {{ else }} efs-sc-base {{end}}
   volumeMode: Filesystem
   volumeName: efs-pv-{{$.App.Name}}-{{$.Service.Name}}-{{.Id}}
   resources:
@@ -57,12 +57,12 @@ metadata:
   labels:
     system: convox
     {{ range keyValue $.Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   accessModes:
-    - {{.AccessMode}}
-  storageClassName: {{ if .StorageClass }} {{.StorageClass}} {{ else }} efs-sc {{end}}
+    - {{ yamlScalar .AccessMode }}
+  storageClassName: {{ if .StorageClass }} {{ yamlScalar .StorageClass }} {{ else }} efs-sc {{end}}
   resources:
     requests:
       storage: 1Mi # efs driver ignores this value

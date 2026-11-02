@@ -1,0 +1,222 @@
+environment:
+  - PORT=3000
+  - ON=1
+  - FOO_BAR=x
+  - DB_URL=postgres://u:p@h:5432/db?sslmode=require&region=us-east-1&para=2&amp;x=1
+labels:
+  team: platform
+  version: "1.0"
+  enabled: "true"
+  on: "x"
+resources:
+  db:
+    type: postgres
+    options:
+      version: "13.4"
+      storage: "20"
+      cpu: "250"
+      mem: "512"
+  cache:
+    type: redis
+    image: redis@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  db2:
+    type: mysql
+balancers:
+  edgebal:
+    service: web
+    annotations:
+      - service.beta.kubernetes.io/aws-load-balancer-attributes=load_balancing.cross_zone.enabled=true
+      - service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags=Team=platform,Env=prod
+      - 'x.example.com/json={"a": "b", "c": [1, 2]}'
+      - 'x.example.com/quoted=a "quoted" value'
+      - "x.example.com/amp=a&b&amp;c"
+      - "true=yes"
+    ports:
+      3000: 3000
+      5000:
+        protocol: UDP
+        port: 5000
+    whitelist:
+      - 10.0.0.0/8
+      - 192.168.0.0/16
+services:
+  web:
+    build: .
+    port: 3000
+    ports:
+      - 5000/udp
+    command: sh -c "echo a && echo b | grep -v c; curl 'http://x/?a=1&para=2&amp;b=&lt;c'"
+    annotations:
+      - "key1=value1"
+      - "key = value"
+      - "true=on"
+      - "yes=1"
+      - "1=one"
+      - "null=nothing"
+      - "~=tilde"
+      - "0x1F=hex"
+      - "1.5=float"
+      - "n=no"
+      - "foo bar=space key"
+      - "empty="
+      - "spaces=  padded  "
+      - "colon.key=a: b"
+      - "hashval=a #b"
+      - "unicode=héllo wörld"
+      - "nel=a\u0085b"
+      - "ls=a\u2028b"
+      - "bs=C:\\path\\to"
+      - "json={\"k\": \"v\"}"
+      - "tab=a\tb"
+      - "lead=  x"
+      - "keep=line one\nline two\n\n"
+      - "nl=\n"
+    ingressAnnotations:
+      - "nginx.ingress.kubernetes.io/configuration-snippet=more_set_headers \"X-A: b\";\nmore_set_headers \"X-C: d\";\n"
+      - "x.example.com/amp=a&b"
+      - "x.example.com/ent=&amp;"
+      - "x.example.com/para=?a=1&para=2"
+      - "x.example.com/region=?a=1&region=us"
+      - "x.example.com/copy=&copy;"
+      - "x.example.com/att=AT&T"
+      - "key = value"
+      - "true=on"
+      - "yes=1"
+      - "x.example.com/bs=a\\b"
+      - "x.example.com/quote=say \"hi\""
+    domain:
+      - a.example.com
+      - "*.example.com"
+    whitelist: 10.0.0.0/8,192.168.0.0/16
+    certificate:
+      duration: 2160h0m0s
+    health:
+      path: /health?x=1&y=2
+      grace: 5
+    liveness:
+      path: /live?a=b&c=d
+    startupProbe:
+      tcpSocketPort: "3000"
+    lifecycle:
+      preStop: sleep 5 && echo "bye"
+      postStart: echo '&para;' "&amp;"
+    labels:
+      app.kubernetes.io/name: web
+      tier: "1"
+      flag: "yes"
+      on: "off"
+    nodeSelectorLabels:
+      convox.io/label: "true"
+      kubernetes.io/arch: arm64
+      example.com/num: "123"
+      example.com/null: "~"
+      example.com/space: "a b"
+      example.com/hash: "x#y"
+      example.com/pct: "100%"
+      example.com/uni: "é"
+      example.com/block: "gpu\n"
+      example.com/booln: "true\n"
+    nodeAffinityLabels:
+      - label: node.kubernetes.io/instance-type
+        value: m5.large
+        weight: 10
+      - label: example.com/bool
+        value: "yes"
+        weight: 1
+    securityContext:
+      capabilities:
+        add:
+          - NET_ADMIN
+        drop:
+          - ALL
+      seccompProfile: RuntimeDefault
+    volumeOptions:
+      - emptyDir:
+          id: cache
+          mountPath: "/var/cache dir"
+          medium: Memory
+          sizeLimit: 1Gi
+      - emptyDir:
+          id: tmp2
+          mountPath: /tmp/a#b
+      - emptyDir:
+          id: scratch
+          mountPath: "/scratch\n"
+    configMounts:
+      - id: cfg1
+        dir: "/etc/my app"
+        filename: "app config.json"
+      - id: cfg2
+        dir: /etc/app
+        filename: settings.yml
+    initContainer:
+      image: busybox@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      command: sh -c "echo init && touch /var/cache\ dir/x"
+      volumeOptions:
+        - emptyDir:
+            id: cache
+            mountPath: "/var/cache dir"
+      configMounts:
+        - id: cfg1
+          dir: "/etc/my app"
+          filename: "app config.json"
+    environment:
+      - SVC_ONLY=1
+      - "Y=yes"
+    resources:
+      - db
+      - cache:CACHE_URL
+    scale:
+      count: 1-3
+      cpu: 256
+      memory: 512
+      targets:
+        cpu: 50
+        external:
+          - name: sqs.queue/messages
+            matchLabels:
+              queue: "my queue"
+              yes: "true"
+            averageValue: 30
+    timeout: 120
+    sticky: true
+  db:
+    stateful: true
+    podManagementPolicy: Parallel
+    port: 5432
+    volumeOptions:
+      - persistentVolumeClaim:
+          id: data
+          mountPath: "/var/lib/data dir"
+          size: 10Gi
+          storageClass: gp3
+          accessMode: ReadWriteOnce
+  agent:
+    agent: true
+    ports:
+      - 8125/udp
+  single:
+    singleton: true
+    port: 4000
+    internalRouter: true
+    health:
+      path: "/h"
+    port:
+      scheme: https
+      port: 4000
+timers:
+  cleanup:
+    command: bin/cleanup --since "1 day" && echo '&amp;'
+    schedule: "*/5 * * * *"
+    service: web
+    concurrency: forbid
+    annotations:
+      - "true=on"
+      - "key = value"
+      - "null=x"
+      - "keep=a\n\n"
+      - "nl=\n"
+  daily:
+    command: bin/daily
+    schedule: "0 3 * * ? *"
+    service: web

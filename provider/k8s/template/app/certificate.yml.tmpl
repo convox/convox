@@ -24,7 +24,7 @@ spec:
   - digital signature
   - key encipherment
   {{- if .CertDuration}}
-  duration: {{.CertDuration}}
+  duration: {{ yamlScalar .CertDuration }}
   {{- end}}
   dnsNames:
   - {{ safe .Host }}
@@ -56,7 +56,7 @@ spec:
   - digital signature
   - key encipherment
   {{- if .CertDuration}}
-  duration: {{.CertDuration}}
+  duration: {{ yamlScalar .CertDuration }}
   {{- end}}
   dnsNames:
   {{- range .Service.Domains}}

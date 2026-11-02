@@ -9,13 +9,13 @@ metadata:
     system: convox
     type: service
     {{- range keyValue .Service.Labels}}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{- end}}
   annotations:
     convox.com/idles: "{{.Idles}}"
-    convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
+    convox.com/backend-protocol: {{ yamlQuote .Service.Port.Scheme }}
     {{- range $k, $v := .Annotations}}
-    {{$k}}: {{ safe $v }}
+    {{ yamlScalar $k }}: {{ safe $v }}
     {{- end}}
 spec:
   ingressClassName: {{.IngressClassName}}
@@ -23,7 +23,7 @@ spec:
     fqdn: {{ safe .Host }}
     {{- if or .Service.Certificate.Id .ConvoxDomainTLS}}
     tls:
-      secretName: {{if .Service.Certificate.Id}}{{.Service.Certificate.Id}}{{else}}cert-{{.Service.Name}}{{end}}
+      secretName: {{if .Service.Certificate.Id}}{{ yamlScalar .Service.Certificate.Id }}{{else}}cert-{{.Service.Name}}{{end}}
     {{- end}}
     {{- if .WhitelistCIDRs}}
     ipAllowPolicy:
@@ -78,7 +78,7 @@ spec:
     fqdn: {{ safe $d }}
     {{- if or $.Service.Certificate.Id $.ConvoxDomainTLS}}
     tls:
-      secretName: {{if $.Service.Certificate.Id}}{{$.Service.Certificate.Id}}{{else}}cert-{{$.Service.Name}}-domains{{end}}
+      secretName: {{if $.Service.Certificate.Id}}{{ yamlScalar $.Service.Certificate.Id }}{{else}}cert-{{$.Service.Name}}-domains{{end}}
     {{- end}}
     {{- if $.WhitelistCIDRs}}
     ipAllowPolicy:

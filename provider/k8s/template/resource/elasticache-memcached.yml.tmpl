@@ -11,10 +11,10 @@ metadata:
     resource: {{.Name}}
     provisioner: elasticache
 data:
-  URL: "memcached://{{.Host}}:{{.Port}}"
+  URL: {{ yamlQuote (printf "memcached://%s:%s" .Host .Port) }}
   USER: ""
   PASS: ""
-  HOST: "{{.Host}}"
-  PORT: "{{.Port}}"
+  HOST: {{ yamlQuote .Host }}
+  PORT: {{ yamlQuote .Port }}
   NAME: ""
 ---

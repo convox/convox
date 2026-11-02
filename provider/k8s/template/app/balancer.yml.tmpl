@@ -19,17 +19,17 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-type: nlb
     {{ end }}
     {{ range keyValue .Annotations }}
-    {{.Key}}: "{{ quoteEscape .Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
     {{ if and .Balancer.AwsLoadBalancerController .TcpUdp }}
     service.beta.kubernetes.io/aws-load-balancer-enable-tcp-udp-listener: "true"
     {{ end }}
   labels:
     balancer: {{.Balancer.Name}}
-    service: {{.Balancer.Service}}
+    service: {{ yamlScalar .Balancer.Service }}
     type: balancer
     {{ range keyValue .Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   type: LoadBalancer
@@ -37,16 +37,16 @@ spec:
   {{ with .Balancer.Whitelist }}
   loadBalancerSourceRanges:
   {{ range . }}
-  - "{{.}}"
+  - {{ yamlQuote . }}
   {{ end }}
   {{ end }}
   selector:
-    service: {{.Balancer.Service}}
+    service: {{ yamlScalar .Balancer.Service }}
     type: service
   ports:
     {{ range .Ports }}
     - name: "{{.Name}}"
       port: {{.Source}}
-      protocol: {{.Protocol}}
+      protocol: {{ yamlScalar .Protocol }}
       targetPort: {{.Target}}
     {{ end }}

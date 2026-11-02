@@ -54,24 +54,24 @@ spec:
       {{ end }}
       containers:
       - name: memcached
-        image: {{ if not .Image }}memcached:{{ coalesce (index .Parameters "version") "1.4.34" }}{{ else }}{{ .Image }}{{ end }}
+        image: {{ yamlScalar (coalesce .Image (printf "memcached:%s" (coalesce (index .Parameters "version") "1.4.34"))) }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 11211
         resources:
           limits:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
           requests:
             {{ if (index .Parameters "cpu") }}
-            cpu: "{{.Parameters.cpu}}m"
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
             {{ end }}
             {{ if (index .Parameters "mem") }}
-            memory: "{{.Parameters.mem}}Mi"
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
             {{ end }}
 ---
 apiVersion: v1
