@@ -815,6 +815,48 @@ func TestBuildPathOutsideSource(t *testing.T) {
 	})
 }
 
+func TestBuildTenantIngressAnnotations(t *testing.T) {
+	tests := []struct {
+		Name string
+		Tid  string
+		Err  string
+	}{
+		{Name: "Tenant", Tid: "ab12", Err: "validation errors:\nservice web: ingress annotation nginx.ingress.kubernetes.io/configuration-snippet is not supported on this rack"},
+		{Name: "NoTenant", Tid: "", Err: "Dockerfile: no such file or directory"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			home := t.TempDir()
+			require.NoError(t, os.Mkdir(filepath.Join(home, ".docker"), 0700))
+			t.Setenv("HOME", home)
+			t.Setenv("CONVOX_TID", test.Tid)
+
+			src := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(src, "convox.yml"), []byte("services:\n  web:\n    port: 5000\n    ingressAnnotations:\n      - nginx.ingress.kubernetes.io/configuration-snippet=return 418;\n"), 0600))
+
+			opts := build.Options{
+				App:    "app1",
+				Auth:   "{}",
+				Id:     "build1",
+				Rack:   "rack1",
+				Source: "dir://" + src,
+				Push:   "registry.test.com",
+			}
+
+			testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
+				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()
+				p.On("BuildUpdate", "app1", "build1", mock.Anything).Return(fxBuildStarted(), nil)
+				p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{}, nil)
+				p.On("EventSend", "build:create", mock.Anything).Return(nil)
+				p.On("ObjectStore", "app1", "build/build1/logs", mock.Anything, structs.ObjectStoreOptions{}).Return(fxObject(), nil)
+
+				require.ErrorContains(t, b.Execute(), test.Err)
+			})
+		})
+	}
+}
+
 func TestBuildCacheProvider(t *testing.T) {
 	registry := []string{
 		"--export-cache", "mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=registry.test.com:web.buildcache",
