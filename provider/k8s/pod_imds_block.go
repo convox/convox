@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/convox/convox/pkg/options"
 	"github.com/pkg/errors"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -75,6 +76,22 @@ func (p *Provider) removeImdsBlockPolicy(ctx context.Context, namespace string) 
 	err := p.Cluster.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, imdsBlockPolicyName, am.DeleteOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) syncBuildImdsBlock(namespace string) error {
+	if !p.FeatureGates[options.FeatureGateTid] {
+		return nil
+	}
+
+	if p.PodImdsBlockEnabled {
+		return errors.WithStack(p.ensureImdsBlockPolicy(context.TODO(), namespace))
+	}
+
+	if err := p.removeImdsBlockPolicy(context.TODO(), namespace); err != nil {
+		fmt.Printf("ns=pod_imds_block at=warn kind=build rack=%s namespace=%s err=%q\n", p.Name, namespace, err)
 	}
 
 	return nil
