@@ -260,8 +260,7 @@ func (c *Client) apply(a *aa.Atom) error {
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%s.%s", ua.Namespace, ua.Name))))[0:60]
 
 	if out, err := c.applyTemplate(a.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
-		fmt.Println(string(av.Spec.Template))
-		fmt.Println(string(out))
+		fmt.Println(string(redactObjects(out)))
 		return errors.WithStack(err)
 	}
 
@@ -661,6 +660,19 @@ func servicePortsPaired(ports []ac.ServicePort) bool {
 	}
 
 	return false
+}
+
+// kubectl prints the objects it failed to patch as one-line JSON, Secret data included
+func redactObjects(out []byte) []byte {
+	lines := bytes.Split(out, []byte("\n"))
+
+	for i := range lines {
+		if l := bytes.TrimSpace(lines[i]); bytes.HasPrefix(l, []byte("{")) || bytes.HasPrefix(l, []byte("&{")) {
+			lines[i] = []byte("[redacted]")
+		}
+	}
+
+	return bytes.Join(lines, []byte("\n"))
 }
 
 // isRecoverableApplyError reports whether a failed kubectl apply can be retried with --force

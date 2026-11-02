@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -789,4 +791,50 @@ func TestApplyTemplateServiceLookupFailureStopsTheApply(t *testing.T) {
 	_, err := c.applyTemplate("ns1", testStream(testBalancerDocument(testPairPorts)), "atom=abc")
 	require.Error(t, err)
 	assert.Empty(t, *calls)
+}
+
+func TestApplyFailureLogOmitsSecretData(t *testing.T) {
+	const value = "cmFjay1wYXNzd29yZA=="
+
+	stubKubectl(t, []string{"core/v1/Secret"}, func(_ int, _ []byte, _ ...string) ([]byte, error) {
+		return []byte("Error from server (Invalid): error when applying patch:\n" +
+			`{"data":{"RACK_URL":"` + value + `"},"metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"data\":{\"RACK_URL\":\"` + value + `\"}}"}}}` + "\n" +
+			"to:\n" +
+			"&{map[data:map[RACK_URL:" + value + "]]}\n" +
+			`Resource: "/v1, Resource=secrets", GroupVersionKind: "/v1, Kind=Secret"` + "\n" +
+			`Name: "env-web", Namespace: "ns1"` + "\n" +
+			`for: "STDIN": error when patching "STDIN": Secret "env-web" is invalid` + "\n"), fmt.Errorf("exit status 1")
+	})
+
+	testClient(t, func(c *Client) {
+		c.k8s = fake.NewSimpleClientset()
+
+		_, err := c.Atom.AtomV1().AtomVersions("ns1").Create(context.Background(), &aa.AtomVersion{
+			ObjectMeta: am.ObjectMeta{Namespace: "ns1", Name: "v1"},
+			Spec:       aa.AtomVersionSpec{Template: []byte("apiVersion: v1\nkind: Secret\nmetadata:\n  namespace: ns1\n  name: env-web\ntype: Opaque\ndata:\n  RACK_URL: " + value + "\n")},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		a, err := c.Atom.AtomV1().Atoms("ns1").Create(context.Background(), &aa.Atom{
+			ObjectMeta: am.ObjectMeta{Namespace: "ns1", Name: "app"},
+			Spec:       aa.AtomSpec{CurrentVersion: "v1"},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		stdout := os.Stdout
+		os.Stdout = w
+		err = c.apply(a)
+		os.Stdout = stdout
+		require.NoError(t, w.Close())
+		require.Error(t, err)
+
+		logged, err := io.ReadAll(r)
+		require.NoError(t, err)
+
+		require.NotContains(t, string(logged), value)
+		require.Contains(t, string(logged), "[redacted]")
+		require.Contains(t, string(logged), `for: "STDIN": error when patching "STDIN": Secret "env-web" is invalid`)
+	})
 }
