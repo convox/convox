@@ -221,7 +221,7 @@ resource "aws_launch_template" "cluster_additional" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
+      tags          = merge(each.value.tags == null ? local.tags : merge(local.tags, each.value.tags), random_id.additional_node_groups[each.key].keepers.ami_id == null ? local.node_refresh_tags : {})
     }
   }
 
@@ -393,7 +393,7 @@ resource "aws_launch_template" "build_additional" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = each.value.tags == null ? local.tags : merge(local.tags, each.value.tags)
+      tags          = merge(each.value.tags == null ? local.tags : merge(local.tags, each.value.tags), random_id.build_node_additional[each.key].keepers.ami_id == null ? local.node_refresh_tags : {})
     }
   }
 
