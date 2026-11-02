@@ -60,6 +60,9 @@ locals {
   network_resource_count = var.high_availability ? 3 : 2
   node_types             = compact([for t in split(",", random_id.node_group.keepers.node_type) : trimspace(t)])
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+
+  # changing or removing this rolls each node group without a custom AMI onto the newest EKS AMI
+  node_refresh_tags = { NodeRefresh = "20261031" }
 }
 
 data "aws_availability_zones" "available" {
@@ -557,7 +560,7 @@ resource "aws_launch_template" "cluster" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = local.tags
+      tags          = merge(local.tags, local.node_refresh_tags)
     }
   }
 
@@ -599,7 +602,7 @@ resource "aws_launch_template" "cluster-build" {
     ))
     content {
       resource_type = tag_specifications.key
-      tags          = local.tags
+      tags          = merge(local.tags, local.node_refresh_tags)
     }
   }
 
