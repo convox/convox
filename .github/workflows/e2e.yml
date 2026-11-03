@@ -41,8 +41,6 @@ on:
         required: true
       GOOGLE_REGION:
         required: true
-      CI_DOCKERHUB_USERNAME:
-        required: true
       CI_DOCKERHUB_TOKEN:
         required: true
   workflow_dispatch:
@@ -144,12 +142,11 @@ jobs:
         timeout-minutes: 60
       - name: wait
         run: ci/wait_ready.sh
-        timeout-minutes: 25
+        timeout-minutes: 30
       - name: test
         run: ci/test.sh
         timeout-minutes: 60
         env:
-          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
@@ -202,7 +199,7 @@ jobs:
         timeout-minutes: 60
       - name: wait
         run: ci/wait_ready.sh
-        timeout-minutes: 25
+        timeout-minutes: 30
       - name: before version downgrade setup and test
         run: ci/before_additional_test.sh
         timeout-minutes: 30
@@ -218,7 +215,6 @@ jobs:
         run: ci/test.sh
         timeout-minutes: 60
         env:
-          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
@@ -273,7 +269,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: wait
         run: ci/wait_ready.sh
-        timeout-minutes: 25
+        timeout-minutes: 30
       - name: before version upgrade setup and test
         run: ci/before_additional_test.sh
         timeout-minutes: 30
@@ -287,7 +283,6 @@ jobs:
         run: ci/test.sh
         timeout-minutes: 60
         env:
-          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
@@ -340,7 +335,7 @@ jobs:
         timeout-minutes: 60
       - name: wait
         run: ci/wait_ready.sh
-        timeout-minutes: 25
+        timeout-minutes: 30
       - name: ssh keyroll
         run: ci/ssh_keyroll.sh
         timeout-minutes: 30
@@ -348,7 +343,6 @@ jobs:
         run: ci/test.sh
         timeout-minutes: 60
         env:
-          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh

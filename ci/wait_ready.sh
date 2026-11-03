@@ -3,6 +3,6 @@ set -ex -o pipefail
 
 . "$(dirname "$0")/lib.sh"
 
-sleep 120
+sleep 300
 
 wait_ready

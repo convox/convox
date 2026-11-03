@@ -15,7 +15,11 @@ root="$(cd $(dirname ${0:-})/..; pwd)"
 
 set -ex
 
-provider=$(convox api get /system | jq -r .provider)
+provider=${PROVIDER:-$(convox api get /system | jq -r .provider)}
+if [ -z "$provider" ] || [ "$provider" = "null" ]; then
+  echo "could not determine the rack provider" >&2
+  exit 1
+fi
 export provider
 
 # cli
@@ -29,19 +33,19 @@ convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
 # registries: the aws provider reads an ecr registry's credentials as an access key pair, so aws racks pull a private docker hub image instead
-if [ "$provider" = "aws" ]; then
-  registry=https://index.docker.io/v1/
-  registry_user=${CI_DOCKERHUB_USERNAME}
-  registry_password=${CI_DOCKERHUB_TOKEN}
-  registry_image=convox/ci-registry-test:1
-else
-  registry=${ECR_REGISTRY_HOST}
-  registry_user=AWS
-  registry_password=${ECR_REGISTRY_PASSWORD}
-  registry_image=${ECR_REGISTRY_HOST}/convox-ci/registry-test:1
-fi
 convox registries
 set +x
+if [ "$provider" = "aws" ]; then
+  registry=https://index.docker.io/v1/
+  registry_user=convox
+  registry_password=${CI_DOCKERHUB_TOKEN:?}
+  registry_image=convox/ci-registry-test:1
+else
+  registry=${ECR_REGISTRY_HOST:?}
+  registry_user=AWS
+  registry_password=${ECR_REGISTRY_PASSWORD:?}
+  registry_image=${ECR_REGISTRY_HOST}/convox-ci/registry-test:1
+fi
 convox registries add ${registry} ${registry_user} "${registry_password}"
 set -x
 convox registries | grep ${registry} | grep ${registry_user}

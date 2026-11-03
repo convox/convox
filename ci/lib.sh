@@ -60,9 +60,18 @@ registry_ready() {
   [ "$code" = "200" ] || [ "$code" = "401" ]
 }
 
+# three answers in a row: a fresh aws rack's api endpoint drops connections for a while after install
 wait_ready() {
-  local deadline=$((SECONDS + 1200)) system
-  until system=$(convox api get /system 2>/dev/null) && [ "$(jq -r .status <<<"$system")" = "running" ] && registry_ready "$system"; do
+  local deadline=$((SECONDS + 1200)) system ok=0
+  while true; do
+    if system=$(convox api get /system 2>/dev/null) && [ "$(jq -r .status <<<"$system")" = "running" ] && registry_ready "$system"; then
+      ok=$((ok + 1))
+    else
+      ok=0
+    fi
+    if [ "$ok" -ge 3 ]; then
+      return 0
+    fi
     if [ "$SECONDS" -ge "$deadline" ]; then
       echo "rack not ready after 20 minutes" >&2
       convox rack || true
