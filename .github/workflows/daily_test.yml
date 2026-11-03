@@ -66,12 +66,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: wait
         run: ci/wait_ready.sh
-        timeout-minutes: 25
+        timeout-minutes: 30
       - name: test
         run: ci/test.sh
         timeout-minutes: 60
         env:
-          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
           CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
