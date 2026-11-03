@@ -1,7 +1,9 @@
 #!/bin/bash
 
+. "$(dirname "$0")/../lib.sh"
+
 set -ex
 
 convox resources -a httpd | grep memcache
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd)
 convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd

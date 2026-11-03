@@ -7,6 +7,7 @@ permissions:
 jobs:
   telemetry-manifest-check:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -22,6 +23,7 @@ jobs:
 
   golangci-lint:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -41,10 +43,11 @@ jobs:
           # pinned: the action's "latest" can resolve to a go1.24-built v1 binary that rejects a
           # go 1.25 module. Bump this when go.mod's toolchain minor version exceeds the linter's build go.
           version: v2.12.2
-          args: --timeout 5m --new-from-rev=${{ github.event.pull_request.base.sha }}
+          args: --timeout 10m --new-from-rev=${{ github.event.pull_request.base.sha }}
 
   govulncheck:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - name: checkout
@@ -65,6 +68,7 @@ jobs:
 
   terraform-lint:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -73,6 +77,7 @@ jobs:
       - name: setup terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
+          terraform_version: 1.15.5
           terraform_wrapper: false
       - name: setup tflint
         uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
@@ -80,6 +85,8 @@ jobs:
           tflint_version: v0.65.0
       - name: init tflint
         run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: terraform validate
         continue-on-error: true
         run: |
@@ -96,6 +103,7 @@ jobs:
 
   terraform-fleet-floor:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -125,6 +133,7 @@ jobs:
 
   terraform-security:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -137,6 +146,7 @@ jobs:
 
   workflow-lint:
     runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
       - name: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0

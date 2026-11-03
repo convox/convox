@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +37,17 @@ type Options struct {
 	Regions    []string
 	MaxRetries int
 	BaseDelay  time.Duration
+	MinAge     time.Duration
 }
+
+// ciNameRe captures the creation time CI puts in every rack name: ci-YYYYMMDDHHMMSS<suffix>.
+var ciNameRe = regexp.MustCompile(`^ci-(\d{14})`)
+
+var (
+	minAge          = 8 * time.Hour
+	now             = time.Now
+	dependencyDelay = 30 * time.Second
+)
 
 // allowlistedVPCs are never deleted: they back the existing-vpc install test and must persist.
 var allowlistedVPCs = map[string]struct{}{
@@ -68,11 +79,36 @@ func DefaultOptions() Options {
 		}
 	}
 
+	age := 8 * time.Hour
+	if v := os.Getenv("MIN_AGE_HOURS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			age = time.Duration(n) * time.Hour
+		}
+	}
+
 	return Options{
 		Regions:    reg,
 		MaxRetries: retries,
 		BaseDelay:  delay,
+		MinAge:     age,
 	}
+}
+
+// isCIName reports whether s names a CI rack old enough to reap. A ci- name without a parsable
+// timestamp is reaped as before, so only racks that may still be under test are spared.
+func isCIName(s string) bool {
+	if !strings.HasPrefix(s, "ci-") {
+		return false
+	}
+	m := ciNameRe.FindStringSubmatch(s)
+	if m == nil {
+		return true
+	}
+	t, err := time.Parse("20060102150405", m[1])
+	if err != nil {
+		return true
+	}
+	return now().Sub(t) >= minAge
 }
 
 // isCITag reports whether the tags positively identify a convox CI resource: the Rack tag
@@ -80,13 +116,13 @@ func DefaultOptions() Options {
 func isCITag(tags []ec2types.Tag) bool {
 	for _, t := range tags {
 		k, v := aws.ToString(t.Key), aws.ToString(t.Value)
-		if k == "Rack" && strings.HasPrefix(v, "ci-") {
+		if k == "Rack" && isCIName(v) {
 			return true
 		}
-		if strings.HasPrefix(k, "kubernetes.io/cluster/ci-") {
+		if strings.HasPrefix(k, "kubernetes.io/cluster/") && isCIName(strings.TrimPrefix(k, "kubernetes.io/cluster/")) {
 			return true
 		}
-		if k == "cluster.k8s.amazonaws.com/name" && strings.HasPrefix(v, "ci-") {
+		if k == "cluster.k8s.amazonaws.com/name" && isCIName(v) {
 			return true
 		}
 	}
@@ -98,13 +134,13 @@ func isCITag(tags []ec2types.Tag) bool {
 func isCITagELBv2(tags []elbv2types.Tag) bool {
 	for _, t := range tags {
 		k, v := aws.ToString(t.Key), aws.ToString(t.Value)
-		if k == "Rack" && strings.HasPrefix(v, "ci-") {
+		if k == "Rack" && isCIName(v) {
 			return true
 		}
-		if k == "elbv2.k8s.aws/cluster" && strings.HasPrefix(v, "ci-") {
+		if k == "elbv2.k8s.aws/cluster" && isCIName(v) {
 			return true
 		}
-		if strings.HasPrefix(k, "kubernetes.io/cluster/ci-") {
+		if strings.HasPrefix(k, "kubernetes.io/cluster/") && isCIName(strings.TrimPrefix(k, "kubernetes.io/cluster/")) {
 			return true
 		}
 	}
@@ -160,6 +196,9 @@ func Run(ctx context.Context, opts Options) error {
 	}
 	if opts.BaseDelay <= 0 {
 		opts.BaseDelay = 2 * time.Second
+	}
+	if opts.MinAge > 0 {
+		minAge = opts.MinAge
 	}
 
 	rootCfg, err := config.LoadDefaultConfig(ctx)
@@ -252,14 +291,25 @@ func withRetry(ctx context.Context, maxRetries int, baseDelay time.Duration, f f
 			return nil
 		}
 
-		// Bail on non-retriable errors (4xx other than throttling).
+		// Every wrapped call is a delete, so a missing resource is already done. A dependency
+		// (an ENI still detaching from a VPC) clears on its own; other 4xx errors do not.
 		var apiErr smithy.APIError
-		if errors.As(err, &apiErr) && apiErr.ErrorCode() != "Throttling" {
-			return err
+		code := ""
+		if errors.As(err, &apiErr) {
+			code = apiErr.ErrorCode()
+			if strings.Contains(code, "NotFound") || code == "NoSuchEntity" {
+				return nil
+			}
+			if code != "Throttling" && code != "DependencyViolation" {
+				return err
+			}
 		}
 		delay := baseDelay * time.Duration(math.Pow(2, float64(attempt-1)))
 		if delay <= 0 || delay > 60*time.Second {
 			delay = 60 * time.Second
+		}
+		if code == "DependencyViolation" && delay < dependencyDelay {
+			delay = dependencyDelay
 		}
 		log.Printf("   retrying after error: %v (attempt %d/%d), sleeping %s", err, attempt, maxRetries, delay)
 
@@ -300,7 +350,7 @@ func deleteReadyStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	var targets []string
 	for _, s := range stacksOut.StackSummaries {
 		name := aws.ToString(s.StackName)
-		if strings.HasPrefix(name, "ci-") {
+		if isCIName(name) {
 			targets = append(targets, name)
 		}
 	}
@@ -349,7 +399,7 @@ func forceDeleteFailedStacks(ctx context.Context, cfn *cf.Client, o Options) {
 	var targets []string
 	for _, s := range stacksOut.StackSummaries {
 		name := aws.ToString(s.StackName)
-		if strings.HasPrefix(name, "ci-") {
+		if isCIName(name) {
 			targets = append(targets, name)
 		}
 	}
@@ -386,7 +436,7 @@ func deleteECR(ctx context.Context, ecrCl *ecr.Client, o Options) {
 	}
 	for _, repo := range reposOut.Repositories {
 		name := aws.ToString(repo.RepositoryName)
-		if !strings.HasPrefix(name, "ci-") && !strings.HasPrefix(name, "docker-hub-ci-") {
+		if !isCIName(strings.TrimPrefix(name, "docker-hub-")) {
 			continue
 		}
 		log.Printf("   deleting %s", name)
@@ -419,6 +469,9 @@ func deleteLogGroups(ctx context.Context, logs *cwlogs.Client, o Options) {
 			}
 			for _, lg := range page.LogGroups {
 				name := aws.ToString(lg.LogGroupName)
+				if !isCIName(strings.TrimPrefix(name, strings.TrimSuffix(prefix, "ci-"))) {
+					continue
+				}
 				log.Printf("   deleting %s", name)
 				if err := withRetry(ctx, o.MaxRetries, o.BaseDelay, func() error {
 					_, err := logs.DeleteLogGroup(ctx, &cwlogs.DeleteLogGroupInput{LogGroupName: aws.String(name)})
@@ -476,7 +529,7 @@ func scheduleKMSDeletion(ctx context.Context, kmsCl *kms.Client, o Options) {
 
 func kmsTagIsCI(tags []kmstypes.Tag) bool {
 	for _, t := range tags {
-		if aws.ToString(t.TagKey) == "Rack" && strings.HasPrefix(aws.ToString(t.TagValue), "ci-") {
+		if aws.ToString(t.TagKey) == "Rack" && isCIName(aws.ToString(t.TagValue)) {
 			return true
 		}
 	}
@@ -521,7 +574,7 @@ func deleteEFS(ctx context.Context, efsCl *efs.Client, o Options) {
 
 func efsTagIsCI(tags []efstypes.Tag) bool {
 	for _, t := range tags {
-		if aws.ToString(t.Key) == "Rack" && strings.HasPrefix(aws.ToString(t.Value), "ci-") {
+		if aws.ToString(t.Key) == "Rack" && isCIName(aws.ToString(t.Value)) {
 			return true
 		}
 	}
@@ -538,7 +591,7 @@ func deleteEKS(ctx context.Context, eksCl *eks.Client, o Options) {
 		return
 	}
 	for _, name := range clustersOut.Clusters {
-		if !strings.HasPrefix(name, "ci-") {
+		if !isCIName(name) {
 			continue
 		}
 		log.Printf("   cluster %s", name)
@@ -832,7 +885,7 @@ func deleteCIAMRoles(ctx context.Context, iamCl *iam.Client, o Options) {
 		}
 		for _, role := range page.Roles {
 			name := aws.ToString(role.RoleName)
-			if !strings.HasPrefix(name, "ci-") {
+			if !isCIName(name) {
 				continue
 			}
 			log.Printf("   deleting role %s", name)
@@ -901,7 +954,7 @@ func deleteOIDCProviders(ctx context.Context, iamCl *iam.Client, o Options) {
 
 func iamTagIsCI(tags []iamtypes.Tag) bool {
 	for _, t := range tags {
-		if aws.ToString(t.Key) == "Rack" && strings.HasPrefix(aws.ToString(t.Value), "ci-") {
+		if aws.ToString(t.Key) == "Rack" && isCIName(aws.ToString(t.Value)) {
 			return true
 		}
 	}

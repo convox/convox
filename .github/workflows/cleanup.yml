@@ -8,9 +8,13 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-cleanup-${{ github.workflow }}
+
 jobs:
   cleanup-aws:
     runs-on: ubuntu-22.04
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +50,7 @@ jobs:
           AWS_DEFAULT_REGION:    us-east-1
   cleanup-do:
     runs-on: ubuntu-22.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
     steps:

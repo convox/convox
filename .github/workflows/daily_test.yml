@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   test-clouds:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
@@ -50,15 +51,30 @@ jobs:
         run: ci/dependencies.sh
       - name: cli
         run: ci/cli.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: install last release
         run: ci/install_last_release.sh
+        timeout-minutes: 60
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: wait
-        run: sleep 300
+        run: ci/wait_ready.sh
+        timeout-minutes: 25
       - name: test
         run: ci/test.sh
+        timeout-minutes: 60
       - name: debug
         run: ci/debug.sh
         if: always()
+        timeout-minutes: 15
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
+        timeout-minutes: 240
