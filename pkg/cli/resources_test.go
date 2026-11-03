@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
-	"net"
 	"testing"
-	"time"
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
@@ -93,7 +90,7 @@ func TestResourcesProxy(t *testing.T) {
 			rwc.Close()
 		})
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -102,10 +99,7 @@ func TestResourcesProxy(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 
@@ -373,7 +367,7 @@ func TestRackResourcesProxy(t *testing.T) {
 			rwc.Close()
 		})
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -382,10 +376,7 @@ func TestRackResourcesProxy(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 

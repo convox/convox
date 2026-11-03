@@ -1,14 +1,8 @@
 #!/bin/bash
 
-function fetch {
-  fetch_once $1 && sleep 5 && fetch_once $1
-}
-
-function fetch_once {
-  curl -ks --connect-timeout 5 --max-time 3 --retry 100 --retry-max-time 600 --retry-connrefused $1
-}
-
 root="$(cd $(dirname ${0:-})/..; pwd)"
+
+. $root/ci/lib.sh
 
 set -ex
 
@@ -30,23 +24,23 @@ endpoint=$(convox env get ENDPOINT -a httpd2)
 fetch https://$endpoint | grep "It works"
 
 # postgres resource test
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd2)
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd2
 
 # mariadb resource test
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd2)
 convox exec $ps "/usr/scripts/mariadb_check.sh" -a httpd2
 
 # mysqldb resource test
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd2)
 convox exec $ps "/usr/scripts/mariadb_check.sh mysql" -a httpd2
 
 # redis resource test
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd2)
 convox exec $ps "/usr/scripts/redis_check.sh" -a httpd2
 
 # memcache resource test
-ps=$(convox api get /apps/httpd2/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | head -n 1)
+ps=$(web_ps httpd2)
 convox exec $ps "/usr/scripts/memcache_check.sh" -a httpd2
 
 #cleanup

@@ -56,23 +56,21 @@ func TestFollow(t *testing.T) {
 
 	s.Append("foo", time2, "p2", "two")
 
-	ch := make(chan logstorage.Log)
+	ch := make(chan logstorage.Log, 3)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	s.Subscribe(ctx, ch, "foo", time1, true)
 
-	time.Sleep(500 * time.Millisecond)
-
-	s.Append("foo", time3, "p3", "three")
-	s.Append("foo", time1, "p1", "one")
-
 	log, ok := <-ch
 	require.True(t, ok)
 	require.Equal(t, "two", log.Message)
 	require.Equal(t, "p2", log.Prefix)
 	require.Equal(t, time2, log.Timestamp)
+
+	s.Append("foo", time3, "p3", "three")
+	s.Append("foo", time1, "p1", "one")
 
 	log, ok = <-ch
 	require.True(t, ok)

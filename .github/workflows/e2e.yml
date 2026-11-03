@@ -1,0 +1,344 @@
+name: e2e
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      base_version:
+        type: string
+        required: false
+        default: ""
+    secrets:
+      ARM_CLIENT_ID:
+        required: true
+      ARM_CLIENT_SECRET:
+        required: true
+      ARM_REGION:
+        required: true
+      ARM_SUBSCRIPTION_ID:
+        required: true
+      ARM_TENANT_ID:
+        required: true
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      DIGITALOCEAN_ACCESS_ID:
+        required: true
+      DIGITALOCEAN_REGION:
+        required: true
+      DIGITALOCEAN_SECRET_KEY:
+        required: true
+      DIGITALOCEAN_TOKEN:
+        required: true
+      GOOGLE_CREDENTIALS:
+        required: true
+      GOOGLE_PROJECT:
+        required: true
+      GOOGLE_REGION:
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: published release tag to test (for example 3.25.14)
+        type: string
+        required: true
+      base_version:
+        description: release to upgrade from and downgrade to (empty for the latest published release)
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    if: github.repository == 'convox/convox'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: e2e-${{ inputs.version }}-${{ matrix.job }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - aws
+          - aws-arm64
+          - aws-existing-vpc
+          - do
+          - gcp
+          - azure
+        include:
+          - job: aws
+            provider: aws
+            rack_params: "region=us-east-2"
+          - job: aws-arm64
+            provider: aws
+            rack_params: "node_type=t4g.small proxy_protocol=true"
+            suffix: arm64
+          - job: aws-existing-vpc
+            provider: aws
+            rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
+            suffix: evpc
+          - job: do
+            provider: do
+          - job: gcp
+            provider: gcp
+            rack_params: "region=us-west1"
+          - job: azure
+            provider: azure
+    env:
+      PROVIDER: ${{ matrix.provider }}
+      RACK_PARAMS: ${{ matrix.rack_params }}
+      SUFFIX: ${{ matrix.suffix }}
+      VERSION: ${{ inputs.version }}
+      BASE_VERSION: ${{ inputs.base_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${SUFFIX}" >> "$GITHUB_ENV"
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_REGION: ${{ secrets.ARM_REGION }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
+          DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_REGION: ${{ secrets.GOOGLE_REGION }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: install
+        run: ci/install.sh
+        timeout-minutes: 60
+      - name: wait
+        run: ci/wait_ready.sh
+        timeout-minutes: 25
+      - name: test
+        run: ci/test.sh
+        timeout-minutes: 60
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+        timeout-minutes: 15
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+        timeout-minutes: 240
+  ci-downgrade:
+    if: github.repository == 'convox/convox'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: e2e-${{ inputs.version }}-downgrade
+    env:
+      provider: aws
+      suffix: down
+      VERSION: ${{ inputs.version }}
+      BASE_VERSION: ${{ inputs.base_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
+      - name: provider
+        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: install
+        run: ci/install.sh
+        timeout-minutes: 60
+      - name: wait
+        run: ci/wait_ready.sh
+        timeout-minutes: 25
+      - name: before version downgrade setup and test
+        run: ci/before_additional_test.sh
+        timeout-minutes: 30
+      - name: downgrade
+        run: ci/downgrade.sh
+        timeout-minutes: 90
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: after version downgrade test
+        run: ci/after_additional_test.sh
+        timeout-minutes: 30
+      - name: test
+        run: ci/test.sh
+        timeout-minutes: 60
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+        timeout-minutes: 15
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+        timeout-minutes: 240
+  ci-upgrade:
+    if: github.repository == 'convox/convox'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: e2e-${{ inputs.version }}-upgrade
+    env:
+      provider: aws
+      suffix: upgrade
+      VERSION: ${{ inputs.version }}
+      BASE_VERSION: ${{ inputs.base_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
+      - name: provider
+        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: install last release
+        run: ci/install_last_release.sh
+        timeout-minutes: 60
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: wait
+        run: ci/wait_ready.sh
+        timeout-minutes: 25
+      - name: before version upgrade setup and test
+        run: ci/before_additional_test.sh
+        timeout-minutes: 30
+      - name: upgrade
+        run: ci/upgrade.sh
+        timeout-minutes: 90
+      - name: after version upgrade test
+        run: ci/after_additional_test.sh
+        timeout-minutes: 30
+      - name: test
+        run: ci/test.sh
+        timeout-minutes: 60
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+        timeout-minutes: 15
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+        timeout-minutes: 240
+  ci-ssh:
+    if: github.repository == 'convox/convox'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    concurrency:
+      group: e2e-${{ inputs.version }}-ssh
+    env:
+      provider: aws
+      suffix: ssh
+      VERSION: ${{ inputs.version }}
+      BASE_VERSION: ${{ inputs.base_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: name
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
+      - name: provider
+        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
+      - name: secrets
+        run: ci/secrets.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: dependencies
+        run: ci/dependencies.sh
+      - name: cli
+        run: ci/cli.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: install
+        run: ci/install.sh
+        timeout-minutes: 60
+      - name: wait
+        run: ci/wait_ready.sh
+        timeout-minutes: 25
+      - name: ssh keyroll
+        run: ci/ssh_keyroll.sh
+        timeout-minutes: 30
+      - name: test
+        run: ci/test.sh
+        timeout-minutes: 60
+      - name: debug
+        run: ci/debug.sh
+        if: always()
+        timeout-minutes: 15
+      - name: uninstall
+        run: ci/uninstall.sh
+        if: always()
+        timeout-minutes: 240

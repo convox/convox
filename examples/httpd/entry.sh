@@ -2,4 +2,4 @@
 
 echo "entrypoint"
 
-$*
+exec "$@"

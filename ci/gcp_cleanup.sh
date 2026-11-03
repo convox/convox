@@ -2,6 +2,8 @@
 
 set -e
 
+. "$(dirname "$0")/lib.sh"
+
 # install gcloud
 # sudo apt-get update
 
@@ -27,14 +29,17 @@ echo "$clusters"
 if [ -n "$clusters" ]; then
   while read -r name location; do
     [ -z "$name" ] && continue
+    ci_rack_is_old "$name" || { echo "skipping $name: younger than 8 hours"; continue; }
     echo "Deleting GKE cluster: $name in $location"
     gcloud container clusters delete "$name" --location="$location" --quiet || true
   done <<< "$clusters"
 fi
 
-# CI-dedicated project, so unattached disks and reserved IPs are reaped project-wide.
+cutoff=$(date -u -d '8 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+
+# CI-dedicated project, so unattached disks and reserved IPs are reaped project-wide once 8 hours old.
 # Convox GKE uses zonal persistent disks; -region:* keeps the reaper to disks the --zone delete handles.
-disks=$(gcloud compute disks list --filter="-users:* AND -region:*" --format="value(name,zone.basename())" || true)
+disks=$(gcloud compute disks list --filter="-users:* AND -region:* AND creationTimestamp<'${cutoff}'" --format="value(name,zone.basename())" || true)
 if [ -n "$disks" ]; then
   while read -r name zone; do
     [ -z "$name" ] && continue
@@ -43,7 +48,7 @@ if [ -n "$disks" ]; then
   done <<< "$disks"
 fi
 
-addrs=$(gcloud compute addresses list --filter="status=RESERVED" --format="value(name,region.basename())" || true)
+addrs=$(gcloud compute addresses list --filter="status=RESERVED AND creationTimestamp<'${cutoff}'" --format="value(name,region.basename())" || true)
 if [ -n "$addrs" ]; then
   while read -r name region; do
     [ -z "$name" ] && continue

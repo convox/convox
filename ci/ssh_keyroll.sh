@@ -13,14 +13,16 @@ sed '0,/^Generated private key:$/d' ~/keyroll.out > ~/priv.key
 
 grep -q 'PRIVATE KEY' ~/priv.key
 
-while true
-do
+for i in $(seq 1 80); do
     instance=$(convox instances | awk '{print $1}' | sed -n 2p)
-    if [[ $old_instances == *${instance}* ]]; then
-      echo "waiting for new instances"
-    else
+    if [[ $old_instances != *${instance}* ]]; then
       break
     fi
+    if [ "$i" -eq 80 ]; then
+      echo "no new instance after 20 minutes" >&2
+      exit 1
+    fi
+    echo "waiting for new instances"
     sleep 15
 done
 

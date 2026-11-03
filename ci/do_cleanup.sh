@@ -2,12 +2,14 @@
 
 set -uo pipefail
 
-# install doctl
-wget https://github.com/digitalocean/doctl/releases/download/v1.94.0/doctl-1.94.0-linux-amd64.tar.gz
-tar xf ./doctl-1.94.0-linux-amd64.tar.gz
-sudo mv ./doctl /usr/bin
+. "$(dirname "$0")/lib.sh"
 
-for v in DIGITALOCEAN_TOKEN DIGITALOCEAN_ACCESS_ID DIGITALOCEAN_SECRET_KEY; do
+# install doctl
+curl -fsSL https://github.com/digitalocean/doctl/releases/download/v1.186.0/doctl-1.186.0-linux-amd64.tar.gz -o /tmp/doctl.tar.gz || exit 1
+echo "a36f2ae5e672160c3a20ab46e8cef79c9b24e8055417f4beb790a897c532d241  /tmp/doctl.tar.gz" | sha256sum -c - || exit 1
+tar xf /tmp/doctl.tar.gz -C /tmp && sudo mv /tmp/doctl /usr/bin
+
+for v in DIGITALOCEAN_TOKEN DIGITALOCEAN_ACCESS_ID DIGITALOCEAN_SECRET_KEY REGION; do
   val="${!v:-}"
   if [ -z "$val" ] || [ "$val" = "null" ]; then
     echo "$v is not set" >&2
@@ -27,27 +29,29 @@ echo "$clusters"
 if [ -n "$clusters" ]; then
   while IFS= read -r cluster; do
     [ -z "$cluster" ] && continue
-    doctl kubernetes cluster delete "$cluster" -f || true
+    ci_rack_is_old "$cluster" || { echo "skipping $cluster: younger than 8 hours"; continue; }
+    doctl kubernetes cluster delete "$cluster" -f --dangerous || true
   done <<< "$clusters"
 fi
 
-buckets=$(aws s3 ls --endpoint-url=https://nyc3.digitaloceanspaces.com | awk '{print $3}' || true)
+buckets=$(aws s3 ls --endpoint-url=https://${REGION}.digitaloceanspaces.com | awk '{print $3}' | grep '^ci-' || true)
 echo "Spaces Buckets:"
 echo "$buckets"
 if [ -n "$buckets" ]; then
   while IFS= read -r bucket; do
     [ -z "$bucket" ] && continue
-    aws s3 rb "s3://$bucket" --force --endpoint-url=https://nyc3.digitaloceanspaces.com || true
+    ci_rack_is_old "$bucket" || { echo "skipping $bucket: younger than 8 hours"; continue; }
+    aws s3 rb "s3://$bucket" --force --endpoint-url=https://${REGION}.digitaloceanspaces.com || true
   done <<< "$buckets"
 fi
 
-volumes=$(doctl compute volume list --format Name,DropletIDs --no-header || true)
-echo "Volumes:"
+cutoff=$(date -u -d '8 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+volumes=$(doctl compute volume list -o json | jq -r --arg c "$cutoff" '.[] | select((.droplet_ids // [] | length) == 0 and .created_at < $c) | .id' || true)
+echo "Unattached volumes older than 8 hours:"
 echo "$volumes"
 if [ -n "$volumes" ]; then
-  while read -r volume droplets; do
+  while IFS= read -r volume; do
     [ -z "$volume" ] && continue
-    [ -n "$droplets" ] && continue
     doctl compute volume delete "$volume" -f || true
   done <<< "$volumes"
 fi

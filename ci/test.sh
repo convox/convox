@@ -4,14 +4,6 @@ function assert_run {
   run "$1" || { echo "failed"; exit 101; }
 }
 
-function fetch {
-  fetch_once $1 && sleep 5 && fetch_once $1
-}
-
-function fetch_once {
-  curl -ks --connect-timeout 5 --max-time 3 --retry 100 --retry-max-time 600 --retry-connrefused $1
-}
-
 function run {
   echo "running: $*" >&2
   eval $*
@@ -19,9 +11,12 @@ function run {
 
 root="$(cd $(dirname ${0:-})/..; pwd)"
 
+. $root/ci/lib.sh
+
 set -ex
 
 provider=$(convox api get /system | jq -r .provider)
+export provider
 
 # cli
 convox version
@@ -35,10 +30,24 @@ convox rack ps | grep system
 
 # registries
 convox registries
-convox registries add quay.io convox+ci 6D5CJVRM5P3L24OG4AWOYGCDRJLPL0PFQAENZYJ1KGE040YDUGPYKOZYNWFTE5CV
-convox registries | grep quay.io | grep convox+ci
-convox registries remove quay.io
-convox registries | grep -v quay.io
+set +x
+convox registries add ${ECR_REGISTRY_HOST} AWS "${ECR_REGISTRY_PASSWORD}"
+set -x
+convox registries | grep ${ECR_REGISTRY_HOST} | grep AWS
+# the aws provider reads an ecr registry's credentials as an access key pair, so only pull through it elsewhere
+if [ "$provider" != "aws" ]; then
+  mkdir -p /tmp/ciregistry
+  printf 'FROM %s/convox-ci/registry-test:1\n' ${ECR_REGISTRY_HOST} > /tmp/ciregistry/Dockerfile
+  printf 'services:\n  web:\n    build: .\n' > /tmp/ciregistry/convox.yml
+  convox apps create ciregistry
+  convox apps info ciregistry | grep running
+  (cd /tmp/ciregistry && convox build -a ciregistry -d ciregistry)
+  convox apps delete ciregistry
+fi
+convox registries remove ${ECR_REGISTRY_HOST}
+if convox registries | grep -q ${ECR_REGISTRY_HOST}; then
+  exit 1
+fi
 
 # test files
 sudo chmod -R +x $root/ci/test
@@ -49,23 +58,30 @@ convox apps create httpd
 convox apps
 convox apps | grep httpd
 convox apps info httpd | grep running
-release=$(convox build -a httpd -d cibuild --id) && [ -n "$release" ]
+release=$(convox build -a httpd -d cibuild --id)
+[ -n "$release" ]
 convox releases -a httpd | grep $release
-build=$(convox api get /apps/httpd/builds | jq -r ".[0].id") && [ -n "$build" ]
+build=$(convox api get /apps/httpd/builds | jq -r ".[0].id")
+[ -n "$build" ]
 convox builds -a httpd | grep $build
 convox builds info $build -a httpd | grep $build
 convox builds info $build -a httpd | grep cibuild
 convox builds logs $build -a httpd | grep "load build context"
 convox builds export $build -a httpd -f /tmp/build.tgz
-releasei=$(convox builds import -a httpd -f /tmp/build.tgz --id) && [ -n "$releasei" ]
-buildi=$(convox api get /apps/httpd/releases/$releasei | jq -r ".build") && [ -n "$buildi" ]
+releasei=$(convox builds import -a httpd -f /tmp/build.tgz --id)
+[ -n "$releasei" ]
+buildi=$(convox api get /apps/httpd/releases/$releasei | jq -r ".build")
+[ -n "$buildi" ]
 convox builds info $buildi -a httpd | grep cibuild
 echo "FOO=bar" | convox env set -a httpd
 convox env -a httpd | grep FOO | grep bar
 convox env get FOO -a httpd | grep bar
 convox env unset FOO -a httpd
-convox env -a httpd | grep -v FOO
-releasee=$(convox env set FOO=bar -a httpd --id) && [ -n "$releasee" ]
+if convox env -a httpd | grep -q "^FOO="; then
+  exit 1
+fi
+releasee=$(convox env set FOO=bar -a httpd --id)
+[ -n "$releasee" ]
 convox env get FOO -a httpd | grep bar
 convox releases -a httpd | grep $releasee
 convox releases info $releasee -a httpd | grep FOO
@@ -80,27 +96,25 @@ convox logs -a httpd --no-follow --since 1m | grep service/web
 releaser=$(convox releases rollback $release -a httpd --id)
 convox ps -a httpd | grep $releaser
 sleep 30
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+ps=$(web_ps httpd)
 convox ps info $ps -a httpd | grep $releaser
 # assert the run command is going through the Dockerfile entrypoint
 convox run web ls | grep entrypoint
 
-$root/ci/test/app_scale.sh &
-$root/ci/test/app_htdocs.sh &
-
-wait
+$root/ci/test/app_scale.sh
+$root/ci/test/app_htdocs.sh
 
 convox scale web --count 1
 convox deploy -a httpd
 sleep 30
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
-convox exec -a httpd $ps -- env | grep "ONE_URL="
-convox exec -a httpd $ps -- env | grep "ONE_USER="
-convox exec -a httpd $ps -- env | grep "ONE_PASS="
-convox exec -a httpd $ps -- env | grep "ONE_HOST="
-convox exec -a httpd $ps -- env | grep "ONE_PORT="
-convox exec -a httpd $ps -- env | grep "ONE_NAME="
-convox exec -a httpd $ps -- env | grep "CUSTOM_DATABASE="
+ps=$(web_ps httpd)
+convox exec -a httpd $ps -- env | grep -q "^ONE_URL="
+convox exec -a httpd $ps -- env | grep -q "^ONE_USER="
+convox exec -a httpd $ps -- env | grep -q "^ONE_PASS="
+convox exec -a httpd $ps -- env | grep -q "^ONE_HOST="
+convox exec -a httpd $ps -- env | grep -q "^ONE_PORT="
+convox exec -a httpd $ps -- env | grep -q "^ONE_NAME="
+convox exec -a httpd $ps -- env | grep -q "^CUSTOM_DATABASE="
 
 # test apps cancel
 echo "FOO=not-bar" | convox env set -a httpd
@@ -109,6 +123,7 @@ cp Dockerfile Dockerfile.original # copy current Dockerfile
 echo "COPY new-feature.html /usr/local/apache2/htdocs/index.html" >> Dockerfile
 echo "ENTRYPOINT sleep 60 && httpd-foreground" >> Dockerfile
 nohup convox deploy & # run deploy on background
+deploy_pid=$!
 
 i=0
 while [ "$(convox apps info -a httpd | grep updating | wc -l)" != "1" ]
@@ -147,28 +162,31 @@ echo "env var is correctly set"
 
 mv Dockerfile.original Dockerfile # replace the Dockerfile with the original copy
 
+wait $deploy_pid || true
+
 # timers
 sleep 30
-$root/ci/test/timers.sh &
+pids=()
+$root/ci/test/timers.sh & pids+=($!)
 
 # postgres resource test
-$root/ci/test/resources_postgres.sh &
+$root/ci/test/resources_postgres.sh & pids+=($!)
 
 # mariadb resource test
-$root/ci/test/resources_mariadb.sh &
+$root/ci/test/resources_mariadb.sh & pids+=($!)
 
 # mysqldb resource test
-$root/ci/test/resources_mysql.sh &
+$root/ci/test/resources_mysql.sh & pids+=($!)
 
 # redis resource test
-$root/ci/test/resources_redis.sh &
+$root/ci/test/resources_redis.sh & pids+=($!)
 
 # memcache resource test
-$root/ci/test/resources_memcache.sh &
+$root/ci/test/resources_memcache.sh & pids+=($!)
 
 # app (httpd2)
-$root/ci/test/app_internal_communication.sh &
-wait
+$root/ci/test/app_internal_communication.sh & pids+=($!)
+wait_all "${pids[@]}"
 
 # import/export test
 convox apps create httpd-export
@@ -191,7 +209,8 @@ convox apps create gpu
 convox apps
 convox apps | grep gpu
 convox apps info gpu | grep running
-release=$(convox build -a gpu -d cibuild --id) && [ -n "$release" ]
+release=$(convox build -a gpu -d cibuild --id)
+[ -n "$release" ]
 
 # cleanup
 convox apps delete gpu

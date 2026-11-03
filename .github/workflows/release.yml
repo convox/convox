@@ -7,7 +7,9 @@ permissions:
   contents: read
 jobs:
   release:
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-22.04
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
@@ -60,6 +62,7 @@ jobs:
           path: ./cmd/convox/pkg/convox-darwin-arm64
   build-amd64:
     needs: release
+    timeout-minutes: 45
     runs-on: ubuntu-22.04
     steps:
       - name: checkout
@@ -74,7 +77,7 @@ jobs:
         with:
           driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
       - name: login
-        run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
+        run: printf '%s' "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -88,6 +91,7 @@ jobs:
         run: docker buildx build -f Dockerfile.buildkit --target privileged --platform linux/amd64 -t "${GITHUB_REPOSITORY}:${VERSION}-build-privileged" --push --pull .
   build-arm64:
     needs: release
+    timeout-minutes: 45
     runs-on: ubuntu-22.04-arm
     steps:
       - name: checkout
@@ -102,7 +106,7 @@ jobs:
         with:
           driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
       - name: login
-        run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
+        run: printf '%s' "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -118,11 +122,12 @@ jobs:
   create-manifests:
     needs: [build-amd64, build-arm64]
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: version
         run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
       - name: login
-        run: docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
+        run: printf '%s' "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -149,6 +154,7 @@ jobs:
     needs:
       - release
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -172,6 +178,7 @@ jobs:
     needs:
       - release
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -193,6 +200,7 @@ jobs:
     needs:
       - release
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -216,6 +224,7 @@ jobs:
     needs:
       - release
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
@@ -235,7 +244,7 @@ jobs:
         run: |
           mv ./convox-darwin-arm64 ./convox-macos-arm64
           gh release upload "${VERSION}" ./convox-macos-arm64 --clobber
-  ci:
+  e2e:
     if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
     needs:
       - create-manifests
@@ -243,229 +252,22 @@ jobs:
       - release-cli-linux-arm64
       - release-cli-macos
       - release-cli-macos-arm64
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        job:
-          - aws
-          - aws-arm64
-          - aws-existing-vpc
-          - do
-          - gcp
-          - azure
-        include:
-          - job: aws
-            provider: aws
-            rack_params: "region=us-east-2"
-          - job: aws-arm64
-            provider: aws
-            rack_params: "node_type=t4g.small proxy_protocol=true"
-            suffix: arm64
-          - job: aws-existing-vpc
-            provider: aws
-            rack_params: "vpc_id=vpc-0f18b6d1265717215 internet_gateway_id=igw-01c3d338eecec02a1 cidr=172.0.0.0/16"
-            suffix: evpc
-          - job: do
-            provider: do
-          - job: gcp
-            provider: gcp
-            rack_params: "region=us-west1"
-          - job: azure
-            provider: azure
-    env:
-      PROVIDER: ${{ matrix.provider }}
-      RACK_PARAMS: ${{ matrix.rack_params }}
-      SUFFIX: ${{ matrix.suffix }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - name: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-      - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${SUFFIX}" >> "$GITHUB_ENV"
-      - name: secrets
-        run: ci/secrets.sh
-        env:
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-          ARM_REGION: ${{ secrets.ARM_REGION }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
-          DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
-          DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
-          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-          GOOGLE_REGION: ${{ secrets.GOOGLE_REGION }}
-      - name: dependencies
-        run: ci/dependencies.sh
-      - name: cli
-        run: ci/cli.sh
-      - name: install
-        run: ci/install.sh
-      - name: wait
-        run: sleep 300
-      - name: test
-        run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
-        if: always()
-  ci-downgrade:
-    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
-    needs:
-      - create-manifests
-      - release-cli-linux
-      - release-cli-linux-arm64
-      - release-cli-macos
-      - release-cli-macos-arm64
-    runs-on: ubuntu-22.04
-    env:
-      provider: aws
-      suffix: downgrade
-    steps:
-      - name: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - name: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-      - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
-      - name: provider
-        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
-      - name: secrets
-        run: ci/secrets.sh
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: dependencies
-        run: ci/dependencies.sh
-      - name: cli
-        run: ci/cli.sh
-      - name: install
-        run: ci/install.sh
-      - name: wait
-        run: sleep 600
-      - name: before version downgrade setup and test
-        run: ci/before_additional_test.sh
-      - name: downgrade
-        run: ci/downgrade.sh
-      - name: after version downgrade test
-        run: ci/after_additional_test.sh
-      - name: test
-        run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
-        if: always()
-  ci-upgrade:
-    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
-    needs:
-      - create-manifests
-      - release-cli-linux
-      - release-cli-linux-arm64
-      - release-cli-macos
-      - release-cli-macos-arm64
-    runs-on: ubuntu-22.04
-    env:
-      provider: aws
-      suffix: upgrade
-    steps:
-      - name: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - name: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-      - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
-      - name: provider
-        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
-      - name: secrets
-        run: ci/secrets.sh
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: dependencies
-        run: ci/dependencies.sh
-      - name: cli
-        run: ci/cli.sh
-      - name: install last release
-        run: ci/install_last_release.sh
-      - name: wait
-        run: sleep 600
-      - name: before version upgrade setup and test
-        run: ci/before_additional_test.sh
-      - name: upgrade
-        run: ci/upgrade.sh
-      - name: after version upgrade test
-        run: ci/after_additional_test.sh
-      - name: test
-        run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
-        if: always()
-  ci-ssh:
-    if: github.repository == 'convox/convox' && !contains(github.ref_name, 'rc')
-    needs:
-      - create-manifests
-      - release-cli-linux
-      - release-cli-linux-arm64
-      - release-cli-macos
-      - release-cli-macos-arm64
-    runs-on: ubuntu-22.04
-    env:
-      provider: aws
-      suffix: ssh
-    steps:
-      - name: checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          persist-credentials: false
-      - name: version
-        run: echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-      - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")${suffix}" >> "$GITHUB_ENV"
-      - name: provider
-        run: echo "PROVIDER=${provider}" >> "$GITHUB_ENV"
-      - name: secrets
-        run: ci/secrets.sh
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: dependencies
-        run: ci/dependencies.sh
-      - name: cli
-        run: ci/cli.sh
-      - name: install
-        run: ci/install.sh
-      - name: wait
-        run: sleep 600
-      - name: ssh keyroll
-        run: ci/ssh_keyroll.sh
-      - name: test
-        run: ci/test.sh
-      - name: debug
-        run: ci/debug.sh
-        if: always()
-      - name: uninstall
-        run: ci/uninstall.sh
-        if: always()
+    uses: ./.github/workflows/e2e.yml # zizmor: ignore[self-repository] actionlint 1.7.12 rejects the $/ form
+    with:
+      version: ${{ github.ref_name }}
+    secrets:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_REGION: ${{ secrets.ARM_REGION }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
+      DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
+      DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      GOOGLE_REGION: ${{ secrets.GOOGLE_REGION }}
