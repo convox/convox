@@ -21,11 +21,11 @@ func TestIsCITag(t *testing.T) {
 		tags []ec2types.Tag
 		want bool
 	}{
-		{"rack ci", []ec2types.Tag{tag("Rack", "ci-20260618")}, true},
-		{"k8s cluster ci", []ec2types.Tag{tag("kubernetes.io/cluster/ci-20260618", "shared")}, true},
-		{"cni cluster ci", []ec2types.Tag{tag("cluster.k8s.amazonaws.com/name", "ci-20260618")}, true},
+		{"rack ci", []ec2types.Tag{tag("Rack", "ci-20260618000000")}, true},
+		{"k8s cluster ci", []ec2types.Tag{tag("kubernetes.io/cluster/ci-20260618000000", "shared")}, true},
+		{"cni cluster ci", []ec2types.Tag{tag("cluster.k8s.amazonaws.com/name", "ci-20260618000000")}, true},
 		{"rack non-ci", []ec2types.Tag{tag("Rack", "prod-rack")}, false},
-		{"name only ci is not a signal", []ec2types.Tag{tag("Name", "ci-20260618")}, false},
+		{"name only ci is not a signal", []ec2types.Tag{tag("Name", "ci-20260618000000")}, false},
 		{"k8s cluster non-ci", []ec2types.Tag{tag("kubernetes.io/cluster/prod", "owned")}, false},
 		{"empty", nil, false},
 	}
@@ -39,7 +39,7 @@ func TestIsCITag(t *testing.T) {
 func TestReapInVPC(t *testing.T) {
 	ci := map[string]struct{}{"vpc-ci123": {}}
 	allow := "vpc-0f18b6d1265717215" // allowlisted
-	rackTag := []ec2types.Tag{tag("Rack", "ci-20260618")}
+	rackTag := []ec2types.Tag{tag("Rack", "ci-20260618000000")}
 
 	cases := []struct {
 		name string
@@ -71,9 +71,9 @@ func TestIsCITagELBv2(t *testing.T) {
 		tags []elbv2types.Tag
 		want bool
 	}{
-		{"rack ci", []elbv2types.Tag{tg("Rack", "ci-20260618")}, true},
-		{"lbc cluster ci", []elbv2types.Tag{tg("elbv2.k8s.aws/cluster", "ci-20260618")}, true},
-		{"k8s cluster ci", []elbv2types.Tag{tg("kubernetes.io/cluster/ci-20260618", "owned")}, true},
+		{"rack ci", []elbv2types.Tag{tg("Rack", "ci-20260618000000")}, true},
+		{"lbc cluster ci", []elbv2types.Tag{tg("elbv2.k8s.aws/cluster", "ci-20260618000000")}, true},
+		{"k8s cluster ci", []elbv2types.Tag{tg("kubernetes.io/cluster/ci-20260618000000", "owned")}, true},
 		{"rack non-ci", []elbv2types.Tag{tg("Rack", "prod-rack")}, false},
 		{"empty", nil, false},
 	}
@@ -97,9 +97,11 @@ func TestIsCIName(t *testing.T) {
 		{"ci-20261103040001ssh", false},
 		{"ci-20261103115959", false},
 		{"ci-20261103010000/httpd", true},
-		{"ci-20260618", true},
-		{"ci-legacy-rack", true},
-		{"ci-20261399999999", true},
+		{"ci-20260618", false},
+		{"ci-legacy-rack", false},
+		{"ci-20034-0223", false},
+		{"ci-20034-0223-registry-abc", false},
+		{"ci-20261399999999", false},
 		{"prod-ci-20261103010000", false},
 		{"convox-ci/registry-test", false},
 		{"", false},
