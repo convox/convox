@@ -70,6 +70,9 @@ jobs:
       - name: test
         run: ci/test.sh
         timeout-minutes: 60
+        env:
+          CI_DOCKERHUB_USERNAME: ${{ secrets.CI_DOCKERHUB_USERNAME }}
+          CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
         if: always()

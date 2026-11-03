@@ -94,19 +94,16 @@ func DefaultOptions() Options {
 	}
 }
 
-// isCIName reports whether s names a CI rack old enough to reap. A ci- name without a parsable
-// timestamp is reaped as before, so only racks that may still be under test are spared.
+// isCIName reports whether s names a convox/convox CI rack old enough to reap. The account is
+// shared with convox/rack CI, whose racks are named ci-<build>-<HHMM> and are left to its own reaper.
 func isCIName(s string) bool {
-	if !strings.HasPrefix(s, "ci-") {
-		return false
-	}
 	m := ciNameRe.FindStringSubmatch(s)
 	if m == nil {
-		return true
+		return false
 	}
 	t, err := time.Parse("20060102150405", m[1])
 	if err != nil {
-		return true
+		return false
 	}
 	return now().Sub(t) >= minAge
 }

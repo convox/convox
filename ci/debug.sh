@@ -2,10 +2,16 @@
 
 export KUBECONFIG=~/.kube/config.${PROVIDER}.${RACK_NAME}
 
-# terraform writes this file on gcp and do only
+# terraform writes this file on gcp and do only; aws reads eks directly so a broken rack api cannot hide the debug output
 if [ ! -s "$KUBECONFIG" ]; then
   mkdir -p ~/.kube
-  convox rack kubeconfig -r ${RACK_NAME} > "$KUBECONFIG" 2>/dev/null || true
+  if [ "${PROVIDER}" = "aws" ]; then
+    region=$(echo " ${RACK_PARAMS:-} " | sed -nE 's/.* region=([^ ]+).*/\1/p')
+    aws eks update-kubeconfig --name ${RACK_NAME} --region ${region:-$REGION} --kubeconfig "$KUBECONFIG" >/dev/null 2>&1 || true
+  else
+    convox rack kubeconfig -r ${RACK_NAME} > "$KUBECONFIG" 2>/dev/null || true
+    kubectl config set-cluster "$(kubectl config view -o jsonpath='{.clusters[0].name}')" --insecure-skip-tls-verify=true >/dev/null 2>&1 || true
+  fi
 fi
 
 set -x

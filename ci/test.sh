@@ -28,24 +28,32 @@ convox rack logs --no-follow --since 30m
 convox rack logs --no-follow --since 30m | grep service/
 convox rack ps | grep system
 
-# registries
+# registries: the aws provider reads an ecr registry's credentials as an access key pair, so aws racks pull a private docker hub image instead
+if [ "$provider" = "aws" ]; then
+  registry=https://index.docker.io/v1/
+  registry_user=${CI_DOCKERHUB_USERNAME}
+  registry_password=${CI_DOCKERHUB_TOKEN}
+  registry_image=convox/ci-registry-test:1
+else
+  registry=${ECR_REGISTRY_HOST}
+  registry_user=AWS
+  registry_password=${ECR_REGISTRY_PASSWORD}
+  registry_image=${ECR_REGISTRY_HOST}/convox-ci/registry-test:1
+fi
 convox registries
 set +x
-convox registries add ${ECR_REGISTRY_HOST} AWS "${ECR_REGISTRY_PASSWORD}"
+convox registries add ${registry} ${registry_user} "${registry_password}"
 set -x
-convox registries | grep ${ECR_REGISTRY_HOST} | grep AWS
-# the aws provider reads an ecr registry's credentials as an access key pair, so only pull through it elsewhere
-if [ "$provider" != "aws" ]; then
-  mkdir -p /tmp/ciregistry
-  printf 'FROM %s/convox-ci/registry-test:1\n' ${ECR_REGISTRY_HOST} > /tmp/ciregistry/Dockerfile
-  printf 'services:\n  web:\n    build: .\n' > /tmp/ciregistry/convox.yml
-  convox apps create ciregistry
-  convox apps info ciregistry | grep running
-  (cd /tmp/ciregistry && convox build -a ciregistry -d ciregistry)
-  convox apps delete ciregistry
-fi
-convox registries remove ${ECR_REGISTRY_HOST}
-if convox registries | grep -q ${ECR_REGISTRY_HOST}; then
+convox registries | grep ${registry} | grep ${registry_user}
+mkdir -p /tmp/ciregistry
+printf 'FROM %s\n' ${registry_image} > /tmp/ciregistry/Dockerfile
+printf 'services:\n  web:\n    build: .\n' > /tmp/ciregistry/convox.yml
+convox apps create ciregistry
+convox apps info ciregistry | grep running
+(cd /tmp/ciregistry && convox build -a ciregistry -d ciregistry)
+convox apps delete ciregistry
+convox registries remove ${registry}
+if convox registries | grep -q ${registry}; then
   exit 1
 fi
 
