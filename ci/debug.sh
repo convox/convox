@@ -2,7 +2,7 @@
 
 export KUBECONFIG=~/.kube/config.${PROVIDER}.${RACK_NAME}
 
-# terraform writes this file on gcp and do only; aws reads eks directly so a broken rack api cannot hide the debug output
+# terraform writes this file on do only; aws reads eks directly so a broken rack api cannot hide the debug output
 if [ ! -s "$KUBECONFIG" ]; then
   mkdir -p ~/.kube
   if [ "${PROVIDER}" = "aws" ]; then
