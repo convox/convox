@@ -204,7 +204,7 @@ func (opts Options2) buildCreate(ctx context.Context, pw *prefix.Writer, bopts s
 
 	pw.Writef("build", "uploading source\n")
 
-	data, err := common.Tarball(".")
+	data, err := common.Tarball(".", ".dockerignore")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

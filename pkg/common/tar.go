@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,7 +76,7 @@ func RebaseArchive(r io.Reader, src, dst string) (io.Reader, error) {
 	return &buf, nil
 }
 
-func Tarball(dir string) ([]byte, error) {
+func Tarball(dir string, ignoreFile string) ([]byte, error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
@@ -88,7 +87,7 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(filepath.Join(sym, ".dockerignore"))
+	data, err := os.ReadFile(filepath.Join(sym, ignoreFile))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -120,7 +119,7 @@ func Tarball(dir string) ([]byte, error) {
 		return nil, err
 	}
 
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 func isContained(base, path string) bool {

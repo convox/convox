@@ -463,7 +463,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 
 	c.Startf("Packaging export")
 
-	tgz, err := common.Tarball(tmp)
+	tgz, err := common.Tarball(tmp, ".dockerignore")
 	if err != nil {
 		return err
 	}
