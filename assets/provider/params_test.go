@@ -31,7 +31,7 @@ type ParamsFile struct {
 	} `yaml:"Groups"`
 }
 
-var providers = []string{"aws", "gcp", "azure", "do"}
+var providers = []string{"aws", "gcp", "azure", "do", "oci"}
 
 func loadParams(t *testing.T, provider string) ParamsFile {
 	t.Helper()
