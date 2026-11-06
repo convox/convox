@@ -22,11 +22,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.name
-  elasticsearch = module.elasticsearch.host
-  namespace     = var.namespace
-  rack          = var.name
-  syslog        = var.syslog
+  cluster                  = var.name
+  elasticsearch            = module.elasticsearch.host
+  fluentd_memory           = var.fluentd_memory
+  namespace                = var.namespace
+  rack                     = var.name
+  router_log_redact_params = var.router_log_redact_params
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
 }
 
 module "k8s" {
@@ -37,25 +40,27 @@ module "k8s" {
   }
 
   docker_hub_authentication = var.docker_hub_authentication
-  domain    = var.domain
-  image     = var.image
-  namespace = var.namespace
-  rack      = var.name
-  release   = var.release
-  resolver  = var.resolver
+  domain                    = var.domain
+  image                     = var.image
+  namespace                 = var.namespace
+  rack                      = var.name
+  release                   = var.release
+  resolver                  = var.resolver
+  webhook_signing_key       = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"
   }
 
   env = {
-    CERT_MANAGER = "true"
-    ELASTIC_URL  = module.elasticsearch.url
-    PROVIDER     = "metal"
-    REGISTRY     = "registry.${var.domain}"
-    RESOLVER     = var.resolver
-    ROUTER       = var.router
-    SECRET       = var.secret
+    CERT_MANAGER       = "true"
+    ELASTIC_URL        = module.elasticsearch.url
+    ELASTICSEARCH_DISK = var.elasticsearch_disk
+    PROVIDER           = "metal"
+    REGISTRY           = "registry.${var.domain}"
+    RESOLVER           = var.resolver
+    ROUTER             = var.router
+    SECRET             = var.secret
   }
 
   volumes = {

@@ -1,6 +1,9 @@
-// +build dummy
-
-// This Go file is part of a workaround for `go mod vendor`.
-// Please see the file `c_deps.go` at the root for more information.
+//go:build !hidraw && linux && cgo
 
 package os
+
+/*
+#cgo CFLAGS: -I. -I../. -I../../../. -DDEFAULT_VISIBILITY="" -DOS_LINUX -D_GNU_SOURCE -DPLATFORM_POSIX
+#cgo logging CFLAGS: -DENABLE_LOGGING -DENABLE_DEBUG_LOGGING -DUSE_SYSTEM_LOGGING_FACILITY
+*/
+import "C"

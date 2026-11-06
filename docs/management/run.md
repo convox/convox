@@ -1,7 +1,7 @@
 ---
 title: "One-off Commands"
-draft: false
-slug: One-off Commands
+description: "Run one-off commands with convox run in a new Process, detached or waited on, or with convox exec inside an existing Process for debugging and migrations."
+slug: one-off-commands
 url: /management/run
 ---
 # One-off Commands
@@ -18,25 +18,35 @@ Using `convox run` will start a new [Process](/reference/primitives/app/process)
 
 Running an interactive process will start a [Process](/reference/primitives/app/process) and connect
 your local terminal so that you can run commands and see output:
-```html
+```bash
     $ convox run web bash
     root@web#
 ```
 ### Running Detached
 
 Running detached is useful for long-running tasks that you don't want to be disrupted:
-```html
-    $ convox run web bin/cleanup-database --detach
+```bash
+    $ convox run web bin/cleanup-database --detach -a my-app
     Running detached process... OK, web-s43xf
+      convox logs -a my-app
+      convox ps stop web-s43xf -a my-app
 ```
 > The output of detached [Processes](/reference/primitives/app/process) will appear in the
 > [application logs](/configuration/logging)
+
+The two follow-up lines go to standard error. Add `--wait` to hold the command open until the [Process](/reference/primitives/app/process) finishes, print its output while it runs, and exit with its own exit code. `--wait` also suppresses the two follow-up lines and lets a CI step fail when the command does:
+```bash
+    $ convox run web bin/migrate --detach --wait -a my-app
+    Running detached process... OK, web-s43xf
+    Migrating users... done
+```
+Printing the output requires CLI version `3.25.11` or later. See [Detached Runs](/reference/cli/run#detached-runs) for `--wait`, `--retain`, and `--id`.
 
 ## Running a command in an existing Process
 
 Using `convox exec` will run a command inside an existing [Process](/reference/primitives/app/process).
 This can be useful for debugging a running [Process](/reference/primitives/app/process).
-```html
+```bash
     $ convox ps
     ID                    SERVICE  STATUS   RELEASE     STARTED         COMMAND
     web-6844dc6f45-9wdss  web      running  RABCDEFGHI  14 minutes ago  bin/web
@@ -47,7 +57,13 @@ This can be useful for debugging a running [Process](/reference/primitives/app/p
 ```
 You can also use a [Service](/reference/primitives/app/service) name with `convox exec` to select
 a random [Process](/reference/primitives/app/process) of that Service.
-```html
+```bash
     $ convox exec web bash
     root@web#
 ```
+
+## See Also
+
+- [CLI run Reference](/reference/cli/run) for the full `convox run` command reference
+- [CLI exec Reference](/reference/cli/exec) for running commands in existing processes
+- [CLI ps Reference](/reference/cli/ps) for inspecting a Process and its exit status

@@ -31,6 +31,9 @@ func NewController(cfg *rest.Config) (*AtomController, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	cfg.QPS = 20
+	cfg.Burst = 40
+
 	cc, err := cv.NewForConfig(cfg)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -62,7 +65,7 @@ func (c *AtomController) Client() kubernetes.Interface {
 }
 
 func (c *AtomController) Informer() cache.SharedInformer {
-	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 5*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
+	return ic.NewFilteredAtomInformer(c.convox, ac.NamespaceAll, 30*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, c.ListOptions)
 }
 
 func (c *AtomController) ListOptions(opts *am.ListOptions) {
@@ -72,6 +75,8 @@ func (c *AtomController) Run() {
 	ch := make(chan error)
 
 	go c.controller.Run(ch)
+
+	go c.atom.SyncReleaseCache()
 
 	for err := range ch {
 		fmt.Printf("err = %+v\n", err)
@@ -120,8 +125,11 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 	switch ca.Status {
 	case "Rollback":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atomStatus(ca, "Failure")
-			return nil
+			success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
+			if err != nil || !success {
+				c.atomStatus(ca, "Failure")
+				return nil
+			}
 		}
 
 		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
@@ -135,8 +143,11 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		}
 	case "Updating":
 		if deadline := am.NewTime(time.Now().UTC().Add(-1 * time.Duration(ca.Spec.ProgressDeadlineSeconds) * time.Second)); ca.Started.Before(&deadline) {
-			c.atomStatus(ca, "Deadline")
-			return nil
+			success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
+			if err != nil || !success {
+				c.atomStatus(ca, "Deadline")
+				return nil
+			}
 		}
 
 		success, err := c.atom.check(ca.Namespace, ca.Spec.CurrentVersion)
@@ -150,7 +161,7 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 		}
 	}
 
-	if ca.Status == pa.Status {
+	if ca.Status == pa.Status && ca.Status != "Pending" {
 		return nil
 	}
 
@@ -163,12 +174,16 @@ func (c *AtomController) Update(prev, cur interface{}) error {
 
 		c.atomStatus(ca, "Rollback")
 	case "Pending":
-		if err := c.atom.apply(ca); err != nil {
-			c.atomStatus(ca, "Error")
-			return err
-		}
+		if len(ca.Spec.Dependencies) > 0 {
+			c.atomEvent(ca, "Status", "Waiting on dependent resources to be completed")
+		} else {
+			if err := c.atom.apply(ca); err != nil {
+				c.atomStatus(ca, "Error")
+				return err
+			}
 
-		c.atomStatus(ca, "Updating")
+			c.atomStatus(ca, "Updating")
+		}
 	}
 
 	return nil

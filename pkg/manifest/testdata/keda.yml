@@ -1,0 +1,16 @@
+
+environment:
+  - PORT=3000
+services:
+  web:
+    build: .
+    port: 3000
+    scale:
+      count: 1-3
+      keda:
+        triggers:
+        - type: aws-sqs-queue
+          metadata:
+            queueURL: https://sqs.us-east-1.mytest
+            queueLength: "2"
+            awsRegion: "us-east-1"

@@ -70,7 +70,7 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 
 			parts := strings.SplitN(string(data), ":", 2)
 			if len(parts) != 2 {
-				return nil, errors.WithStack(fmt.Errorf("invalid auth for registry: %s", host))
+				return nil, errors.WithStack(structs.ErrBadRequest("invalid auth for registry: %s", host))
 			}
 
 			rs = append(rs, structs.Registry{
@@ -86,6 +86,11 @@ func (p *Provider) RegistryList() (structs.Registries, error) {
 
 func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 	path := c.Var("path")
+	prefix := p.Engine.RepositoryPrefix()
+
+	if artifactUploadPath(prefix, c.Request().URL.Path) {
+		return p.registryUploadProxy(c, prefix)
+	}
 
 	if path == "" {
 		c.Response().Header().Add("Docker-Distribution-Api-Version", "registry/2.0")
@@ -107,12 +112,65 @@ func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 		return registryError(err)
 	}
 
-	u, err := url.Parse(fmt.Sprintf("https://%s", host))
+	return registryForward(c, host, fmt.Sprintf("/v2/%s", path), user, pass, prefix)
+}
+
+func (p *Provider) registryUploadProxy(c *stdapi.Context, prefix string) error {
+	user, pass, err := p.Engine.RepositoryAuth("")
 	if err != nil {
-		registryError(err)
+		return registryError(err)
 	}
 
-	u.Path = fmt.Sprintf("/v2/%s", path)
+	host, _, err := p.Engine.RepositoryHost("")
+	if err != nil {
+		return registryError(err)
+	}
+
+	upstream, local, _ := artifactUploadPrefixes(prefix)
+
+	path := c.Request().URL.Path
+	if rest, ok := strings.CutPrefix(path, local+"artifacts-uploads/"); ok {
+		path = upstream + rest
+	}
+
+	return registryForward(c, host, path, user, pass, prefix)
+}
+
+// Artifact Registry continues blob uploads at Locations that name no app: first under
+// /artifacts-uploads, then under a pkg image in the /v2 API. Docker only authenticates
+// /v2 requests, so the proxy serves the /artifacts-uploads Locations under the pkg path.
+func artifactUploadPrefixes(prefix string) (string, string, bool) {
+	parts := strings.Split(strings.TrimSuffix(prefix, "/"), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+
+	return fmt.Sprintf("/artifacts-uploads/namespaces/%s/repositories/%s/uploads/", parts[0], parts[1]),
+		fmt.Sprintf("/v2/%s/%s/pkg/blobs/uploads/", parts[0], parts[1]), true
+}
+
+func artifactUploadPath(prefix, path string) bool {
+	_, local, ok := artifactUploadPrefixes(prefix)
+
+	return ok && strings.HasPrefix(path, local) && len(path) > len(local)
+}
+
+func artifactUploadLocation(prefix, location string) string {
+	upstream, local, ok := artifactUploadPrefixes(prefix)
+	if rest, found := strings.CutPrefix(location, upstream); ok && found {
+		return local + "artifacts-uploads/" + rest
+	}
+
+	return location
+}
+
+func registryForward(c *stdapi.Context, host, path, user, pass, prefix string) error {
+	u, err := url.Parse(fmt.Sprintf("https://%s", host))
+	if err != nil {
+		return registryError(err)
+	}
+
+	u.Path = path
 	u.RawQuery = c.Request().URL.RawQuery
 
 	proxy := httputil.ReverseProxy{
@@ -120,6 +178,13 @@ func (p *Provider) RegistryProxy(c *stdapi.Context) error {
 			r.Host = u.Host
 			r.URL = u
 			r.SetBasicAuth(user, pass)
+		},
+		ModifyResponse: func(res *http.Response) error {
+			l := res.Header.Get("Location")
+			if nl := artifactUploadLocation(prefix, l); nl != l {
+				res.Header.Set("Location", nl)
+			}
+			return nil
 		},
 	}
 
@@ -139,10 +204,10 @@ func (p *Provider) RegistryRemove(server string) error {
 		return errors.WithStack(err)
 	}
 	if dc.Auths == nil {
-		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
+		return errors.WithStack(structs.ErrNotFound("no such registry: %s", server))
 	}
 	if _, ok := dc.Auths[server]; !ok {
-		return errors.WithStack(fmt.Errorf("no such registry: %s", server))
+		return errors.WithStack(structs.ErrNotFound("no such registry: %s", server))
 	}
 
 	delete(dc.Auths, server)
@@ -171,11 +236,11 @@ func (p *Provider) dockerConfigLoad(secret string) (*dockerConfig, error) {
 		return nil, errors.WithStack(err)
 	}
 	if s.Type != ac.SecretTypeDockerConfigJson {
-		return nil, errors.WithStack(fmt.Errorf("invalid type for secret: %s", secret))
+		return nil, errors.WithStack(structs.ErrBadRequest("invalid type for secret: %s", secret))
 	}
 	data, ok := s.Data[".dockerconfigjson"]
 	if !ok {
-		return nil, errors.WithStack(fmt.Errorf("invalid data for secret: %s", secret))
+		return nil, errors.WithStack(structs.ErrBadRequest("invalid data for secret: %s", secret))
 	}
 
 	var dc dockerConfig
@@ -230,6 +295,10 @@ func (p *Provider) dockerConfigSave(secret string, dc *dockerConfig) error {
 func (p *Provider) registryApp(path string) (string, error) {
 	app := strings.Split(strings.TrimPrefix(path, p.Engine.RepositoryPrefix()), "/")[0]
 
+	if structs.ReservedAppName(app) {
+		return "", errors.WithStack(structs.ErrBadRequest("app name is reserved"))
+	}
+
 	if _, err := p.AppGet(app); err != nil {
 		return "", err
 	}
@@ -238,5 +307,5 @@ func (p *Provider) registryApp(path string) (string, error) {
 }
 
 func registryError(err error) error {
-	return stdapi.Errorf(403, fmt.Sprintf(`{"errors":[{"message":%q}]}`, err.Error()))
+	return stdapi.Errorf(403, `{"errors":[{"message":%q}]}`, err.Error())
 }

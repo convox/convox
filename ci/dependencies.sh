@@ -1,19 +1,22 @@
 #!/bin/bash
 set -ex -o pipefail
 
+fetch_verified() {
+  curl -fsSL "$1" -o "$2"
+  echo "$3  $2" | sha256sum -c -
+}
+
 # install utilities
 sudo apt-get update && sudo apt-get -y install jq unzip
 
 # install docker
-curl -s https://download.docker.com/linux/static/stable/x86_64/docker-20.10.21.tgz | sudo tar -C /usr/bin --strip-components 1 -xz
+fetch_verified https://download.docker.com/linux/static/stable/x86_64/docker-29.5.2.tgz /tmp/docker.tgz 6d81a5be56232d9cc047e60b7110a087793536ae5a8b465719cd303f05fc56ec
+sudo tar -C /usr/bin --strip-components 1 -xzf /tmp/docker.tgz
 
-# install kubectl
-curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.22.0/bin/linux/amd64/kubectl -o /tmp/kubectl && \
-	sudo mv /tmp/kubectl /usr/bin/kubectl && sudo chmod +x /usr/bin/kubectl
+# install kubectl (match the rack's EKS k8s_version)
+fetch_verified https://dl.k8s.io/release/v1.36.6/bin/linux/amd64/kubectl /tmp/kubectl 29818b6729dc9262b692307470d0558d027725e738be5dd47c760261868a2634
+sudo install -m 0755 /tmp/kubectl /usr/bin/kubectl
 
-# install terraform
-curl -L https://releases.hashicorp.com/terraform/0.13.2/terraform_0.13.2_linux_amd64.zip -o terraform.zip && \
-	unzip terraform.zip -d /tmp && sudo mv /tmp/terraform /usr/bin/terraform && rm terraform.zip
-
-# install latest aws cli
-pip install --upgrade awscli
+# install terraform (1.x required by the hashicorp/aws 5.x provider the modules pin)
+fetch_verified https://releases.hashicorp.com/terraform/1.15.5/terraform_1.15.5_linux_amd64.zip /tmp/terraform.zip 702b2136af6728c8ff037f843dd2dbce2b7ad88786b7381d1d72aefa250f601c
+unzip -o /tmp/terraform.zip terraform -d /tmp && sudo install -m 0755 /tmp/terraform /usr/bin/terraform

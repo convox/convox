@@ -1,0 +1,58 @@
+---
+title: "node_capacity_type"
+description: "The node_capacity_type AWS rack parameter selects the capacity type for cluster nodes, on_demand (default), spot, or mixed."
+slug: node_capacity_type
+url: /configuration/rack-parameters/aws/node_capacity_type
+---
+
+# node_capacity_type
+
+## Description
+The `node_capacity_type` parameter specifies the type of capacity for the cluster nodes. It can be set to `on_demand`, `spot`, or `mixed`.
+
+- `on_demand`: Uses AWS on-demand instances for the cluster nodes.
+- `spot`: Uses AWS spot instances for the cluster nodes.
+- `mixed`: Creates one node group with on-demand instances and the other two with spot instances. Use `mixed` with the [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) and [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameters to control the minimum and maximum number of on-demand nodes, ensuring acceptable service availability even if spot instances become unavailable.
+
+## Default Value
+The default value for `node_capacity_type` is `on_demand`.
+
+## Use Cases
+- **Cost Optimization**: Use `spot` or `mixed` capacity types to reduce costs by leveraging lower-cost spot instances while maintaining a baseline of reliable on-demand instances.
+- **Reliability and Performance**: Use `on_demand` capacity type for maximum reliability and performance, as on-demand instances are not subject to interruption like spot instances.
+
+## Setting Parameters
+To set the `node_capacity_type` parameter, use the following command:
+```bash
+$ convox rack params set node_capacity_type=mixed -r rackName
+Updating parameters... OK
+```
+This command sets the node capacity type to `mixed`.
+
+## Karpenter Interaction (3.24.7+)
+
+When [Karpenter](/configuration/scaling/karpenter) is enabled or being enabled, the CLI enforces constraints on `node_capacity_type`:
+
+- **Enabling Karpenter requires `on_demand`.** Setting `karpenter_enabled=true` when `node_capacity_type` is `spot` or `mixed` is rejected because Karpenter taints the old node group during replacement, and non-on_demand nodes may not schedule replacements reliably.
+- **Cannot change while Karpenter is active.** Any `node_capacity_type` change while `karpenter_enabled=true` is rejected. Disable Karpenter first, change the capacity type, then re-enable.
+
+These guards prevent scheduling deadlocks during node group transitions. See [Karpenter Enablement Validation Guards](/configuration/scaling/karpenter#enablement-validation-guards) for details.
+
+## Instance Type Lists
+
+When [`node_type`](/configuration/rack-parameters/aws/node_type) names more than one instance type, the capacity type decides how EKS picks from the list. An On-Demand node group tries the types in the order listed. A Spot node group chooses by available capacity and price and ignores the order, so on `spot`, and on the Spot groups of a `mixed` Rack, listing more types widens the capacity pool rather than setting a preference.
+
+With `mixed`, the Cluster Autoscaler does not treat the On-Demand group and the Spot groups as interchangeable, so a scale-up splits across the two Spot groups rather than all three. See [How the Autoscaler Picks a Group](/configuration/scaling/autoscaling#how-the-autoscaler-picks-a-group).
+
+## Additional Information
+When using the `mixed` capacity type, it is important to configure the [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) and [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) parameters to ensure that your cluster maintains the desired balance of cost and reliability.
+
+Using spot instances can lead to potential volatility as these instances may be interrupted by AWS when capacity is needed elsewhere. This setup is recommended only for non-production environments that can tolerate such interruptions.
+
+By setting the `node_capacity_type` parameter appropriately, you can optimize the cost-efficiency and reliability of your Convox rack based on your specific needs and workload requirements.
+
+## See Also
+
+- [Karpenter](/configuration/scaling/karpenter) for Karpenter node autoscaling
+- [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count) for minimum on-demand nodes in mixed mode
+- [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count) for maximum on-demand nodes in mixed mode

@@ -17,6 +17,84 @@ type CloudFormationAPI struct {
 	mock.Mock
 }
 
+// ActivateOrganizationsAccess provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ActivateOrganizationsAccess(_a0 *cloudformation.ActivateOrganizationsAccessInput) (*cloudformation.ActivateOrganizationsAccessOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ActivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ActivateOrganizationsAccessInput) *cloudformation.ActivateOrganizationsAccessOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ActivateOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ActivateOrganizationsAccessInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ActivateOrganizationsAccessRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ActivateOrganizationsAccessRequest(_a0 *cloudformation.ActivateOrganizationsAccessInput) (*request.Request, *cloudformation.ActivateOrganizationsAccessOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ActivateOrganizationsAccessInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ActivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ActivateOrganizationsAccessInput) *cloudformation.ActivateOrganizationsAccessOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ActivateOrganizationsAccessOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ActivateOrganizationsAccessWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ActivateOrganizationsAccessWithContext(_a0 context.Context, _a1 *cloudformation.ActivateOrganizationsAccessInput, _a2 ...request.Option) (*cloudformation.ActivateOrganizationsAccessOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ActivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ActivateOrganizationsAccessInput, ...request.Option) *cloudformation.ActivateOrganizationsAccessOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ActivateOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ActivateOrganizationsAccessInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ActivateType provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) ActivateType(_a0 *cloudformation.ActivateTypeInput) (*cloudformation.ActivateTypeOutput, error) {
 	ret := _m.Called(_a0)
@@ -407,6 +485,84 @@ func (_m *CloudFormationAPI) CreateChangeSetWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// CreateGeneratedTemplate provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) CreateGeneratedTemplate(_a0 *cloudformation.CreateGeneratedTemplateInput) (*cloudformation.CreateGeneratedTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.CreateGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.CreateGeneratedTemplateInput) *cloudformation.CreateGeneratedTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.CreateGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.CreateGeneratedTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateGeneratedTemplateRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) CreateGeneratedTemplateRequest(_a0 *cloudformation.CreateGeneratedTemplateInput) (*request.Request, *cloudformation.CreateGeneratedTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.CreateGeneratedTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.CreateGeneratedTemplateOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.CreateGeneratedTemplateInput) *cloudformation.CreateGeneratedTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.CreateGeneratedTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CreateGeneratedTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) CreateGeneratedTemplateWithContext(_a0 context.Context, _a1 *cloudformation.CreateGeneratedTemplateInput, _a2 ...request.Option) (*cloudformation.CreateGeneratedTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.CreateGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.CreateGeneratedTemplateInput, ...request.Option) *cloudformation.CreateGeneratedTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.CreateGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.CreateGeneratedTemplateInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateStack provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) CreateStack(_a0 *cloudformation.CreateStackInput) (*cloudformation.CreateStackOutput, error) {
 	ret := _m.Called(_a0)
@@ -641,6 +797,84 @@ func (_m *CloudFormationAPI) CreateStackWithContext(_a0 context.Context, _a1 *cl
 	return r0, r1
 }
 
+// DeactivateOrganizationsAccess provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DeactivateOrganizationsAccess(_a0 *cloudformation.DeactivateOrganizationsAccessInput) (*cloudformation.DeactivateOrganizationsAccessOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.DeactivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.DeactivateOrganizationsAccessInput) *cloudformation.DeactivateOrganizationsAccessOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DeactivateOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.DeactivateOrganizationsAccessInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeactivateOrganizationsAccessRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DeactivateOrganizationsAccessRequest(_a0 *cloudformation.DeactivateOrganizationsAccessInput) (*request.Request, *cloudformation.DeactivateOrganizationsAccessOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.DeactivateOrganizationsAccessInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.DeactivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.DeactivateOrganizationsAccessInput) *cloudformation.DeactivateOrganizationsAccessOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.DeactivateOrganizationsAccessOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeactivateOrganizationsAccessWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) DeactivateOrganizationsAccessWithContext(_a0 context.Context, _a1 *cloudformation.DeactivateOrganizationsAccessInput, _a2 ...request.Option) (*cloudformation.DeactivateOrganizationsAccessOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.DeactivateOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.DeactivateOrganizationsAccessInput, ...request.Option) *cloudformation.DeactivateOrganizationsAccessOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DeactivateOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DeactivateOrganizationsAccessInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DeactivateType provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) DeactivateType(_a0 *cloudformation.DeactivateTypeInput) (*cloudformation.DeactivateTypeOutput, error) {
 	ret := _m.Called(_a0)
@@ -789,6 +1023,84 @@ func (_m *CloudFormationAPI) DeleteChangeSetWithContext(_a0 context.Context, _a1
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DeleteChangeSetInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteGeneratedTemplate provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DeleteGeneratedTemplate(_a0 *cloudformation.DeleteGeneratedTemplateInput) (*cloudformation.DeleteGeneratedTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.DeleteGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.DeleteGeneratedTemplateInput) *cloudformation.DeleteGeneratedTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DeleteGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.DeleteGeneratedTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DeleteGeneratedTemplateRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DeleteGeneratedTemplateRequest(_a0 *cloudformation.DeleteGeneratedTemplateInput) (*request.Request, *cloudformation.DeleteGeneratedTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.DeleteGeneratedTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.DeleteGeneratedTemplateOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.DeleteGeneratedTemplateInput) *cloudformation.DeleteGeneratedTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.DeleteGeneratedTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DeleteGeneratedTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) DeleteGeneratedTemplateWithContext(_a0 context.Context, _a1 *cloudformation.DeleteGeneratedTemplateInput, _a2 ...request.Option) (*cloudformation.DeleteGeneratedTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.DeleteGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.DeleteGeneratedTemplateInput, ...request.Option) *cloudformation.DeleteGeneratedTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DeleteGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DeleteGeneratedTemplateInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -1378,6 +1690,162 @@ func (_m *CloudFormationAPI) DescribeChangeSetWithContext(_a0 context.Context, _
 	return r0, r1
 }
 
+// DescribeGeneratedTemplate provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeGeneratedTemplate(_a0 *cloudformation.DescribeGeneratedTemplateInput) (*cloudformation.DescribeGeneratedTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.DescribeGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeGeneratedTemplateInput) *cloudformation.DescribeGeneratedTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeGeneratedTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeGeneratedTemplateRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeGeneratedTemplateRequest(_a0 *cloudformation.DescribeGeneratedTemplateInput) (*request.Request, *cloudformation.DescribeGeneratedTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeGeneratedTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.DescribeGeneratedTemplateOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeGeneratedTemplateInput) *cloudformation.DescribeGeneratedTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.DescribeGeneratedTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeGeneratedTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) DescribeGeneratedTemplateWithContext(_a0 context.Context, _a1 *cloudformation.DescribeGeneratedTemplateInput, _a2 ...request.Option) (*cloudformation.DescribeGeneratedTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.DescribeGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.DescribeGeneratedTemplateInput, ...request.Option) *cloudformation.DescribeGeneratedTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DescribeGeneratedTemplateInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeOrganizationsAccess provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeOrganizationsAccess(_a0 *cloudformation.DescribeOrganizationsAccessInput) (*cloudformation.DescribeOrganizationsAccessOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.DescribeOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeOrganizationsAccessInput) *cloudformation.DescribeOrganizationsAccessOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeOrganizationsAccessInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeOrganizationsAccessRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeOrganizationsAccessRequest(_a0 *cloudformation.DescribeOrganizationsAccessInput) (*request.Request, *cloudformation.DescribeOrganizationsAccessOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeOrganizationsAccessInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.DescribeOrganizationsAccessOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeOrganizationsAccessInput) *cloudformation.DescribeOrganizationsAccessOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.DescribeOrganizationsAccessOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeOrganizationsAccessWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) DescribeOrganizationsAccessWithContext(_a0 context.Context, _a1 *cloudformation.DescribeOrganizationsAccessInput, _a2 ...request.Option) (*cloudformation.DescribeOrganizationsAccessOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.DescribeOrganizationsAccessOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.DescribeOrganizationsAccessInput, ...request.Option) *cloudformation.DescribeOrganizationsAccessOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeOrganizationsAccessOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DescribeOrganizationsAccessInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // DescribePublisher provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) DescribePublisher(_a0 *cloudformation.DescribePublisherInput) (*cloudformation.DescribePublisherOutput, error) {
 	ret := _m.Called(_a0)
@@ -1448,6 +1916,84 @@ func (_m *CloudFormationAPI) DescribePublisherWithContext(_a0 context.Context, _
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DescribePublisherInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeResourceScan provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeResourceScan(_a0 *cloudformation.DescribeResourceScanInput) (*cloudformation.DescribeResourceScanOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.DescribeResourceScanOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeResourceScanInput) *cloudformation.DescribeResourceScanOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeResourceScanOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeResourceScanInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// DescribeResourceScanRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) DescribeResourceScanRequest(_a0 *cloudformation.DescribeResourceScanInput) (*request.Request, *cloudformation.DescribeResourceScanOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.DescribeResourceScanInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.DescribeResourceScanOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.DescribeResourceScanInput) *cloudformation.DescribeResourceScanOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.DescribeResourceScanOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// DescribeResourceScanWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) DescribeResourceScanWithContext(_a0 context.Context, _a1 *cloudformation.DescribeResourceScanInput, _a2 ...request.Option) (*cloudformation.DescribeResourceScanOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.DescribeResourceScanOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.DescribeResourceScanInput, ...request.Option) *cloudformation.DescribeResourceScanOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.DescribeResourceScanOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.DescribeResourceScanInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -2809,6 +3355,84 @@ func (_m *CloudFormationAPI) ExecuteChangeSetWithContext(_a0 context.Context, _a
 	return r0, r1
 }
 
+// GetGeneratedTemplate provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) GetGeneratedTemplate(_a0 *cloudformation.GetGeneratedTemplateInput) (*cloudformation.GetGeneratedTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.GetGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.GetGeneratedTemplateInput) *cloudformation.GetGeneratedTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.GetGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.GetGeneratedTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetGeneratedTemplateRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) GetGeneratedTemplateRequest(_a0 *cloudformation.GetGeneratedTemplateInput) (*request.Request, *cloudformation.GetGeneratedTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.GetGeneratedTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.GetGeneratedTemplateOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.GetGeneratedTemplateInput) *cloudformation.GetGeneratedTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.GetGeneratedTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// GetGeneratedTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) GetGeneratedTemplateWithContext(_a0 context.Context, _a1 *cloudformation.GetGeneratedTemplateInput, _a2 ...request.Option) (*cloudformation.GetGeneratedTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.GetGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.GetGeneratedTemplateInput, ...request.Option) *cloudformation.GetGeneratedTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.GetGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.GetGeneratedTemplateInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetStackPolicy provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) GetStackPolicy(_a0 *cloudformation.GetStackPolicyInput) (*cloudformation.GetStackPolicyOutput, error) {
 	ret := _m.Called(_a0)
@@ -3347,6 +3971,119 @@ func (_m *CloudFormationAPI) ListExportsWithContext(_a0 context.Context, _a1 *cl
 	return r0, r1
 }
 
+// ListGeneratedTemplates provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListGeneratedTemplates(_a0 *cloudformation.ListGeneratedTemplatesInput) (*cloudformation.ListGeneratedTemplatesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListGeneratedTemplatesOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListGeneratedTemplatesInput) *cloudformation.ListGeneratedTemplatesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListGeneratedTemplatesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListGeneratedTemplatesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListGeneratedTemplatesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudFormationAPI) ListGeneratedTemplatesPages(_a0 *cloudformation.ListGeneratedTemplatesInput, _a1 func(*cloudformation.ListGeneratedTemplatesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListGeneratedTemplatesInput, func(*cloudformation.ListGeneratedTemplatesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListGeneratedTemplatesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudFormationAPI) ListGeneratedTemplatesPagesWithContext(_a0 context.Context, _a1 *cloudformation.ListGeneratedTemplatesInput, _a2 func(*cloudformation.ListGeneratedTemplatesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListGeneratedTemplatesInput, func(*cloudformation.ListGeneratedTemplatesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListGeneratedTemplatesRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListGeneratedTemplatesRequest(_a0 *cloudformation.ListGeneratedTemplatesInput) (*request.Request, *cloudformation.ListGeneratedTemplatesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListGeneratedTemplatesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListGeneratedTemplatesOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListGeneratedTemplatesInput) *cloudformation.ListGeneratedTemplatesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListGeneratedTemplatesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListGeneratedTemplatesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListGeneratedTemplatesWithContext(_a0 context.Context, _a1 *cloudformation.ListGeneratedTemplatesInput, _a2 ...request.Option) (*cloudformation.ListGeneratedTemplatesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListGeneratedTemplatesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListGeneratedTemplatesInput, ...request.Option) *cloudformation.ListGeneratedTemplatesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListGeneratedTemplatesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListGeneratedTemplatesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListImports provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) ListImports(_a0 *cloudformation.ListImportsInput) (*cloudformation.ListImportsOutput, error) {
 	ret := _m.Called(_a0)
@@ -3452,6 +4189,423 @@ func (_m *CloudFormationAPI) ListImportsWithContext(_a0 context.Context, _a1 *cl
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListImportsInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanRelatedResources provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScanRelatedResources(_a0 *cloudformation.ListResourceScanRelatedResourcesInput) (*cloudformation.ListResourceScanRelatedResourcesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListResourceScanRelatedResourcesOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanRelatedResourcesInput) *cloudformation.ListResourceScanRelatedResourcesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScanRelatedResourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScanRelatedResourcesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanRelatedResourcesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudFormationAPI) ListResourceScanRelatedResourcesPages(_a0 *cloudformation.ListResourceScanRelatedResourcesInput, _a1 func(*cloudformation.ListResourceScanRelatedResourcesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanRelatedResourcesInput, func(*cloudformation.ListResourceScanRelatedResourcesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScanRelatedResourcesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudFormationAPI) ListResourceScanRelatedResourcesPagesWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScanRelatedResourcesInput, _a2 func(*cloudformation.ListResourceScanRelatedResourcesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScanRelatedResourcesInput, func(*cloudformation.ListResourceScanRelatedResourcesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScanRelatedResourcesRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScanRelatedResourcesRequest(_a0 *cloudformation.ListResourceScanRelatedResourcesInput) (*request.Request, *cloudformation.ListResourceScanRelatedResourcesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanRelatedResourcesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListResourceScanRelatedResourcesOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScanRelatedResourcesInput) *cloudformation.ListResourceScanRelatedResourcesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListResourceScanRelatedResourcesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanRelatedResourcesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListResourceScanRelatedResourcesWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScanRelatedResourcesInput, _a2 ...request.Option) (*cloudformation.ListResourceScanRelatedResourcesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListResourceScanRelatedResourcesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScanRelatedResourcesInput, ...request.Option) *cloudformation.ListResourceScanRelatedResourcesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScanRelatedResourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListResourceScanRelatedResourcesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanResources provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScanResources(_a0 *cloudformation.ListResourceScanResourcesInput) (*cloudformation.ListResourceScanResourcesOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListResourceScanResourcesOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanResourcesInput) *cloudformation.ListResourceScanResourcesOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScanResourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScanResourcesInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanResourcesPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudFormationAPI) ListResourceScanResourcesPages(_a0 *cloudformation.ListResourceScanResourcesInput, _a1 func(*cloudformation.ListResourceScanResourcesOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanResourcesInput, func(*cloudformation.ListResourceScanResourcesOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScanResourcesPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudFormationAPI) ListResourceScanResourcesPagesWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScanResourcesInput, _a2 func(*cloudformation.ListResourceScanResourcesOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScanResourcesInput, func(*cloudformation.ListResourceScanResourcesOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScanResourcesRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScanResourcesRequest(_a0 *cloudformation.ListResourceScanResourcesInput) (*request.Request, *cloudformation.ListResourceScanResourcesOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScanResourcesInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListResourceScanResourcesOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScanResourcesInput) *cloudformation.ListResourceScanResourcesOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListResourceScanResourcesOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListResourceScanResourcesWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListResourceScanResourcesWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScanResourcesInput, _a2 ...request.Option) (*cloudformation.ListResourceScanResourcesOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListResourceScanResourcesOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScanResourcesInput, ...request.Option) *cloudformation.ListResourceScanResourcesOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScanResourcesOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListResourceScanResourcesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScans provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScans(_a0 *cloudformation.ListResourceScansInput) (*cloudformation.ListResourceScansOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListResourceScansOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScansInput) *cloudformation.ListResourceScansOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScansOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScansInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListResourceScansPages provides a mock function with given fields: _a0, _a1
+func (_m *CloudFormationAPI) ListResourceScansPages(_a0 *cloudformation.ListResourceScansInput, _a1 func(*cloudformation.ListResourceScansOutput, bool) bool) error {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScansInput, func(*cloudformation.ListResourceScansOutput, bool) bool) error); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScansPagesWithContext provides a mock function with given fields: _a0, _a1, _a2, _a3
+func (_m *CloudFormationAPI) ListResourceScansPagesWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScansInput, _a2 func(*cloudformation.ListResourceScansOutput, bool) bool, _a3 ...request.Option) error {
+	_va := make([]interface{}, len(_a3))
+	for _i := range _a3 {
+		_va[_i] = _a3[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1, _a2)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScansInput, func(*cloudformation.ListResourceScansOutput, bool) bool, ...request.Option) error); ok {
+		r0 = rf(_a0, _a1, _a2, _a3...)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// ListResourceScansRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListResourceScansRequest(_a0 *cloudformation.ListResourceScansInput) (*request.Request, *cloudformation.ListResourceScansOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListResourceScansInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListResourceScansOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListResourceScansInput) *cloudformation.ListResourceScansOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListResourceScansOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListResourceScansWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListResourceScansWithContext(_a0 context.Context, _a1 *cloudformation.ListResourceScansInput, _a2 ...request.Option) (*cloudformation.ListResourceScansOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListResourceScansOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListResourceScansInput, ...request.Option) *cloudformation.ListResourceScansOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListResourceScansOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListResourceScansInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListStackInstanceResourceDrifts provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListStackInstanceResourceDrifts(_a0 *cloudformation.ListStackInstanceResourceDriftsInput) (*cloudformation.ListStackInstanceResourceDriftsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListStackInstanceResourceDriftsOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListStackInstanceResourceDriftsInput) *cloudformation.ListStackInstanceResourceDriftsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListStackInstanceResourceDriftsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListStackInstanceResourceDriftsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListStackInstanceResourceDriftsRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListStackInstanceResourceDriftsRequest(_a0 *cloudformation.ListStackInstanceResourceDriftsInput) (*request.Request, *cloudformation.ListStackInstanceResourceDriftsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListStackInstanceResourceDriftsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListStackInstanceResourceDriftsOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListStackInstanceResourceDriftsInput) *cloudformation.ListStackInstanceResourceDriftsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListStackInstanceResourceDriftsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListStackInstanceResourceDriftsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListStackInstanceResourceDriftsWithContext(_a0 context.Context, _a1 *cloudformation.ListStackInstanceResourceDriftsInput, _a2 ...request.Option) (*cloudformation.ListStackInstanceResourceDriftsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListStackInstanceResourceDriftsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListStackInstanceResourceDriftsInput, ...request.Option) *cloudformation.ListStackInstanceResourceDriftsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListStackInstanceResourceDriftsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListStackInstanceResourceDriftsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -3678,6 +4832,84 @@ func (_m *CloudFormationAPI) ListStackResourcesWithContext(_a0 context.Context, 
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListStackResourcesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListStackSetAutoDeploymentTargets provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListStackSetAutoDeploymentTargets(_a0 *cloudformation.ListStackSetAutoDeploymentTargetsInput) (*cloudformation.ListStackSetAutoDeploymentTargetsOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.ListStackSetAutoDeploymentTargetsOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListStackSetAutoDeploymentTargetsInput) *cloudformation.ListStackSetAutoDeploymentTargetsOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListStackSetAutoDeploymentTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListStackSetAutoDeploymentTargetsInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListStackSetAutoDeploymentTargetsRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) ListStackSetAutoDeploymentTargetsRequest(_a0 *cloudformation.ListStackSetAutoDeploymentTargetsInput) (*request.Request, *cloudformation.ListStackSetAutoDeploymentTargetsOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.ListStackSetAutoDeploymentTargetsInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.ListStackSetAutoDeploymentTargetsOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.ListStackSetAutoDeploymentTargetsInput) *cloudformation.ListStackSetAutoDeploymentTargetsOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.ListStackSetAutoDeploymentTargetsOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListStackSetAutoDeploymentTargetsWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) ListStackSetAutoDeploymentTargetsWithContext(_a0 context.Context, _a1 *cloudformation.ListStackSetAutoDeploymentTargetsInput, _a2 ...request.Option) (*cloudformation.ListStackSetAutoDeploymentTargetsOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.ListStackSetAutoDeploymentTargetsOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.ListStackSetAutoDeploymentTargetsInput, ...request.Option) *cloudformation.ListStackSetAutoDeploymentTargetsOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.ListStackSetAutoDeploymentTargetsOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.ListStackSetAutoDeploymentTargetsInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)
@@ -5179,6 +6411,84 @@ func (_m *CloudFormationAPI) SignalResourceWithContext(_a0 context.Context, _a1 
 	return r0, r1
 }
 
+// StartResourceScan provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) StartResourceScan(_a0 *cloudformation.StartResourceScanInput) (*cloudformation.StartResourceScanOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.StartResourceScanOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.StartResourceScanInput) *cloudformation.StartResourceScanOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.StartResourceScanOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.StartResourceScanInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartResourceScanRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) StartResourceScanRequest(_a0 *cloudformation.StartResourceScanInput) (*request.Request, *cloudformation.StartResourceScanOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.StartResourceScanInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.StartResourceScanOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.StartResourceScanInput) *cloudformation.StartResourceScanOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.StartResourceScanOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// StartResourceScanWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) StartResourceScanWithContext(_a0 context.Context, _a1 *cloudformation.StartResourceScanInput, _a2 ...request.Option) (*cloudformation.StartResourceScanOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.StartResourceScanOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.StartResourceScanInput, ...request.Option) *cloudformation.StartResourceScanOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.StartResourceScanOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.StartResourceScanInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // StopStackSetOperation provides a mock function with given fields: _a0
 func (_m *CloudFormationAPI) StopStackSetOperation(_a0 *cloudformation.StopStackSetOperationInput) (*cloudformation.StopStackSetOperationOutput, error) {
 	ret := _m.Called(_a0)
@@ -5327,6 +6637,84 @@ func (_m *CloudFormationAPI) TestTypeWithContext(_a0 context.Context, _a1 *cloud
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.TestTypeInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateGeneratedTemplate provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) UpdateGeneratedTemplate(_a0 *cloudformation.UpdateGeneratedTemplateInput) (*cloudformation.UpdateGeneratedTemplateOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *cloudformation.UpdateGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(*cloudformation.UpdateGeneratedTemplateInput) *cloudformation.UpdateGeneratedTemplateOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.UpdateGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*cloudformation.UpdateGeneratedTemplateInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateGeneratedTemplateRequest provides a mock function with given fields: _a0
+func (_m *CloudFormationAPI) UpdateGeneratedTemplateRequest(_a0 *cloudformation.UpdateGeneratedTemplateInput) (*request.Request, *cloudformation.UpdateGeneratedTemplateOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*cloudformation.UpdateGeneratedTemplateInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *cloudformation.UpdateGeneratedTemplateOutput
+	if rf, ok := ret.Get(1).(func(*cloudformation.UpdateGeneratedTemplateInput) *cloudformation.UpdateGeneratedTemplateOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*cloudformation.UpdateGeneratedTemplateOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// UpdateGeneratedTemplateWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *CloudFormationAPI) UpdateGeneratedTemplateWithContext(_a0 context.Context, _a1 *cloudformation.UpdateGeneratedTemplateInput, _a2 ...request.Option) (*cloudformation.UpdateGeneratedTemplateOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *cloudformation.UpdateGeneratedTemplateOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *cloudformation.UpdateGeneratedTemplateInput, ...request.Option) *cloudformation.UpdateGeneratedTemplateOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*cloudformation.UpdateGeneratedTemplateOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *cloudformation.UpdateGeneratedTemplateInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

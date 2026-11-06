@@ -30,10 +30,14 @@ data "aws_iam_policy_document" "autoscale" {
       "autoscaling:DescribeAutoScalingInstances",
       "autoscaling:DescribeLaunchConfigurations",
       "autoscaling:DescribeTags",
+      "autoscaling:DescribeScalingActivities",
       "autoscaling:SetDesiredCapacity",
       "autoscaling:TerminateInstanceInAutoScalingGroup",
       "ec2:DescribeLaunchTemplateVersions",
       "ec2:DescribeInstanceTypes",
+      "ec2:DescribeImages",
+      "ec2:GetInstanceTypesFromInstanceRequirements",
+      "eks:DescribeNodegroup"
     ]
     effect    = "Allow"
     resources = ["*"]
@@ -51,6 +55,54 @@ locals {
     "k8s-addon" : "cluster-autoscaler.addons.k8s.io",
     "k8s-app" : "cluster-autoscaler",
   }
+
+  # CAS/Karpenter coexistence logic
+  has_additional_groups = length(var.additional_node_groups) > 0
+
+  # CAS replicas: 0 when Karpenter + no additional groups, 1 otherwise
+  cas_replicas = var.karpenter_enabled && !local.has_additional_groups ? 0 : 1
+
+  # Build --nodes flags for each additional node group ASG (used in Karpenter mode)
+  cas_additional_nodes_args = [
+    for key, ng in aws_eks_node_group.cluster_additional :
+    "--nodes=${ng.scaling_config[0].min_size}:${ng.scaling_config[0].max_size}:${ng.resources[0].autoscaling_groups[0].name}"
+  ]
+
+  # Base CAS flags (shared between all modes)
+  cas_base_args = [
+    "./cluster-autoscaler",
+    "--v=4",
+    "--stderrthreshold=info",
+    "--cloud-provider=aws",
+    "--skip-nodes-with-local-storage=false",
+    "--expander=least-waste",
+  ]
+
+  # Tail CAS flags (shared between all modes)
+  cas_tail_args = [
+    "--skip-nodes-with-system-pods=false",
+    "--max-pod-eviction-time=5m",
+    "--emit-per-nodegroup-metrics",
+  ]
+
+  # Mode-specific discovery/targeting flag
+  cas_discovery_args = var.karpenter_enabled ? (
+    # Karpenter mode: explicit ASG targeting for additional groups only
+    local.cas_additional_nodes_args
+    ) : (
+    # CAS mode: auto-discovery (current behavior)
+    [
+      "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
+      "--balance-similar-node-groups",
+      "--balancing-ignore-label=eks.amazonaws.com/nodegroup-image",
+      "--balancing-ignore-label=eks.amazonaws.com/sourceLaunchTemplateVersion",
+      "--balancing-ignore-label=node.kubernetes.io/instance-type",
+      "--balancing-ignore-label=beta.kubernetes.io/instance-type",
+    ]
+  )
+
+  # Full CAS command
+  cas_command = concat(local.cas_base_args, local.cas_discovery_args, local.cas_tail_args)
 }
 
 resource "kubernetes_service_account" "autoscaler" {
@@ -105,13 +157,25 @@ resource "kubernetes_cluster_role" "autoscaler" {
   rule {
     api_groups = [""]
     resources  = ["nodes"]
-    verbs      = ["watch", "list", "get", "update"]
+    verbs      = ["watch", "list", "get", "create", "delete", "update"]
   }
 
   rule {
     api_groups = [""]
     resources  = ["namespaces", "pods", "services", "replicationcontrollers", "persistentvolumeclaims", "persistentvolumes"]
     verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["batch"]
+    resources  = ["jobs", "cronjobs"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["batch", "extensions"]
+    resources  = ["jobs"]
+    verbs      = ["watch", "list", "get", "patch"]
   }
 
   rule {
@@ -133,15 +197,39 @@ resource "kubernetes_cluster_role" "autoscaler" {
   }
 
   rule {
+    api_groups = ["discovery.k8s.io"]
+    resources  = ["endpointslices"]
+    verbs      = ["get", "list", "update", "create", "patch"]
+  }
+
+  rule {
     api_groups = ["storage.k8s.io"]
-    resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses"]
+    resources  = ["csidrivers", "csinodes", "csistoragecapacities", "storageclasses", "volumeattachments"]
     verbs      = ["watch", "list", "get"]
   }
 
   rule {
-    api_groups = ["batch", "extensions"]
-    resources  = ["jobs"]
-    verbs      = ["get", "list", "watch", "patch"]
+    api_groups = ["resource.k8s.io"]
+    resources  = ["resourceclaims", "resourceslices", "deviceclasses"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["podtemplates"]
+    verbs      = ["watch", "list", "get"]
+  }
+
+  rule {
+    api_groups = ["autoscaling.x-k8s.io"]
+    resources  = ["provisioningrequests", "provisioningrequests/status"]
+    verbs      = ["get", "list", "watch", "update", "patch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps"]
+    verbs      = ["get", "list", "watch"]
   }
 
   rule {
@@ -199,8 +287,14 @@ resource "kubernetes_role" "autoscaler" {
   rule {
     api_groups     = [""]
     resources      = ["configmaps"]
-    resource_names = ["cluster-autoscaler-status", "cluster-autoscaler-priority-expander"]
+    resource_names = ["cluster-autoscaler-status", "cluster-autoscaler-priority-expander", "cluster-autoscaler"]
     verbs          = ["delete", "get", "update", "watch"]
+  }
+
+  rule {
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
+    verbs      = ["create", "get", "update"]
   }
 }
 
@@ -227,10 +321,29 @@ resource "kubernetes_role_binding" "autoscaler" {
   }
 }
 
+resource "kubernetes_pod_disruption_budget_v1" "autoscaler" {
+  count = local.cas_replicas > 0 ? 1 : 0
+
+  metadata {
+    name      = "cluster-autoscaler"
+    namespace = "kube-system"
+    labels    = local.autoscaler_labels
+  }
+  spec {
+    min_available = "1"
+    selector {
+      match_labels = {
+        "app" : "cluster-autoscaler"
+      }
+    }
+  }
+}
+
 resource "kubernetes_deployment" "autoscaler" {
   depends_on = [
     aws_iam_role_policy.autoscaler_autoscale,
-    null_resource.wait_eks_addons
+    null_resource.wait_eks_addons,
+    aws_eks_node_group.cluster,
   ]
 
   metadata {
@@ -243,7 +356,7 @@ resource "kubernetes_deployment" "autoscaler" {
   }
 
   spec {
-    replicas = 1
+    replicas = local.cas_replicas
 
     selector {
       match_labels = {
@@ -258,7 +371,6 @@ resource "kubernetes_deployment" "autoscaler" {
         }
 
         annotations = {
-          "cluster-autoscaler.kubernetes.io/safe-to-evict" : "false",
           "prometheus.io/scrape" : "true",
           "prometheus.io/port" : "8085"
         }
@@ -267,30 +379,30 @@ resource "kubernetes_deployment" "autoscaler" {
       spec {
         automount_service_account_token = true
         service_account_name            = "cluster-autoscaler"
-        priority_class_name             = "system-cluster-critical"
+        priority_class_name             = "system-node-critical"
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
 
         container {
-          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.28.2"
+          image             = "registry.k8s.io/autoscaling/cluster-autoscaler:v1.36.1"
           image_pull_policy = "IfNotPresent"
           name              = "cluster-autoscaler"
 
-          command = [
-            "./cluster-autoscaler",
-            "--v=4",
-            "--stderrthreshold=info",
-            "--cloud-provider=aws",
-            "--skip-nodes-with-local-storage=false",
-            "--expander=least-waste",
-            "--node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/${aws_eks_cluster.cluster.name}",
-            "--balance-similar-node-groups",
-            "--skip-nodes-with-system-pods=false",
-            "--max-pod-eviction-time=5m",
-          ]
+          command = local.cas_command
 
           resources {
             limits = {
-              cpu    = "100m"
-              memory = "300Mi"
+              cpu    = "500m"
+              memory = "600Mi"
             }
 
             requests = {

@@ -1,0 +1,227 @@
+---
+title: "AWS Rack Parameters"
+description: "Reference for the AWS rack parameters that configure a Convox rack on Amazon Web Services, grouped by networking, ingress, Karpenter, nodes, build, and GPU."
+slug: aws-rack-parameters
+url: /configuration/rack-parameters/aws
+---
+# AWS Rack Parameters
+
+The following parameters are available for configuring your Convox rack on Amazon Web Services (AWS). These parameters allow you to customize and optimize the behavior of your applications and services running on the AWS platform.
+
+> Some parameters can only be set when the Rack is installed and cannot be changed afterwards. These include `availability_zones`, `cidr`, `high_availability`, `private`, `private_subnets_ids`, `public_subnets_ids`, `vpc_id`, and `internet_gateway_id`. See individual parameter pages for details.
+
+## Parameters
+
+Parameters are grouped by category below. Every parameter links to its own reference page.
+
+### Networking
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [availability_zones](/configuration/rack-parameters/aws/availability_zones)         | Specifies a list of Availability Zones for better availability and fault tolerance. |
+| [cidr](/configuration/rack-parameters/aws/cidr)                                     | Specifies the CIDR range for the VPC.                                     |
+| [eks_api_server_private_access_cidrs](/configuration/rack-parameters/aws/eks_api_server_private_access_cidrs) | Comma-separated CIDRs allowed to reach the EKS API via the private endpoint (TCP 443 ingress on the Rack's `<rack>-cluster` security group). |
+| [eks_control_plane_private_subnets](/configuration/rack-parameters/aws/eks_control_plane_private_subnets) | Places the EKS control-plane network interfaces in the Rack's private subnets instead of its public subnets. |
+| [high_availability](/configuration/rack-parameters/aws/high_availability)           | Ensures high availability by creating a cluster with redundant resources. |
+| [idle_timeout](/configuration/rack-parameters/aws/idle_timeout)                     | Specifies the idle timeout value for the Rack Load Balancer.             |
+| [internal_router](/configuration/rack-parameters/aws/internal_router)               | Installs an internal load balancer within the VPC.                       |
+| [internet_gateway_id](/configuration/rack-parameters/aws/internet_gateway_id)       | Specifies the ID of the attached internet gateway when using an existing VPC. |
+| [nlb_security_group](/configuration/rack-parameters/aws/nlb_security_group)         | Specifies the ID of the security group to attach to the NLB.             |
+| [private](/configuration/rack-parameters/aws/private)                               | Specifies whether to place nodes in private subnets behind NAT gateways. |
+| [private_subnets_ids](/configuration/rack-parameters/aws/private_subnets_ids)       | Specifies the IDs of private subnets to use for the Rack.                |
+| [proxy_protocol](/configuration/rack-parameters/aws/proxy_protocol)                 | Enables the Proxy Protocol to track the original client IP address.      |
+| [public_subnets_ids](/configuration/rack-parameters/aws/public_subnets_ids)         | Specifies the IDs of public subnets to use for the Rack.                 |
+| [vpc_id](/configuration/rack-parameters/aws/vpc_id)                                 | Specifies the ID of an existing VPC to use for cluster creation.         |
+
+### Ingress Router
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [contour_cpu_request](/configuration/rack-parameters/aws/contour_cpu_request) | Sets the CPU request for the Contour control plane. Applies only when `router_type=contour`. |
+| [contour_internal_tls](/configuration/rack-parameters/aws/contour_internal_tls) | Encrypts traffic between the internal Contour router and services using a rack-issued certificate. Applies only when `router_type=contour`. |
+| [contour_memory_request](/configuration/rack-parameters/aws/contour_memory_request) | Sets the memory request for the Contour control plane. Raise on racks with many routes. Applies only when `router_type=contour`. |
+| [envoy_cpu_request](/configuration/rack-parameters/aws/envoy_cpu_request) | Sets the CPU request for the Envoy data plane. Applies only when `router_type=contour`. |
+| [envoy_memory_request](/configuration/rack-parameters/aws/envoy_memory_request) | Sets the memory request for the Envoy data plane. Applies only when `router_type=contour`. |
+| [nginx_additional_config](/configuration/rack-parameters/aws/nginx_additional_config) | Passes additional key-value configuration pairs to the nginx ingress controller ConfigMap. |
+| [router_type](/configuration/rack-parameters/aws/router_type)                       | Selects the rack ingress router: `nginx` (default) or `contour` (Envoy). See [Ingress Router](/configuration/ingress-router). |
+
+### Karpenter
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [additional_karpenter_nodepools_config](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config) | Creates custom Karpenter NodePools for specialized workloads. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_ami_alias](/configuration/rack-parameters/aws/karpenter_ami_alias)       | Pins the AL2023 Karpenter node pools to one EKS-optimized AMI version. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_arch](/configuration/rack-parameters/aws/karpenter_arch)                 | Karpenter workload node CPU architecture. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_auth_mode](/configuration/rack-parameters/aws/karpenter_auth_mode)       | One-way migration preparing EKS for Karpenter. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_capacity_types](/configuration/rack-parameters/aws/karpenter_build_capacity_types) | Purchasing model for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_consolidate_after](/configuration/rack-parameters/aws/karpenter_build_consolidate_after) | Delay before empty Karpenter build nodes are consolidated. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_cpu_limit](/configuration/rack-parameters/aws/karpenter_build_cpu_limit) | Maximum total vCPUs for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) | Maximum empty Karpenter build nodes reclaimed simultaneously. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_imds_hop_limit](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | IMDS response hop limit for Karpenter build nodes, independent of the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_imds_tokens](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | IMDS session token requirement (IMDSv2) for Karpenter build nodes, overriding the rack-wide setting. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_instance_families](/configuration/rack-parameters/aws/karpenter_build_instance_families) | Instance families for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_instance_sizes](/configuration/rack-parameters/aws/karpenter_build_instance_sizes) | Instance sizes for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_memory_limit_gb](/configuration/rack-parameters/aws/karpenter_build_memory_limit_gb) | Maximum total memory for the Karpenter build NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_build_node_labels](/configuration/rack-parameters/aws/karpenter_build_node_labels) | Custom labels for Karpenter build nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_capacity_types](/configuration/rack-parameters/aws/karpenter_capacity_types) | EC2 purchasing model for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_config](/configuration/rack-parameters/aws/karpenter_config)             | JSON override for the Karpenter workload NodePool. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_consolidate_after](/configuration/rack-parameters/aws/karpenter_consolidate_after) | Delay before Karpenter consolidation triggers. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_consolidation_enabled](/configuration/rack-parameters/aws/karpenter_consolidation_enabled) | Enables Karpenter node consolidation. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_cpu_limit](/configuration/rack-parameters/aws/karpenter_cpu_limit)       | Maximum total vCPUs Karpenter can provision. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_block_duration](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) | How long the Karpenter disruption window stays open. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) | Opens a recurring window in which Karpenter pauses drift and consolidation. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_disruption_budget_nodes](/configuration/rack-parameters/aws/karpenter_disruption_budget_nodes) | Maximum Karpenter nodes disrupted simultaneously. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_enabled](/configuration/rack-parameters/aws/karpenter_enabled)           | Enables Karpenter node autoscaling. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_instance_families](/configuration/rack-parameters/aws/karpenter_instance_families) | EC2 instance families for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_instance_sizes](/configuration/rack-parameters/aws/karpenter_instance_sizes) | Instance sizes for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_memory_limit_gb](/configuration/rack-parameters/aws/karpenter_memory_limit_gb) | Maximum total memory Karpenter can provision. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_disk](/configuration/rack-parameters/aws/karpenter_node_disk)       | EBS volume size for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_expiry](/configuration/rack-parameters/aws/karpenter_node_expiry)   | Maximum Karpenter node lifetime before replacement. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_labels](/configuration/rack-parameters/aws/karpenter_node_labels)   | Custom labels for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_os](/configuration/rack-parameters/aws/karpenter_node_os)           | Node OS (al2023 or bottlerocket) for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_overlays_config](/configuration/rack-parameters/aws/karpenter_node_overlays_config) | Creates Karpenter NodeOverlays that advertise extended resources or adjust pricing for selected instance types. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_taints](/configuration/rack-parameters/aws/karpenter_node_taints)   | Custom taints for Karpenter workload nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_iops](/configuration/rack-parameters/aws/karpenter_node_volume_iops) | Provisioned IOPS for Karpenter node root volumes, inheriting `node_volume_iops` when `0`. gp3 only. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_throughput](/configuration/rack-parameters/aws/karpenter_node_volume_throughput) | Provisioned throughput in MiB/s for Karpenter node root volumes, inheriting `node_volume_throughput` when `0`. gp3 only. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_node_volume_type](/configuration/rack-parameters/aws/karpenter_node_volume_type) | EBS volume type for Karpenter-provisioned nodes. See [Karpenter](/configuration/scaling/karpenter). |
+| [karpenter_system_node_min_count_per_az](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) | Minimum system nodes per availability zone while Karpenter is enabled. See [Karpenter](/configuration/scaling/karpenter). |
+
+### Nodes and Scaling
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) | Configures additional customized node groups for the cluster. |
+| [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
+| [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a Service rollout may go without progress before it is failed. |
+| [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
+| [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable) | Pulls and unpacks image layers in parallel through the SOCI snapshotter on AL2023 nodes. |
+| [keda_enable](/configuration/rack-parameters/aws/keda_enable)                       | Enables KEDA (Kubernetes Event-Driven Autoscaling) for event-driven scaling. |
+| [max_on_demand_count](/configuration/rack-parameters/aws/max_on_demand_count)       | Sets the maximum number of on-demand nodes when using the mixed capacity type. |
+| [min_on_demand_count](/configuration/rack-parameters/aws/min_on_demand_count)       | Sets the minimum number of on-demand nodes when using the mixed capacity type. |
+| [node_capacity_type](/configuration/rack-parameters/aws/node_capacity_type)         | Specifies the node capacity type: on-demand, spot, or mixed.             |
+| [node_max_unavailable_percentage](/configuration/rack-parameters/aws/node_max_unavailable_percentage) | Controls the maximum percentage of nodes unavailable during node group updates. |
+| [node_disk](/configuration/rack-parameters/aws/node_disk)                           | Specifies the node disk size in GiB.                                     |
+| [node_type](/configuration/rack-parameters/aws/node_type)                           | Specifies the node instance type, or a comma separated list of types the node groups fall back through. |
+| [node_volume_iops](/configuration/rack-parameters/aws/node_volume_iops)             | Sets provisioned IOPS on each node's root volume, capped at 500 per GiB of `node_disk`. |
+| [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) | Sets provisioned throughput in MiB/s on each node's root volume, capped at a quarter of the provisioned IOPS. |
+| [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
+| [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
+| [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
+| [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |
+
+### Build
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) | Defines dedicated node groups specifically for application build processes. |
+| [build_disable_convox_resolver](/configuration/rack-parameters/aws/build_disable_convox_resolver) | Disables the Convox DNS resolver during builds to address DNS resolution issues. |
+| [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled)         | Enables a dedicated build node for building applications.                |
+| [build_node_min_count](/configuration/rack-parameters/aws/build_node_min_count)     | Sets the minimum number of build nodes to keep running.                  |
+| [build_node_minimal_role_enabled](/configuration/rack-parameters/aws/build_node_minimal_role_enabled) | Runs build nodes under a dedicated least-privilege IAM role instead of the shared node role. |
+| [build_node_type](/configuration/rack-parameters/aws/build_node_type)               | Specifies the node type for the build node.                              |
+| [buildkit_host_path_cache_enable](/configuration/rack-parameters/aws/buildkit_host_path_cache_enable) | Persists the BuildKit layer cache on node local disk so repeat Builds on the same node reuse cached layers. |
+| [disable_image_manifest_cache](/configuration/rack-parameters/aws/disable_image_manifest_cache) | Disables the ECR registry-backed BuildKit layer cache stored under a per-Service buildcache tag in each App's ECR repository. |
+| [docker_hub_username](/configuration/rack-parameters/aws/docker_hub_username) | Configures Docker Hub username for authenticated image pulls (avoids rate limits). |
+| [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password) | Sets Docker Hub access token for authenticated image pulls. Use with docker_hub_username. |
+| [ecr_docker_hub_cache](/configuration/rack-parameters/aws/ecr_docker_hub_cache) | Enables ECR pull-through cache for Docker Hub images to avoid rate limits. |
+| [ecr_immutable_tags_enabled](/configuration/rack-parameters/aws/ecr_immutable_tags_enabled) | Creates ECR repositories for new Apps with immutable image tags, so a pushed tag cannot be overwritten. |
+| [ecr_scan_on_push_enable](/configuration/rack-parameters/aws/ecr_scan_on_push_enable) | Enables automatic vulnerability scanning for images pushed to ECR. |
+| [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst) | Sets the maximum burst rate for image pulls. See also [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps). |
+| [kubelet_registry_pull_qps](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) | Sets the steady-state rate limit for image pulls (queries per second). See also [kubelet_registry_burst](/configuration/rack-parameters/aws/kubelet_registry_burst). |
+
+### GPU and Observability
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [access_log_retention_in_days](/configuration/rack-parameters/aws/access_log_retention_in_days) | Passed to Fluentd for the Nginx access log output. Sets no retention on any log group; use `cloudwatch_retention_in_days` for that. |
+| [app_cloudwatch_disable](/configuration/rack-parameters/aws/app_cloudwatch_disable) | Stops the per-App CloudWatch log groups while keeping the Rack system group. |
+| [cloudwatch_disable](/configuration/rack-parameters/aws/cloudwatch_disable)         | Stops the Rack from creating, writing, and reading its own CloudWatch log groups. |
+| [cloudwatch_retention_in_days](/configuration/rack-parameters/aws/cloudwatch_retention_in_days) | Sets how long CloudWatch keeps the Rack, App, and EKS control plane log groups, or stops them expiring. |
+| [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable)     | Turns on the rack-side cost accumulator that powers `convox cost` and per-app budget caps. |
+| [cost_tracking_history_days](/configuration/rack-parameters/aws/cost_tracking_history_days) | Sets how many days of daily App cost history the Rack keeps for `convox cost --start` and `--end`. |
+| [dcgm_scrape_interval](/configuration/rack-parameters/aws/dcgm_scrape_interval)     | Controls how often the rack-managed Prometheus job scrapes the DCGM exporter for GPU metrics. |
+| [eks_log_types](/configuration/rack-parameters/aws/eks_log_types)                   | Comma-separated EKS control plane log types to enable (api, audit, authenticator, controllerManager, scheduler). |
+| [fluentd_disable](/configuration/rack-parameters/aws/fluentd_disable)               | Disables Fluentd installation in the rack.                               |
+| [fluentd_memory](/configuration/rack-parameters/aws/fluentd_memory)                 | Configures memory allocation for the Fluentd log collector DaemonSet.    |
+| [gpu_metrics_max_concurrent](/configuration/rack-parameters/aws/gpu_metrics_max_concurrent) | Caps simultaneous Prometheus QueryRange invocations issued by the rack's GPU metrics handler. |
+| [gpu_metrics_max_pods](/configuration/rack-parameters/aws/gpu_metrics_max_pods)     | Caps the number of services included in a single rack-side GPU metrics request (parameter name is historical). |
+| [gpu_observability_chart_version](/configuration/rack-parameters/aws/gpu_observability_chart_version) | Pins the Helm chart version for the NVIDIA DCGM exporter.    |
+| [gpu_observability_enable](/configuration/rack-parameters/aws/gpu_observability_enable) | Installs the NVIDIA DCGM exporter DaemonSet to emit GPU telemetry to Prometheus. |
+| [gpu_tag_enable](/configuration/rack-parameters/aws/gpu_tag_enable)                 | Enables GPU tagging.                                                     |
+| [grafana_dashboard_var_app](/configuration/rack-parameters/aws/grafana_dashboard_var_app) | Overrides the Grafana dashboard template variable name for the app filter. |
+| [grafana_dashboard_var_namespace](/configuration/rack-parameters/aws/grafana_dashboard_var_namespace) | Overrides the Grafana dashboard template variable name for the namespace filter. |
+| [grafana_dashboard_var_rack](/configuration/rack-parameters/aws/grafana_dashboard_var_rack) | Overrides the Grafana dashboard template variable name for the rack/cluster filter. |
+| [grafana_dashboard_var_service](/configuration/rack-parameters/aws/grafana_dashboard_var_service) | Overrides the Grafana dashboard template variable name for the service filter. |
+| [grafana_url](/configuration/rack-parameters/aws/grafana_url)                       | External Grafana base URL surfaced as the "Open in your Grafana" deep-link button on Console GPU views. |
+| [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) | Enables the NVIDIA GPU device plugin for GPU workloads. |
+| [nvidia_device_time_slicing_replicas](/configuration/rack-parameters/aws/nvidia_device_time_slicing_replicas) | Configures GPU time slicing by setting the number of virtual replicas per physical GPU. |
+| [prometheus_gpu_metrics_chart_version](/configuration/rack-parameters/aws/prometheus_gpu_metrics_chart_version) | Helm chart version pin for the free-plan Prometheus chart deployed via the Convox Console. |
+| [prometheus_gpu_metrics_retention](/configuration/rack-parameters/aws/prometheus_gpu_metrics_retention) | Retention window for the free-plan Prometheus chart deployed via the Convox Console. |
+| [prometheus_url](/configuration/rack-parameters/aws/prometheus_url)                 | External Prometheus URL for KEDA autoscale and the Console GPU columns. Must be set explicitly post-3.24.6 (no auto-resolution). |
+| [router_log_redact_params](/configuration/rack-parameters/aws/router_log_redact_params) | Masks query parameter values in router access and error logs, for every parameter (`all`) or a list of names. |
+| [syslog](/configuration/rack-parameters/aws/syslog)                                 | Specifies the endpoint to forward logs to a syslog server.               |
+| [syslog_access_logs](/configuration/rack-parameters/aws/syslog_access_logs) | Also forwards the public router's access logs to the `syslog` endpoint. |
+| [syslog_tls_verify](/configuration/rack-parameters/aws/syslog_tls_verify) | Verifies the certificate of a `tcp+tls` syslog endpoint against public certificate authorities. |
+
+### TLS and Security
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [cert_duration](/configuration/rack-parameters/aws/cert_duration)                   | Specifies the certificate renewal period.                              |
+| [convox_domain_tls_cert_disable](/configuration/rack-parameters/aws/convox_domain_tls_cert_disable) | Disables Convox domain TLS certificate generation for services. |
+| [ebs_volume_encryption_enabled](/configuration/rack-parameters/aws/ebs_volume_encryption_enabled) | Enables encryption for EBS volumes used by primary node disks. |
+| [ecr_additional_policy_arn](/configuration/rack-parameters/aws/ecr_additional_policy_arn) | Attaches a user-provided IAM policy ARN to the Rack API role for custom ECR access control. |
+| [ecr_full_access](/configuration/rack-parameters/aws/ecr_full_access) | Re-attaches the `AmazonEC2ContainerRegistryFullAccess` managed policy, restoring pre-3.24.6 ECR permissions. |
+| [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) | Creates EKS Access Entries for the rack's managing IAM role and nodes role. One-way migration from `aws-auth` ConfigMap. |
+| [imds_http_hop_limit](/configuration/rack-parameters/aws/imds_http_hop_limit)       | Sets the IMDS PUT response hop limit on Rack node launch templates and Karpenter EC2NodeClasses. |
+| [imds_http_tokens](/configuration/rack-parameters/aws/imds_http_tokens)             | Determines whether the Instance Metadata Service requires session tokens (IMDSv2). |
+| [imds_tags_enable](/configuration/rack-parameters/aws/imds_tags_enable)             | Exposes EC2 instance tags through the Instance Metadata Service (IMDS) on Rack nodes. |
+| [key_pair_name](/configuration/rack-parameters/aws/key_pair_name)                   | Specifies an EC2 Key Pair for SSH access to cluster nodes.               |
+| [network_policy_enable](/configuration/rack-parameters/aws/network_policy_enable)   | Restricts which pods can open inbound connections to an App's pods, closing the direct pod-to-pod path between App namespaces. |
+| [pod_identity_agent_enable](/configuration/rack-parameters/aws/pod_identity_agent_enable) | Enables the AWS Pod Identity Agent. |
+| [pod_imds_block_enabled](/configuration/rack-parameters/aws/pod_imds_block_enabled) | Blocks App pod egress to the EC2 instance metadata service (IMDS) with a CNI-enforced NetworkPolicy in each App namespace. |
+| [pod_security_mode](/configuration/rack-parameters/aws/pod_security_mode)           | Selects how the Pod Security Standard set by `pod_security_standard` is applied to App namespaces: `warn`, `audit`, or `enforce`. |
+| [pod_security_standard](/configuration/rack-parameters/aws/pod_security_standard)   | Applies a Kubernetes Pod Security Standard, `baseline` or `restricted`, to every App namespace. |
+| [seccomp_default_enabled](/configuration/rack-parameters/aws/seccomp_default_enabled) | Applies the RuntimeDefault seccomp profile to the Convox system deployments (api, atom, resolver, metrics-server, metrics-scraper). |
+| [ssl_ciphers](/configuration/rack-parameters/aws/ssl_ciphers)                       | Specifies the SSL ciphers to use for Nginx.                              |
+| [ssl_protocols](/configuration/rack-parameters/aws/ssl_protocols)                   | Specifies the SSL protocols to use for Nginx.                            |
+| [system_readonly_rootfs_enabled](/configuration/rack-parameters/aws/system_readonly_rootfs_enabled) | Runs the Convox system containers (api, atom, and resolver) with a read-only root filesystem, provisioning the writable scratch space they need. |
+| [webhook_signing_key](/configuration/rack-parameters/aws/webhook_signing_key)       | Sets the per-rack HMAC secret for signing outbound webhook deliveries.   |
+
+### General
+
+| Parameter                            | Description                                                              |
+|:-------------------------------------|:-------------------------------------------------------------------------|
+| [disable_convox_resolver](/configuration/rack-parameters/aws/disable_convox_resolver) | Disables the Convox resolver and uses the Kubernetes resolver instead. |
+| [release_watcher_gc_interval](/configuration/rack-parameters/aws/release_watcher_gc_interval) | Controls how frequently the rack's release-watcher subsystem runs garbage collection on orphaned watcher slots. |
+| [releases_to_retain_after_active](/configuration/rack-parameters/aws/releases_to_retain_after_active) | Specifies the number of releases to retain after the currently active release. |
+| [releases_to_retain_task_run_interval_hour](/configuration/rack-parameters/aws/releases_to_retain_task_run_interval_hour) | Defines the interval in hours at which the release cleanup task runs. |
+| [tags](/configuration/rack-parameters/aws/tags)                                     | Specifies custom tags to add to AWS resources.                           |
+| [terraform_update_timeout](/configuration/rack-parameters/aws/terraform_update_timeout) | Controls how long Terraform waits for node group update operations to complete. |
+| [user_data](/configuration/rack-parameters/aws/user_data)                           | Specifies custom commands to append to EC2 instance user data scripts.   |
+| [user_data_url](/configuration/rack-parameters/aws/user_data_url)                   | Specifies a URL to a script to append to EC2 instance user data scripts. |
+
+## Setting Parameters
+
+To set a rack parameter, use the following command:
+```bash
+$ convox rack params set parameterName=value -r rackName
+Updating parameters... OK
+```
+
+For example, to set the `node_type` parameter:
+```bash
+$ convox rack params set node_type=m5.xlarge -r rackName
+Updating parameters... OK
+```
+
+## Viewing Parameters
+
+To view the current parameters for a rack:
+```bash
+$ convox rack params -r rackName
+access_log_retention_in_days          7
+build_node_enabled                    true
+build_node_min_count                  0
+build_node_type                       t3.small
+```

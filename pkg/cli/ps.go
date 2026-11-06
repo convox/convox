@@ -1,6 +1,9 @@
 package cli
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
@@ -8,20 +11,20 @@ import (
 )
 
 func init() {
-	register("ps", "list app processes", Ps, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.ProcessListOptions{}), flagApp, flagRack),
+	register("ps", "list app processes", watch(Ps), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ProcessListOptions{}), flagApp, flagRack, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
-	register("ps info", "get information about a process", PsInfo, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+	register("ps info", "get information about a process", watch(PsInfo), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagApp, flagRack, flagWatchInterval},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("ps stop", "stop a process", PsStop, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Ps(rack sdk.Interface, c *stdcli.Context) error {
@@ -36,10 +39,20 @@ func Ps(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
+	if len(ps) == 0 {
+		if _, err := rack.AppGet(app(c)); err != nil && strings.Contains(strings.ToLower(err.Error()), "app not found") {
+			return err
+		}
+	}
+
+	// budgetCapStatus is best-effort: errors are logged to stderr inside the
+	// helper so a budget-API hiccup never degrades the user-visible ps output.
+	cs, _ := budgetCapStatus(rack, app(c), c.Writer().Stderr)
+
 	t := c.Table("ID", "SERVICE", "STATUS", "RELEASE", "STARTED", "COMMAND")
 
 	for _, p := range ps {
-		t.AddRow(p.Id, p.Name, p.Status, p.Release, common.Ago(p.Started), p.Command)
+		t.AddRow(p.Id, p.Name, decorateStatusForBudgetCap(p.Status, p.Name, cs), p.Release, common.Ago(p.Started), p.Command)
 	}
 
 	return t.Print()
@@ -61,6 +74,10 @@ func PsInfo(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Service", ps.Name)
 	i.Add("Started", common.Ago(ps.Started))
 	i.Add("Status", ps.Status)
+
+	if ps.ExitCode != nil {
+		i.Add("Exit", strconv.Itoa(*ps.ExitCode))
+	}
 
 	return i.Print()
 }

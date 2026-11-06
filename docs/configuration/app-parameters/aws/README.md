@@ -1,0 +1,46 @@
+---
+title: "AWS App Parameters"
+description: "App parameters available for Convox apps on AWS, including BuildArch, BuildLabels, BuildCpu, and BuildMem for controlling build resources and placement."
+slug: aws-app-parameters
+url: /configuration/app-parameters/aws
+---
+# AWS App Parameters
+
+The following parameters are available for configuring your Convox applications on Amazon Web Services (AWS). These parameters allow you to customize and optimize the behavior of your applications running on the AWS platform.
+
+## Parameters
+
+| Parameter | Description |
+|:---------|:------------|
+| [BuildArch](/configuration/app-parameters/aws/BuildArch) | Pins the App's built image to a CPU architecture (amd64 or arm64), and directs the build pod to a matching build node when dedicated build nodes are enabled. Requires a Rack running 3.25.3 or later |
+| [BuildLabels](/configuration/app-parameters/aws/BuildLabels) | Specifies Kubernetes node selector labels for build pods |
+| [BuildCpu](/configuration/app-parameters/aws/BuildCpu) | Sets the CPU request for build pods in millicores |
+| [BuildMem](/configuration/app-parameters/aws/BuildMem) | Sets the memory request for build pods in megabytes |
+
+> **Warning**: When configuring `BuildLabels`, ensure that the specified labels match a node group defined in the [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameter. With `build_node_enabled=true`, only build node groups qualify. If the labels don't match any node, build pods remain Pending and the Build does not complete until you cancel it.
+
+These application-specific parameters complement the rack-level configuration available through [Rack Parameters](/configuration/rack-parameters/aws), providing fine-grained control over your application deployments.
+
+## Setting Parameters
+
+To set an app parameter, use the following command:
+```bash
+$ convox apps params set parameterName=value -a appName
+Updating parameters... OK
+```
+
+For example, to set the `BuildLabels` parameter:
+```bash
+$ convox apps params set BuildLabels=convox.io/label=app-build -a myapp
+Updating parameters... OK
+```
+
+## Viewing Parameters
+
+To view the current parameters for an application:
+```bash
+$ convox apps params -a appName
+BuildCpu     500
+BuildLabels  convox.io/label=app-build
+BuildMem     1024
+```

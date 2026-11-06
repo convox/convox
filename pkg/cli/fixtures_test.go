@@ -3,6 +3,7 @@ package cli_test
 import (
 	"time"
 
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 )
 
@@ -70,6 +71,13 @@ func fxAppUpdating() *structs.App {
 	}
 }
 
+func fxAppAt(release, status string) *structs.App {
+	a := fxApp()
+	a.Release = release
+	a.Status = status
+	return a
+}
+
 func fxBuild() *structs.Build {
 	return &structs.Build{
 		App:         "app1",
@@ -120,7 +128,10 @@ func fxInstance() *structs.Instance {
 		Agent:             true,
 		Cpu:               0.423,
 		CpuAllocatable:    1,
+		GpuCapacity:       0,
+		GpuAllocatable:    0,
 		Id:                "instance1",
+		InstanceType:      "t3.xlarge",
 		Memory:            718,
 		MemoryAllocatable: 1000,
 		PrivateIp:         "private",
@@ -177,6 +188,14 @@ func fxProcess() *structs.Process {
 		Started:  time.Now().UTC().Add(-49 * time.Hour),
 		Status:   "running",
 	}
+}
+
+func fxProcessExited(status string, code *int) *structs.Process {
+	ps := fxProcess()
+	ps.Status = status
+	ps.ExitCode = code
+
+	return ps
 }
 
 func fxProcessPending() *structs.Process {
@@ -277,14 +296,96 @@ func fxResourceUpdating() *structs.Resource {
 
 func fxService() *structs.Service {
 	return &structs.Service{
-		Name:   "service1",
-		Count:  1,
-		Cpu:    2,
-		Domain: "domain",
-		Memory: 3,
+		Name:      "service1",
+		Count:     1,
+		Cpu:       2,
+		Domain:    "domain",
+		Gpu:       0,
+		GpuVendor: "",
+		Memory:    3,
 		Ports: []structs.ServicePort{
 			{Balancer: 1, Certificate: "cert1", Container: 2},
 			{Balancer: 1, Certificate: "cert1", Container: 2},
+		},
+	}
+}
+
+func fxServiceNLB() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public"},
+		{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
+	}
+	return s
+}
+
+func fxServiceNLBTLS() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{
+			Port: 8443, Protocol: "tls", ContainerPort: 8080, Scheme: "public",
+			Certificate: "arn:aws:acm:us-east-1:123456789012:certificate/abc",
+		},
+		{Port: 9443, Protocol: "tcp", ContainerPort: 8080, Scheme: "internal"},
+	}
+	return s
+}
+
+func fxServiceNLBHardening() *structs.Service {
+	s := fxService()
+	s.Nlb = []structs.ServiceNlbPort{
+		{
+			Port: 8443, Protocol: "tcp", ContainerPort: 8443, Scheme: "public",
+			CrossZone:        options.Bool(true),
+			AllowCIDR:        []string{"10.0.0.0/24", "10.1.0.0/24"},
+			PreserveClientIP: options.Bool(false),
+		},
+	}
+	return s
+}
+
+// fxSystemV2WithSensitive returns a System shaped like a v2 rack response:
+// PascalCase Parameters keys including the two v2 sensitive params the v3
+// CLI now masks on TTY. v3 rack responses never look like this (snake_case
+// only); this fixture exercises the v2-against-v3-CLI code path.
+func fxSystemV2WithSensitive() *structs.System {
+	return &structs.System{
+		Count:    1,
+		Domain:   "domain",
+		Name:     "name",
+		Provider: "aws",
+		Region:   "region",
+		Status:   "running",
+		Type:     "type",
+		Version:  "21000101000000",
+		Parameters: map[string]string{
+			"Password":     "secret123",
+			"HttpProxy":    "http://user:pass@proxy.corp:8080",
+			"VPCCIDR":      "10.0.0.0/16",
+			"Autoscale":    "Yes",
+			"InstanceType": "t3.medium",
+		},
+	}
+}
+
+// fxSystemV2NLB returns a System shaped like a v2 rack response with the
+// CloudFormation NLB hardening parameters populated.
+func fxSystemV2NLB() *structs.System {
+	return &structs.System{
+		Count:    1,
+		Domain:   "domain",
+		Name:     "name",
+		Provider: "aws",
+		Region:   "region",
+		Status:   "running",
+		Type:     "type",
+		Version:  "21000101000000",
+		Parameters: map[string]string{
+			"NLB":                   "Yes",
+			"NLBAllowCIDR":          "10.0.0.0/8,192.168.0.0/16",
+			"NLBCrossZone":          "true",
+			"NLBDeletionProtection": "No",
+			"NLBPreserveClientIP":   "true",
 		},
 	}
 }
@@ -343,6 +444,26 @@ func fxSystemInternal() *structs.System {
 	}
 }
 
+func fxSystemNLB() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost": "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0": "1.2.3.4",
+		"NLBEIP1": "5.6.7.8",
+	}
+	return s
+}
+
+func fxSystemNLBInternal() *structs.System {
+	s := fxSystem()
+	s.Outputs = map[string]string{
+		"NLBHost":         "nlb-abc.elb.amazonaws.com",
+		"NLBEIP0":         "1.2.3.4",
+		"NLBInternalHost": "nlb-int-xyz.elb.amazonaws.com",
+	}
+	return s
+}
+
 func fxSystemUpdating() *structs.System {
 	return &structs.System{
 		Count:      1,
@@ -355,5 +476,33 @@ func fxSystemUpdating() *structs.System {
 		Status:     "updating",
 		Type:       "type",
 		Version:    "21000101000000",
+	}
+}
+
+func fxSystemSensitive() *structs.System {
+	return &structs.System{
+		Name:     "name1",
+		Provider: "provider1",
+		Region:   "region1",
+		Status:   "running",
+		Version:  "version1",
+		Parameters: map[string]string{
+			"docker_hub_password": "HUB-PASS",
+			"secret_key":          "KEY-SENSITIVE",
+			"token":               "TOK-SENSITIVE",
+			"access_id":           "ACCESS-ID",
+			"private_eks_host":    "eks-host-1",
+			"private_eks_user":    "eks-user-1",
+			"private_eks_pass":    "eks-pass-1",
+			"region":              "us-east-1",
+			"ParamOther":          "value2",
+		},
+	}
+}
+
+func fxRuntime() *structs.Runtime {
+	return &structs.Runtime{
+		Id:    "b29266a2-0d25-4194-b375-a7ac722f82a5",
+		Title: "533267189958",
 	}
 }

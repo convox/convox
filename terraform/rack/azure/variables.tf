@@ -2,6 +2,31 @@ variable "cluster" {
   type = string
 }
 
+variable "azure_files_enable" {
+  default = false
+  type    = bool
+}
+
+variable "cost_tracking_enable" {
+  default = false
+  type    = bool
+}
+
+variable "cost_tracking_history_days" {
+  default = 62
+  type    = number
+}
+
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "docker_hub_username" {
   default = ""
 }
@@ -10,12 +35,37 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "high_availability" {
+  default = true
+  type    = bool
+}
+
+variable "idle_timeout" {
+  default = 4
+  type    = number
+}
+
 variable "image" {
   type = string
 }
 
 variable "name" {
   type = string
+}
+
+variable "nginx_additional_config" {
+  default = ""
+  type    = string
+}
+
+variable "nginx_image" {
+  default = ""
+  type    = string
+}
+
+variable "pdb_default_min_available_percentage" {
+  default = "50"
+  type    = string
 }
 
 variable "rack_name" {
@@ -43,8 +93,33 @@ variable "resource_group_location" {
   type = string
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
+}
+
+variable "ssl_ciphers" {
+  default = ""
+  type    = string
+}
+
+variable "ssl_protocols" {
+  default = ""
+  type    = string
+}
+
+variable "tags" {
+  default = {}
+  type    = map(string)
 }
 
 variable "telemetry" {
@@ -57,6 +132,11 @@ variable "telemetry_map" {
 
 variable "telemetry_default_map" {
   type = any
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }
 
 variable "whitelist" {

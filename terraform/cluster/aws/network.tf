@@ -10,6 +10,8 @@ locals {
   validate_private_subnets_count = length(var.private_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.private_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 private subnets on each AZ")) : true)
   private_subnets_ids            = length(var.private_subnets_ids) == 0 ? aws_subnet.private[*].id : var.private_subnets_ids
 
+  validate_control_plane_private_subnets = var.eks_control_plane_private_subnets ? (length(local.private_subnets_ids) >= 2 ? true : tobool("eks_control_plane_private_subnets requires at least 2 private subnets in different availability zones")) : true
+
   validate_public_subnets_count = length(var.public_subnets_ids) == 0 ? true : (var.high_availability ? (length(var.public_subnets_ids) == 3 ? true : tobool("If high availability is enabled, there must be 3 public subnets on each AZ")) : true)
   public_subnets_ids            = length(var.public_subnets_ids) == 0 ? aws_subnet.public[*].id : var.public_subnets_ids
 }
@@ -69,8 +71,8 @@ resource "aws_subnet" "public" {
   tags = merge(local.tags, {
     Name = "${var.name} public ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
-    "kubernetes.io/role/elb" : ""
-  })
+    "kubernetes.io/role/elb" : "1"
+  }, var.karpenter_auth_mode ? { "karpenter.sh/discovery" = var.name } : {})
 
   timeouts {
     delete = "6h"
@@ -135,8 +137,8 @@ resource "aws_subnet" "private" {
   tags = merge(local.tags, {
     Name = "${var.name} private ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
-    "kubernetes.io/role/internal-elb" : ""
-  })
+    "kubernetes.io/role/internal-elb" : "1"
+  }, var.karpenter_auth_mode ? { "karpenter.sh/discovery" = var.name } : {})
 
   timeouts {
     delete = "6h"
@@ -146,7 +148,7 @@ resource "aws_subnet" "private" {
 resource "aws_eip" "nat" {
   count = !local.is_custom_subnets_provided ? (var.private ? local.network_resource_count : 0) : 0
 
-  vpc = true
+  domain = "vpc"
 
   tags = merge(local.tags, {
     Name = "${var.name} nat ${count.index}"
@@ -225,7 +227,18 @@ resource "aws_security_group" "cluster" {
 
   tags = merge(local.tags, {
     Name = "${var.name}-cluster"
-  })
+  }, var.karpenter_auth_mode ? { "karpenter.sh/discovery" = var.name } : {})
+}
+
+resource "aws_security_group_rule" "cluster_private_api_access" {
+  for_each          = toset(var.private_access_cidrs)
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = [each.value]
+  security_group_id = aws_security_group.cluster.id
+  description       = "Private API access from ${each.value}"
 }
 
 resource "null_resource" "network" {
@@ -262,7 +275,7 @@ resource "aws_ec2_tag" "private_subnets_tagging2" {
   count       = length(var.private_subnets_ids)
   resource_id = var.private_subnets_ids[count.index]
   key         = "kubernetes.io/role/internal-elb"
-  value       = ""
+  value       = "1"
 }
 
 resource "aws_ec2_tag" "public_subnets_tagging1" {
@@ -276,5 +289,28 @@ resource "aws_ec2_tag" "public_subnets_tagging2" {
   count       = length(var.public_subnets_ids)
   resource_id = var.public_subnets_ids[count.index]
   key         = "kubernetes.io/role/elb"
-  value       = ""
+  value       = "1"
+}
+
+// karpenter.sh/discovery tags for BYOVPC subnets
+resource "aws_ec2_tag" "private_subnets_karpenter" {
+  count       = var.karpenter_auth_mode ? length(var.private_subnets_ids) : 0
+  resource_id = var.private_subnets_ids[count.index]
+  key         = "karpenter.sh/discovery"
+  value       = var.name
+}
+
+resource "aws_ec2_tag" "public_subnets_karpenter" {
+  count       = var.karpenter_auth_mode ? length(var.public_subnets_ids) : 0
+  resource_id = var.public_subnets_ids[count.index]
+  key         = "karpenter.sh/discovery"
+  value       = var.name
+}
+
+// karpenter.sh/discovery tag for the EKS-managed cluster security group
+resource "aws_ec2_tag" "cluster_sg_karpenter" {
+  count       = var.karpenter_auth_mode ? 1 : 0
+  resource_id = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
+  key         = "karpenter.sh/discovery"
+  value       = var.name
 }

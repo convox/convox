@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -48,8 +50,22 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		},
 	}
 
+	if p.ContextTID() != "" {
+		ns.ObjectMeta.Labels["tid"] = p.ContextTID()
+	}
+
+	if p.PodSecurityStandard != "" {
+		ns.Labels["pod-security.kubernetes.io/"+p.PodSecurityMode] = p.PodSecurityStandard
+	}
+
 	if _, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{}); err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if p.PodImdsBlockEnabled {
+		if err := p.ensureImdsBlockPolicy(context.TODO(), ns.Name); err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	a := &structs.App{
@@ -61,7 +77,8 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 		return nil, errors.WithStack(err)
 	}
 
-	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
+	timeout := common.DefaultInt(opts.Timeout, 300)
+	if err := p.ReleasePromote(a.Name, "", structs.ReleasePromoteOptions{Timeout: &timeout}); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -75,27 +92,133 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 	return a, nil
 }
 
+func (p *Provider) AppConfigGet(app, name string) (*structs.AppConfig, error) {
+	cfg, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).Get(context.TODO(), p.GenConfigName(name), am.GetOptions{})
+	if ae.IsNotFound(err) {
+		return nil, errors.WithStack(structs.ErrNotFound("app config not found: %s", name))
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	c := &structs.AppConfig{
+		Name: name,
+	}
+	if cfg.Data != nil {
+		c.Value = string(cfg.Data[APP_CONFIG_KEY])
+	}
+
+	return c, nil
+}
+
+func (p *Provider) AppConfigList(app string) ([]structs.AppConfig, error) {
+	resp, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{
+		LabelSelector: "system=convox,type=config",
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cfgs := []structs.AppConfig{}
+	for i := range resp.Items {
+		cfg := &resp.Items[i]
+		c := structs.AppConfig{
+			Name: strings.TrimPrefix(cfg.Name, "cfg-"),
+		}
+		if cfg.Data != nil {
+			c.Value = string(cfg.Data[APP_CONFIG_KEY])
+		}
+
+		cfgs = append(cfgs, c)
+	}
+
+	return cfgs, nil
+}
+
+func (p *Provider) AppConfigSet(app, name, valueBase64 string) error {
+	data, err := base64.StdEncoding.DecodeString(valueBase64)
+	if err != nil {
+		return structs.ErrBadRequest("failed to parse base 64 value: %s", err)
+	}
+
+	_, err = p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+		Name:      p.GenConfigName(name),
+		Namespace: p.AppNamespace(app),
+	}, func(s *ac.Secret) *ac.Secret {
+		if s.Labels == nil {
+			s.Labels = map[string]string{}
+		}
+		s.Labels["app"] = app
+		s.Labels["system"] = "convox"
+		s.Labels["type"] = "config"
+
+		s.Data = map[string][]byte{
+			APP_CONFIG_KEY: data,
+		}
+
+		return s
+	}, am.PatchOptions{FieldManager: "convox"})
+	if err != nil {
+		return fmt.Errorf("failed to set config: %s", err)
+	}
+	return err
+}
+
 func (p *Provider) AppDelete(name string) error {
-	a, err := p.AppGet(name)
+	a, err := p.appGetLive(name)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	if a.Locked {
-		return errors.WithStack(fmt.Errorf("app is locked: %s", name))
+		return errors.WithStack(structs.ErrConflict("app is locked: %s", name))
 	}
 
 	if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
+	// Delete the dedicated build namespace if present. The type=build label guards
+	// against an app literally named build-<name> whose namespace name collides
+	// with this one.
+	if bns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.buildNamespace(name), am.GetOptions{}); err == nil {
+		if bns.Labels["type"] == "build" {
+			if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.buildNamespace(name), am.DeleteOptions{}); err != nil && !ae.IsNotFound(err) {
+				return errors.WithStack(err)
+			}
+		}
+	} else if !ae.IsNotFound(err) {
+		return errors.WithStack(err)
+	}
+
+	// Drop the per-app budget lock entry so appBudgetLockMap doesn't
+	// grow unbounded on long-lived racks with high app churn.
+	p.RemoveAppLock(name)
+
 	return nil
 }
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
+	ns, err := p.GetNamespaceFromInformer(p.AppNamespace(name))
+	if ae.IsNotFound(err) {
+		return nil, errors.WithStack(structs.ErrNotFound("app not found: %s", name))
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	a, err := p.appFromNamespace(*ns)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return a, nil
+}
+
+// appGetLive skips the namespace informer, so a read right after a write sees it.
+func (p *Provider) appGetLive(name string) (*structs.App, error) {
 	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(name), am.GetOptions{})
 	if ae.IsNotFound(err) {
-		return nil, errors.WithStack(fmt.Errorf("app not found: %s", name))
+		return nil, errors.WithStack(structs.ErrNotFound("app not found: %s", name))
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -114,9 +237,11 @@ func (p *Provider) AppIdles(name string) (bool, error) {
 }
 
 func (p *Provider) AppList() (structs.Apps, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().List(context.TODO(), am.ListOptions{
-		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=app", p.Name),
-	})
+	selector := fmt.Sprintf("system=convox,rack=%s,type=app", p.Name)
+	if p.ContextTID() != "" {
+		selector = fmt.Sprintf("%s,tid=%s", selector, p.ContextTID())
+	}
+	ns, err := p.ListNamespacesFromInformer(selector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -124,7 +249,7 @@ func (p *Provider) AppList() (structs.Apps, error) {
 	as := structs.Apps{}
 
 	for _, n := range ns.Items {
-		a, err := p.appFromNamespace(n)
+		a, err := p.appFromNamespaceOnly(n)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -135,12 +260,120 @@ func (p *Provider) AppList() (structs.Apps, error) {
 	return as, nil
 }
 
-func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+func (p *Provider) AppManifestService(app, service string) (*structs.ManifestService, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// Index iteration avoids per-iteration value-copy of the large
+	// manifest.Service struct (gocritic rangeValCopy).
+	for i := range m.Services {
+		s := &m.Services[i]
+		if s.Name != service {
+			continue
+		}
+
+		ms := &structs.ManifestService{
+			Name:        s.Name,
+			Environment: []string(s.Environment),
+		}
+
+		// Synthesize min/max from BOTH yaml forms.
+		// New form: scale.min / scale.max (top-level *int pointers).
+		// Legacy form: scale.count: N or N-M (Count.Min / Count.Max ints).
+		// Pointer wins when set; otherwise fall back to non-zero Count fields.
+		scale := &structs.ManifestServiceScale{}
+		switch {
+		case s.Scale.Min != nil:
+			scale.Min = s.Scale.Min
+		case s.Scale.Count.Min != 0:
+			min := s.Scale.Count.Min
+			scale.Min = &min
+		}
+		switch {
+		case s.Scale.Max != nil:
+			scale.Max = s.Scale.Max
+		case s.Scale.Count.Max != 0:
+			max := s.Scale.Count.Max
+			scale.Max = &max
+		}
+		// Emit Scale only when at least one bound is populated (else nil
+		// → omitempty drops the field from the response).
+		if scale.Min != nil || scale.Max != nil {
+			ms.Scale = scale
+		}
+
+		return ms, nil
+	}
+
+	return nil, errors.WithStack(fmt.Errorf("service %s not found in manifest for app %s", service, app))
 }
 
 func (p *Provider) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
+}
+
+// MetricsByService is the batched per-app companion to ServiceMetrics:
+// one rack call returns a row per requested service, each carrying the
+// GPU metric series for that service. The implementation reuses the
+// shared QueryGPURange path (regex alternation on services) so all
+// services in the app are fetched in N PromQL QueryRange calls (one per
+// metric), not N×M (one per metric per service). Wire shape: see
+// pkg/structs/metric.go::ServiceMetricsRow comment for invariants.
+//
+// Empty services slice → no Prom call, returns []. Per-service rows are
+// returned in the same order as the input `services` slice; rows for
+// services with no Prom data are emitted with an empty `Metrics` slice
+// so the UI can distinguish "requested but empty" from "not requested".
+//
+// Bounds, name validation, and concurrency capping happen at the
+// controller layer (pkg/api/controllers.go::MetricsByService) — by the
+// time we're here, `services` is sanitised and the semaphore is held.
+func (p *Provider) MetricsByService(app string, services []string, opts structs.MetricsOptions) ([]structs.ServiceMetricsRow, error) {
+	if p.PromClient == nil {
+		// No Prom client configured — return one empty row per requested
+		// service so the UI can show "requested but empty".
+		rows := make([]structs.ServiceMetricsRow, 0, len(services))
+		for _, s := range services {
+			rows = append(rows, structs.ServiceMetricsRow{Name: s, Metrics: structs.Metrics{}})
+		}
+		return rows, nil
+	}
+	if len(services) == 0 {
+		return []structs.ServiceMetricsRow{}, nil
+	}
+
+	ctx := p.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	byMetric, err := p.PromClient.QueryGPURange(ctx, app, services, opts)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// For each requested service, build one row containing one Metric
+	// per wire-name (in stable order). Wire-names for which a service
+	// has no series come through with an empty Values slice — preserve
+	// rather than skip so chart code can render an empty axis.
+	rows := make([]structs.ServiceMetricsRow, 0, len(services))
+	for _, svc := range services {
+		metrics := make(structs.Metrics, 0, len(GpuRangeWireNames()))
+		for _, wire := range GpuRangeWireNames() {
+			values := byMetric[wire][svc]
+			if values == nil {
+				values = structs.MetricValues{}
+			}
+			metrics = append(metrics, structs.Metric{
+				Name:   wire,
+				Values: structs.MetricValues(values),
+			})
+		}
+		rows = append(rows, structs.ServiceMetricsRow{Name: svc, Metrics: metrics})
+	}
+	return rows, nil
 }
 
 func (p *Provider) AppNamespace(app string) string {
@@ -148,12 +381,100 @@ func (p *Provider) AppNamespace(app string) string {
 	case "system":
 		return p.Namespace
 	default:
+		if p.ContextTID() != "" {
+			return p.tidNamespace(p.ContextTID(), app)
+		}
 		return fmt.Sprintf("%s-%s", p.Name, app)
 	}
 }
 
+// tidNamespace is AppNamespace for callers that carry the tenant explicitly
+// because they run outside a tenant request context.
+func (p *Provider) tidNamespace(tid, app string) string {
+	return fmt.Sprintf("%s-%s-%s", p.Name, tid, app)
+}
+
+// buildNamespace returns a deterministic, length-safe namespace dedicated to an
+// app's build pod. The natural form can exceed the 63-character namespace limit
+// for long names, so fall back to a hashed form that stays within the limit.
+func (p *Provider) buildNamespace(app string) string {
+	natural := fmt.Sprintf("%s-build-%s", p.Name, app)
+	if p.ContextTID() != "" {
+		natural = fmt.Sprintf("%s-build-%s-%s", p.Name, p.ContextTID(), app)
+	}
+	if len(natural) <= 63 {
+		return natural
+	}
+	sum := sha256.Sum256([]byte(natural))
+	prefix := natural
+	if len(prefix) > 54 {
+		prefix = prefix[:54]
+	}
+	return strings.TrimRight(prefix, "-") + "-" + hex.EncodeToString(sum[:])[:8]
+}
+
+// processBuildNamespace returns where the build pod runs. A tid-gated rack keeps it
+// out of the tenant's own namespace; params enforce, or an app namespace still
+// carrying an enforce label, routes it to the same dedicated namespace.
+func (p *Provider) processBuildNamespace(app string) string {
+	if p.FeatureGates[options.FeatureGateTid] {
+		return p.buildNamespace(app)
+	}
+
+	if p.PodSecurityStandard != "" && p.PodSecurityMode == "enforce" {
+		return p.buildNamespace(app)
+	}
+
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
+	if err == nil {
+		if _, ok := ns.Labels["pod-security.kubernetes.io/enforce"]; ok {
+			return p.buildNamespace(app)
+		}
+	}
+
+	return p.AppNamespace(app)
+}
+
+func (p *Provider) ensureBuildNamespace(app string) error {
+	name := p.buildNamespace(app)
+
+	ns := &ac.Namespace{
+		ObjectMeta: am.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{"name": app, "type": "build"},
+		},
+	}
+
+	if p.ContextTID() != "" {
+		ns.Labels["tid"] = p.ContextTID()
+	}
+
+	_, err := p.Cluster.CoreV1().Namespaces().Create(context.TODO(), ns, am.CreateOptions{})
+	if err == nil {
+		return p.syncBuildImdsBlock(name)
+	}
+
+	if !ae.IsAlreadyExists(err) {
+		return errors.WithStack(err)
+	}
+
+	// The name already exists. Confirm it is our build namespace and not a
+	// collision with another app's namespace (an app named build-<app>) before
+	// a build pod is created in it.
+	existing, gerr := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), name, am.GetOptions{})
+	if gerr != nil {
+		return errors.WithStack(gerr)
+	}
+
+	if existing.Labels["type"] != "build" {
+		return errors.WithStack(fmt.Errorf("build namespace %q collides with an existing namespace; rename the app", name))
+	}
+
+	return p.syncBuildImdsBlock(name)
+}
+
 func (p *Provider) NamespaceApp(namespace string) (string, error) {
-	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), namespace, am.GetOptions{})
+	ns, err := p.GetNamespaceFromInformer(namespace)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -166,11 +487,16 @@ func (p *Provider) NamespaceApp(namespace string) (string, error) {
 }
 
 func (p *Provider) AppParameters() map[string]string {
-	return map[string]string{}
+	return map[string]string{
+		structs.AppParamBuildArch:   "",
+		structs.AppParamBuildCpu:    "",
+		structs.AppParamBuildMem:    "",
+		structs.AppParamBuildLabels: "",
+	}
 }
 
 func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
-	a, err := p.AppGet(name)
+	a, err := p.appGetLive(name)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -198,10 +524,14 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 
 func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
+	as, release := ns.Annotations["convox.com/app-status"], ns.Annotations["convox.com/app-release"]
 
-	as, release, err := p.Atom.Status(ns.Name, "app")
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if as == "" || release == "" {
+		var err error
+		as, release, err = p.Atom.Status(ns.Name, "app")
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	status := common.AtomStatus(as)
@@ -217,6 +547,9 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 		Release:    release,
 		Router:     p.Router,
 		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
 	}
 
 	var params map[string]string
@@ -241,6 +574,65 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 	}
 
 	// filter out invalid parameters
+	for k, v := range params {
+		if _, ok := defparams[k]; !ok || (ok && v == "") {
+			delete(params, k)
+		}
+	}
+
+	a.Parameters = params
+
+	switch ns.Status.Phase {
+	case "Terminating":
+		a.Status = "deleting"
+	}
+
+	return a, nil
+}
+
+func (p *Provider) appFromNamespaceOnly(ns ac.Namespace) (*structs.App, error) {
+	name := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
+
+	status := common.AtomStatus(ns.Annotations["convox.com/app-status"])
+
+	if ns.Annotations == nil {
+		ns.Annotations = map[string]string{}
+	}
+
+	a := &structs.App{
+		Generation: "3",
+		Locked:     ns.Annotations["convox.com/lock"] == "true",
+		Name:       name,
+		Release:    ns.Annotations["convox.com/app-release"],
+		Router:     p.Router,
+		Status:     status,
+		Tags: map[string]string{
+			"namespace": ns.Name,
+		},
+	}
+
+	var params map[string]string
+
+	if data, ok := ns.Annotations["convox.com/params"]; ok && data > "" {
+		if err := json.Unmarshal([]byte(data), &params); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	if params == nil {
+		params = map[string]string{}
+	}
+
+	defparams := p.Engine.AppParameters()
+
+	// set parameter default values
+	for k, v := range defparams {
+		if _, ok := params[k]; !ok && v != "" {
+			params[k] = v
+		}
+	}
+
+	// filter out invalid parameters
 	for k := range params {
 		if _, ok := defparams[k]; !ok {
 			delete(params, k)
@@ -258,13 +650,12 @@ func (p *Provider) appFromNamespace(ns ac.Namespace) (*structs.App, error) {
 }
 
 func (p *Provider) appNameValidate(name string) error {
-	switch name {
-	case "rack", "system":
-		return errors.WithStack(fmt.Errorf("app name is reserved"))
+	if structs.ReservedAppName(name) {
+		return errors.WithStack(structs.ErrBadRequest("app name is reserved"))
 	}
 
 	if _, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(name), am.GetOptions{}); !ae.IsNotFound(err) {
-		return errors.WithStack(fmt.Errorf("app already exists: %s", name))
+		return errors.WithStack(structs.ErrConflict("app already exists: %s", name))
 	}
 
 	return nil
@@ -273,16 +664,16 @@ func (p *Provider) appNameValidate(name string) error {
 func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string) error {
 	defs := p.Engine.AppParameters()
 
-	var redundantParameters []string
+	var invalidParameters []string
 	for k, v := range params {
 		if _, ok := defs[k]; !ok {
-			redundantParameters = append(redundantParameters, k)
+			invalidParameters = append(invalidParameters, k)
 		} else {
 			a.Parameters[k] = v
 		}
 	}
 
-	fmt.Printf("Skipping redundant parameters: %s ...", strings.Join(redundantParameters, ", "))
+	fmt.Printf("Skipping unsupported parameters: %s ...", strings.Join(invalidParameters, ", "))
 
 	return nil
 }
@@ -310,4 +701,8 @@ func (p *Provider) appUpdate(a *structs.App) error {
 	}
 
 	return nil
+}
+
+func (p *Provider) GenConfigName(id string) string {
+	return fmt.Sprintf("cfg-%s", id)
 }

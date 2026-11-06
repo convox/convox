@@ -4,11 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math/rand"
-	"net"
 	"testing"
-	"time"
 
 	"github.com/convox/convox/pkg/cli"
 	mocksdk "github.com/convox/convox/pkg/mock/sdk"
@@ -20,7 +16,6 @@ import (
 
 func TestResources(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceList", "app1").Return(structs.Resources{*fxResource(), *fxResource()}, nil)
 
 		res, err := testExecute(e, "resources -a app1", nil)
@@ -37,7 +32,6 @@ func TestResources(t *testing.T) {
 
 func TestResourcesError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceList", "app1").Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "resources -a app1", nil)
@@ -50,7 +44,6 @@ func TestResourcesError(t *testing.T) {
 
 func TestResourcesInfo(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceGet", "app1", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "resources info resource1 -a app1", nil)
@@ -67,7 +60,6 @@ func TestResourcesInfo(t *testing.T) {
 
 func TestResourcesInfoError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceGet", "app1", "resource1").Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "resources info resource1 -a app1", nil)
@@ -84,7 +76,6 @@ func TestResourcesProxy(t *testing.T) {
 		defer cancel()
 
 		i.On("WithContext", ctx).Return(i)
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceGet", "app1", "resource1").Return(fxResource(), nil)
 		i.On("Proxy", "example.org", 443, mock.Anything, structs.ProxyOptions{TLS: options.Bool(false)}).Return(nil).Run(func(args mock.Arguments) {
 			buf := make([]byte, 2)
@@ -99,7 +90,7 @@ func TestResourcesProxy(t *testing.T) {
 			rwc.Close()
 		})
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -108,14 +99,11 @@ func TestResourcesProxy(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 
-		data, err := ioutil.ReadAll(cn)
+		data, err := io.ReadAll(cn)
 		require.NoError(t, err)
 		require.Equal(t, "out", string(data))
 
@@ -135,7 +123,6 @@ func TestResourcesProxy(t *testing.T) {
 
 func TestResourcesUrl(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceGet", "app1", "resource1").Return(fxResource(), nil)
 
 		res, err := testExecute(e, "resources url resource1 -a app1", nil)
@@ -148,7 +135,6 @@ func TestResourcesUrl(t *testing.T) {
 
 func TestResourcesUrlError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ResourceGet", "app1", "resource1").Return(nil, fmt.Errorf("err1"))
 
 		res, err := testExecute(e, "resources url resource1 -a app1", nil)
@@ -381,7 +367,7 @@ func TestRackResourcesProxy(t *testing.T) {
 			rwc.Close()
 		})
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -390,14 +376,11 @@ func TestRackResourcesProxy(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 
-		data, err := ioutil.ReadAll(cn)
+		data, err := io.ReadAll(cn)
 		require.NoError(t, err)
 		require.Equal(t, "out", string(data))
 

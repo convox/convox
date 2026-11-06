@@ -1,0 +1,12 @@
+services:
+  api:
+    image: example/api:latest
+  worker:
+    image: example/worker:latest
+
+budget:
+  monthlyCapUsd: 200
+  atCapAction: auto-shutdown
+  atCapWebhookUrl: https://hooks.example.com/budget
+  neverAutoShutdown:
+    - api

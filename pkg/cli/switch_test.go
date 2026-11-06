@@ -1,10 +1,10 @@
 package cli_test
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,7 +30,7 @@ func TestSwitch(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0600)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "switch foo", nil)
@@ -44,6 +44,18 @@ func TestSwitch(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{"test/foo"})
+	})
+}
+
+func TestSwitchLocalSymlink(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testLocalRackSymlink(t, e, "dev1", "local", "https://host1")
+
+		res, err := testExecute(e, "switch dev1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Switched to dev1"})
 	})
 }
 
@@ -63,7 +75,7 @@ func TestSwitchUnknown(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0600)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "switch rack1", nil)

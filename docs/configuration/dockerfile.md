@@ -1,7 +1,7 @@
 ---
 title: "Dockerfile"
-draft: false
-slug: Dockerfile
+description: "The Dockerfile describes the steps used to create a Build from your application code, with directive reference and tips for optimizing build caching."
+slug: dockerfile
 url: /configuration/dockerfile
 ---
 
@@ -9,8 +9,8 @@ url: /configuration/dockerfile
 
 The `Dockerfile` describes the steps used to create a [Build](/reference/primitives/app/build) from your
 application code.
-```html
-    FROM ubuntu:18.04
+```dockerfile
+    FROM ubuntu:24.04
     COPY . .
     RUN ["deps", "install"]
     CMD ["bin/start"]
@@ -31,8 +31,8 @@ Each line of a `Dockerfile` will be cached as long as files referenced by it are
 to cache expensive steps such as dependency installation by selectively copying files before running commands.
 
 The following example selectively copies only the files needed to run `npm` before installing dependencies.
-```html
-    FROM nodejs
+```dockerfile
+    FROM node
 
     COPY package.json package-lock.json .
     RUN ["npm", "install"]
@@ -40,7 +40,23 @@ The following example selectively copies only the files needed to run `npm` befo
     COPY . .
     CMD ["npm", "start"]
 ```
-The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed.
+The `npm install` will be cached on successive builds unless `package.json` or `package-lock.json` is changed. See [Build Layers Caching](/reference/primitives/app/build#build-layers-caching) for where each Rack keeps the cache.
+
+## .dockerignore
+
+A `.dockerignore` file at the root of your source directory keeps files out of the build context. Convox applies the same pattern rules as `docker build`, including negation with `!` to re-include a path underneath an excluded directory:
+
+```text
+    node_modules
+    tmp/**
+    !tmp/keep-this
+    *.log
+```
+
+Two details of that matching changed in rack version 3.25.3, in the `convox` CLI rather than on the Rack, so they apply once you update the CLI:
+
+- A wildcard directory exclude combined with a re-include underneath it now excludes everything else under that directory. Earlier CLI versions leaked the other files under it into the build context.
+- Patterns containing the regex characters `+`, `(`, `)`, and `|` are now treated literally, matching `docker build`.
 
 ## Build Variables
 
@@ -53,15 +69,18 @@ deployments.
 > in the resulting image.
 
 You can declare build variables using the `ARG` directive with an optional default value:
-```html
-    ARG COPYRIGHT=2020
+```text
+    ARG COPYRIGHT=2026
     ARG RUBY_VERSION
 ```
 Values for these variables will be read from the [Environment](/configuration/environment) at build time:
-```html
+```bash
     $ convox env set RUBY_VERSION=2.6.4
 ```
+You can also pass build arguments directly via the CLI using the `--build-args` flag (requires rack version 3.22.0+). See [Build Arguments](/reference/primitives/app/build#build-arguments) for the full range of options including Convox-managed build arguments.
+
 ## See Also
 
+- [Build Arguments](/reference/primitives/app/build#build-arguments) for CLI-based build arguments and Convox-managed args
 - [Dockerfile: Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 - [Private Registries](/configuration/private-registries)

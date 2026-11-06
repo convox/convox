@@ -24,11 +24,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.cluster
-  elasticsearch = module.elasticsearch.host
-  namespace     = var.namespace
-  rack          = var.name
-  syslog        = var.syslog
+  cluster                  = var.cluster
+  elasticsearch            = module.elasticsearch.host
+  fluentd_memory           = var.fluentd_memory
+  namespace                = var.namespace
+  rack                     = var.name
+  router_log_redact_params = var.router_log_redact_params
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
 }
 
 module "k8s" {
@@ -38,15 +41,18 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled          = var.buildkit_enabled
-  docker_hub_authentication = var.docker_hub_authentication
-  domain                    = var.domain
-  image                     = var.image
-  namespace                 = var.namespace
-  rack                      = var.name
-  rack_name                 = var.rack_name
-  release                   = var.release
-  resolver                  = var.resolver
+  buildkit_enabled           = var.buildkit_enabled
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_authentication  = var.docker_hub_authentication
+  domain                     = var.domain
+  image                      = var.image
+  namespace                  = var.namespace
+  rack                       = var.name
+  rack_name                  = var.rack_name
+  release                    = var.release
+  resolver                   = var.resolver
+  webhook_signing_key        = var.webhook_signing_key
 
 
   annotations = {
@@ -56,16 +62,17 @@ module "k8s" {
   }
 
   env = {
-    BUCKET       = google_storage_bucket.storage.name
-    CERT_MANAGER = "true"
-    ELASTIC_URL  = module.elasticsearch.url
-    KEY          = google_service_account_key.api.private_key
-    PROJECT      = data.google_client_config.current.project,
-    PROVIDER     = "gcp"
-    REGION       = data.google_client_config.current.region
-    REGISTRY     = data.google_container_registry_repository.registry.repository_url
-    RESOLVER     = var.resolver
-    ROUTER       = var.router
-    SOCKET       = "/var/run/docker.sock"
+    BUCKET             = google_storage_bucket.storage.name
+    CERT_MANAGER       = "true"
+    ELASTIC_URL        = module.elasticsearch.url
+    ELASTICSEARCH_DISK = var.elasticsearch_disk
+    KEY                = google_service_account_key.api.private_key
+    PROJECT            = data.google_client_config.current.project,
+    PROVIDER           = "gcp"
+    REGION             = data.google_client_config.current.region
+    REGISTRY           = "${var.region}-docker.pkg.dev/${var.project_id}/${var.name}"
+    RESOLVER           = var.resolver
+    ROUTER             = var.router
+    SOCKET             = "/var/run/docker.sock"
   }
 }

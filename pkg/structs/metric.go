@@ -9,6 +9,22 @@ type Metric struct {
 
 type Metrics []Metric
 
+// ServiceMetricsRow is one row in a `MetricsByService` response: a
+// service name plus its metric series. The batched `App.metricsByService`
+// endpoint returns one row per requested service, even when the service
+// has no Prometheus data — `Metrics` is an empty slice in that case so the
+// UI can distinguish "requested but empty" from "not requested".
+//
+// The struct is consumed verbatim by the console GraphQL resolver
+// (`(*appResolver).MetricsByService`) which mirrors `ServiceMetricsRow`
+// in `console3/api/model/`. JSON tags match the GraphQL field names
+// (`name`, `metrics`) — drift between rack and console here would
+// silently null-out the chart.
+type ServiceMetricsRow struct {
+	Name    string  `json:"name"`
+	Metrics Metrics `json:"metrics"`
+}
+
 type MetricValue struct {
 	Average float64   `json:"avg"`
 	Count   float64   `json:"count"`

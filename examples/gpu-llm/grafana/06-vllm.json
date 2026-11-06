@@ -1,0 +1,104 @@
+{
+  "annotations": {"list": []},
+  "convox_source_check": "upstream",
+  "description": "Adapted from https://github.com/vllm-project/vllm — Apache License 2.0. See examples/gpu-llm/grafana/LICENSE-vllm.txt for the full upstream license text. Convox-authored extension panels are tagged with `_source: \"convox-authored:*\"` annotations.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [{"title": "vLLM Project", "url": "https://github.com/vllm-project/vllm"}, {"title": "Grafana.com 23991", "url": "https://grafana.com/grafana/dashboards/23991-vllm-dashboard/"}],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Number of running vLLM inference requests.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (vllm:num_requests_running{model_name=~\"$model\"})", "legendFormat": "Running ({{model_name}})", "refId": "A"},
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (vllm:num_requests_waiting{model_name=~\"$model\"})", "legendFormat": "Waiting ({{model_name}})", "refId": "B"}
+      ],
+      "title": "Inference Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "End-to-end request latency percentiles.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.5, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "P50 {{model_name}}", "refId": "A"},
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "P95 {{model_name}}", "refId": "B"},
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "P99 {{model_name}}", "refId": "C"}
+      ],
+      "title": "End-to-End Request Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Token throughput (prompt + generation).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (rate(vllm:prompt_tokens_total{model_name=~\"$model\"}[5m]))", "legendFormat": "Prompt tokens/s {{model_name}}", "refId": "A"},
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (rate(vllm:generation_tokens_total{model_name=~\"$model\"}[5m]))", "legendFormat": "Generation tokens/s {{model_name}}", "refId": "B"}
+      ],
+      "title": "Token Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "GPU KV-cache usage (vLLM-managed memory pool).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "percent", "min": 0, "max": 100}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "upstream:vllm-23991", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "vllm:gpu_cache_usage_perc{model_name=~\"$model\"} * 100", "legendFormat": "{{model_name}} ({{instance}})", "refId": "A"}
+      ],
+      "title": "GPU KV-Cache Usage",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["convox", "gpu", "vllm", "inference", "upstream"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(vllm:num_requests_running, model_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Model",
+        "multi": false,
+        "name": "model",
+        "options": [],
+        "query": {"query": "label_values(vllm:num_requests_running, model_name)", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU — vLLM Inference",
+  "uid": "convox-gpu-vllm",
+  "version": 1,
+  "weekStart": ""
+}

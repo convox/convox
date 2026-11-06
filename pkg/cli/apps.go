@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,28 +18,28 @@ import (
 )
 
 func init() {
-	register("apps", "list apps", Apps, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("apps", "list apps", watch(Apps), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("apps cancel", "cancel an app update", AppsCancel, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps create", "create an app", AppsCreate, stdcli.CommandOptions{
 		Flags:    append(stdcli.OptionFlags(structs.AppCreateOptions{}), flagRack),
 		Usage:    "[name]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps delete", "delete an app", AppsDelete, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("apps export", "export an app", AppsExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -50,7 +49,7 @@ func init() {
 		},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps import", "import an app", AppsImport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -60,13 +59,13 @@ func init() {
 		},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps info", "get information about an app", AppsInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps lock", "enable termination protection", AppsLock, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
@@ -78,13 +77,13 @@ func init() {
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "[app]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("apps params set", "set app parameters", AppsParamsSet, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
-	})
+	}, WithCloud())
 
 	register("apps unlock", "disable termination protection", AppsUnlock, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
@@ -213,7 +212,7 @@ func AppsImport(rack sdk.Interface, c *stdcli.Context) error {
 		if c.Reader().IsTerminal() {
 			return fmt.Errorf("pipe a file into this command or specify --file")
 		}
-		r = ioutil.NopCloser(c.Reader())
+		r = io.NopCloser(c.Reader())
 	}
 
 	defer r.Close()
@@ -260,7 +259,7 @@ func AppsLock(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func AppsParams(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -300,7 +299,7 @@ func AppsParams(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func AppsParamsSet(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -343,8 +342,15 @@ func AppsParamsSet(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	for k, v := range opts.Parameters {
+		if k == "Tags" {
+			if !tagsApplied(v, a.Parameters["Tags"], s.Parameters["Tags"], s.Version) {
+				return fmt.Errorf("failed to set params")
+			}
+			continue
+		}
+
 		if a.Parameters[k] != v {
-			return fmt.Errorf("rollback")
+			return fmt.Errorf("failed to set params")
 		}
 	}
 
@@ -364,7 +370,7 @@ func AppsUnlock(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) error {
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
@@ -388,7 +394,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(tmp, "app.json"), data, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(tmp, "app.json"), data, 0600); err != nil {
 		return err
 	}
 
@@ -402,7 +408,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 			return err
 		}
 
-		if err := ioutil.WriteFile(filepath.Join(tmp, "env"), []byte(r.Env), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(tmp, "env"), []byte(r.Env), 0600); err != nil {
 			return err
 		}
 
@@ -457,7 +463,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 
 	c.Startf("Packaging export")
 
-	tgz, err := common.Tarball(tmp)
+	tgz, err := common.Tarball(tmp, ".dockerignore")
 	if err != nil {
 		return err
 	}
@@ -472,7 +478,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 }
 
 func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) error {
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	if err != nil {
 		return err
 	}
@@ -489,7 +495,7 @@ func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) e
 
 	var a structs.App
 
-	data, err := ioutil.ReadFile(filepath.Join(tmp, "app.json"))
+	data, err := os.ReadFile(filepath.Join(tmp, "app.json"))
 	if err != nil {
 		return err
 	}
@@ -533,7 +539,7 @@ func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) e
 	}
 
 	if _, err := os.Stat(env); !os.IsNotExist(err) {
-		data, err := ioutil.ReadFile(env)
+		data, err := os.ReadFile(env)
 		if err != nil {
 			return err
 		}

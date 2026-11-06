@@ -8,7 +8,7 @@ resource "azuread_application" "cluster" {
 }
 
 resource "azuread_service_principal" "cluster" {
-  application_id               = azuread_application.cluster.application_id
+  client_id                    = azuread_application.cluster.client_id
   app_role_assignment_required = false
 }
 
@@ -26,5 +26,5 @@ resource "azuread_service_principal_password" "cluster" {
 resource "azurerm_role_assignment" "cluster-contributor" {
   scope                = var.resource_group
   role_definition_name = "Contributor"
-  principal_id         = azuread_service_principal.cluster.id
+  principal_id         = azuread_service_principal.cluster.object_id
 }

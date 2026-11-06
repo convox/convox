@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"path"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -21,7 +23,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 	}
 
 	if !exists {
-		return fmt.Errorf("object not found: %s", key)
+		return structs.ErrNotFound("object not found: %s", key)
 	}
 
 	_, err = p.S3.DeleteObject(&s3.DeleteObjectInput{
@@ -59,7 +61,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 	})
 
 	if ae, ok := err.(awserr.Error); ok && ae.Code() == "NoSuchKey" {
-		return nil, fmt.Errorf("object not found: %s", key)
+		return nil, structs.ErrNotFound("object not found: %s", key)
 	}
 
 	if err != nil {
@@ -127,6 +129,17 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 }
 
 func (p *Provider) objectKey(app, key string) string {
+	if tid := p.ContextTID(); tid != "" {
+		// The S3 client cleans the request path, so dot segments left in the key would resolve outside the prefix.
+		clean := strings.TrimPrefix(path.Clean("/"+key), "/")
+		if clean != "" && strings.HasSuffix(key, "/") {
+			clean += "/"
+		}
+		return fmt.Sprintf("%s-%s/%s", tid, app, clean)
+	}
+	if app == "" || app == "x-undefined-app-x" {
+		return key
+	}
 	return fmt.Sprintf("%s/%s", app, key)
 }
 

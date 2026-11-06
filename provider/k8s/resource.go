@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os/exec"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
@@ -46,7 +48,7 @@ func (p *Provider) ResourceConsole(app, name string, rw io.ReadWriter, opts stru
 	case "redis":
 		return resourceConsoleCommand(rw, opts, "redis-cli", "-u", u)
 	default:
-		return errors.WithStack(fmt.Errorf("console not available for resources of type: %s", r.Type))
+		return errors.WithStack(structs.ErrBadRequest("console not available for resources of type: %s", r.Type))
 	}
 }
 
@@ -62,16 +64,12 @@ func (p *Provider) ResourceExport(app, name string) (io.ReadCloser, error) {
 	}
 
 	switch r.Type {
-	case "mariadb":
-		return resourceExportMysql(u)
-	case "mysql":
-		return resourceExportMysql(u)
-	case "postgis":
-		return resourceExportPostgres(u)
-	case "postgres":
+	case "mariadb", "rds-mariadb", "mysql", "rds-mysql":
+		return resourceExportMysql(r.Type, u)
+	case "postgis", "postgres", "rds-postgres":
 		return resourceExportPostgres(u)
 	default:
-		return nil, errors.WithStack(fmt.Errorf("export not available for resources of type: %s", r.Type))
+		return nil, errors.WithStack(structs.ErrBadRequest("export not available for resources of type: %s", r.Type))
 	}
 }
 
@@ -98,6 +96,21 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		Url:    u,
 	}
 
+	if mr.IsRds() {
+		r.Status, err = p.RdsProvisioner.GetDbStatus(generateResourceStateId(p.Name, p.ContextTID(), app, name))
+		return r, err
+	}
+
+	if mr.IsElastiCache() {
+		isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(generateResourceStateId(p.Name, p.ContextTID(), app, name))
+		if isAvailable {
+			r.Status = "running"
+		} else {
+			r.Status = "pending"
+		}
+		return r, err
+	}
+
 	overlay, err := p.resourceOverlay(app, name)
 	if err != nil {
 		return nil, err
@@ -107,7 +120,7 @@ func (p *Provider) ResourceGet(app, name string) (*structs.Resource, error) {
 		return r, nil
 	}
 
-	d, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Get(context.TODO(), fmt.Sprintf("resource-%s", nameFilter(name)), am.GetOptions{})
+	d, err := p.GetDeploymentFromInformer(fmt.Sprintf("resource-%s", nameFilter(name)), p.AppNamespace(app))
 	if err != nil {
 		return nil, err
 	}
@@ -128,16 +141,12 @@ func (p *Provider) ResourceImport(app, name string, r io.Reader) error {
 	}
 
 	switch rr.Type {
-	case "mariadb":
+	case "mariadb", "rds-mariadb", "mysql", "rds-mysql":
 		return resourceImportMysql(rr, r)
-	case "mysql":
-		return resourceImportMysql(rr, r)
-	case "postgis":
-		return resourceImportPostgres(rr, r)
-	case "postgres":
+	case "postgis", "postgres", "rds-postgres":
 		return resourceImportPostgres(rr, r)
 	default:
-		return errors.WithStack(fmt.Errorf("import not available for resources of type: %s", rr.Type))
+		return errors.WithStack(structs.ErrBadRequest("import not available for resources of type: %s", rr.Type))
 	}
 }
 
@@ -146,7 +155,7 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 		LabelSelector: fmt.Sprintf("app=%s,type=resource", app),
 	}
 
-	ds, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).List(context.TODO(), lopts)
+	ds, err := p.ListDeploymentsFromInformer(p.AppNamespace(app), lopts.LabelSelector)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -162,6 +171,20 @@ func (p *Provider) ResourceList(app string) (structs.Resources, error) {
 		rs = append(rs, *r)
 	}
 
+	rdss, err := p.RdsResourceList(app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs = append(rs, rdss...)
+
+	caches, err := p.ElastiCacheResourceList(app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs = append(rs, caches...)
+
 	return rs, nil
 }
 
@@ -170,14 +193,14 @@ func (p *Provider) SystemResourceCreate(kind string, opts structs.ResourceCreate
 	case "webhook":
 		return p.systemResourceCreateWebhook(opts)
 	default:
-		return nil, fmt.Errorf("rack resource type unknown: %s", kind)
+		return nil, structs.ErrBadRequest("rack resource type unknown: %s", kind)
 	}
 }
 
 func (p *Provider) systemResourceCreateWebhook(opts structs.ResourceCreateOptions) (*structs.Resource, error) {
 	url, ok := opts.Parameters["Url"]
 	if !ok {
-		return nil, fmt.Errorf("parameter required: Url")
+		return nil, structs.ErrBadRequest("parameter required: Url")
 	}
 
 	key := fmt.Sprintf("%s-%d", url, rand.Int63())
@@ -200,7 +223,7 @@ func (p *Provider) SystemResourceDelete(name string) error {
 	case "webhook":
 		return p.webhookDelete(r.Name)
 	default:
-		return fmt.Errorf("rack resource type unknown: %s", r.Type)
+		return structs.ErrBadRequest("rack resource type unknown: %s", r.Type)
 	}
 }
 
@@ -216,11 +239,11 @@ func (p *Provider) SystemResourceGet(name string) (*structs.Resource, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no such resource: %s", name)
+	return nil, structs.ErrNotFound("no such resource: %s", name)
 }
 
 func (p *Provider) SystemResourceLink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceList() (structs.Resources, error) {
@@ -263,11 +286,11 @@ func (p *Provider) SystemResourceTypes() (structs.ResourceTypes, error) {
 }
 
 func (p *Provider) SystemResourceUnlink(name, app string) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) SystemResourceUpdate(name string, opts structs.ResourceUpdateOptions) (*structs.Resource, error) {
-	return nil, errors.WithStack(fmt.Errorf("unavailable on v3 racks"))
+	return nil, errors.WithStack(structs.ErrBadRequest("unavailable on v3 racks"))
 }
 
 func (p *Provider) resourceOverlay(app, name string) (bool, error) {
@@ -296,6 +319,51 @@ func (p *Provider) resourceUrl(app, name string) (string, error) {
 	}
 
 	return cm.Data["URL"], nil
+}
+
+func (p *Provider) RdsResourceList(app string) (structs.Resources, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs := structs.Resources{}
+
+	for _, mr := range m.Resources {
+		if mr.IsRds() {
+			r, err := p.ResourceGet(app, mr.Name)
+			if err != nil {
+				return nil, err
+			}
+			if r != nil {
+				rs = append(rs, *r)
+			}
+		}
+	}
+	return rs, nil
+}
+
+func (p *Provider) ElastiCacheResourceList(app string) (structs.Resources, error) {
+	m, _, err := common.AppManifest(p, app)
+	if err != nil {
+		return nil, err
+	}
+
+	rs := structs.Resources{}
+
+	for _, mr := range m.Resources {
+		if mr.IsElastiCache() {
+			r, err := p.ResourceGet(app, mr.Name)
+			if err != nil {
+				return nil, err
+			}
+			if r != nil {
+				rs = append(rs, *r)
+			}
+		}
+	}
+
+	return rs, nil
 }
 
 type resourceConnection struct {
@@ -356,17 +424,34 @@ func resourceConsoleCommand(rw io.ReadWriter, opts structs.ResourceConsoleOption
 func resourceExportCommand(w io.WriteCloser, command string, args ...string) {
 	defer w.Close()
 
+	var stderr bytes.Buffer
+
 	cmd := exec.Command(command, args...)
 
 	cmd.Stdout = w
-	cmd.Stderr = w
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(w, "ERROR: could not export: %v\n", err)
+		msg := err.Error()
+		if s := strings.TrimSpace(stderr.String()); s != "" {
+			msg += ": " + s
+		}
+		fmt.Fprintf(w, "ERROR: could not export: %s\n", msg)
 	}
 }
 
-func resourceExportMysql(url string) (io.ReadCloser, error) {
+func mysqldumpArgs(resourceType string, cn *resourceConnection) []string {
+	args := []string{"-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password)}
+
+	switch resourceType {
+	case "mariadb", "rds-mariadb":
+		args = append(args, "--column-statistics=0")
+	}
+
+	return append(args, cn.Database)
+}
+
+func resourceExportMysql(resourceType, url string) (io.ReadCloser, error) {
 	cn, err := parseResourceURL(url)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -374,7 +459,7 @@ func resourceExportMysql(url string) (io.ReadCloser, error) {
 
 	rr, ww := io.Pipe()
 
-	go resourceExportCommand(ww, "mysqldump", "-h", cn.Host, "-P", cn.Port, "-u", cn.Username, fmt.Sprintf("-p%s", cn.Password), cn.Database)
+	go resourceExportCommand(ww, "mysqldump", mysqldumpArgs(resourceType, cn)...)
 
 	return rr, nil
 }
@@ -397,9 +482,7 @@ func resourceImportMysql(rr *structs.Resource, r io.Reader) error {
 
 	cmd.Stdin = r
 
-	data, err := cmd.CombinedOutput()
-	fmt.Printf("string(data): %+v\n", string(data))
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 
@@ -411,9 +494,7 @@ func resourceImportPostgres(rr *structs.Resource, r io.Reader) error {
 
 	cmd.Stdin = r
 
-	data, err := cmd.CombinedOutput()
-	fmt.Printf("string(data): %+v\n", string(data))
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return errors.WithStack(fmt.Errorf("ERROR: import failed"))
 	}
 

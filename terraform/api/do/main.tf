@@ -23,11 +23,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.cluster
-  elasticsearch = module.elasticsearch.host
-  namespace     = var.namespace
-  rack          = var.name
-  syslog        = var.syslog
+  cluster                  = var.cluster
+  elasticsearch            = module.elasticsearch.host
+  fluentd_memory           = var.fluentd_memory
+  namespace                = var.namespace
+  rack                     = var.name
+  router_log_redact_params = var.router_log_redact_params
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
 }
 
 module "k8s" {
@@ -51,6 +54,7 @@ module "k8s" {
   release                   = var.release
   resolver                  = var.resolver
   replicas                  = var.high_availability ? 2 : 1
+  webhook_signing_key       = var.webhook_signing_key
 
 
   annotations = {
@@ -58,17 +62,18 @@ module "k8s" {
   }
 
   env = {
-    BUCKET          = digitalocean_spaces_bucket.storage.name
-    CERT_MANAGER    = "true"
-    ELASTIC_URL     = module.elasticsearch.url
-    PROVIDER        = "do"
-    REGION          = var.region
-    REGISTRY        = "registry.${var.domain}"
-    RESOLVER        = var.resolver
-    ROUTER          = var.router
-    SECRET          = var.secret
-    SPACES_ACCESS   = var.access_id
-    SPACES_ENDPOINT = "https://${var.region}.digitaloceanspaces.com"
-    SPACES_SECRET   = var.secret_key
+    BUCKET             = digitalocean_spaces_bucket.storage.name
+    CERT_MANAGER       = "true"
+    ELASTIC_URL        = module.elasticsearch.url
+    ELASTICSEARCH_DISK = var.elasticsearch_disk
+    PROVIDER           = "do"
+    REGION             = var.region
+    REGISTRY           = "registry.${var.domain}"
+    RESOLVER           = var.resolver
+    ROUTER             = var.router
+    SECRET             = var.secret
+    SPACES_ACCESS      = var.access_id
+    SPACES_ENDPOINT    = "https://${var.region}.digitaloceanspaces.com"
+    SPACES_SECRET      = var.secret_key
   }
 }

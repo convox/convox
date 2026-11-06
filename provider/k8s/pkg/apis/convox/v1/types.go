@@ -31,6 +31,7 @@ type BuildSpec struct {
 	Logs        string `json:"logs"`
 	Manifest    string `json:"manifest"`
 	Process     string `json:"process"`
+	Reason      string `json:"reason"`
 	Release     string `json:"release"`
 	Started     string `json:"started"`
 	Status      string `json:"status"`

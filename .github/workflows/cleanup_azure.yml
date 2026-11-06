@@ -5,19 +5,32 @@ on:
     - cron:  '0 2/24 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cleanup-${{ github.workflow }}
+
 jobs:
   cleanup-azure:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: azure secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: azure
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_REGION: ${{ secrets.ARM_REGION }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
       - name: dependencies
         run: ci/dependencies.sh
       - name: azure cleanup

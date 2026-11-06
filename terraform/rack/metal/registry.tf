@@ -3,8 +3,23 @@ resource "random_string" "secret" {
   special = false
 }
 
+resource "kubernetes_secret" "registry_htpasswd" {
+  metadata {
+    namespace = module.k8s.namespace
+    name      = "registry-htpasswd"
+  }
+
+  data = {
+    htpasswd = "docker:${bcrypt(random_string.secret.result)}"
+  }
+
+  lifecycle {
+    ignore_changes = [data]
+  }
+}
+
 resource "kubernetes_deployment" "registry" {
-  depends_on = [kubernetes_persistent_volume_claim.registry]
+  depends_on = [kubernetes_persistent_volume_claim.registry, module.api]
 
   metadata {
     namespace = module.k8s.namespace
@@ -34,8 +49,8 @@ resource "kubernetes_deployment" "registry" {
     strategy {
       type = "RollingUpdate"
       rolling_update {
-        max_surge       = 1
-        max_unavailable = 0
+        max_surge       = 0
+        max_unavailable = 1
       }
     }
 
@@ -56,12 +71,47 @@ resource "kubernetes_deployment" "registry" {
 
         container {
           name              = "system"
-          image             = "registry:2"
+          image             = module.k8s.registry_image
           image_pull_policy = "IfNotPresent"
+
+          env {
+            name  = "REGISTRY_AUTH"
+            value = "htpasswd"
+          }
+
+          env {
+            name  = "REGISTRY_AUTH_HTPASSWD_PATH"
+            value = "/auth/htpasswd"
+          }
+
+          env {
+            name  = "REGISTRY_AUTH_HTPASSWD_REALM"
+            value = "convox"
+          }
+
+          env {
+            name  = "REGISTRY_HTTP_DEBUG_ADDR"
+            value = ""
+          }
+
+          env {
+            name  = "REGISTRY_HTTP_RELATIVEURLS"
+            value = "true"
+          }
 
           env {
             name  = "REGISTRY_HTTP_SECRET"
             value = random_string.secret.result
+          }
+
+          env {
+            name  = "REGISTRY_LOG_LEVEL"
+            value = "info"
+          }
+
+          env {
+            name  = "REGISTRY_STORAGE_DELETE_ENABLED"
+            value = "false"
           }
 
           port {
@@ -73,6 +123,12 @@ resource "kubernetes_deployment" "registry" {
             name       = "registry"
             mount_path = "/var/lib/registry"
           }
+
+          volume_mount {
+            name       = "htpasswd"
+            mount_path = "/auth"
+            read_only  = true
+          }
         }
 
         volume {
@@ -80,6 +136,14 @@ resource "kubernetes_deployment" "registry" {
 
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
+          }
+        }
+
+        volume {
+          name = "htpasswd"
+
+          secret {
+            secret_name = kubernetes_secret.registry_htpasswd.metadata.0.name
           }
         }
       }

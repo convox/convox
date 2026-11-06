@@ -10,10 +10,10 @@ metadata:
     type: resource
     resource: {{.Name}}
 data:
-  URL: "postgres://app:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local:5432/app?sslmode=disable"
+  URL: "postgres://app:{{.Password}}@resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}:5432/app?sslmode=disable"
   USER: "app"
   PASS: "{{.Password}}"
-  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.svc.cluster.local"
+  HOST: "resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}"
   PORT: "5432"
   NAME: "app"
 ---
@@ -32,7 +32,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: {{ coalesce (index .Parameters "storage") "10" }}Gi
+      storage: {{ yamlScalar (printf "%sGi" (coalesce (index .Parameters "storage") "10")) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -57,6 +57,8 @@ spec:
       app: {{.App}}
       resource: {{.Name}}
   replicas: 1
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -66,9 +68,13 @@ spec:
         type: resource
         resource: {{.Name}}
     spec:
+      {{ if .DockerHubAuth }}
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      {{ end }}
       containers:
       - name: postgis
-        image: postgis/postgis:{{ coalesce (index .Parameters "version") "10-3.2" }}
+        image: {{ yamlScalar .Image }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
@@ -84,6 +90,21 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: data
+        resources:
+          limits:
+            {{ if (index .Parameters "cpu") }}
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
+            {{ end }}
+          requests:
+            {{ if (index .Parameters "cpu") }}
+            cpu: {{ yamlQuote (printf "%sm" .Parameters.cpu) }}
+            {{ end }}
+            {{ if (index .Parameters "mem") }}
+            memory: {{ yamlQuote (printf "%sMi" .Parameters.mem) }}
+            {{ end }}
       volumes:
       - name: data
         persistentVolumeClaim:
@@ -94,6 +115,8 @@ kind: Service
 metadata:
   namespace: {{.Namespace}}
   name: resource-{{ k8sname .Name }}
+  annotations:
+    convox.com/alias: resource-{{ k8sname .Name }}.{{.Namespace}}.{{ internalResourceDotDomainSuffix }}
   labels:
     system: convox
     rack: {{.Rack}}

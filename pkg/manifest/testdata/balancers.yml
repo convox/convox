@@ -1,0 +1,29 @@
+balancers:
+  controller:
+    awsLoadBalancerController: true
+    ports:
+      5000: 5001
+      6000:
+        protocol: udp
+        port: 6001
+      7000:
+        port: 7001
+    service: web
+  legacy:
+    ports:
+      8000: 8001
+      8000: 8002
+    service: web
+  udponly:
+    annotations:
+      - service.beta.kubernetes.io/aws-load-balancer-healthcheck-port=9001
+    awsLoadBalancerController: true
+    ports:
+      9000:
+        protocol: UDP
+        port: 9001
+    service: web
+services:
+  web:
+    build: .
+    port: 5000

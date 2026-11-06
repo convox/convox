@@ -16,9 +16,25 @@ resource "random_string" "secret" {
   special = false
 }
 
+resource "kubernetes_secret" "registry_htpasswd" {
+  metadata {
+    namespace = module.k8s.namespace
+    name      = "registry-htpasswd"
+  }
+
+  data = {
+    htpasswd = "docker:${bcrypt(random_string.secret.result)}"
+  }
+
+  lifecycle {
+    ignore_changes = [data]
+  }
+}
+
 resource "kubernetes_deployment" "registry" {
   depends_on = [
-    digitalocean_spaces_bucket.registry
+    digitalocean_spaces_bucket.registry,
+    module.api
   ]
 
   metadata {
@@ -71,9 +87,33 @@ resource "kubernetes_deployment" "registry" {
 
         container {
           name              = "system"
-          image             = "registry:2"
+          image             = module.k8s.registry_image
           image_pull_policy = "IfNotPresent"
 
+          env {
+            name  = "REGISTRY_AUTH"
+            value = "htpasswd"
+          }
+
+          env {
+            name  = "REGISTRY_AUTH_HTPASSWD_PATH"
+            value = "/auth/htpasswd"
+          }
+
+          env {
+            name  = "REGISTRY_AUTH_HTPASSWD_REALM"
+            value = "convox"
+          }
+
+          env {
+            name  = "REGISTRY_HTTP_DEBUG_ADDR"
+            value = ""
+          }
+
+          env {
+            name  = "REGISTRY_HTTP_RELATIVEURLS"
+            value = "true"
+          }
 
           env {
             name  = "REGISTRY_HTTP_SECRET"
@@ -81,8 +121,18 @@ resource "kubernetes_deployment" "registry" {
           }
 
           env {
+            name  = "REGISTRY_LOG_LEVEL"
+            value = "info"
+          }
+
+          env {
             name  = "REGISTRY_STORAGE"
             value = "s3"
+          }
+
+          env {
+            name  = "REGISTRY_STORAGE_DELETE_ENABLED"
+            value = "false"
           }
 
           env {
@@ -93,6 +143,11 @@ resource "kubernetes_deployment" "registry" {
           env {
             name  = "REGISTRY_STORAGE_S3_BUCKET"
             value = digitalocean_spaces_bucket.registry.name
+          }
+
+          env {
+            name  = "REGISTRY_STORAGE_S3_FORCEPATHSTYLE"
+            value = "true"
           }
 
           env {
@@ -116,16 +171,17 @@ resource "kubernetes_deployment" "registry" {
           }
 
           volume_mount {
-            name       = "registry"
-            mount_path = "/var/lib/registry"
+            name       = "htpasswd"
+            mount_path = "/auth"
+            read_only  = true
           }
         }
 
         volume {
-          name = "registry"
+          name = "htpasswd"
 
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.registry.metadata.0.name
+          secret {
+            secret_name = kubernetes_secret.registry_htpasswd.metadata.0.name
           }
         }
       }

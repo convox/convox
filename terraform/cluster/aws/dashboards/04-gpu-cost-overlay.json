@@ -1,0 +1,204 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "GPU utilization-minutes consumed per app over the last 24 hours. Height is total GPU-minutes (utilization rate \u00d7 60s intervals summed over 24h).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "displayName": "${__series.name}"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "barWidth": 0.7,
+        "fillOpacity": 80,
+        "gradientMode": "none",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "_source": "GpuMinutesByApp",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (convox_app) (increase(DCGM_FI_DEV_GPU_UTIL[24h]) / 100 * 60)",
+          "legendFormat": "{{convox_app}}",
+          "refId": "A"
+        }
+      ],
+      "time": {
+        "from": "now-24h",
+        "to": "now"
+      },
+      "title": "GPU Minutes by App (last 24h)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Cost-overlay panels require a Plan-4 cost recording rule that is not yet bundled with this version of Convox.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "content": "# Cost overlay panels require a Plan-4 cost recording rule\n\nThe rule `gpu_pod_hourly_cost_usd_seconds_total` is not yet bundled with this version of Convox.\n\nTo populate this panel, configure cost-per-node lookups via Console \u2192 Costs (post-3.24.6 bundle).",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.4.2",
+      "title": "Configure cost recording rules",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Count of GPUs with utilization below 5% over the last hour.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 3
+              }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Idle GPUs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "_source": "IdleGpuCount",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(DCGM_FI_DEV_GPU_UTIL < 5)",
+          "legendFormat": "Idle",
+          "refId": "A"
+        },
+        {
+          "_source": "TotalGpuCount",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(DCGM_FI_DEV_GPU_UTIL)",
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "title": "Idle GPU Detection (last 1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "7-day cost ladder requires a Plan-4 cost recording rule that is not yet bundled with this version of Convox.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "content": "# Same dependency as panel 2\n\nRequires `gpu_pod_hourly_cost_usd_seconds_total` recording rule (post-3.24.6 bundle).",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.4.2",
+      "title": "Last-7-Day Cost Ladder",
+      "type": "text"
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": [
+    "convox",
+    "gpu",
+    "cost"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU \u2014 Cost Overlay",
+  "uid": "convox-gpu-cost-overlay",
+  "version": 1,
+  "weekStart": ""
+}

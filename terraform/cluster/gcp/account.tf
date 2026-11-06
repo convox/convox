@@ -26,6 +26,12 @@ resource "google_project_iam_member" "nodes-storage" {
   project = var.project_id
 }
 
+resource "google_project_iam_member" "modes-artifactregistry" {
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${google_service_account.nodes.email}"
+  project = var.project_id
+}
+
 # resource "google_project_iam_member" "nodes-token-creator" {
 #   depends_on = ["google_project_service.cloudresourcemanager"]
 

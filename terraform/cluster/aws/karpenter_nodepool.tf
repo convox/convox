@@ -1,0 +1,460 @@
+# Karpenter NodePool and EC2NodeClass resources
+# All resources gated on var.karpenter_enabled
+
+locals {
+  karpenter_effective_disk = var.karpenter_node_disk > 0 ? var.karpenter_node_disk : var.node_disk
+
+  # Zero inherits the rack-wide value. Both fields are gp3-only: nothing cross-checks them
+  # against the volume type, so a mismatch applies cleanly and fails at instance launch.
+  karpenter_volume_gp3                  = var.karpenter_node_volume_type == "gp3"
+  karpenter_volume_iops_requested       = var.karpenter_node_volume_iops > 0 ? min(80000, floor(var.karpenter_node_volume_iops)) : local.node_volume_iops_requested
+  karpenter_volume_throughput_requested = var.karpenter_node_volume_throughput > 0 ? min(1000, floor(var.karpenter_node_volume_throughput)) : local.node_volume_throughput_requested
+
+  karpenter_volume_iops_effective       = local.karpenter_volume_gp3 && local.karpenter_volume_iops_requested > 0 ? max(3000, min(local.karpenter_volume_iops_requested, local.karpenter_effective_disk * 500)) : 0
+  karpenter_volume_throughput_effective = local.karpenter_volume_gp3 && local.karpenter_volume_throughput_requested > 0 ? max(125, min(local.karpenter_volume_throughput_requested, floor(max(3000, local.karpenter_volume_iops_effective) * 0.25))) : 0
+
+  karpenter_volume_perf = merge(
+    local.karpenter_volume_iops_effective > 0 ? { iops = local.karpenter_volume_iops_effective } : {},
+    local.karpenter_volume_throughput_effective > 0 ? { throughput = local.karpenter_volume_throughput_effective } : {},
+  )
+
+  karpenter_is_bottlerocket = var.karpenter_node_os == "bottlerocket"
+
+  karpenter_effective_ami_alias = var.karpenter_ami_alias != "" ? var.karpenter_ami_alias : "al2023@latest"
+
+  # Parse workload NodePool custom labels from "k1=v1,k2=v2" to map
+  karpenter_workload_extra_labels = {
+    for pair in compact(split(",", var.karpenter_node_labels)) :
+    trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
+  }
+
+  # Parse workload NodePool custom taints from "key=value:Effect" to list of objects
+  karpenter_workload_taints = [
+    for t in compact(split(",", var.karpenter_node_taints)) : {
+      key    = split("=", split(":", t)[0])[0]
+      value  = length(split("=", split(":", t)[0])) > 1 ? split("=", split(":", t)[0])[1] : ""
+      effect = element(split(":", t), length(split(":", t)) - 1)
+    }
+  ]
+
+  # Parse build NodePool extra labels
+  karpenter_build_extra_labels = {
+    for pair in compact(split(",", var.karpenter_build_node_labels)) :
+    trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
+  }
+
+  build_imds_tokens    = var.karpenter_build_imds_tokens != "" ? var.karpenter_build_imds_tokens : var.imds_http_tokens
+  build_imds_hop_limit = var.karpenter_build_imds_hop_limit > 0 ? var.karpenter_build_imds_hop_limit : var.imds_http_hop_limit
+
+  ###########################################################################
+  # karpenter_config overrides — decode user JSON (empty = no overrides)
+  ###########################################################################
+
+  karpenter_config_raw    = var.karpenter_config != "" ? var.karpenter_config : "{}"
+  karpenter_config_parsed = jsondecode(local.karpenter_config_raw)
+  kc_np                   = lookup(local.karpenter_config_parsed, "nodePool", {})
+  kc_np_template          = lookup(local.kc_np, "template", {})
+  kc_np_template_meta     = lookup(local.kc_np_template, "metadata", {})
+  kc_np_template_spec     = lookup(local.kc_np_template, "spec", {})
+  kc_np_disruption        = lookup(local.kc_np, "disruption", {})
+  kc_ec2                  = lookup(local.karpenter_config_parsed, "ec2NodeClass", {})
+
+  ###########################################################################
+  # Workload NodePool — build defaults, merge overrides, force protected fields
+  ###########################################################################
+
+  # Requirements: use override if provided, otherwise build from individual params
+  np_default_requirements = concat(
+    [
+      { key = "karpenter.sh/capacity-type", operator = "In", values = split(",", var.karpenter_capacity_types) },
+      { key = "kubernetes.io/arch", operator = "In", values = split(",", var.karpenter_arch) },
+    ],
+    var.karpenter_instance_families != "" ? [
+      { key = "karpenter.k8s.aws/instance-family", operator = "In", values = split(",", var.karpenter_instance_families) }
+    ] : [],
+    var.karpenter_instance_sizes != "" ? [
+      { key = "karpenter.k8s.aws/instance-size", operator = "In", values = split(",", var.karpenter_instance_sizes) }
+    ] : [],
+  )
+  np_final_requirements = lookup(local.kc_np_template_spec, "requirements", local.np_default_requirements)
+
+  # Labels: merge param labels, then override labels, then force Convox-reserved label last (always wins)
+  np_final_labels = merge(
+    local.karpenter_workload_extra_labels,
+    lookup(local.kc_np_template_meta, "labels", {}),
+    { "convox.io/nodepool" = "workload" }
+  )
+
+  # Taints: use override if provided, otherwise param taints
+  np_final_taints = lookup(local.kc_np_template_spec, "taints", (
+    length(local.karpenter_workload_taints) > 0 ? local.karpenter_workload_taints : null
+  ))
+
+  # expireAfter: override or param
+  np_final_expire = lookup(local.kc_np_template_spec, "expireAfter", var.karpenter_node_expiry)
+
+  # terminationGracePeriod: only from override (no individual param)
+  np_final_term_grace = lookup(local.kc_np_template_spec, "terminationGracePeriod", null)
+
+  # Limits: override or params
+  np_final_limits = lookup(local.kc_np, "limits", {
+    cpu    = tostring(var.karpenter_cpu_limit)
+    memory = "${var.karpenter_memory_limit_gb}Gi"
+  })
+
+  # Scoped so empty-node reclamation keeps running inside the window
+  np_block_budget = var.karpenter_disruption_block_schedule != "" && var.karpenter_disruption_block_duration != "" ? [{
+    nodes    = "0"
+    schedule = var.karpenter_disruption_block_schedule
+    duration = var.karpenter_disruption_block_duration
+    reasons  = ["Drifted", "Underutilized"]
+  }] : []
+
+  # Disruption: override or params
+  np_default_disruption = {
+    consolidationPolicy = var.karpenter_consolidation_enabled ? "WhenEmptyOrUnderutilized" : "WhenEmpty"
+    consolidateAfter    = var.karpenter_consolidate_after
+    budgets             = concat([{ nodes = var.karpenter_disruption_budget_nodes }], local.np_block_budget)
+  }
+  np_final_disruption = merge(local.np_default_disruption, local.kc_np_disruption)
+
+  # Weight: override or default (0 = not set)
+  np_final_weight = lookup(local.kc_np, "weight", null)
+
+  # Build the template.spec — only include non-null fields
+  np_template_spec_map = merge(
+    {
+      expireAfter  = local.np_final_expire
+      nodeClassRef = { group = "karpenter.k8s.aws", kind = "EC2NodeClass", name = "workload" }
+      requirements = local.np_final_requirements
+    },
+    local.np_final_taints != null ? { taints = local.np_final_taints } : {},
+    local.np_final_term_grace != null ? { terminationGracePeriod = local.np_final_term_grace } : {},
+  )
+
+  # Full NodePool manifest
+  np_workload_manifest = {
+    apiVersion = "karpenter.sh/v1"
+    kind       = "NodePool"
+    metadata   = { name = "workload" }
+    spec = merge(
+      {
+        template = {
+          metadata = { labels = local.np_final_labels }
+          spec     = local.np_template_spec_map
+        }
+        limits     = local.np_final_limits
+        disruption = local.np_final_disruption
+      },
+      local.np_final_weight != null ? { weight = local.np_final_weight } : {},
+    )
+  }
+
+  ###########################################################################
+  # Workload EC2NodeClass — build defaults, merge overrides, force protected fields
+  ###########################################################################
+
+  # Bottlerocket needs two volumes (OS + data); still overridable. Built by concat rather than
+  # one ternary over both lists: element types that differ by a key unify to map(string).
+  ec2_bottlerocket_os_device = local.karpenter_is_bottlerocket ? [
+    {
+      deviceName = "/dev/xvda"
+      ebs = {
+        volumeType = "gp3"
+        volumeSize = "4Gi"
+        encrypted  = var.ebs_volume_encryption_enabled
+      }
+    },
+  ] : []
+
+  ec2_default_block_devices = concat(local.ec2_bottlerocket_os_device, [
+    {
+      deviceName = local.karpenter_is_bottlerocket ? "/dev/xvdb" : "/dev/xvda"
+      ebs = merge({
+        volumeType = var.karpenter_node_volume_type
+        volumeSize = "${local.karpenter_effective_disk}Gi"
+        encrypted  = var.ebs_volume_encryption_enabled
+      }, local.karpenter_volume_perf)
+    },
+  ])
+  ec2_final_block_devices = lookup(local.kc_ec2, "blockDeviceMappings", local.ec2_default_block_devices)
+
+  # metadataOptions: override or params
+  ec2_default_metadata = {
+    httpTokens              = var.imds_http_tokens
+    httpPutResponseHopLimit = var.imds_http_hop_limit
+    httpEndpoint            = "enabled"
+  }
+  ec2_final_metadata = lookup(local.kc_ec2, "metadataOptions", local.ec2_default_metadata)
+
+  # Tags: rack-level Tags first, then karpenter_config overrides, then Convox reserved (always win).
+  # Merge order matches local.tags convention: user tags first, Name/Rack forced last.
+  ec2_final_tags = merge(
+    var.tags,
+    lookup(local.kc_ec2, "tags", {}),
+    { Name = "${var.name}/karpenter/workload", Rack = var.name },
+  )
+
+  # amiSelectorTerms: OS-aware default, still overridable
+  ec2_default_ami = local.karpenter_is_bottlerocket ? [{ alias = "bottlerocket@latest" }] : [{ alias = local.karpenter_effective_ami_alias }]
+  ec2_final_ami   = lookup(local.kc_ec2, "amiSelectorTerms", local.ec2_default_ami)
+
+  # Skipped when karpenter_config picks the AMI, since a Bottlerocket class parses userData as
+  # TOML rather than YAML. Not indented: a %{ if } inside a <<- heredoc cancels the unindenting.
+  ec2_node_config = <<EOT
+apiVersion: node.eks.aws/v1alpha1
+kind: NodeConfig
+spec:
+%{if var.fast_image_pull_enable~}
+  featureGates:
+    FastImagePull: true
+%{endif~}
+%{if local.kubelet_registry_set~}
+  kubelet:
+    config:
+      registryPullQPS: ${local.kubelet_registry_pull_qps_effective}
+      registryBurst: ${local.kubelet_registry_burst_effective}
+%{endif~}
+EOT
+
+  ec2_node_config_user_data = local.node_config_set ? local.ec2_node_config : ""
+
+  # Params first, then override, so karpenter_config wins on any key it sets
+  ec2_optional_fields = merge(
+    !local.karpenter_is_bottlerocket && lookup(local.kc_ec2, "amiSelectorTerms", null) == null && local.ec2_node_config_user_data != "" ? { userData = local.ec2_node_config_user_data } : {},
+    lookup(local.kc_ec2, "userData", null) != null ? { userData = local.kc_ec2["userData"] } : {},
+    lookup(local.kc_ec2, "detailedMonitoring", null) != null ? { detailedMonitoring = local.kc_ec2["detailedMonitoring"] } : {},
+    lookup(local.kc_ec2, "associatePublicIPAddress", null) != null ? { associatePublicIPAddress = local.kc_ec2["associatePublicIPAddress"] } : {},
+    lookup(local.kc_ec2, "instanceStorePolicy", null) != null ? { instanceStorePolicy = local.kc_ec2["instanceStorePolicy"] } : {},
+    lookup(local.kc_ec2, "amiFamily", null) != null && lookup(local.kc_ec2, "amiSelectorTerms", null) != null ? { amiFamily = local.kc_ec2["amiFamily"] } : {},
+  )
+
+  # Full EC2NodeClass manifest — protected fields forced after merge
+  ec2_workload_manifest = {
+    apiVersion = "karpenter.k8s.aws/v1"
+    kind       = "EC2NodeClass"
+    metadata   = { name = "workload" }
+    spec = merge(
+      {
+        # Protected: Convox always controls these
+        role                       = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].name : ""
+        subnetSelectorTerms        = [{ tags = { "karpenter.sh/discovery" = var.name } }]
+        securityGroupSelectorTerms = [{ tags = { "karpenter.sh/discovery" = var.name } }]
+        # Configurable with defaults
+        amiSelectorTerms    = local.ec2_final_ami
+        blockDeviceMappings = local.ec2_final_block_devices
+        metadataOptions     = local.ec2_final_metadata
+        tags                = local.ec2_final_tags
+      },
+      local.ec2_optional_fields,
+    )
+  }
+
+  ###########################################################################
+  # Process additional Karpenter NodePools — apply defaults and parse labels/taints
+  ###########################################################################
+
+  additional_karpenter_nodepools_with_defaults = {
+    for idx, np in var.additional_karpenter_nodepools : lookup(np, "name", "custom-${idx}") => {
+      name                    = lookup(np, "name", "custom-${idx}")
+      instance_families       = lookup(np, "instance_families", "")
+      instance_sizes          = lookup(np, "instance_sizes", "")
+      capacity_types          = lookup(np, "capacity_types", "on-demand")
+      arch                    = lookup(np, "arch", "amd64")
+      cpu_limit               = tonumber(lookup(np, "cpu_limit", 100))
+      memory_limit_gb         = tonumber(lookup(np, "memory_limit_gb", 400))
+      consolidation_policy    = lookup(np, "consolidation_policy", "WhenEmptyOrUnderutilized")
+      consolidate_after       = lookup(np, "consolidate_after", "30s")
+      node_expiry             = lookup(np, "node_expiry", var.karpenter_node_expiry)
+      disruption_budget_nodes = lookup(np, "disruption_budget_nodes", "10%")
+      disk                    = tonumber(lookup(np, "disk", 0))
+      volume_type             = lookup(np, "volume_type", "gp3")
+      volume_iops             = tonumber(lookup(np, "volume_iops", 0))
+      volume_throughput       = tonumber(lookup(np, "volume_throughput", 0))
+      ami_id                  = lookup(np, "ami_id", "")
+      weight                  = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
+      dedicated               = tobool(lookup(np, "dedicated", false))
+      labels = {
+        for pair in compact(split(",", lookup(np, "labels", ""))) :
+        trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
+      }
+      taints = concat(
+        tobool(lookup(np, "dedicated", false)) ? [{
+          key    = "dedicated-node"
+          value  = lookup(np, "name", "custom-${idx}")
+          effect = "NoSchedule"
+        }] : [],
+        [for t in compact(split(",", lookup(np, "taints", ""))) : {
+          key    = split("=", split(":", t)[0])[0]
+          value  = length(split("=", split(":", t)[0])) > 1 ? split("=", split(":", t)[0])[1] : ""
+          effect = element(split(":", t), length(split(":", t)) - 1)
+        }]
+      )
+    }
+  }
+
+  karpenter_pool_volume_requested = {
+    for name, np in local.additional_karpenter_nodepools_with_defaults : name => {
+      gp3        = np.volume_type == "gp3"
+      disk       = np.disk > 0 ? np.disk : local.karpenter_effective_disk
+      iops       = np.volume_iops > 0 ? min(80000, floor(np.volume_iops)) : local.karpenter_volume_iops_requested
+      throughput = np.volume_throughput > 0 ? min(1000, floor(np.volume_throughput)) : local.karpenter_volume_throughput_requested
+    }
+  }
+
+  karpenter_pool_volume_iops = { for name, r in local.karpenter_pool_volume_requested : name =>
+    r.gp3 && r.iops > 0 ? max(3000, min(r.iops, r.disk * 500)) : 0
+  }
+  karpenter_pool_volume_throughput = { for name, r in local.karpenter_pool_volume_requested : name =>
+    r.gp3 && r.throughput > 0 ? max(125, min(r.throughput, floor(max(3000, local.karpenter_pool_volume_iops[name]) * 0.25))) : 0
+  }
+}
+
+###############################################################################
+# Workload NodePool — built from defaults + karpenter_config overrides
+###############################################################################
+
+resource "kubectl_manifest" "karpenter_nodepool_workload" {
+  count     = var.karpenter_enabled ? 1 : 0
+  yaml_body = yamlencode(local.np_workload_manifest)
+  wait      = true
+
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
+}
+
+###############################################################################
+# Workload EC2NodeClass — built from defaults + karpenter_config overrides
+###############################################################################
+
+resource "kubectl_manifest" "karpenter_ec2nodeclass_workload" {
+  count     = var.karpenter_enabled ? 1 : 0
+  yaml_body = yamlencode(local.ec2_workload_manifest)
+  wait      = true
+
+  depends_on = [
+    null_resource.wait_karpenter_ready,
+    helm_release.karpenter_crd,
+    aws_ec2_tag.private_subnets_karpenter,
+    aws_ec2_tag.public_subnets_karpenter,
+    aws_ec2_tag.cluster_sg_karpenter,
+  ]
+}
+
+###############################################################################
+# Build NodePool (conditional on build_node_enabled AND karpenter_enabled)
+###############################################################################
+
+resource "kubectl_manifest" "karpenter_nodepool_build" {
+  count = var.build_node_enabled && var.karpenter_enabled ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/templates/karpenter-nodepool-build.yaml.tpl", {
+    karpenter_node_expiry                   = var.karpenter_node_expiry
+    karpenter_build_capacity_types          = var.karpenter_build_capacity_types
+    karpenter_build_instance_families       = var.karpenter_build_instance_families
+    karpenter_build_instance_sizes          = var.karpenter_build_instance_sizes
+    karpenter_build_cpu_limit               = var.karpenter_build_cpu_limit
+    karpenter_build_memory_limit_gb         = var.karpenter_build_memory_limit_gb
+    karpenter_build_consolidate_after       = var.karpenter_build_consolidate_after
+    karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
+    karpenter_build_arch                    = var.build_arm_type ? "arm64" : "amd64"
+    extra_labels                            = local.karpenter_build_extra_labels
+    block_schedule                          = var.karpenter_disruption_block_schedule
+    block_duration                          = var.karpenter_disruption_block_duration
+  })
+
+  wait       = true
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
+}
+
+resource "kubectl_manifest" "karpenter_ec2nodeclass_build" {
+  count = var.build_node_enabled && var.karpenter_enabled ? 1 : 0
+
+  yaml_body = templatefile("${path.module}/templates/karpenter-ec2nodeclass.yaml.tpl", {
+    name                       = "build"
+    cluster_name               = var.name
+    karpenter_node_role_name   = local.build_minimal_role_enabled ? aws_iam_role.karpenter_build_nodes[0].name : aws_iam_role.karpenter_nodes[0].name
+    karpenter_node_volume_type = var.karpenter_node_volume_type
+    karpenter_effective_disk   = local.karpenter_effective_disk
+    volume_iops                = local.karpenter_volume_iops_effective
+    volume_throughput          = local.karpenter_volume_throughput_effective
+    ebs_encrypted              = var.ebs_volume_encryption_enabled
+    imds_http_tokens           = local.build_imds_tokens
+    imds_http_hop_limit        = local.build_imds_hop_limit
+    extra_tags                 = var.tags
+    ami_id                     = ""
+    ami_alias                  = local.karpenter_effective_ami_alias
+    node_config_user_data      = local.ec2_node_config_user_data
+  })
+
+  wait = true
+
+  depends_on = [
+    null_resource.wait_karpenter_ready,
+    helm_release.karpenter_crd,
+    aws_ec2_tag.private_subnets_karpenter,
+    aws_ec2_tag.public_subnets_karpenter,
+    aws_ec2_tag.cluster_sg_karpenter,
+    null_resource.karpenter_build_nodes_access_entry,
+  ]
+}
+
+###############################################################################
+# Additional Custom NodePools (via additional_karpenter_nodepools_config)
+###############################################################################
+
+resource "kubectl_manifest" "karpenter_nodepool_additional" {
+  for_each = var.karpenter_enabled ? local.additional_karpenter_nodepools_with_defaults : {}
+
+  yaml_body = templatefile("${path.module}/templates/karpenter-nodepool-custom.yaml.tpl", {
+    name                    = each.value.name
+    instance_families       = each.value.instance_families
+    instance_sizes          = each.value.instance_sizes
+    capacity_types          = each.value.capacity_types
+    arch                    = each.value.arch
+    cpu_limit               = each.value.cpu_limit
+    memory_limit_gb         = each.value.memory_limit_gb
+    consolidation_policy    = each.value.consolidation_policy
+    consolidate_after       = each.value.consolidate_after
+    node_expiry             = each.value.node_expiry
+    disruption_budget_nodes = each.value.disruption_budget_nodes
+    weight                  = each.value.weight
+    labels                  = each.value.labels
+    taints                  = each.value.taints
+    block_schedule          = var.karpenter_disruption_block_schedule
+    block_duration          = var.karpenter_disruption_block_duration
+  })
+
+  wait       = true
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
+}
+
+resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
+  for_each = var.karpenter_enabled ? local.additional_karpenter_nodepools_with_defaults : {}
+
+  yaml_body = templatefile("${path.module}/templates/karpenter-ec2nodeclass.yaml.tpl", {
+    name                       = each.value.name
+    cluster_name               = var.name
+    karpenter_node_role_name   = aws_iam_role.karpenter_nodes[0].name
+    karpenter_node_volume_type = each.value.volume_type
+    karpenter_effective_disk   = each.value.disk > 0 ? each.value.disk : local.karpenter_effective_disk
+    volume_iops                = local.karpenter_pool_volume_iops[each.key]
+    volume_throughput          = local.karpenter_pool_volume_throughput[each.key]
+    ebs_encrypted              = var.ebs_volume_encryption_enabled
+    imds_http_tokens           = var.imds_http_tokens
+    imds_http_hop_limit        = var.imds_http_hop_limit
+    extra_tags                 = var.tags
+    ami_id                     = each.value.ami_id
+    ami_alias                  = local.karpenter_effective_ami_alias
+    node_config_user_data      = local.ec2_node_config_user_data
+  })
+
+  wait = true
+
+  depends_on = [
+    null_resource.wait_karpenter_ready,
+    helm_release.karpenter_crd,
+    aws_ec2_tag.private_subnets_karpenter,
+    aws_ec2_tag.public_subnets_karpenter,
+    aws_ec2_tag.cluster_sg_karpenter,
+  ]
+}

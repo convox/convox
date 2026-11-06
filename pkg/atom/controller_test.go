@@ -1,8 +1,8 @@
 package atom
 
 import (
+	"context"
 	"testing"
-	"time"
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	afake "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned/fake"
@@ -109,10 +109,10 @@ func TestUpdate(t *testing.T) {
 			Err: nil,
 		},
 		{
-			Name:          "Different Status - Rollback - Deadline Error",
+			Name:          "Different Status - Rollback - Reverted",
 			AtomNamespace: "atom.controller",
 			AtomName:      "atom4",
-			AtomStatus:    "Failure",
+			AtomStatus:    "Reverted",
 			AtomVersion:   "v4",
 			Prev: &aa.Atom{
 				ObjectMeta: am.ObjectMeta{
@@ -129,38 +129,10 @@ func TestUpdate(t *testing.T) {
 			Err: nil,
 		},
 		{
-			Name:          "Different Status - Rollback - Reverted",
-			AtomNamespace: "atom.controller",
-			AtomName:      "atom5",
-			AtomStatus:    "Reverted",
-			AtomVersion:   "v.atom5",
-			Prev: &aa.Atom{
-				ObjectMeta: am.ObjectMeta{
-					Name: "atom5",
-				},
-				Status: aa.AtomStatus("Running"),
-				Spec: aa.AtomSpec{
-					CurrentVersion: "v.atom5",
-				},
-			},
-			Curr: &aa.Atom{
-				ObjectMeta: am.ObjectMeta{
-					Name: "atom5",
-				},
-				Status:  aa.AtomStatus("Rollback"),
-				Started: am.Time{Time: time.Now()},
-				Spec: aa.AtomSpec{
-					CurrentVersion:          "v.atom5",
-					ProgressDeadlineSeconds: 180,
-				},
-			},
-			Err: nil,
-		},
-		{
-			Name:          "Updating - Deadline",
+			Name:          "Updating - Running",
 			AtomNamespace: "atom.controller",
 			AtomName:      "atom6",
-			AtomStatus:    "Deadline",
+			AtomStatus:    "Running",
 			AtomVersion:   "v6",
 			Prev: &aa.Atom{
 				ObjectMeta: am.ObjectMeta{
@@ -173,34 +145,6 @@ func TestUpdate(t *testing.T) {
 					Name: "atom6",
 				},
 				Status: aa.AtomStatus("Updating"),
-			},
-			Err: nil,
-		},
-		{
-			Name:          "Updating - Running",
-			AtomNamespace: "atom.controller",
-			AtomName:      "atom7",
-			AtomStatus:    "Running",
-			AtomVersion:   "v.atom7",
-			Prev: &aa.Atom{
-				ObjectMeta: am.ObjectMeta{
-					Name: "atom7",
-				},
-				Status: aa.AtomStatus("Updating"),
-				Spec: aa.AtomSpec{
-					CurrentVersion: "v.atom7",
-				},
-			},
-			Curr: &aa.Atom{
-				ObjectMeta: am.ObjectMeta{
-					Name: "atom5",
-				},
-				Status:  aa.AtomStatus("Updating"),
-				Started: am.Time{Time: time.Now()},
-				Spec: aa.AtomSpec{
-					CurrentVersion:          "v.atom5",
-					ProgressDeadlineSeconds: 180,
-				},
 			},
 			Err: nil,
 		},
@@ -228,7 +172,7 @@ func TestUpdate(t *testing.T) {
 			Name:          "Pending - Error",
 			AtomNamespace: "atom.controller",
 			AtomName:      "atom9",
-			AtomStatus:    "Error",
+			AtomStatus:    "Rollback",
 			AtomVersion:   "v9",
 			Prev: &aa.Atom{
 				ObjectMeta: am.ObjectMeta{
@@ -240,7 +184,7 @@ func TestUpdate(t *testing.T) {
 				ObjectMeta: am.ObjectMeta{
 					Name: "atom9",
 				},
-				Status: aa.AtomStatus("Pending"),
+				Status: aa.AtomStatus("Error"),
 			},
 			Err: nil,
 		},
@@ -273,7 +217,7 @@ func TestUpdate(t *testing.T) {
 				if test.Err == nil {
 					require.NoError(t, err)
 
-					a, err := ac.convox.AtomV1().Atoms(test.AtomNamespace).Get(test.AtomName, am.GetOptions{})
+					a, err := ac.convox.AtomV1().Atoms(test.AtomNamespace).Get(context.Background(), test.AtomName, am.GetOptions{})
 					require.NoError(t, err)
 					require.Equal(t, aa.AtomStatus(test.AtomStatus), a.Status)
 				} else {
@@ -293,6 +237,7 @@ func testController(fn func(*AtomController)) {
 	client := &Client{
 		Atom:   fa,
 		config: &rest.Config{},
+		k8s:    fakeK8s,
 	}
 
 	fac := client.Atom.(*afake.Clientset)

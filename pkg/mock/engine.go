@@ -16,7 +16,7 @@ func (*TestEngine) AppIdles(_ string) (bool, error) {
 }
 
 func (*TestEngine) AppParameters() map[string]string {
-	return map[string]string{"Test": "foo"}
+	return map[string]string{"BuildArch": "", "Test": "foo"}
 }
 
 func (*TestEngine) Heartbeat() (map[string]interface{}, error) {
@@ -73,4 +73,12 @@ func (*TestEngine) SystemHost() string {
 
 func (*TestEngine) SystemStatus() (string, error) {
 	return "amazing", nil
+}
+
+func (*TestEngine) GPUIntanceList(instanceTypes []string) ([]string, error) {
+	return nil, nil
+}
+
+func (*TestEngine) RepositoryImagesBatchDelete(app string, tags []string) error {
+	return nil
 }

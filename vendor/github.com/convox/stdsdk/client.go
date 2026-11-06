@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -179,9 +180,7 @@ func (c *Client) Delete(path string, opts RequestOptions, out interface{}) error
 }
 
 func (c *Client) Websocket(path string, opts RequestOptions) (io.ReadCloser, error) {
-	var u url.URL
-
-	u = *c.Endpoint
+	u := *c.Endpoint
 
 	u.Scheme = "wss"
 
@@ -218,79 +217,46 @@ func (c *Client) Websocket(path string, opts RequestOptions) (io.ReadCloser, err
 
 	h.Set("Content-Type", ct)
 
-	go copyToWebsocket(c.ctx, ws, or)
-	go copyFromWebsocket(c.ctx, w, ws)
-	go keepalive(c.ctx, ws)
+	adapterWs := NewAdapterWs(ws)
 
-	return r, nil
+	ctx, cancel := context.WithCancel(c.ctx)
+
+	go func() {
+		<-ctx.Done()
+		adapterWs.Close()
+	}()
+
+	wr := &websocketReader{PipeReader: r}
+
+	go copyToWS(ctx, adapterWs, or)
+	go func() {
+		err := copyFromWS(ctx, adapterWs, w)
+
+		wr.mu.Lock()
+		wr.err = err
+		wr.mu.Unlock()
+
+		w.Close()
+		cancel()
+	}()
+	go WsKeepAlivePing(ctx, adapterWs)
+
+	return wr, nil
 }
 
-func copyToWebsocket(ctx context.Context, ws *websocket.Conn, r io.Reader) {
-	if r == nil {
-		return
-	}
+type websocketReader struct {
+	*io.PipeReader
 
-	// used as eof
-	defer ws.WriteMessage(websocket.BinaryMessage, []byte{})
-
-	buf := make([]byte, 1024)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			n, err := r.Read(buf)
-			switch err {
-			case io.EOF:
-				return
-			case nil:
-				ws.WriteMessage(websocket.TextMessage, buf[0:n])
-			default:
-				return
-			}
-		}
-	}
+	mu  sync.Mutex
+	err error
 }
 
-func copyFromWebsocket(ctx context.Context, w io.WriteCloser, ws *websocket.Conn) {
-	defer w.Close()
+// Err returns the error that ended the stream before its end-of-stream frame, or nil.
+func (r *websocketReader) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			code, data, err := ws.ReadMessage()
-			switch err {
-			case io.EOF:
-				return
-			case nil:
-				switch code {
-				case websocket.TextMessage:
-					w.Write(data)
-				case websocket.BinaryMessage: // interpreted as eof
-					return
-				}
-			default:
-				return
-			}
-		}
-	}
-}
-
-func keepalive(ctx context.Context, ws *websocket.Conn) {
-	t := time.NewTicker(5 * time.Second)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			ws.WriteMessage(websocket.PingMessage, []byte{})
-		}
-	}
+	return r.err
 }
 
 func (c *Client) Request(method, path string, opts RequestOptions) (*http.Request, error) {

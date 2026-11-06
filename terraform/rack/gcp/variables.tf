@@ -6,6 +6,26 @@ variable "cluster" {
   type = string
 }
 
+variable "cost_tracking_enable" {
+  default = false
+  type    = bool
+}
+
+variable "cost_tracking_history_days" {
+  default = 62
+  type    = number
+}
+
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "docker_hub_username" {
   default = ""
 }
@@ -39,6 +59,12 @@ variable "nodes_account" {
   type = string
 }
 
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
+}
+
 variable "project_id" {
   type = string
 }
@@ -51,8 +77,18 @@ variable "release" {
   type = string
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
 }
 
 variable "telemetry" {
@@ -65,6 +101,11 @@ variable "telemetry_map" {
 
 variable "telemetry_default_map" {
   type = any
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
 }
 
 variable "whitelist" {

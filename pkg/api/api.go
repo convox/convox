@@ -1,9 +1,12 @@
 package api
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"reflect"
+	"strings"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider"
@@ -50,27 +53,11 @@ func NewWithProvider(p structs.Provider) *Server {
 
 	s.Server.Router.Router = s.Server.Router.Router.SkipClean(true)
 
-	// s.Router.HandleFunc("/debug/pprof/", pprof.Index)
-	// s.Router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	// s.Router.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	// s.Router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	// s.Router.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	// s.Route("GET", "/v2/", func(c *stdapi.Context) error {
-	// 	c.Response().Header().Add("Docker-Distribution-Api-Version", "registry/2.0")
-	// 	if _, pass, _ := c.Request().BasicAuth(); s.Password != "" && s.Password != pass {
-	// 		c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
-	// 		return stdapi.Errorf(401, "invalid authentication")
-	// 	}
-	// 	return nil
-	// })
-
 	s.Subrouter("/", func(auth *stdapi.Router) {
+		auth.Use(securityHeaders)
 		auth.Use(s.authenticate)
 
 		auth.Route("GET", "/auth", func(c *stdapi.Context) error { return c.RenderOK() })
-
-		// auth.Route("GET", "/v2/{path:.*}", s.RegistryProxy)
 
 		s.setupRoutes(*auth)
 	})
@@ -87,14 +74,42 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication: %s", err)
 			}
 			c.Set(structs.ConvoxRoleParam, data.Role)
+			c.Set(structs.ConvoxJwtUserParam, data.User)
 		} else {
-			if s.Password != "" && s.Password != pass {
+			if s.Password != "" && subtle.ConstantTimeCompare([]byte(s.Password), []byte(pass)) != 1 {
 				c.Response().Header().Set("WWW-Authenticate", `Basic realm="convox"`)
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication")
 			}
-			SetReadWriteRole(c)
+			SetAdminRole(c)
+			pickActor := func(raw string) string {
+				raw = strings.TrimSpace(raw)
+				if raw == "" {
+					return ""
+				}
+				sanitized := audit.SanitizeActor(raw)
+				if sanitized == "unknown" {
+					return ""
+				}
+				return sanitized
+			}
+			actor := pickActor(c.Request().Header.Get("X-Convox-Actor"))
+			if actor == "" {
+				actor = pickActor(c.Request().Header.Get("Convox-Actor"))
+			}
+			if actor == "" {
+				actor = "rack-password"
+			}
+			c.Set(structs.ConvoxJwtUserParam, actor)
 		}
 
+		return next(c)
+	}
+}
+
+func securityHeaders(next stdapi.HandlerFunc) stdapi.HandlerFunc {
+	return func(c *stdapi.Context) error {
+		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+		c.Response().Header().Set("X-Frame-Options", "DENY")
 		return next(c)
 	}
 }

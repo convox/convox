@@ -17,6 +17,11 @@ variable "build_node_enabled" {
   type    = bool
 }
 
+variable "buildkit_host_path_cache_enable" {
+  default = false
+  type    = bool
+}
+
 variable "convox_domain_tls_cert_disable" {
   default = false
   type    = bool
@@ -25,6 +30,21 @@ variable "convox_domain_tls_cert_disable" {
 variable "docker_hub_authentication" {
   default = null
   type    = string
+}
+
+variable "docker_hub_username" {
+  type    = string
+  default = ""
+}
+
+variable "docker_hub_password" {
+  type    = string
+  default = ""
+}
+
+variable "ecr_docker_hub_cache_prefix" {
+  type    = string
+  default = ""
 }
 
 variable "domain" {
@@ -49,13 +69,38 @@ variable "image" {
   type = string
 }
 
+variable "cost_tracking_enable" {
+  type    = bool
+  default = false
+}
+
+variable "cost_tracking_history_days" {
+  type    = number
+  default = 62
+}
+
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "labels" {
   default = {}
 }
 
-variable "metrics_scraper_host" {
-  default = ""
+variable "prometheus_url" {
   type    = string
+  default = ""
 }
 
 variable "namespace" {
@@ -93,4 +138,19 @@ variable "volumes" {
 variable "rack_name" {
   default = ""
   type    = string
+}
+
+variable "webhook_signing_key" {
+  type    = string
+  default = ""
+}
+
+variable "router_type" {
+  type    = string
+  default = "nginx"
+}
+
+variable "cert_duration" {
+  type    = string
+  default = ""
 }

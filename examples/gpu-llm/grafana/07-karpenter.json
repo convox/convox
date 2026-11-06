@@ -1,0 +1,121 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Total GPU NodePool nodes by NodePool.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterGpuNodeCount", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (nodepool) (karpenter_nodes_total_count{nodepool=~\".*gpu.*\"})", "legendFormat": "{{nodepool}}", "refId": "A"}
+      ],
+      "title": "GPU Nodes by NodePool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Rate of new GPU NodeClaims (10-minute window).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterGpuClaimRate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (nodepool) (rate(karpenter_nodeclaims_created_total{nodepool=~\".*gpu.*\"}[10m]))", "legendFormat": "{{nodepool}}", "refId": "A"}
+      ],
+      "title": "GPU NodeClaim Creation Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Time pods spent unbound (waiting for a node). Spikes here = scheduler latency.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterPodPendingDuration", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "karpenter_pods_unbound_time_seconds", "legendFormat": "{{namespace}}/{{name}}", "refId": "A"}
+      ],
+      "title": "Pod Unbound Duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Spot interruption rate by message type.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterSpotInterruptionRate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (message_type) (rate(karpenter_interruption_received_messages_total[1h]))", "legendFormat": "{{message_type}}", "refId": "A"}
+      ],
+      "title": "Spot Interruption Rate (1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Voluntary disruption decisions by reason (consolidation / drift / expiration / etc).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "ops"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 5,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterDisruptionRate", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (reason) (rate(karpenter_voluntary_disruption_decisions_total[1h]))", "legendFormat": "{{reason}}", "refId": "A"}
+      ],
+      "title": "Disruption Decisions (1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "Node lifetime in seconds. Long lifetimes = stable workload; rapid churn = either ephemeral compute or spot interruption pressure.",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterNodeLifetime", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "karpenter_nodes_lifetime_seconds{nodepool=~\".*gpu.*\"}", "legendFormat": "{{nodepool}} {{node}}", "refId": "A"}
+      ],
+      "title": "GPU Node Lifetime",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "description": "NodePool current usage vs configured limit (capacity headroom).",
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "id": 7,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi"}},
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {"_source": "KarpenterNodepoolUsage", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "karpenter_nodepool_usage{nodepool=~\".*gpu.*\"}", "legendFormat": "Usage {{nodepool}} ({{resource_type}})", "refId": "A"},
+        {"_source": "KarpenterNodepoolLimit", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "karpenter_nodepool_limit{nodepool=~\".*gpu.*\"}", "legendFormat": "Limit {{nodepool}} ({{resource_type}})", "refId": "B"}
+      ],
+      "title": "NodePool Usage / Limit",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["convox", "gpu", "karpenter", "node-lifecycle"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Convox GPU — Karpenter Node Lifecycle",
+  "uid": "convox-gpu-karpenter",
+  "version": 1,
+  "weekStart": ""
+}

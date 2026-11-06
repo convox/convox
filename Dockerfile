@@ -1,19 +1,20 @@
 ## development #################################################################
 
-FROM golang:1.19 AS development
+FROM golang:1.26.10 AS development
 
 ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
 
-RUN apt-get update && apt-get -y install default-mysql-client postgresql-client redis-tools telnet
+# skipcq: DOK-DL3008
+RUN apt-get update && apt-get -y install --no-install-recommends default-mysql-client postgresql-client redis-tools telnet
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
   tar -C /usr/bin --strip-components 1 -xz
 
-RUN curl -Ls https://dl.k8s.io/release/v1.24.2/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN curl -Ls https://dl.k8s.io/release/v1.36.6/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
   chmod +x /usr/bin/kubectl
 
 RUN curl -Ls https://github.com/mattgreen/watchexec/releases/download/1.8.6/watchexec-1.8.6-x86_64-unknown-linux-gnu.tar.gz | \
@@ -26,6 +27,7 @@ WORKDIR /usr/src/convox
 COPY go.mod go.sum ./
 COPY vendor vendor
 
+# skipcq: DOK-SC2046
 RUN go build -mod=vendor --ldflags="-s -w" $(go list -mod=vendor ./vendor/...)
 
 COPY . .
@@ -34,9 +36,12 @@ RUN make build
 
 ## package #####################################################################
 
-FROM golang:1.19 AS package
+FROM golang:1.26.10 AS package
 
 WORKDIR /usr/src/convox
+
+# skipcq: DOK-DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends libudev-dev
 
 COPY . .
 
@@ -44,19 +49,23 @@ RUN make package build compress
 
 ## production ##################################################################
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
-ARG DOCKER_ARCH=x86_64
 ARG KUBECTL_ARCH=amd64
 
-RUN apt-get -qq update && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo
+# skopeo version pin — bump in lockstep with: (a) annual review (Convox release
+# cycle), (b) on `convox builds import-image` smoke-test failure (signals an
+# upstream regression), or (c) on Ubuntu base-image major version bump. The
+# pinned version must be present in the active Ubuntu repository before
+# updating; check with `apt-cache madison skopeo` on the chosen base.
+# skipcq: DOK-DL3008, DOK-DL3015
+RUN apt-get -qq update && apt-get -qq -y upgrade && apt-get -qq -y install curl default-mysql-client postgresql-client redis-tools telnet skopeo=1.13.3+ds1-2ubuntu0.24.04.3 && rm -rf /var/lib/apt/lists/*
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN curl -s https://download.docker.com/linux/static/stable/$DOCKER_ARCH/docker-20.10.7.tgz | \
-  tar -C /usr/bin --strip-components 1 -xz
-
-RUN curl -Ls https://storage.googleapis.com/kubernetes-release/release/v1.22.15/bin/linux/$KUBECTL_ARCH/kubectl -o /usr/bin/kubectl && \
+RUN u=https://dl.k8s.io/release/v1.36.6/bin/linux/$KUBECTL_ARCH/kubectl && \
+  curl -fsSL "$u" -o /usr/bin/kubectl && \
+  echo "$(curl -fsSL "$u.sha256")  /usr/bin/kubectl" | sha256sum -c - && \
   chmod +x /usr/bin/kubectl
 
 ENV DEVELOPMENT=false

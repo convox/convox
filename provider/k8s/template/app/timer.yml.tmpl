@@ -4,9 +4,9 @@ kind: ServiceAccount
 metadata:
   annotations:
     convox.com/type: timer
-    {{ range keyValue .Annotations }}
-    {{.Key}}: "{{ quoteEscape .Value}}"
-    {{ end }}
+    {{- range $k, $v := .Annotations }}
+    {{ yamlQuote $k }}: {{ yamlQuote $v }}
+    {{- end }}
   namespace: {{.Namespace}}
   name: timer-{{.Timer.Name}}
   labels:
@@ -19,21 +19,26 @@ metadata:
   namespace: {{.Namespace}}
   name: timer-{{.Timer.Name}}
 spec:
-  schedule: "{{.Timer.Schedule}}"
-  concurrencyPolicy: {{.Timer.Concurrency}}
+  schedule: {{ yamlQuote .Timer.Schedule }}
+  concurrencyPolicy: {{ yamlScalar .Timer.Concurrency }}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       backoffLimit: 0
       # ttlSecondsAfterFinished: 60
+      {{ if gt .Timer.ParallelCount 1 }}
+      completionMode: "Indexed"
+      completions: {{ .Timer.ParallelCount }}
+      parallelism: {{ .Timer.ParallelCount }}
+      {{ end }}
       template:
         metadata:
           annotations:
             convox.com/type: timer
-            {{ range keyValue .Annotations }}
-            {{.Key}}: "{{ quoteEscape .Value}}"
-            {{ end }}
+            {{- range $k, $v := .Annotations }}
+            {{ yamlQuote $k }}: {{ yamlQuote $v }}
+            {{- end }}
           labels:
             system: convox
             rack: {{.Rack}}
@@ -43,9 +48,64 @@ spec:
             service: {{.Service.Name}}
             type: timer
             {{ range keyValue .Service.Labels }}
-            {{.Key}}: "{{.Value}}"
+            {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
             {{ end }}
         spec:
+          {{ if or (.Service.NodeSelectorLabels) (.Service.NodeAffinityLabels) }}
+          affinity:
+            nodeAffinity:
+              {{ if .Service.NodeSelectorLabels }}
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  {{ range keyValue .Service.NodeSelectorLabels }}
+                  - key: {{ yamlScalar .Key }}
+                    operator: In
+                    values:
+                    - {{ yamlScalar .Value }}
+                  {{ end }}
+              {{ end }}
+              {{ if .Service.NodeAffinityLabels }}
+              preferredDuringSchedulingIgnoredDuringExecution:
+              {{ range .Service.NodeAffinityLabels }}
+              - weight: {{ .Weight }}
+                preference:
+                  matchExpressions:
+                  - key: {{ yamlScalar .Label }}
+                    operator: In
+                    values:
+                    - {{ yamlScalar .Value }}
+              {{ end }}
+              {{ end }}
+          {{ end }}
+          {{ $hasDedicatedNode := false }}
+          {{ range keyValue .Service.NodeSelectorLabels }}
+            {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
+              {{ $hasDedicatedNode = true }}
+            {{ end }}
+          {{ end }}
+          {{ $hasGpu := gt .Service.Scale.Gpu.Count 0 }}
+          {{ if or $hasDedicatedNode $hasGpu }}
+          tolerations:
+            {{ if $hasDedicatedNode }}
+            {{ range keyValue .Service.NodeSelectorLabels }}
+            {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
+            - key: "dedicated-node"
+              operator: "Equal"
+              value: {{ yamlQuote .Value }}
+              effect: "NoSchedule"
+            {{ end }}
+            {{ end }}
+            {{ end }}
+            {{ if $hasGpu }}
+            - key: {{ gpuResourceKey .Service.Scale.Gpu.Vendor }}
+              operator: Exists
+              effect: NoSchedule
+            {{ end }}
+          {{ end }}
+          {{ if .Service.DisableHostUsers }}
+          hostUsers: false
+          {{ end }}
           {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
           dnsPolicy: "None"
           dnsConfig:
@@ -57,6 +117,7 @@ spec:
             {{ with .Resolver }}
             nameservers:
               - "{{ . }}"
+            {{ if not (index $ "DisableDnsSearches") }}
             searches:
               - "{{$.App.Name}}.{{$.Rack}}.local"
               - "{{$.Namespace}}.svc.cluster.local"
@@ -64,7 +125,21 @@ spec:
               - "svc.cluster.local"
               - "cluster.local"
             {{ end }}
+            {{ end }}
           {{ end }}
+          {{ if or .DockerHubAuth .ImagePullSecretNames .RegistryAuth }}
+          imagePullSecrets:
+          {{ if .DockerHubAuth }}
+          - name: docker-hub-authentication
+          {{ end }}
+          {{ range .ImagePullSecretNames }}
+          - name: {{ yamlScalar . }}
+          {{ end }}
+          {{ if .RegistryAuth }}
+          - name: convox-registry-authentication
+          {{ end }}
+          {{ end }}
+          terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
           restartPolicy: Never
           shareProcessNamespace: {{.Service.Init}}
           serviceAccountName: timer-{{.Timer.Name}}
@@ -79,8 +154,14 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            {{ if gt .Timer.ParallelCount 1 }}
+            - name: TIMER_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['batch.kubernetes.io/job-completion-index']
+            {{ end }}
             {{ range $.Resources }}
-            - name: "{{.Env}}"
+            - name: {{ yamlQuote .Env }}
               valueFrom:
                 configMapKeyRef:
                   name: resource-{{ k8sname .Name }}
@@ -96,6 +177,9 @@ spec:
                 {{ if (gt .Service.Scale.Limit.Cpu 0)}}
                 cpu: "{{.Service.Scale.Limit.Cpu}}m"
                 {{ end }}
+                {{ with .Service.Scale.Gpu.Count }}
+                {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
+                {{ end }}
                 {{ if (gt .Service.Scale.Limit.Memory 0)}}
                 memory: "{{.Service.Scale.Limit.Memory}}Mi"
                 {{ else if (gt .Service.Scale.Memory 0)}}
@@ -105,15 +189,73 @@ spec:
                 {{ with .Service.Scale.Cpu }}
                 cpu: "{{.}}m"
                 {{ end }}
+                {{ with .Service.Scale.Gpu.Count }}
+                {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
+                {{ end }}
                 {{ with .Service.Scale.Memory }}
                 memory: "{{.}}Mi"
                 {{ end }}
+            {{ if or .Service.Privileged .Service.SecurityContext.HasSecurityContext }}
+            securityContext:
+              {{ if .Service.Privileged }}
+              privileged: true
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsNonRoot }}
+              runAsNonRoot: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsUser }}
+              runAsUser: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.RunAsGroup }}
+              runAsGroup: {{ . }}
+              {{ end }}
+              {{ with .Service.SecurityContext.ReadOnlyRootFilesystem }}
+              readOnlyRootFilesystem: {{ . }}
+              {{ end }}
+              {{ if ne .Service.SecurityContext.AllowPrivilegeEscalation nil }}
+              allowPrivilegeEscalation: {{ deref .Service.SecurityContext.AllowPrivilegeEscalation }}
+              {{ end }}
+              {{ if .Service.SecurityContext.Capabilities.HasCapabilities }}
+              capabilities:
+                {{ with .Service.SecurityContext.Capabilities.Drop }}
+                drop:
+                {{ range . }}
+                  - {{ yamlScalar . }}
+                {{ end }}
+                {{ end }}
+                {{ with .Service.SecurityContext.Capabilities.Add }}
+                add:
+                {{ range . }}
+                  - {{ yamlScalar . }}
+                {{ end }}
+                {{ end }}
+              {{ end }}
+              {{ with .Service.SecurityContext.SeccompProfile }}
+              seccompProfile:
+                type: {{ yamlScalar . }}
+              {{ end }}
+            {{ end }}
             volumeMounts:
             - name: ca
               mountPath: /etc/convox
             {{ range .Service.Volumes }}
             - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-              mountPath: "{{ volumeTo . }}"
+              mountPath: {{ yamlQuote (volumeTo .) }}
+            {{ end }}
+            {{ range .Service.ConfigMounts }}
+            - name: cfg-{{ .Id }}
+              mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+              subPath: {{ yamlQuote .Filename }}
+            {{ end }}
+            {{ range .Service.VolumeOptions }}
+            {{ with .EmptyDir }}
+            - name: ed-{{ .Id }}
+              mountPath: {{ yamlScalar .MountPath }}
+            {{ end }}
+            {{ with .AwsEfs }}
+            - name: efs-{{ .Id }}
+              mountPath: {{ yamlScalar .MountPath }}
+            {{ end }}
             {{ end }}
           volumes:
           - name: ca
@@ -129,4 +271,33 @@ spec:
             persistentVolumeClaim:
               claimName: {{ volumeName $.App.Name . }}
             {{ end }}
+          {{ end }}
+          {{ range .Service.VolumeOptions }}
+          {{ with .EmptyDir }}
+          - name: ed-{{ .Id }}
+            {{ if or .Medium .SizeLimit }}
+            emptyDir:
+              {{ if .Medium }}
+              medium: {{ yamlScalar .Medium }}
+              {{ end }}
+              {{ if .SizeLimit }}
+              sizeLimit: {{ yamlScalar .SizeLimit }}
+              {{ end }}
+            {{ else }}
+            emptyDir: {}
+            {{ end }}
+          {{ end }}
+          {{ with .AwsEfs }}
+          - name: efs-{{ .Id }}
+            persistentVolumeClaim:
+              claimName: efs-{{$.Service.Name}}-{{.Id}}
+          {{ end }}
+          {{ end }}
+          {{ range $.Service.ConfigMounts }}
+          - name: cfg-{{ .Id }}
+            secret:
+              secretName: cfg-{{ .Id }}
+              items:
+                - key: app.json
+                  path: {{ yamlScalar .Filename }}
           {{ end }}

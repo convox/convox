@@ -11,9 +11,11 @@ import (
 
 var fxCapacity = structs.Capacity{
 	ClusterCPU:    1,
+	ClusterGPU:    3,
 	ClusterMemory: 2,
 	ProcessCount:  5,
 	ProcessCPU:    6,
+	ProcessGPU:    1,
 	ProcessMemory: 7,
 }
 

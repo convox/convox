@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdsdk"
@@ -50,7 +50,7 @@ func (c *Client) BuildCreateUpload(app string, r io.Reader, opts structs.BuildCr
 		ro.Params["config"] = ro.Params["manifest"]
 	}
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (c *Client) BuildCreateUpload(app string, r io.Reader, opts structs.BuildCr
 }
 
 func (c *Client) BuildImportMultipart(app string, r io.Reader) (*structs.Build, error) {
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -122,6 +122,42 @@ func (c *Client) CertificateCreateClassic(pub string, key string, opts structs.C
 	var v *structs.Certificate
 
 	err = c.Post(fmt.Sprintf("/certificates"), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) CertificateDnsClassic() (*structs.CertificateDns, error) {
+	var v *structs.CertificateDns
+
+	err := c.Get("/certificates/dns", stdsdk.RequestOptions{}, &v)
+
+	return v, err
+}
+
+func (c *Client) CertificateMigrateClassic(ids []string) (structs.CertificateMigrations, error) {
+	ro := stdsdk.RequestOptions{Params: stdsdk.Params{}}
+
+	if len(ids) > 0 {
+		ro.Params["ids"] = strings.Join(ids, ",")
+	}
+
+	var v structs.CertificateMigrations
+
+	err := c.Post("/certificates/migrate", ro, &v)
+
+	return v, err
+}
+
+func (c *Client) CertificateMigrationListClassic(ids []string) (structs.CertificateMigrations, error) {
+	ro := stdsdk.RequestOptions{Query: stdsdk.Query{}}
+
+	if len(ids) > 0 {
+		ro.Query["ids"] = strings.Join(ids, ",")
+	}
+
+	var v structs.CertificateMigrations
+
+	err := c.Get("/certificates/migrations", ro, &v)
 
 	return v, err
 }

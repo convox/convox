@@ -5,10 +5,6 @@ output "ca" {
   value      = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
 }
 
-output "ebs_csi_driver_name" {
-  value = module.ebs_csi_driver_controller.ebs_csi_driver_name
-}
-
 output "endpoint" {
   depends_on = [null_resource.wait_k8s_cluster]
   value      = aws_eks_cluster.cluster.endpoint
@@ -42,5 +38,36 @@ output "vpc" {
 }
 
 output "eks_addons" {
-  value = [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id]
+  value = concat(
+    [aws_eks_addon.coredns.id, aws_eks_addon.vpc_cni.id, aws_eks_addon.kube_proxy.id],
+    [for ng in aws_eks_node_group.cluster : ng.id]
+  )
+}
+
+output "lbc_helm_id" {
+  value = helm_release.aws_lbc.id
+}
+
+output "efs_file_system_id" {
+  value = var.efs_csi_driver_enable ? aws_efs_file_system.convox_efs[0].id : ""
+}
+
+output "karpenter_controller_role_arn" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_controller[0].arn : ""
+}
+
+output "karpenter_node_role_arn" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].arn : ""
+}
+
+output "karpenter_node_role_name" {
+  value = var.karpenter_enabled ? aws_iam_role.karpenter_nodes[0].name : ""
+}
+
+output "karpenter_interruption_queue_name" {
+  value = var.karpenter_enabled ? aws_sqs_queue.karpenter_interruption[0].name : ""
+}
+
+output "ecr_docker_hub_cache_prefix" {
+  value = var.ecr_docker_hub_cache && var.docker_hub_username != "" && var.docker_hub_password != "" ? "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/docker-hub-${var.name}" : ""
 }

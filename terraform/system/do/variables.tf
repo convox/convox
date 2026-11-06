@@ -19,6 +19,11 @@ variable "docker_hub_password" {
   default = ""
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
 variable "high_availability" {
   default = true
 }
@@ -29,7 +34,7 @@ variable "image" {
 
 variable "k8s_version" {
   type    = string
-  default = "1.28"
+  default = "1.36"
 }
 
 variable "name" {
@@ -43,6 +48,11 @@ variable "rack_name" {
 
 variable "node_type" {
   default = "s-2vcpu-4gb"
+}
+
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
 }
 
 variable "region" {
@@ -65,8 +75,18 @@ variable "settings" {
   default = ""
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
 }
 
 variable "telemetry" {
@@ -76,6 +96,17 @@ variable "telemetry" {
 
 variable "token" {
   type = string
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
+variable "webhook_signing_key" {
+  type        = string
+  default     = ""
+  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
 }
 
 variable "whitelist" {

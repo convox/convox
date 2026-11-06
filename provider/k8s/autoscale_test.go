@@ -1,0 +1,501 @@
+package k8s_test
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	ac "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	ktypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/dynamic/fake"
+	kfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
+	"sigs.k8s.io/yaml"
+)
+
+var testScaledObjectGVR = schema.GroupVersionResource{Group: "keda.sh", Version: "v1alpha1", Resource: "scaledobjects"}
+
+func scaledObjectUnstructured(namespace, name string, minReplica, maxReplica int64) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "keda.sh/v1alpha1",
+			"kind":       "ScaledObject",
+			"metadata": map[string]interface{}{
+				"name":      name,
+				"namespace": namespace,
+			},
+			"spec": map[string]interface{}{
+				"minReplicaCount": minReplica,
+				"maxReplicaCount": maxReplica,
+			},
+		},
+	}
+}
+
+func newDynamicScheme() *runtime.Scheme {
+	s := runtime.NewScheme()
+	s.AddKnownTypeWithName(testScaledObjectGVR.GroupVersion().WithKind("ScaledObject"), &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(testScaledObjectGVR.GroupVersion().WithKind("ScaledObjectList"), &unstructured.UnstructuredList{})
+	return s
+}
+
+func seedDeployment(t *testing.T, kk *kfake.Clientset, ns, name string, replicas int32) {
+	t.Helper()
+	r := replicas
+	_, err := kk.AppsV1().Deployments(ns).Create(context.TODO(), &appsv1.Deployment{
+		ObjectMeta: am.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    map[string]string{"app": "app1", "type": "service", "service": name},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &r,
+			Template: ac.PodTemplateSpec{Spec: ac.PodSpec{Containers: []ac.Container{{Name: "app1"}}}},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func seedStatefulset(t *testing.T, kk *kfake.Clientset, ns, name string, replicas int32) {
+	t.Helper()
+	r := replicas
+	_, err := kk.AppsV1().StatefulSets(ns).Create(context.TODO(), &appsv1.StatefulSet{
+		ObjectMeta: am.ObjectMeta{Name: name, Namespace: ns, Labels: map[string]string{"app": "app1", "type": "service", "service": name}},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: &r,
+			Template: ac.PodTemplateSpec{Spec: ac.PodSpec{Containers: []ac.Container{{
+				Name: "app1", Resources: ac.ResourceRequirements{Requests: ac.ResourceList{}, Limits: ac.ResourceList{}},
+			}}}},
+		},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestServiceUpdateStatefulset(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedStatefulset(t, kk, "rack1-app1", "database", 1)
+
+		err := p.ServiceUpdate("app1", "database", structs.ServiceUpdateOptions{
+			Count: options.Int(3), Cpu: options.Int(1500), Memory: options.Int(12288),
+		})
+		require.NoError(t, err)
+
+		s, err := kk.AppsV1().StatefulSets("rack1-app1").Get(context.TODO(), "database", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(3), *s.Spec.Replicas)
+		require.Equal(t, int64(1500), s.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().MilliValue())
+		require.Equal(t, int64(12*1024*1024*1024), s.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value())
+
+		err = p.ServiceUpdate("app1", "database", structs.ServiceUpdateOptions{Min: options.Int(1), Max: options.Int(3)})
+		require.ErrorContains(t, err, "stateful services require a fixed scale count")
+	})
+}
+
+func TestServiceUpdateKedaSync(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 2)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme(), scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{
+			Min: options.Int(0),
+			Max: options.Int(10),
+		})
+		require.NoError(t, err)
+
+		got, err := dyn.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		spec, _ := got.Object["spec"].(map[string]interface{})
+		require.Equal(t, int64(0), toInt64(spec["minReplicaCount"]))
+		require.Equal(t, int64(10), toInt64(spec["maxReplicaCount"]))
+
+		// Verify patch strategy is JSON-merge (RFC 7396). Strategic-merge
+		// would require server-side strategy metadata that CRDs don't register.
+		var sawPatch bool
+		for _, action := range dyn.Actions() {
+			p, ok := action.(k8stesting.PatchAction)
+			if !ok {
+				continue
+			}
+			if p.GetResource() != testScaledObjectGVR {
+				continue
+			}
+			require.Equal(t, ktypes.MergePatchType, p.GetPatchType(), "scaledobject patch must use JSON-merge")
+			sawPatch = true
+		}
+		require.True(t, sawPatch, "expected at least one patch action on scaledobjects")
+	})
+}
+
+func TestServiceUpdateDeadPodsGuard(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		aa, _ := p.Atom.(*atom.MockInterface)
+		aa.On("Status", "rack1-app1", "app").Return("Running", "", nil).Maybe()
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(0)})
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "no autoscale mechanism is configured"), err.Error())
+	})
+}
+
+// TestServiceUpdateRangeWithoutScaledObject_KedaDisabledPromptsKedaEnable:
+// when the rack has keda_enable=false (Provider.IsKedaEnabled=false), the
+// range-mode error must direct the user to enable KEDA (the actionable
+// fix) rather than tell them to add scale.autoscale (which they may
+// already have).
+func TestServiceUpdateRangeWithoutScaledObject_KedaDisabledPromptsKedaEnable(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		// IsKedaEnabled defaults to false in testProvider — explicit
+		// for clarity.
+		p.IsKedaEnabled = false
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "requires KEDA on this rack"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "convox rack params set keda_enable=true"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "click Enable triggers"),
+			"3.24.6+ message must surface the Console-actionable redirect alongside the CLI command: %s", err.Error())
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *d.Spec.Replicas, "rejected request must NOT mutate replicas")
+	})
+}
+
+// TestServiceUpdateRangeWithoutScaledObject_KedaEnabledPromptsAutoscaleBlock:
+// when the rack has KEDA enabled but the service's manifest has no
+// scale.autoscale block (so no ScaledObject was created at deploy), the
+// error must direct the user to add the autoscale block. Distinct error
+// text from the keda-disabled branch so the user sees the actionable fix.
+func TestServiceUpdateRangeWithoutScaledObject_KedaEnabledPromptsAutoscaleBlock(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+		p.IsKedaEnabled = true
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "requires an autoscale block"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "scale.autoscale"), err.Error())
+		require.True(t, strings.Contains(err.Error(), "click Enable triggers"),
+			"3.24.6+ message must surface the Console-actionable redirect alongside the manifest fix: %s", err.Error())
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(1), *d.Spec.Replicas, "rejected request must NOT mutate replicas")
+	})
+}
+
+// TestServiceUpdateRange_KEDA_CRD_Absent_FallsThroughToFriendlyError verifies
+// the meta.IsNoMatchError handling in serviceUpdateScaledObject. On a rack
+// where KEDA was never installed (keda_enable=false), the apiserver lacks
+// the ScaledObject CRD entirely and the dynamic-client Get returns a
+// meta.NoKindMatchError rather than an IsNotFound. Without the
+// IsNoMatchError guard the raw "no matches for kind" string surfaces in
+// the user-facing error toast — the friendly KEDA-disabled message is
+// what the user actually needs to see.
+func TestServiceUpdateRange_KEDA_CRD_Absent_FallsThroughToFriendlyError(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme())
+		// Inject a NoKindMatchError on Get for the SO GVR. Mirrors what
+		// the production dynamic client returns when the ScaledObject
+		// CRD is absent from the apiserver's discovery cache.
+		dyn.PrependReactor("get", "scaledobjects", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "keda.sh", Kind: "ScaledObject"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+		})
+		p.DynamicClient = dyn
+		p.IsKedaEnabled = false
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3), Max: options.Int(10)})
+		require.Error(t, err)
+		// Friendly message — NOT the raw "no matches for kind ScaledObject" string.
+		require.True(t, strings.Contains(err.Error(), "requires KEDA on this rack"), err.Error())
+		require.False(t, strings.Contains(err.Error(), "no matches for kind"), err.Error())
+	})
+}
+
+// TestServiceUpdateCount_KEDA_CRD_Absent_FallsThroughToReplicaPatch verifies
+// the parallel meta.IsNoMatchError handling in serviceUpdateCount. Fixed-
+// count scaling on a KEDA-CRD-absent rack must succeed via deployment-
+// replica patch; without the guard the raw "no matches for kind" error
+// surfaces from `convox scale --count N` and the Console Fixed mode.
+func TestServiceUpdateCount_KEDA_CRD_Absent_FallsThroughToReplicaPatch(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme())
+		dyn.PrependReactor("get", "scaledobjects", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, &meta.NoKindMatchError{
+				GroupKind:        schema.GroupKind{Group: "keda.sh", Kind: "ScaledObject"},
+				SearchedVersions: []string{"v1alpha1"},
+			}
+		})
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(4)})
+		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(4), *d.Spec.Replicas, "count-only without ScaledObject must patch Deployment.Spec.Replicas to opts.Count")
+	})
+}
+
+// TestServiceUpdateMinOnlyFallbackToDeploymentReplicas: --min N (no --max) is
+// the long-standing CLI convention. When no ScaledObject owns the service
+// the rack falls back to patching Deployment.Spec.Replicas to opts.Min so
+// `convox scale --min N` keeps working on services without an autoscale
+// block (preserves pre-3.24.6 behavior). Range mode (min AND max) is the
+// path that errors — see TestServiceUpdateRangeWithoutScaledObjectErrors.
+func TestServiceUpdateMinOnlyFallbackToDeploymentReplicas(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 1)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(3)})
+		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(3), *d.Spec.Replicas, "--min-only without ScaledObject must patch Deployment.Spec.Replicas to opts.Min (back-compat)")
+	})
+}
+
+// TestServiceUpdateRangeWithScaledObjectPatchesKedaNotDeployment: when a KEDA
+// ScaledObject DOES own the service, range-mode min/max applies to the CRD
+// — the Deployment's Spec.Replicas must NOT be touched (writing it would race
+// KEDA's reconciler).
+func TestServiceUpdateRangeWithScaledObjectPatchesKedaNotDeployment(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 2)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme(), scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(2), Max: options.Int(8)})
+		require.NoError(t, err)
+
+		got, err := dyn.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		spec, _ := got.Object["spec"].(map[string]interface{})
+		require.Equal(t, int64(2), toInt64(spec["minReplicaCount"]))
+		require.Equal(t, int64(8), toInt64(spec["maxReplicaCount"]))
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(2), *d.Spec.Replicas, "deployment replicas must stay at original value when ScaledObject owns replicas")
+	})
+}
+
+// TestServiceUpdateNoOptsLeavesReplicasUntouched: when the caller submits no
+// scale-related opts (no Count, no Min, no Max), Spec.Replicas must remain
+// unchanged through the rest of the update path (cpu / memory / gpu / env).
+func TestServiceUpdateNoOptsLeavesReplicasUntouched(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 4)
+
+		p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme())
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{})
+		require.NoError(t, err)
+
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(4), *d.Spec.Replicas, "no scale opts must leave Deployment.Spec.Replicas untouched")
+	})
+}
+
+func TestServiceUpdateCountPatchesScaledObject(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*kfake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		seedDeployment(t, kk, "rack1-app1", "web", 2)
+
+		dyn := fake.NewSimpleDynamicClient(newDynamicScheme(), scaledObjectUnstructured("rack1-app1", "web", 1, 5))
+		p.DynamicClient = dyn
+
+		err := p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(3)})
+		require.NoError(t, err)
+
+		got, err := dyn.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		spec, _ := got.Object["spec"].(map[string]interface{})
+		require.Equal(t, int64(3), toInt64(spec["minReplicaCount"]))
+		require.Equal(t, int64(3), toInt64(spec["maxReplicaCount"]))
+
+		// Count-only path on a ScaledObject-owned service must not mutate the
+		// Deployment's Replicas field — that would fight KEDA's reconciler.
+		d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), "web", am.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, int32(2), *d.Spec.Replicas, "deployment replicas must stay at original value when ScaledObject owns replicas")
+	})
+}
+
+var longServiceName = strings.Repeat("w", 58)
+
+func scaledObjectAdvanced(t *testing.T, p *k8s.Provider, ns, name string) map[string]interface{} {
+	t.Helper()
+	so, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace(ns).Get(context.TODO(), name, am.GetOptions{})
+	require.NoError(t, err)
+	adv, _, _ := unstructured.NestedMap(so.Object, "spec", "advanced")
+	return adv
+}
+
+func TestServiceUpdateScaledObjectPatchesSetLongHPAName(t *testing.T) {
+	for _, name := range []string{"web", longServiceName} {
+		for _, opts := range []structs.ServiceUpdateOptions{{Min: options.Int(2), Max: options.Int(6)}, {Count: options.Int(3)}} {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, _ := p.Cluster.(*kfake.Clientset)
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+				seedDeployment(t, kk, "rack1-app1", name, 2)
+				so := scaledObjectUnstructured("rack1-app1", name, 1, 5)
+				require.NoError(t, unstructured.SetNestedField(so.Object, true, "spec", "advanced", "restoreToOriginalReplicaCount"))
+				p.DynamicClient = fake.NewSimpleDynamicClient(newDynamicScheme(), so)
+
+				require.NoError(t, p.ServiceUpdate("app1", name, opts))
+
+				adv := scaledObjectAdvanced(t, p, "rack1-app1", name)
+				require.Equal(t, true, adv["restoreToOriginalReplicaCount"])
+				hpaName, _, _ := unstructured.NestedString(adv, "horizontalPodAutoscalerConfig", "name")
+				require.Equal(t, manifest.KedaHPAName(name), hpaName)
+			})
+		}
+	}
+}
+
+func TestKedaScaledObjectFromAutoscale(t *testing.T) {
+	svc := manifest.Service{Name: "vllm"}
+	svc.Scale.Autoscale = &manifest.ServiceAutoscale{
+		GpuUtilization: &manifest.AutoscaleMode{Mode: manifest.AutoscaleModeThreshold, Threshold: 70},
+	}
+	triggers := svc.Scale.Autoscale.BuildTriggers("myapp", "vllm", "http://prom/")
+
+	obj := svc.KedaScaledObject(manifest.KedaScaledObjectParameters{
+		ServiceName: "vllm",
+		Namespace:   "myapp-ns",
+		MinCount:    0,
+		MaxCount:    10,
+		Triggers:    triggers,
+	})
+	require.NotNil(t, obj)
+
+	data, err := k8s.SerializeK8sObjToYaml(obj)
+	require.NoError(t, err)
+
+	var parsed kedav1alpha1.ScaledObject
+	require.NoError(t, yaml.Unmarshal(data, &parsed))
+	require.Equal(t, "ScaledObject", parsed.TypeMeta.Kind)
+	require.Equal(t, "keda.sh/v1alpha1", parsed.TypeMeta.APIVersion)
+	require.Equal(t, int32(0), *parsed.Spec.MinReplicaCount)
+	require.Equal(t, int32(10), *parsed.Spec.MaxReplicaCount)
+	require.Len(t, parsed.Spec.Triggers, 1)
+	require.Equal(t, "prometheus", parsed.Spec.Triggers[0].Type)
+	require.Equal(t, "convox-gpu-utilization", parsed.Spec.Triggers[0].Name)
+	require.Equal(t, "70", parsed.Spec.Triggers[0].Metadata["threshold"])
+	require.Equal(t, "35", parsed.Spec.Triggers[0].Metadata["activationThreshold"])
+	require.Equal(t, "vllm", parsed.Spec.ScaleTargetRef.Name)
+	require.Equal(t, "Deployment", parsed.Spec.ScaleTargetRef.Kind)
+}
+
+func TestAwsAuthAttachFilter(t *testing.T) {
+	t.Setenv("PROVIDER", "aws")
+	svc := manifest.Service{Name: "worker"}
+	svc.Scale.Keda = &manifest.ServiceScaleKeda{
+		Triggers: []kedav1alpha1.ScaleTriggers{
+			{Type: "aws-sqs-queue", Name: "raw-sqs", Metadata: map[string]string{"queueURL": "http://q/", "queueLength": "1", "awsRegion": "us-east-1"}},
+			{Type: "prometheus", Name: "raw-prom", Metadata: map[string]string{"serverAddress": "http://p/", "metricName": "m", "threshold": "1", "query": "up"}},
+			{Type: "cron", Name: "raw-cron", Metadata: map[string]string{"timezone": "UTC", "start": "* * * * *", "end": "* * * * *", "desiredReplicas": "1"}},
+		},
+	}
+
+	obj := svc.KedaScaledObject(manifest.KedaScaledObjectParameters{
+		ServiceName: "worker",
+		Namespace:   "myapp-ns",
+		MinCount:    0,
+		MaxCount:    5,
+		Triggers:    svc.Scale.Keda.Triggers,
+	})
+	require.NotNil(t, obj)
+	require.Len(t, obj.Spec.Triggers, 3)
+
+	var sqs, prom, cron *kedav1alpha1.ScaleTriggers
+	for i := range obj.Spec.Triggers {
+		switch obj.Spec.Triggers[i].Type {
+		case "aws-sqs-queue":
+			sqs = &obj.Spec.Triggers[i]
+		case "prometheus":
+			prom = &obj.Spec.Triggers[i]
+		case "cron":
+			cron = &obj.Spec.Triggers[i]
+		}
+	}
+	require.NotNil(t, sqs)
+	require.NotNil(t, prom)
+	require.NotNil(t, cron)
+
+	require.NotNil(t, sqs.AuthenticationRef, "aws-sqs-queue MUST get default AWS IRSA auth")
+	require.Equal(t, "keda-aws-auth-default", sqs.AuthenticationRef.Name)
+
+	require.Nil(t, prom.AuthenticationRef, "prometheus trigger MUST NOT inherit AWS auth")
+	require.Nil(t, cron.AuthenticationRef, "cron trigger MUST NOT inherit AWS auth")
+}
+
+func toInt64(v interface{}) int64 {
+	switch t := v.(type) {
+	case int64:
+		return t
+	case float64:
+		return int64(t)
+	case int:
+		return int64(t)
+	}
+	panic("unexpected type in toInt64")
+}

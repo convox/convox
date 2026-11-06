@@ -5,16 +5,14 @@ metadata:
   name: {{.Service.Name}}
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
-    convox.com/backend-protocol: "{{.Service.Port.Scheme}}"
+    convox.com/backend-protocol: {{ yamlQuote .Service.Port.Scheme }}
     convox.com/idles: "{{.Idles}}"
-    nginx.ingress.kubernetes.io/backend-protocol: "{{.Service.Port.Scheme}}"
+    nginx.ingress.kubernetes.io/backend-protocol: {{ yamlQuote .Service.Port.Scheme }}
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "{{.Service.Timeout}}"
     nginx.ingress.kubernetes.io/server-snippet: |
         keepalive_timeout {{.Service.Timeout}}s;
-        grpc_read_timeout {{.Service.Timeout}}s;
-        grpc_send_timeout {{.Service.Timeout}}s;
         client_body_timeout {{.Service.Timeout}}s;
     {{ if .Service.Sticky }}
     nginx.ingress.kubernetes.io/affinity: cookie
@@ -22,10 +20,10 @@ metadata:
     {{ end }}
     nginx.ingress.kubernetes.io/ssl-redirect: "{{.Service.Tls.Redirect}}"
     {{ if .Service.Whitelist }}
-    nginx.ingress.kubernetes.io/whitelist-source-range: "{{.Service.Whitelist}}"
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ yamlQuote .Service.Whitelist }}
     {{ end }}
     {{ range $k, $v := .Annotations }}
-    {{$k}}: {{ safe $v }}
+    {{ yamlScalar $k }}: {{ safe $v }}
     {{ end }}
   labels:
     app: {{.App}}
@@ -33,7 +31,7 @@ metadata:
     system: convox
     type: service
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   ingressClassName: "{{.Class}}"
@@ -41,14 +39,14 @@ spec:
   {{ if .ConvoxDomainTLSCertDisable }}
   - hosts:
     - {{ safe .Host }}
-    secretName: cert-{{.Service.Name}}
+    secretName: {{ if .Service.Certificate.Id }} {{ yamlScalar .Service.Certificate.Id }} {{ else }} cert-{{.Service.Name}} {{end}}
   {{ end }}
   {{ with .Service.Domains }}
   - hosts:
     {{ range . }}
     - {{ safe . }}
     {{ end }}
-    secretName: cert-{{$.Service.Name}}-domains
+    secretName: {{ if $.Service.Certificate.Id }} {{ yamlScalar $.Service.Certificate.Id }} {{ else }} cert-{{$.Service.Name}}-domains {{ end }}
   {{ end }}
   rules:
     - host: {{ safe .Host }}

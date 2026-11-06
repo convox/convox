@@ -1,0 +1,95 @@
+environment:
+  - PORT=3000
+  - TRY="qer"
+services:
+  web:
+    build: .
+    port: 3000
+    annotations:
+        - "key1=value1"
+        - k2 : "v2"
+        - "simple.key=value"
+        - "quoted.key=\"quoted value\""
+        - another.key: "another value"
+        - multi.line.test: |
+            This is line 1
+            Line 2 with a "quote" and a special character: $
+        - json.annotation: |
+            {"key1": "value1", "key2": "value2"}
+        - nested.json: |
+            {
+              "config": {
+                "feature_enabled": true,
+                "settings": {
+                  "retry": 3,
+                  "timeout": 120
+                },
+                "targets": ["node1", "node2"]
+              }
+            }
+        - yaml.annotation: |
+            key1: value1
+            key2: value2
+            nested:
+              subkey: subvalue
+        - yaml.config: |
+            feature: true
+            retry: 5
+        - json.config: |
+            {"key": "value", "enabled": false}
+        - large.payload: |
+            {
+              "data": [
+                {"id": 1, "value": "item1"},
+                {"id": 2, "value": "item2"},
+                {"id": 3, "value": "item3"}
+              ],
+              "metadata": {
+                "count": 3,
+                "status": "success"
+              }
+            }
+        - whitespace.test: |
+            Line with trailing space        
+        - "dash-key=value"
+        - "dot.key=value"
+        - "underscore_key=value"
+        - encoded.data: "VGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHZhbHVlLg=="
+        - prometheus.io/scrape: "true"
+        - prometheus.io/path: "/metrics"
+        - nginx.ingress.kubernetes.io/rewrite-target: "/"
+        - ad.datadoghq.com/nginx.logs: |
+            {
+              "source": "nginx",
+              "service": "my-app"
+            }
+        - scheduler.alpha.kubernetes.io/affinity: |
+            {
+              "nodeAffinity": {
+                "requiredDuringSchedulingIgnoredDuringExecution": {
+                  "nodeSelectorTerms": [
+                    {
+                      "matchExpressions": [
+                        {
+                          "key": "kubernetes.io/e2e-az-name",
+                          "operator": "In",
+                          "values": ["az1", "az2"]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+    scale:
+      count: 1
+      cpu: 100
+      memory: 55
+      limit:
+        cpu: 128
+        memory: 56
+timers:
+  test:
+    command: "echo ok timer"
+    schedule: "* * * * ? *"
+    service: web

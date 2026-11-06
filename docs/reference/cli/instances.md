@@ -1,6 +1,6 @@
 ---
 title: "instances"
-draft: false
+description: "The convox instances command lists cluster instances and manages per-instance operations such as terminate, SSH key roll, and opening a shell over SSH."
 slug: instances
 url: /reference/cli/instances
 ---
@@ -11,44 +11,46 @@ url: /reference/cli/instances
 List instances
 
 ### Usage
-```html
+```bash
     convox instances
 ```
 ### Examples
-```html
+```bash
     $ convox instances
-    ID                   STATUS  STARTED       PS  CPU     MEM     PUBLIC          PRIVATE
-    i-029382969778a743a  active  2 months ago  3   18.75%  45.08%  32.207.218.250  10.0.2.39
-    i-06d0eaf588c96ee5a  active  2 months ago  2   18.75%  32.64%  52.208.102.198  10.0.2.17
-    i-0a69dd90d3b542c3a  active  2 months ago  3   21.88%  58.13%  52.160.141.135  10.0.1.151
-    i-0cbaa6d2dd1d094ca  active  2 months ago  5   37.50%  77.72%  1.226.241.132   10.0.3.45
-    i-0d4493dded1fa9aea  active  2 months ago  5   50.00%  97.91%  52.144.245.283  10.0.1.56
+    ID                          STATUS   STARTED       PS  CPU     MEM     PUBLIC          PRIVATE     TYPE
+    ip-10-0-2-39.ec2.internal   running  2 months ago  3   18.75%  45.08%  34.207.218.250  10.0.2.39   t3.large
+    ip-10-0-2-17.ec2.internal   running  2 months ago  2   18.75%  32.64%  52.208.102.198  10.0.2.17   t3.large
+    ip-10-0-1-151.ec2.internal  running  2 months ago  3   21.88%  58.13%  52.160.141.135  10.0.1.151  m5.xlarge
+    ip-10-0-3-45.ec2.internal   running  2 months ago  5   37.50%  77.72%  3.226.241.132   10.0.3.45   m5.xlarge
+    ip-10-0-1-56.ec2.internal   running  2 months ago  5   50.00%  97.91%  52.144.245.183  10.0.1.56   c5.large
 ```
 ## instances terminate
 
 Terminate an instance
 
 ### Usage
-```html
+```bash
     convox instances terminate <instance_id>
 ```
 ### Examples
-```html
-    $ convox instances terminate i-029382969778a743a
+```bash
+    $ convox instances terminate ip-10-0-2-39.ec2.internal
     Terminating instance... OK
 ```
+
+See [Instance](/reference/primitives/rack/instance#termination-behavior) for details on the drain sequence, PodDisruptionBudget handling, and per-provider cloud VM reclamation.
 
 ## instances keyroll
 
 Roll ssh key on instances
 
 ### Usage
-```html
+```bash
     convox instances keyroll
 ```
-For v3 rack it will generate a private key and show it as output. Please save the generated private key and use it when sshing into an instance
+This generates a private key and displays it as output. Save the generated private key and use it when connecting via SSH to an instance.
 ### Examples
-```html
+```bash
     $ convox instances keyroll
     Rolling instance key... OK
     Updating parameters... OK
@@ -63,17 +65,22 @@ For v3 rack it will generate a private key and show it as output. Please save th
 Run a shell on an instance
 
 ### Usage
-**For v2 rack:**
-```html
-    convox instances ssh <instance_id>
-```
-
-**For v3 rack:**
-```html
+```bash
     convox instances ssh <instance_id> --key <private_key_file>
 ```
 
+### Flags
+
+| Flag | Description |
+| ---- | ----------- |
+| `--key` | Path to private key file (from `instances keyroll`) |
+
 ### Examples
-```html
+```bash
     $ convox instances ssh ip-10-1-80-201.ec2.internal --key ~/.ssh/rack/priv.pem
 ```
+
+## See Also
+
+- [key_pair_name](/configuration/rack-parameters/aws/key_pair_name) for configuring SSH access to cluster nodes
+- [Instance](/reference/primitives/rack/instance) for termination behavior and stuck-node cleanup

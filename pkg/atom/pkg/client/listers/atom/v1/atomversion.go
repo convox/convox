@@ -28,8 +28,10 @@ import (
 )
 
 // AtomVersionLister helps list AtomVersions.
+// All objects returned here must be treated as read-only.
 type AtomVersionLister interface {
 	// List lists all AtomVersions in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.AtomVersion, err error)
 	// AtomVersions returns an object that can list and get AtomVersions.
 	AtomVersions(namespace string) AtomVersionNamespaceLister
@@ -60,10 +62,13 @@ func (s *atomVersionLister) AtomVersions(namespace string) AtomVersionNamespaceL
 }
 
 // AtomVersionNamespaceLister helps list and get AtomVersions.
+// All objects returned here must be treated as read-only.
 type AtomVersionNamespaceLister interface {
 	// List lists all AtomVersions in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.AtomVersion, err error)
 	// Get retrieves the AtomVersion from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.AtomVersion, error)
 	AtomVersionNamespaceListerExpansion
 }

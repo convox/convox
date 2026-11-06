@@ -1,54 +1,563 @@
 ---
 title: "rack"
-draft: false
+description: "The convox rack command shows rack info and manages rack operations including install, update, params, scale, access, Karpenter cleanup, and kubeconfig."
 slug: rack
 url: /reference/cli/rack
 ---
 # rack
+
+## Command Summary
+
+| Command | Description |
+|---------|-------------|
+| **Information** | |
+| `convox rack` | Display rack info |
+| `convox rack ps` | List rack processes |
+| `convox rack ps --all` | List all rack processes including system |
+| `convox rack logs` | Get logs for the rack |
+| **Installation** | |
+| `convox rack install` | Install a new rack |
+| `convox rack uninstall` | Uninstall a rack |
+| `convox rack update` | Update rack to a new version |
+| `convox rack sync` | Sync v2 rack API URL |
+| **Access** | |
+| `convox rack access` | Generate rack access credential |
+| `convox rack access key rotate` | Rotate rack access key |
+| **Runtime** | |
+| `convox rack runtimes` | List attachable runtime integrations |
+| `convox rack runtime attach` | Attach a runtime integration |
+| **Parameters** | |
+| `convox rack params` | Display rack parameters |
+| `convox rack params set` | Set rack parameters |
+| **Scaling** | |
+| `convox rack releases` | List rack version history |
+| `convox rack scale` | Scale the rack |
+| **Karpenter** | |
+| `convox rack karpenter cleanup` | Clean up orphaned Karpenter nodes after disabling |
+| **Kubernetes** | |
+| `convox rack kubeconfig` | Output kubeconfig for the underlying cluster |
+| `convox rack mv` | Transfer rack management between user and org |
+
+The subcommand reference below follows the Command Summary grouping above.
 
 ## rack
 
 Get information about the rack
 
 ### Usage
-```html
+```bash
     convox rack
 ```
 ### Examples
-```html
+```bash
     $ convox rack
     Name      test
     Provider  aws
     Router    router.0a1b2c3d4e5f.convox.cloud
     Status    running
-    Version   3.0.0
+    Version   3.24.11
+```
+## rack ps
+
+List rack processes
+
+### Usage
+```bash
+    convox rack ps
+```
+### Examples
+```bash
+    $ convox rack ps
+    ID                              APP     SERVICE        STATUS   RELEASE  STARTED     COMMAND
+    api-59969ff7bc-dbw4c            system  api            running  3.25.11  2 days ago  api
+    api-59969ff7bc-r7xgr            system  api            running  3.25.11  2 days ago  api
+    atom-bcf4f5d76-7m4f7            system  atom           running  3.25.11  2 days ago  atom
+    ingress-nginx-5946c459d9-6qf2v  system  ingress-nginx  running  3.25.11  2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    ingress-nginx-5946c459d9-wzsbn  system  ingress-nginx  running  3.25.11  2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    resolver-554bdb6c98-fwmmn       system  resolver       running  3.25.11  2 days ago  resolver
+    resolver-554bdb6c98-tqsc8       system  resolver       running  3.25.11  2 days ago  resolver
+```
+## rack ps --all
+
+List rack processes as well as essential system ones running on the Rack
+
+### Usage
+```bash
+    convox rack ps --all
+```
+### Examples
+```bash
+    $ convox rack ps --all
+    ID                              APP     SERVICE        STATUS   RELEASE      STARTED     COMMAND
+    web-7cd6cc78dd-blvtn            myapp   web            running  RABCDEFGHIJ  2 days ago  npm start
+    web-7cd6cc78dd-x2kq9            myapp   web            running  RABCDEFGHIJ  2 days ago  npm start
+    api-59969ff7bc-dbw4c            system  api            running  3.25.11      2 days ago  api
+    api-59969ff7bc-r7xgr            system  api            running  3.25.11      2 days ago  api
+    atom-bcf4f5d76-7m4f7            system  atom           running  3.25.11      2 days ago  atom
+    fluentd-2vmln                   system  fluentd        running  3.25.11      2 days ago
+    fluentd-gqjg4                   system  fluentd        running  3.25.11      2 days ago
+    fluentd-mnw9b                   system  fluentd        running  3.25.11      2 days ago
+    ingress-nginx-5946c459d9-6qf2v  system  ingress-nginx  running  3.25.11      2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    ingress-nginx-5946c459d9-wzsbn  system  ingress-nginx  running  3.25.11      2 days ago  /nginx-ingress-controller --watch-ingress-without-class=true ...
+    resolver-554bdb6c98-fwmmn       system  resolver       running  3.25.11      2 days ago  resolver
+    resolver-554bdb6c98-tqsc8       system  resolver       running  3.25.11      2 days ago  resolver
+```
+
+With `--all`, the list also includes the Processes of every App on the Rack, and Rack system Pods that run outside the Rack's own namespace, such as Fluentd on AWS.
+
+## rack logs
+
+Get logs for the rack
+
+### Usage
+```bash
+    convox rack logs [--since <duration>] [--no-follow] [--filter <string>] [--tail <n>]
+```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--filter` | | Show only matching lines. On AWS the value is a CloudWatch filter pattern; on GCP, Azure, DigitalOcean, metal and local Racks, a line matches when its message contains the text, case-sensitive (Rack version 3.25.12 or later). See [Filtering by Content](/configuration/logging#filtering-by-content) |
+| `--no-follow` | | Print logs and exit rather than streaming |
+| `--rack` | `-r` | Rack name |
+| `--since` | | Time frame for log query (e.g., `24h`, `30m`; default `2m`) |
+| `--tail` | | Print the last `n` lines of the `--since` window, counted after `--filter`, then the live stream when following. From 0 to 10000 (Rack version 3.25.12 or later; local Racks ignore it) |
+
+On AWS the command reads the Rack's `/convox/<rack>/system` CloudWatch log group, and on GCP, Azure, DigitalOcean and metal Racks it reads the Rack's Elasticsearch. See [Logging](/configuration/logging).
+
+With `--tail`, nothing prints until the Rack has read the whole `--since` window. A Rack older than 3.25.12 prints every line of the window instead, and a CLI 3.25.12 or later warns about that on stderr:
+
+```text
+WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window
+```
+
+With CLI 3.25.12 or later, a `--no-follow` read that ends before the end of its output prints what it received, then `ERROR: log stream ended before the end of output`, and exits 1. A complete read exits 0, so scripts can tell a complete read from a cut one.
+
+### Examples
+```bash
+    $ convox rack logs
+    2026-01-15T13:37:22Z service/api/api-6b96cd84c4-jcnv7 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=0.041
+    2026-01-15T13:37:23Z service/resolver/resolver-7ff596c56b-l9btt ns=dns at=question type=A question="logs.us-east-2.amazonaws.com"
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=f492a0dce931 ns=api at=AppList method="GET" path="/apps" response=200 elapsed=0.156
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=a437c85a56c9 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=0.036
+    ...
+
+    $ convox rack logs --filter AppList --tail 1 --since 1h --no-follow
+    2026-01-15T13:38:04Z service/api/api-6b96cd84c4-w9qql id=f492a0dce931 ns=api at=AppList method="GET" path="/apps" response=200 elapsed=0.156
 ```
 ## rack install
 
 Install a new Rack
 
+> note: To install the rack into the console with the specified runtime, region, and optional [parameters](/configuration/rack-parameters): provide orgname/rackname in place of `<name>`
+
 ### Usage
-```html
+```bash
     convox rack install <provider> <name> [option=value]...
+
+    convox rack install <provider> <orgname>/<rackname> region=<region> --runtime=<runtime-id> [option=value]...
 ```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `runtime` | | runtime integration ID |
+| `version` | | specify the rack version to install |
+
+> note: To install a rack into an organization with runtime integration, ensure your CLI is updated to the latest version. For detailed instructions on updating CLI, see [CLI Management](/management/cli-rack-management).
+
+> note: Obtain the runtime ID by running `convox runtimes <orgname>`.
+
 ### Examples
-```html
+```bash
     $ convox rack install local dev
     ...
 
     $ convox rack install aws production region=eu-west-1 node_type=t3.large
     ...
+
+    $ convox rack install aws my-org/staging region=us-east-1 --runtime=20e58437-fab7-4124-aa5a-2e5978f1149e
+    ...
 ```
+
+## rack uninstall
+
+Uninstalls a Rack
+
+### Usage
+```bash
+    convox rack uninstall <name>
+```
+### Examples
+```bash
+    $ convox rack uninstall my-rack
+    Upgrading modules...
+    Downloading github.com/convox/convox?ref=3.23.3 for system...
+    ...
+    Destroy complete! Resources: 35 destroyed.
+```
+## rack update
+
+Updates a Rack to a new version.
+
+### Usage
+```bash
+    convox rack update [version]
+```
+### Examples
+```bash
+    $ convox rack update
+    Upgrading modules...
+    Downloading github.com/convox/convox?ref=3.23.3 for system...
+    ...
+    Apply complete! Resources: 1 added, 4 changed, 1 destroyed.
+
+    Outputs:
+
+    api = https://convox:password@api.dev.convox
+    provider = local
+    OK
+```
+
+## rack access credential
+
+Generates rack access credential
+
+### Usage
+```bash
+    convox rack access --role [role] --duration-in-hours [duration]
+```
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `role` | | Access role for the credential. Allowed roles are: `read`, `write`, and `admin`. Requesting an `admin` credential requires the caller to already hold the `admin` role. |
+| `duration-in-hours` | | TTL for the credential. |
+
+### Examples
+```bash
+    $ convox rack access --role read --duration-in-hours 1
+    RACK_URL=https://...
+
+    $ export RACK_URL=https://...
+    $ convox rack
+    Name      v3-rack
+    Provider  aws
+    Router    router.convox
+    Status    running
+    Version   ...
+
+```
+
+## rack access key rotation
+
+Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
+
+### Usage
+```bash
+    convox rack access key rotate
+```
+
+### Examples
+```bash
+    $ convox rack access key rotate
+    OK
+
+```
+
+## rack runtimes
+
+List of attachable runtime integrations
+
+### Usage
+```bash
+    convox rack runtimes
+```
+### Examples
+```bash
+    $ convox rack runtimes
+    ID                                    TITLE
+    20e58437-fab7-4124-aa5a-2e5978f1149e  123456789012
+```
+
+## rack runtime attach
+
+Attach runtime integration to the rack
+
+### Usage
+```bash
+    convox rack runtime attach <runtime_id>
+```
+### Examples
+```bash
+    $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
+    OK
+```
+
+## rack params
+
+Display rack parameters
+
+### Usage
+```bash
+    convox rack params [--group <name>] [--reveal]
+```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Filter output to a curated logical group. Accepts exact names and unique prefixes |
+| `--reveal` | | Show unmasked values for sensitive parameters on a TTY |
+
+### Examples
+```bash
+    $ convox rack params
+    build_node_enabled     true
+    high_availability      true
+    node_disk              100
+    node_type              c5.large
+    private                false
+```
+
+The listing contains only parameters that have a value stored for the Rack. A parameter left at its default is not returned, so an absent name means it has never been set.
+
+### Masking Sensitive Values
+
+Values for `docker_hub_password`, `secret_key`, `token`, `access_id`, `webhook_signing_key`, and the private EKS connection settings render as `**********` on a TTY to prevent accidental disclosure via terminal output, shell history, screen shares, or captured logs. Empty values display as empty so you can tell whether a sensitive parameter is set. The stored values are unchanged.
+
+Piped and non-TTY output is always unmasked, so backup and automation flows (`convox rack params > rack-state.txt`, `| grep`, `| jq`) continue to return real values. Use `--reveal` on a TTY for one-off inspection when the real value is needed.
+
+```bash
+    $ convox rack params | grep docker_hub_password    # pipe: real value
+    docker_hub_password    s3cret-t0ken
+
+    $ convox rack params                                # TTY: masked
+    docker_hub_password    **********
+
+    $ convox rack params --reveal                       # TTY override: real value
+    docker_hub_password    s3cret-t0ken
+```
+
+### Group Filter
+
+Pass `-g` / `--group` to narrow the output to one of a curated set of logical groups. Useful when a fully featured rack emits 100+ parameters and you want the handful relevant to a specific task.
+
+| Group | Covers |
+|-------|--------|
+| `build` | build node config, buildkit, additional build groups |
+| `cost` | cost tracking and allocation tags |
+| `domain` | rack domain and TLS toggle |
+| `gpu` | GPU/NVIDIA device plugin, DCGM exporter, observability, Prometheus metrics |
+| `ingress` | router type (NGINX/Contour), idle timeout, TLS cert duration, Envoy resources |
+| `karpenter` | Karpenter autoscaling configuration |
+| `logging` | syslog, telemetry, fluentd, EKS audit logs, Grafana, Prometheus |
+| `network` | VPC, subnets, CIDR, routing, NLB, DNS resolver |
+| `nlb` | NLB config: listeners, cross-zone, allow-CIDR, preserve-client-IP, deletion protection (v2 racks) |
+| `nodes` | default node-group config, user-data, GPU, kubelet tuning |
+| `registry` | Docker Hub, ECR, image caching, storage buckets |
+| `retention` | release retention policy |
+| `scaling` | capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets |
+| `security` | access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials |
+| `storage` | CSI drivers, EBS/EFS/Azure Files, registry and Elasticsearch disks |
+| `versions` | K8s and managed component versions |
+
+Exact names and unique prefixes both resolve:
+
+```bash
+    $ convox rack params -g karpenter -r prod
+    karpenter_arch                    amd64
+    karpenter_auth_mode               true
+    karpenter_enabled                 true
+    ...
+
+    $ convox rack params -g karp -r prod              # prefix match
+    ...
+
+    $ convox rack params --group security -r prod     # long form
+    access_id                          **********
+    docker_hub_password                **********
+    ebs_volume_encryption_enabled      true
+    eks_control_plane_private_subnets  true
+    ...
+```
+
+Ambiguous prefixes print a disambiguating hint and the full group list so names are discoverable without leaving the command:
+
+```bash
+    $ convox rack params -g s
+    ERROR: group 's' matches multiple groups: scaling, security, storage (use 'sca', 'sec', or 'sto')
+      available groups:
+      build        build node config, buildkit, additional build groups
+      domain       rack domain and TLS toggle
+      ...
+```
+
+Unknown groups print the same list. The filter is applied client-side on top of the rack response, so sensitive-value masking and `--reveal` compose with `--group` (`convox rack params -g security --reveal` shows unmasked credentials).
+
+## rack params set
+
+Set rack parameters
+
+### Usage
+```bash
+    convox rack params set <Key=Value> [Key=Value]... [--force]
+```
+
+### Flags
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--force` | `-f` | Override the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, EKS control-plane subnet, and Arm `node_type` guards |
+
+### Examples
+```bash
+    $ convox rack params set node_type=t3.large
+    Updating parameters... OK
+```
+
+### Parameter Validation
+
+The CLI validates parameters before sending them to the Rack. This catches common errors before they reach Terraform:
+
+- **Unknown parameters** are rejected with a suggestion if a close match exists:
+  ```
+  unknown parameter 'node_tyep' for aws provider
+         Did you mean 'node_type'?
+         Run 'sudo convox update' to get the latest parameter support, or use --force to override.
+  ```
+- **Install-only parameters** (`high_availability`, `private`, `cidr`, `vpc_id`, `region`, `availability_zones`, subnet IDs) cannot be changed after rack creation.
+- **Managed parameters** (`image`, `release`, `k8s_version`, addon versions) are set automatically by `convox rack update` and cannot be modified directly.
+- **Empty values** are rejected for parameters that require explicit values. Parameters that support clearing (labels, taints, schedules, credentials) accept empty strings.
+- **Type validation** is enforced for specific parameters (e.g., `karpenter_auth_mode` must be `true` or `false`, `node_capacity_type` must be `on_demand`, `spot`, or `mixed`).
+- **Destructive removals** are rejected as of 3.25.4. A change that drops a node pool, node group, or build group identifier from `additional_karpenter_nodepools_config`, `additional_node_groups_config`, or `additional_build_groups_config` reports what it removes and what pins to it:
+  ```
+  ERROR: destructive change, removes node pools from the rack: batch, gpu
+         Their nodes are drained and deleted. Services pinned to convox.io/nodepool=batch or convox.io/nodepool=gpu become unschedulable.
+         Re-run with --force to proceed
+  ```
+- **Router whitelist lockout** is rejected as of 3.25.6. A `whitelist` that does not include `0.0.0.0/0` blocks every client outside those ranges, including Convox Console:
+  ```text
+  ERROR: param 'whitelist' does not include 0.0.0.0/0
+         The rack router serves the rack API, so this blocks every client outside
+         these ranges, including Convox Console. A Console-managed rack that blocks
+         Console cannot be updated through Convox again without editing the load
+         balancer rules in your cloud provider.
+         Re-run with --force to proceed
+  ```
+- **Image pull throughput** is checked as of 3.25.7. Setting [`fast_image_pull_enable`](/configuration/rack-parameters/aws/fast_image_pull_enable) to `true` is refused while a node volume that would receive the feature is below 600 MiB/s, and so is lowering [`node_volume_throughput`](/configuration/rack-parameters/aws/node_volume_throughput) or a Karpenter volume parameter back under that while the feature is on:
+  ```text
+  ERROR: fast_image_pull_enable requires at least 600 MiB/s of node volume throughput.
+         AWS documents image pulls getting SLOWER below that with this feature on.
+         Currently: node_volume_throughput=125
+         Raise node_volume_throughput to 600 or higher in the same call, or re-run with --force to proceed
+  ```
+- **Elasticsearch volume size** is checked as of 3.25.11. On GCP, Azure, DigitalOcean and metal Racks, [`elasticsearch_disk`](/configuration/rack-parameters/gcp/elasticsearch_disk) must be a whole number of Gi of at least `5Gi`, and a value below the one currently set is refused because the volumes cannot shrink:
+  ```text
+  ERROR: param 'elasticsearch_disk' cannot be below the current 10Gi: the volumes can grow but not shrink (use --force to set it anyway)
+  ```
+- **Syslog endpoints** are checked by CLI 3.25.12 or later. Each comma-separated entry of [`syslog`](/configuration/rack-parameters/aws/syslog) must be `tcp://`, `tcp+tls://` or `udp://`, then a host and an optional port:
+  ```text
+  ERROR: param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got "udp+tls://logs.example.com:6514")
+  ```
+- **Fluentd memory** is checked by CLI 3.25.12 or later. [`fluentd_memory`](/configuration/rack-parameters/aws/fluentd_memory) must be a whole number of `Mi` or `Gi`:
+  ```text
+  ERROR: param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi
+  ```
+- **Arm primary node pool** is refused on GCP and Azure by CLI 3.25.12 or later. An Arm [`node_type`](/configuration/rack-parameters/gcp/node_type), such as GCP `t2a-standard-4` or Azure `Standard_D4ps_v5`, is refused; Arm nodes go in `additional_node_groups_config` instead ([GCP](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools), [Azure](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools)). `--force` sets it anyway, but the Rack does not support an Arm primary node pool:
+  ```text
+  ERROR: param 'node_type' t2a-standard-4 is an Arm machine type; the primary node pool must stay x86
+    Add Arm nodes with additional_node_groups_config instead.
+    Re-run with --force to proceed
+  ```
+- **Hyperdisk boot disks** are required on GCP by CLI 3.25.12 or later. An `additional_node_groups_config` entry with a C4A, N4A or A4X machine type must set `disk_type` to `hyperdisk-balanced` ([GCP Arm node pools](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools)):
+  ```text
+  ERROR: node type 'c4a-standard-4' boots only from Hyperdisk; set disk_type to hyperdisk-balanced
+  ```
+- **Arm node pools on Azure** are accepted with a warning by CLI 3.25.12 or later. An Arm entry in `additional_node_groups_config` without `dedicated: true`, or an Arm entry in `additional_build_groups_config`, prints one of these lines ([Azure Arm node pools](/configuration/rack-parameters/azure/additional_node_groups_config#arm-node-pools)):
+  ```text
+  WARNING: additional_node_groups_config type Standard_D4ps_v5 is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.
+  WARNING: additional_build_groups_config type Standard_D4ps_v5 is an Arm machine type. Builds of apps without the BuildArch app parameter can run on it and produce Arm-only images.
+  ```
+
+Use `--force` to bypass the unknown-key, managed-parameter, destructive-removal, whitelist-lockout, fast-image-pull throughput, Elasticsearch volume shrink, EKS control-plane subnet, and Arm `node_type` guards. Install-only, empty-value, and type validators, including the `syslog`, `fluentd_memory` and Hyperdisk checks, cannot be overridden.
+
+> The `schedule_rack_scale_down` and `schedule_rack_scale_up` parameters must be set together.
+
+## rack releases
+
+List rack version history
+
+### Usage
+```bash
+    convox rack releases
+```
+### Examples
+```bash
+    $ convox rack releases
+    VERSION  UPDATED
+    3.23.4   2 days ago
+    3.23.3   2 weeks ago
+    3.23.2   3 weeks ago
+```
+
+## rack scale
+
+Scale the rack
+
+### Usage
+```bash
+    convox rack scale
+```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--count` | `-c` | int | Instance count |
+| `--type` | `-t` | string | Instance type |
+
+### Examples
+```bash
+    $ convox rack scale
+    Autoscale  Yes
+    Count      3
+    Status     running
+    Type       t3.small
+
+    $ convox rack scale --count 5 --type t3.large
+    Scaling rack... OK
+```
+
+## rack karpenter cleanup
+
+Clean up orphaned Karpenter nodes after disabling Karpenter. Terminates backing EC2 instances, cordons and drains Kubernetes nodes (respecting PodDisruptionBudgets), strips Karpenter finalizers, and removes stale CRD objects (NodePools, NodeClaims, EC2NodeClasses).
+
+Safe to run multiple times. See [Disabling Karpenter](/configuration/scaling/karpenter#disabling-karpenter) for the full workflow.
+
+### Usage
+```bash
+    convox rack karpenter cleanup
+```
+
+### Examples
+```bash
+    $ convox rack karpenter cleanup -r rackName
+    Cleaning up Karpenter nodes... OK
+```
+
 ## rack kubeconfig
 
 Output a Kubernetes configuration file for connecting to the underlying cluster
 
 ### Usage
-```html
+```bash
     convox rack kubeconfig
 ```
 ### Examples
-```html
+```bash
     $ convox rack kubeconfig
     apiVersion: v1
     clusters:
@@ -69,206 +578,25 @@ Output a Kubernetes configuration file for connecting to the underlying cluster
         username: convox
         password: abcdefghijklmnopqrstuvwxyz
 ```
-## rack logs
-
-Get logs for the rack
-
-### Usage
-```html
-    convox rack logs
-```
-### Examples
-```html
-    $ convox rack logs
-    2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=275.683
-    2020-02-10T13:37:22Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=8d3ec85dc324 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=276.086
-    2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 ns=provider.aws at=SystemGet state=success elapsed=331.824
-    2020-02-10T13:38:04Z service/web/a55eb25e-90f5-4301-99fd-e35c91128592 id=f492a0dce931 ns=api at=SystemGet method="GET" path="/system" response=200 elapsed=332.219
-    ...
-```
 ## rack mv
 
 Transfer the management of a Rack from an individual user to an organization or vice versa.
 > note: rack name should be same
 
 ### Usage
-```html
+```bash
     convox rack mv <from> <to>
 ```
 ### Examples
-```html
+```bash
     $ convox rack mv dev acme/dev
     moving rack dev to acme/dev... OK
 
     $ convox rack mv acme/dev dev
     moving rack acme/dev to dev... OK
 ```
-## rack ps
 
-List rack processes
+## See Also
 
-### Usage
-```html
-    convox rack ps
-```
-### Examples
-```html
-    $ convox rack ps
-    ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
-    router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
-```
-## rack ps --all
-
-List rack processes as well as essential system ones running on the Rack
-
-### Usage
-```html
-    convox rack ps --all
-```
-### Examples
-```html
-    $ convox rack ps --all
-    ID                       APP     SERVICE        STATUS   RELEASE       STARTED      COMMAND
-    api-9749b7ccb-29zh5      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-29zh5      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      system  api            running  3.0.0.beta44  2 weeks ago  api
-    api-9749b7ccb-cg4hr      rack    api            running  3.0.0.beta44  2 weeks ago  api
-    atom-578cd48bfb-6tm7g    rack    atom           running  3.0.0.beta44  2 weeks ago  atom
-    atom-578cd48bfb-6tm7g    system  atom           running  3.0.0.beta44  2 weeks ago  atom
-    elasticsearch-0          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-0          system  elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-1          rack    elasticsearch  running  3.0.0.beta44  2 weeks ago
-    elasticsearch-1          system  elasticsearch  running  3.0.0.beta44  2 weeks ago
-    fluentd-p56dk            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-p56dk            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-qrttw            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-qrttw            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-zsv8f            rack    fluentd        running  3.0.0.beta44  2 weeks ago
-    fluentd-zsv8f            system  fluentd        running  3.0.0.beta44  2 weeks ago
-    redis-77b4f65c55-nbx89   rack    redis          running  3.0.0.beta44  2 weeks ago
-    redis-77b4f65c55-nbx89   system  redis          running  3.0.0.beta44  2 weeks ago
-    router-846b84d544-ndz76  rack    router         running  3.0.0.beta44  2 weeks ago  router
-    router-846b84d544-ndz76  system  router         running  3.0.0.beta44  2 weeks ago  router
-```
-
-## rack runtimes
-
-List of attachable runtime integrations
-
-### Usage
-```html
-    convox rack runtimes
-```
-### Examples
-```html
-    $ convox rack runtimes
-    ID                                    TITLE
-    20e58437-fab7-4124-aa5a-2e5978f1149e  047979207916
-```
-
-## rack runtime attach
-
-Attach runtime integration to the rack
-
-### Usage
-```html
-    convox rack runtime attach <runtime_id>
-```
-### Examples
-```html
-    $ convox rack runtime attach 20e58437-fab7-4124-aa5a-2e5978f11
-    OK
-```
-
-## rack uninstall
-
-Uninstalls a Rack
-
-### Usage
-```html
-    convox rack uninstall <name>
-```
-### Examples
-```html
-    $ convox rack uninstall my-rack
-    Upgrading modules...
-    Downloading github.com/convox/convox?ref=3.0.15 for system...
-    ...
-    Destroy complete! Resources: 35 destroyed.
-```
-## rack update
-
-Updates a Rack to a new version.
-
-### Usage
-```html
-    convox rack update [version]
-```
-### Examples
-```html
-    $ convox rack update
-    Upgrading modules...
-    Downloading github.com/convox/convox?ref=3.0.15 for system...
-    ...
-    Apply complete! Resources: 1 added, 4 changed, 1 destroyed.
-
-    Outputs:
-
-    api = https://convox:password@api.dev.convox
-    provider = local
-    OK
-```
-
-## rack access credential
-
-Generates rack access credential
-
-> supported from: 3.14.1
-
-### Usage
-```html
-    convox rack access --role [role] --duration-in-hours [duration]
-```
-flags:
-  - `role`: Access role for the credential. Allowed roles are: `read` or `write`
-  - `duration-in-hours`: TTL for the credential.
-
-### Examples
-```html
-    $ convox rack access --role read --duration-in-hours 1
-    RACK_URL=https://...
-
-    $ export RACK_URL=https://...
-    $ convox rack
-    Name      v3-rack
-    Provider  aws
-    Router    router.convox
-    Status    running
-    Version   ...
-
-```
-
-## rack access key rotation
-
-Rotates the rack access key that is used for rack access credential. It will invalidate previous all the credential generated from ` convox rack access --role [role] --duration-in-hours [duration]`.
-
-> supported from: 3.14.1
-
-### Usage
-```html
-    convox rack access key rotate
-```
-
-### Examples
-```html
-    $ convox rack access key rotate              
-    OK
-
-```
+- [Rack Parameters](/configuration/rack-parameters) for parameter reference
+- [CLI Rack Management](/management/cli-rack-management) for management best practices

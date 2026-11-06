@@ -1,0 +1,675 @@
+---
+title: "Karpenter"
+description: "Karpenter is an opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning, with faster provisioning and cost-aware instance selection."
+slug: karpenter
+url: /configuration/scaling/karpenter
+---
+
+# Karpenter
+
+Convox supports [Karpenter](https://karpenter.sh/) as an opt-in alternative to Cluster Autoscaler for AWS EKS node provisioning. When enabled, Karpenter manages workload and build nodes through NodePools and EC2NodeClasses, delivering faster node provisioning, cost-aware instance selection, and automatic node lifecycle management.
+
+Karpenter is **bidirectional**. `karpenter_enabled` can be toggled on and off safely, letting you try Karpenter and revert if needed without disrupting your Rack.
+
+> Karpenter is available on **AWS only**. Karpenter parameters are rejected for GCP, Azure, and DigitalOcean Racks.
+
+> **Disambiguation:** the term "budget" on this page refers exclusively to **Karpenter disruption budgets**, a Kubernetes scheduling primitive that limits how many nodes Karpenter may disrupt simultaneously during consolidation or drift cycles. This is unrelated to the **per-app monthly spend cap** introduced in Convox 3.24.6 (see [Budget Caps](/management/budget-caps) for app-level cost controls and the `convox.yml` `budget:` block). The two concepts share a name but operate at different layers (cluster node scheduling vs. application spend) and have no shared configuration surface.
+
+## How Karpenter Works with Convox
+
+When Karpenter is enabled, your Rack's node provisioning is split into three tiers:
+
+| Tier | Managed by | Node type | Purpose |
+|------|-----------|-----------|---------|
+| **System nodes** | EKS managed node groups (always) | ON_DEMAND | Rack control plane: API server, router, resolver, metrics-server, Karpenter controller |
+| **Workload nodes** | Karpenter NodePool | Configurable | Your application Services |
+| **Build nodes** | Karpenter NodePool | Configurable | `convox build` / `convox deploy` build pods |
+
+Karpenter replaces Cluster Autoscaler for workload and build node scaling. System nodes always remain as EKS managed node groups to protect the Karpenter controller's own availability. System pods are pinned to system nodes via `nodeSelector` when Karpenter is enabled.
+
+**Karpenter version:** `1.13.1` (pinned, not user-configurable)
+
+### Why Karpenter Over Cluster Autoscaler
+
+Cluster Autoscaler (CAS) works at the Auto Scaling Group (ASG) level. It can only scale groups of identical instances and reacts to pending pods by incrementing ASG desired count. Karpenter works at the pod level, directly evaluating pending pod requirements and provisioning the optimal instance type, size, and purchasing model in seconds rather than minutes.
+
+- **Faster scaling.** Karpenter provisions nodes in response to pending pods within seconds, compared to the multi-minute feedback loop of CAS
+- **Cost optimization.** Karpenter selects the cheapest instance type that satisfies pod requirements from across all allowed families and sizes
+- **Node consolidation.** Underutilized nodes are automatically consolidated. Karpenter moves pods to fewer, better-utilized nodes and terminates the empty ones
+- **Automatic node replacement.** Nodes are replaced after `karpenter_node_expiry` (default 30 days), keeping your fleet on current AMIs. Expiry is not paced by a disruption budget and does not wait for a replacement node, so a fleet created at the same time expires at the same time
+- **Scale-to-zero builds.** The build NodePool scales to zero when no builds are running, eliminating idle build node costs
+- **Multi-architecture support.** Workload node architecture is auto-detected from `node_type`, or set explicitly with `karpenter_arch`
+
+## Enabling Karpenter
+
+Most users enable Karpenter with a single command:
+
+```bash
+$ convox rack params set karpenter_auth_mode=true karpenter_enabled=true -r rackName
+Updating parameters... OK
+```
+
+Karpenter uses a two-parameter enablement model:
+
+1. **`karpenter_auth_mode=true`**: A **one-way migration** that prepares the EKS cluster. It migrates the cluster to `API_AND_CONFIG_MAP` access mode and applies `karpenter.sh/discovery` tags to subnets and security groups. This cannot be reversed once enabled (matching AWS EKS behavior).
+
+2. **`karpenter_enabled=true`**: A **bidirectional toggle** that deploys the Karpenter controller, NodePools, IAM roles, and SQS interruption queue. Requires `karpenter_auth_mode=true`. Can be toggled on and off freely.
+
+Both can be set in the same call. If setting them separately, `karpenter_auth_mode` must be set first and the update must complete before setting `karpenter_enabled`.
+
+### Enablement Validation Guards
+
+The CLI validates parameter combinations when enabling Karpenter to prevent scheduling deadlocks and stuck rack updates. These guards run at `convox rack params set` time and reject invalid combinations with actionable error messages.
+
+| Guard | Trigger | Resolution |
+|-------|---------|------------|
+| `node_capacity_type` must be `ON_DEMAND` | Enabling Karpenter when `node_capacity_type` is `SPOT` or mixed | Set `node_capacity_type=ON_DEMAND` first, wait for the update, then enable Karpenter |
+| Cannot change `node_capacity_type` while active | Any `node_capacity_type` change when `karpenter_enabled=true` | Disable Karpenter first, change capacity type, then re-enable |
+| Launch template params blocked on non-HA racks | Enabling Karpenter combined with launch template params (`gpu_tag_enable`, `imds_http_tokens`, `imds_http_hop_limit`, `imds_tags_enable`, `ebs_volume_encryption_enabled`, `user_data`, `user_data_url`, `kubelet_registry_pull_qps`, `kubelet_registry_burst`, `key_pair_name`, `fast_image_pull_enable`, `node_volume_iops`, `node_volume_throughput`, `karpenter_node_volume_iops`, `karpenter_node_volume_throughput`) on racks with `high_availability=false` | Set the launch template params first in a separate call, wait for the update, then enable Karpenter |
+
+**Why these guards exist:**
+- Enabling Karpenter with SPOT or mixed capacity types can deadlock node replacement: Karpenter taints the old node group while the replacement may not schedule due to capacity constraints.
+- On non-HA racks (single node), combining `karpenter_enabled=true` with launch template changes triggers a rolling update on the only node while Karpenter simultaneously taints it, leaving no schedulable nodes.
+
+These three guards cannot be bypassed. They run outside the `--force` check, so the resolution column is the only way through.
+
+Before Rack version `3.25.7`, enabling Karpenter also lowered the maximum size of the node groups that already existed, each system node group from 100 to 10 and the static build node group from 100 to 1. EKS rejects a node group update whose maximum is below its recorded desired size, so on a Rack running more than ten nodes in a system node group, or more than one build node, the enable failed during the apply after the CLI had accepted it. From `3.25.7` both maximums stay at 100.
+
+The same rejection happens in the other direction. A Rack version before `3.25.7` re-imposes the maximums of 10 and 1, so a Karpenter Rack whose system node groups run more than ten nodes, or whose build node group runs more than one, cannot apply an older version:
+
+```text
+InvalidParameterException: desired capacity 11 can't be greater than max size 10
+```
+
+Bring the running counts down before downgrading. If [`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) is above `10`, lower it first, then replace the node groups that are over their old maximum. A [`node_disk`](/configuration/rack-parameters/aws/node_disk) change replaces the system node groups and the build node group together. A [`node_type`](/configuration/rack-parameters/aws/node_type) change replaces the system node groups, and the build node group as well when [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) is unset, because the build node group then takes its instance type from `node_type`. Where `build_node_type` is set, change it to a different instance type to replace the build node group. Convox creates the new groups at the configured count. Changing `node_capacity_type` does not, because Karpenter already forces it to `ON_DEMAND`.
+
+As of Rack version `3.25.6`, [`kubelet_registry_pull_qps`](/configuration/rack-parameters/aws/kubelet_registry_pull_qps) and [`kubelet_registry_burst`](/configuration/rack-parameters/aws/kubelet_registry_burst) apply to Karpenter node pools as well as to EKS managed node groups.
+
+### Migrating Workloads to Karpenter Nodes
+
+Once Karpenter is enabled, the system node groups continue running your application workloads alongside core Rack services. To gracefully migrate workloads onto Karpenter-provisioned nodes, set `node_type` to a smaller instance type.
+
+First, raise the Karpenter capacity limits to cover the workload you are about to move. [`karpenter_cpu_limit`](/configuration/rack-parameters/aws/karpenter_cpu_limit) and [`karpenter_memory_limit_gb`](/configuration/rack-parameters/aws/karpenter_memory_limit_gb) default to 100 vCPUs and 400 GiB across every workload node. A Rack already running more than that leaves pods Pending when the system nodes shrink:
+
+```bash
+$ convox rack params set karpenter_cpu_limit=400 karpenter_memory_limit_gb=1600 -r rackName
+Updating parameters... OK
+```
+
+Then set `node_type` to a smaller instance type:
+
+```bash
+$ convox rack params set node_type=t3.medium -r rackName
+Updating parameters... OK
+```
+
+System nodes only need to run core Rack services (API server, router, resolver, Karpenter controller, and pinned add-on controllers). A smaller instance type like `t3.medium` is typically sufficient. Changing `node_type` replaces the system node groups rather than updating them in place. Convox creates the new groups first, then drains and deletes every existing system node in the same apply. Kubernetes drains pods off the old nodes and Karpenter provisions right-sized workload nodes to absorb them. On a Rack with many system nodes this is a long operation: Terraform allows one hour to create the new groups and one hour to delete the old ones.
+
+Size the system nodes with `node_type` and [`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) together.
+
+## Enablement Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `karpenter_auth_mode` | string | `false` | **One-way.** Migrates EKS to `API_AND_CONFIG_MAP` access mode and applies discovery tags. Cannot be set back to `false` once enabled. |
+| `karpenter_enabled` | string | `false` | **Bidirectional.** Deploys Karpenter controller, NodePools, IAM roles, and SQS interruption queue. Requires `karpenter_auth_mode=true`. |
+
+## Workload NodePool Parameters
+
+These parameters control how Karpenter provisions nodes for your application Services.
+
+### Instance Selection
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_instance_families` | string | _(all families)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Comma-separated EC2 instance families (e.g., `c5,m6i,r5`). All general-purpose families if unset. |
+| `karpenter_instance_sizes` | string | _(all sizes)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Comma-separated instance sizes (e.g., `large,xlarge,2xlarge`). All sizes if unset. |
+| `karpenter_arch` | string | _(auto-detect)_ | `amd64`, `arm64`, or `amd64,arm64` | CPU architecture. Unset = auto-detect from `node_type`. Cannot be cleared once set. |
+| `karpenter_capacity_types` | string | `on-demand` | `on-demand`, `spot`, or `on-demand,spot` | EC2 purchasing model. When both are set, Karpenter optimizes for cost and falls back to on-demand when spot is unavailable. |
+
+### Architecture Selection and Mixed-Architecture Racks
+
+`karpenter_arch` accepts `amd64`, `arm64`, or `amd64,arm64` (write the value with no spaces). With `amd64,arm64`, Karpenter may provision either architecture and picks the cheapest instance that satisfies each pod's requirements, which often favors arm64 Graviton instances. Once set, `karpenter_arch` cannot be cleared back to auto-detect; set it explicitly to the desired value instead.
+
+#### Architecture Is Inherited, Not Configured Twice
+
+The Karpenter architecture settings derive from the node type parameters a Rack already has, so enabling Karpenter on an existing Rack keeps the architecture that Rack was already running:
+
+| Setting | Derived from |
+|:--------|:-------------|
+| Workload NodePool architecture | `karpenter_arch` when set, otherwise the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type) |
+| Build NodePool architecture | The architecture of [`build_node_type`](/configuration/rack-parameters/aws/build_node_type), which itself falls back to `node_type` |
+
+Leaving `karpenter_arch` unset on an x86 Rack keeps everything amd64, and on a Graviton Rack keeps everything arm64, so a Rack moving to Karpenter does not need to set it. Convox Console Karpenter install templates pre-set the parameters a Karpenter Rack needs, so a Rack installed from a template arrives with a coherent set of values.
+
+#### Build Output
+
+On a Rack with `karpenter_enabled=true`, `karpenter_arch` also determines what a Convox Build produces:
+
+| `karpenter_arch` | Build output |
+|------------------|--------------|
+| _(unset)_ | One image for the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type), which is also the workload architecture. |
+| A single value (`amd64` or `arm64`) | One image for that architecture, for Builds on the workload and build pools. |
+| `amd64,arm64` | A multi-architecture image index that runs on either architecture. |
+
+From Rack version `3.25.9` the Rack pins Builds to `karpenter_arch` when `node_type`, or [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled), is the other architecture. A pinned Build that runs on a node of the other architecture is built under emulation, which is slower than a native Build. Node groups added with [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) or [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) are not counted: when they are a Rack's only nodes of the other architecture, Builds are not pinned, and a Build that runs on one of them produces an image for that node's architecture.
+
+With `build_node_enabled=true` the build pod runs in the build pool, whose architecture follows `build_node_type`, falling back to `node_type`, and does not follow `karpenter_arch`. Setting `karpenter_arch=arm64` by hand on a Rack whose `node_type` is x86 therefore moves the workload pool to arm64 and leaves the build pool on amd64. From Rack version `3.25.9` those Builds are pinned and still produce arm64 images, under emulation. Set `build_node_type` to a Graviton type in the same change to keep Builds native. Before `3.25.9` every new Build on such a Rack produced an image the workload pool could not run, and Processes failed with an exec format error. A Rack that inherits both from `node_type` is always consistent. With the default `build_node_enabled=false` there is no build pool, build pods run on workload nodes, and `build_node_type` has no effect.
+
+[`convox builds import-image`](/reference/cli/builds-import-image) copies the image from the Rack API, which runs on system nodes that follow `node_type`. From `3.25.9`, whenever the Rack pins Builds, an import copies every platform the source image publishes, so the image runs on the workload pool whatever `node_type` is. A source image published for a single platform is copied as it is. Before `3.25.9` an import copied only the `node_type` architecture unless the Rack was building multi-architecture images. From Rack version `3.25.12`, on a Rack that neither pins Builds nor builds multi-architecture images, an App with [`BuildArch`](/configuration/app-parameters/aws/BuildArch) imports that platform; on a Rack that does either, `BuildArch` does not change what an import copies.
+
+An entry in [`additional_karpenter_nodepools_config`](#additional_karpenter_nodepools_config-custom-nodepools) whose `arch` differs from the workload architecture switches the whole Rack into multi-architecture Builds. On an arm64 Rack, a pool that omits `arch` defaults to `amd64` and does this silently.
+
+From `3.25.9`, on a Rack that pins Builds, these configurations build for `karpenter_arch` where they used to get another architecture:
+
+| Configuration | From `3.25.9` | What to do |
+|---------------|---------------|------------|
+| A Service placed on an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) group of the build node's architecture, on a Rack whose build node differs from `karpenter_arch` | Its Builds target `karpenter_arch`, not the node group's architecture | Set [`BuildArch`](/configuration/app-parameters/aws/BuildArch) on the App to the node group's architecture |
+| A Build routed with [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels), or to an [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) node of the other architecture | Built for `karpenter_arch` | Set `BuildArch` on an App that needs another architecture |
+| A [`karpenter_config`](#karpenter_config-workload-nodepool-override) override of the NodePool `requirements` | The override is not read when choosing the build architecture | Set `karpenter_arch` to the architecture the override selects |
+
+Imported images carry every platform on a Rack that pins Builds, so none of the three affects `convox builds import-image`. Existing images are not rebuilt: an App picks up the change on its next Build or import. Downgrading below `3.25.9` restores the earlier behavior, and images built on `3.25.9` keep running.
+
+A Build whose base image is published as a multi-architecture index without the target architecture fails. With one target architecture, from `3.25.9`, the error is:
+
+```
+an image in this build is not published for the requested build architecture (arm64): use an image published for arm64 or a multi-arch image
+```
+
+With both architectures targeted, the error names the pair and suggests narrowing the App with `BuildArch`. See [BuildArch](/configuration/app-parameters/aws/BuildArch#narrowing-a-multi-architecture-rack-to-one-platform). A base image published for one architecture with no index is not checked against the target: the Build succeeds, and Processes fail with an exec format error when that architecture is not the one targeted.
+
+Multi-architecture Builds require `karpenter_enabled=true`. From `3.25.9` a development Build (`convox build --development`, `convox deploy --development`, `convox start`) builds for the target architecture when exactly one is targeted, and with both it builds for the build node's own architecture. Builds run with `--external` build on your own machine and never receive a platform pin. Containerized [Resources](/reference/primitives/app/resource) are not architecture-aware and several of the default images have no arm64 variant, so an arm64-capable Rack is not a good fit for them yet.
+
+Scheduling on a mixed-architecture pool follows standard Kubernetes behavior: service pods carry no architecture constraint by default, so a pod can land on a node of either architecture. A multi-architecture image runs on either. A single-architecture image scheduled onto a node of the other architecture fails with an exec format error. Convox system images are multi-arch, and services that reference an external multi-arch image with `image:` can schedule onto either architecture freely.
+
+To pin an individual service to one architecture on a mixed pool, set `nodeSelectorLabels` on the service against the standard architecture label:
+
+```yaml
+services:
+  web:
+    nodeSelectorLabels:
+      kubernetes.io/arch: arm64
+```
+
+This renders as a required node affinity on the service's deployment, timers, and `convox run` pods, so its processes only schedule onto nodes matching the image's architecture. See [Workload Placement](/configuration/scaling/workload-placement) for the full `nodeSelectorLabels` reference.
+
+### Resource Limits
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_cpu_limit` | number | `100` | > 0 | Maximum total vCPUs Karpenter can provision across all workload nodes. Safety limit against runaway scaling. |
+| `karpenter_memory_limit_gb` | number | `400` | > 0 | Maximum total memory (GiB) Karpenter can provision across all workload nodes. |
+
+### Node Lifecycle and Consolidation
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_consolidation_enabled` | bool | `true` | | When `true`: `WhenEmptyOrUnderutilized` (consolidates underutilized and empty nodes). When `false`: `WhenEmpty` (only removes fully empty nodes). |
+| `karpenter_consolidate_after` | string | `30s` | `^\d+[smh]$` | Delay before consolidation triggers (e.g., `30s`, `5m`, `1h`). |
+| `karpenter_node_expiry` | string | `720h` | `^\d+h$` or `Never` | Maximum node lifetime before automatic replacement. Default is 30 days. `Never` disables automatic replacement. |
+| `karpenter_disruption_budget_nodes` | string | `10%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `10%`, `3`). Percentages above `100%` are rejected. Applies to consolidation and drift. Node expiry is not budget-gated. |
+| [`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) | string | _(none)_ | Five-field cron firing at most once a day, or `@hourly`, `@daily`, `@midnight`, `@weekly` | Opens a recurring window in which Karpenter will not replace nodes for drift or consolidation. Available from Rack version `3.25.6`. |
+| [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) | string | _(none)_ | `8h`, `90m` or `8h30m`, shorter than the schedule's firing gap | How long the window stays open. Available from Rack version `3.25.6`. |
+
+A Rack update that carries a new Karpenter chart version can change the NodePool drift hash, which makes Karpenter replace the existing nodes once, gradually. That replacement is graceful and bounded by `karpenter_disruption_budget_nodes`, so lower it before the update if you want a slower roll.
+
+Drift also fires with no Rack update at all. On the default `al2023@latest` alias, each AL2023 AMI AWS publishes drifts every pool and rolls its nodes, so a fleet can replace itself overnight. Set [`karpenter_ami_alias`](/configuration/rack-parameters/aws/karpenter_ami_alias) to decide when that happens. See [Telling Drift From Expiry](/configuration/rack-parameters/aws/karpenter_node_expiry#telling-drift-from-expiry) for which of the two replaced a set of nodes.
+
+#### The Disruption Window
+
+`karpenter_disruption_block_schedule` and `karpenter_disruption_block_duration` open a recurring window in which Karpenter will not replace a node for drift or for consolidation of an underutilized node. They must be set together and cleared together, and they apply to the workload pool, the build pool, and every pool in `additional_karpenter_nodepools_config`.
+
+Two things continue inside the window. Empty node reclamation still runs, because reclaiming a node that carries only daemonset pods evicts nothing. Node expiry still runs: a node reaching `karpenter_node_expiry` is deleted inside the window exactly as it is outside, with no budget and no replacement waiting.
+
+Window times are UTC. Karpenter builds its cron with a hardcoded `TZ=UTC` and there is no time zone parameter.
+
+`expireAfter` is copied onto each NodeClaim when it is created, so `karpenter_node_expiry=Never` reaches a node only when that node is replaced. Set `karpenter_node_expiry=Never` first, let the drift roll replace the fleet, and set the window after that. In the other order the window blocks the roll that would have disarmed the fleet.
+
+See [karpenter_disruption_block_schedule](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) for the accepted schedules, the rejected combinations, and the worked maintenance-window examples.
+
+### Storage
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_node_disk` | number | `0` | >= 0 | EBS volume size in GiB for Karpenter-provisioned nodes. `0` inherits the Rack's [`node_disk`](/configuration/rack-parameters/aws/node_disk) value. |
+| `karpenter_node_volume_type` | string | `gp3` | `gp2`, `gp3`, `io1`, `io2` | EBS volume type for Karpenter-provisioned nodes. |
+| [`karpenter_node_volume_iops`](/configuration/rack-parameters/aws/karpenter_node_volume_iops) | number | `0` | `0`, or 3000 to 80000 | Provisioned IOPS for Karpenter node root volumes. `0` inherits [`node_volume_iops`](/configuration/rack-parameters/aws/node_volume_iops). gp3 only. Available from Rack version `3.25.7`. |
+| [`karpenter_node_volume_throughput`](/configuration/rack-parameters/aws/karpenter_node_volume_throughput) | number | `0` | `0`, or 125 to 1000 | Provisioned throughput in MiB/s for Karpenter node root volumes. `0` inherits [`node_volume_throughput`](/configuration/rack-parameters/aws/node_volume_throughput). gp3 only, and capped at a quarter of the provisioned IOPS. Available from Rack version `3.25.7`. |
+| `karpenter_node_os` | string | `al2023` | `al2023`, `bottlerocket` | Node OS for the workload NodePool. `bottlerocket` selects the EKS-optimized Bottlerocket AMI and the two-volume layout it requires (a `gp3` OS volume on `/dev/xvda` and a data volume on `/dev/xvdb`). |
+| [`karpenter_ami_alias`](/configuration/rack-parameters/aws/karpenter_ami_alias) | string | _(none)_ | `al2023@latest` or `al2023@vYYYYMMDD` | Pins the AL2023 workload, build and custom node pools to one EKS-optimized AMI version. Unset, every pool tracks `al2023@latest`. An `amiSelectorTerms` override in `karpenter_config`, or a pool's `ami_id`, wins over it. Available from Rack version `3.25.6`. |
+
+### Labels and Taints
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_node_labels` | string | _(none)_ | Comma-separated `key=value`; no double quotes; `convox.io/nodepool` reserved | Custom labels added alongside the default `convox.io/nodepool=workload` label. |
+| `karpenter_node_taints` | string | _(none)_ | Comma-separated `key=value:Effect`; effect must be `NoSchedule`, `PreferNoSchedule`, or `NoExecute` | Custom taints on workload nodes. Prevents pods without matching tolerations from scheduling on these nodes. See [Using Taints to Protect Nodes](#using-taints-to-protect-nodes) below. |
+
+## Build NodePool Parameters
+
+These parameters control the dedicated build NodePool. The build NodePool is only created when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled).
+
+| Parameter | Type | Default | Validation | Description |
+|-----------|------|---------|------------|-------------|
+| `karpenter_build_instance_families` | string | _(workload families)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Instance families for build nodes. Falls back to workload families if unset. |
+| `karpenter_build_instance_sizes` | string | _(workload sizes)_ | `^[a-z0-9]+(,[a-z0-9]+)*$` | Instance sizes for build nodes. Falls back to workload sizes if unset. |
+| `karpenter_build_capacity_types` | string | `on-demand` | `on-demand`, `spot`, or `on-demand,spot` | Purchasing model for build nodes. |
+| `karpenter_build_cpu_limit` | number | `32` | > 0 | Maximum total vCPUs for the build NodePool. |
+| `karpenter_build_memory_limit_gb` | number | `256` | > 0 | Maximum total memory (GiB) for the build NodePool. |
+| `karpenter_build_consolidate_after` | string | `60s` | `^\d+[smh]$` | Delay before empty build nodes are consolidated. |
+| [`karpenter_build_disruption_budget_nodes`](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) | string | `100%` | `^((100\|[0-9]{1,2})%\|[0-9]+)$` | Maximum empty build nodes reclaimed simultaneously: a node count, or a percentage from `0%` to `100%` (e.g., `100%`, `1`). Drift on the build pool stays capped at a fixed `10%`. |
+| [`karpenter_build_imds_tokens`](/configuration/rack-parameters/aws/karpenter_build_imds_tokens) | string | _(none)_ | `optional`, `required` | IMDSv2 token requirement for build nodes. Unset inherits the Rack's [`imds_http_tokens`](/configuration/rack-parameters/aws/imds_http_tokens) value. |
+| [`karpenter_build_imds_hop_limit`](/configuration/rack-parameters/aws/karpenter_build_imds_hop_limit) | number | `0` | >= 0 | IMDS response hop limit for build nodes. `0` inherits the Rack's [`imds_http_hop_limit`](/configuration/rack-parameters/aws/imds_http_hop_limit) value. |
+| `karpenter_build_node_labels` | string | _(none)_ | Comma-separated `key=value`; no double quotes; `convox-build` and `convox.io/nodepool` reserved | Extra labels added alongside default `convox-build=true` and `convox.io/nodepool=build` labels. |
+
+### Build Node Behavior with Karpenter
+
+When Karpenter is enabled and `build_node_enabled=true`:
+
+- The EKS managed build node group's minimum drops to zero. Nodes the group is already running stay: Convox does not lower a node group's running size, and Cluster Autoscaler no longer targets that group. Builds keep landing on them, because the static group and the Karpenter build NodePool both carry the `convox-build=true` label. Remove them by setting [`build_node_enabled=false`](/configuration/rack-parameters/aws/build_node_enabled) or by changing [`build_node_type`](/configuration/rack-parameters/aws/build_node_type), either of which replaces the group
+- Karpenter's build NodePool provisions nodes on-demand when build pods are scheduled
+- Build nodes have a `dedicated=build:NoSchedule` taint, so only build pods run on them
+- Build nodes scale back to zero after the last build completes. Two parameters govern the turndown: `karpenter_build_consolidate_after` (default `60s`) sets **when** empty build nodes are reclaimed, and [`karpenter_build_disruption_budget_nodes`](/configuration/rack-parameters/aws/karpenter_build_disruption_budget_nodes) (default `100%`) sets **how many** go at once
+- Architecture is auto-detected from `build_node_type`
+- Build nodes can run under a dedicated least-privilege IAM role by setting [`build_node_minimal_role_enabled`](/configuration/rack-parameters/aws/build_node_minimal_role_enabled), and their IMDS options can be set independently of workload nodes with `karpenter_build_imds_tokens` and `karpenter_build_imds_hop_limit`
+- The existing `build_node_min_count` parameter does not apply when Karpenter manages builds
+
+Keep `karpenter_build_instance_families` consistent with the build architecture: restricting build nodes to families of the other architecture (for example `c7g` while `build_node_type` is amd64) leaves no instance type satisfying both constraints, and builds cannot schedule. As of `3.25.3`, `convox rack params set` rejects that combination instead of letting it through, with `karpenter_build_instance_families (c7g) has no family matching the build_node_type architecture (amd64); Karpenter could not provision any matching node`. The same check applies to `karpenter_instance_families` against `karpenter_arch`, and it only runs when `karpenter_enabled=true`. Clear the restriction with `convox rack params set karpenter_build_instance_families=`.
+
+## Advanced Configuration
+
+### `karpenter_config` (Workload NodePool Override)
+
+For users who need access to the full Karpenter API beyond what individual parameters expose, `karpenter_config` provides a JSON escape hatch for the workload NodePool and its EC2NodeClass.
+
+Individual `karpenter_*` parameters build the defaults. `karpenter_config` overrides them at the section level. For example, setting `nodePool.template.spec.requirements` in the config completely replaces the defaults built from `karpenter_instance_families`, `karpenter_instance_sizes`, etc.
+
+**Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path. Maximum 64KB.
+
+**Structure:**
+
+```json
+{
+  "nodePool": {
+    "template": {
+      "metadata": { "labels": { "custom-key": "custom-value" } },
+      "spec": {
+        "requirements": [],
+        "taints": [],
+        "expireAfter": "720h",
+        "terminationGracePeriod": "48h"
+      }
+    },
+    "limits": { "cpu": "200", "memory": "800Gi" },
+    "disruption": {
+      "consolidationPolicy": "WhenEmpty",
+      "consolidateAfter": "5m",
+      "budgets": [
+        { "nodes": "10%" },
+        { "nodes": "0", "schedule": "0 9 * * mon-fri", "duration": "8h" }
+      ]
+    },
+    "weight": 50
+  },
+  "ec2NodeClass": {
+    "blockDeviceMappings": [],
+    "metadataOptions": { "httpTokens": "required", "httpPutResponseHopLimit": 2 },
+    "tags": { "Environment": "production", "CostCenter": "engineering" },
+    "amiSelectorTerms": [{ "alias": "al2023@latest" }],
+    "userData": "...",
+    "detailedMonitoring": true,
+    "associatePublicIPAddress": false,
+    "instanceStorePolicy": "RAID0"
+  }
+}
+```
+
+**Fields only available via `karpenter_config`:**
+
+| Field | Description |
+|-------|-------------|
+| `nodePool.template.spec.terminationGracePeriod` | Time allowed for graceful pod eviction before force termination |
+| `nodePool.disruption.budgets[].schedule` | Cron-based disruption windows (e.g., no disruptions during business hours) |
+| `ec2NodeClass.userData` | Custom EC2 user data script |
+| `ec2NodeClass.detailedMonitoring` | Enable CloudWatch detailed monitoring |
+| `ec2NodeClass.associatePublicIPAddress` | Associate public IP with Karpenter nodes |
+| `ec2NodeClass.instanceStorePolicy` | Instance store disk policy (e.g., `RAID0`) |
+| `ec2NodeClass.amiSelectorTerms` | Custom AMI selection. The default follows [`karpenter_node_os`](/configuration/rack-parameters/aws/karpenter_node_os): `al2023@latest` or `bottlerocket@latest`. An explicit `amiSelectorTerms` overrides it. |
+| `ec2NodeClass.amiFamily` | AMI family, which decides the generated userData format. Rules below the table. |
+| `ec2NodeClass.metadataOptions` | EC2 instance metadata options (IMDSv2 settings) |
+| `ec2NodeClass.blockDeviceMappings` | Custom EBS volume configuration. Replaces the whole generated block device list, so `karpenter_node_disk`, `karpenter_node_volume_type`, `karpenter_node_volume_iops` and `karpenter_node_volume_throughput` no longer reach the workload pool. |
+
+`amiFamily` accepts `AL2`, `AL2023`, `Bottlerocket`, `Custom`, `Windows2019`, `Windows2022`, or `Windows2025`, and is only accepted alongside `amiSelectorTerms`. Karpenter requires it whenever `amiSelectorTerms` carries no `alias`, and where an `alias` is present, Karpenter requires the family to match that alias's family or to be `Custom`.
+
+`Custom` generates no userData, so a `Custom` family also needs `userData`. Karpenter documents that a family other than the one matching [`karpenter_node_os`](/configuration/rack-parameters/aws/karpenter_node_os) needs a matching `blockDeviceMappings` override, because the default mapping follows the OS Convox selected.
+
+`amiFamily` is available from Rack version `3.25.5`. A Rack downgraded below it renders the selector without the family, and Karpenter rejects an `amiSelectorTerms` that carries neither an alias nor a family, so remove `amiSelectorTerms` from `karpenter_config` before downgrading.
+
+Setting either `ec2NodeClass.userData` or `ec2NodeClass.amiSelectorTerms` suppresses [`kubelet_registry_pull_qps`](/configuration/rack-parameters/aws/kubelet_registry_pull_qps), [`kubelet_registry_burst`](/configuration/rack-parameters/aws/kubelet_registry_burst) and [`fast_image_pull_enable`](/configuration/rack-parameters/aws/fast_image_pull_enable) on the workload pool, each on its own, because both replace the generated NodeConfig. The build and additional pools do not read `karpenter_config` at all and keep those settings.
+
+**Protected fields** (managed by Convox, cannot be overridden):
+
+| Field | Reason |
+|-------|--------|
+| `ec2NodeClass.role` | IAM role managed by Convox |
+| `ec2NodeClass.instanceProfile` | IAM instance profile managed by Convox |
+| `ec2NodeClass.subnetSelectorTerms` | Subnet discovery tags managed by Convox |
+| `ec2NodeClass.securityGroupSelectorTerms` | Security group discovery tags managed by Convox |
+| `nodePool.template.spec.nodeClassRef` | Must reference Convox-managed EC2NodeClass |
+| `nodePool.template.metadata.labels["convox.io/nodepool"]` | Reserved Convox label |
+| `ec2NodeClass.tags.Name` | Reserved tag (forced to `{rack}/karpenter/workload`) |
+| `ec2NodeClass.tags.Rack` | Reserved tag (forced to Rack name) |
+
+**Example: maintenance window with no disruptions during business hours**
+
+```bash
+$ convox rack params set karpenter_config='{"nodePool":{"disruption":{"budgets":[{"nodes":"10%"},{"nodes":"0","schedule":"0 9 * * mon-fri","duration":"8h"}]}}}' -r rackName
+Updating parameters... OK
+```
+
+A `budgets` list whose entries carry different keys, as this one does, requires Rack version `3.25.6` or later. On an earlier Rack it fails `terraform apply`.
+
+[`karpenter_disruption_block_schedule`](/configuration/rack-parameters/aws/karpenter_disruption_block_schedule) and [`karpenter_disruption_block_duration`](/configuration/rack-parameters/aws/karpenter_disruption_block_duration) open a window in two parameters and cover the build and custom pools that this example does not. The entry they generate is narrower: it carries `reasons: ["Drifted", "Underutilized"]`, so empty node reclamation keeps running inside the window, while the entry above carries no `reasons` and blocks every reason, `Empty` included. Use `karpenter_config` for a budget list the two parameters cannot express, such as several windows or a per-reason cap. The two cannot be combined with a `budgets` list here, because the list replaces the generated budgets, window entry included.
+
+### `additional_karpenter_nodepools_config` (Custom NodePools)
+
+Creates additional NodePools beyond the built-in workload and build pools. Each entry in the JSON array produces its own NodePool + EC2NodeClass pair with the same infrastructure settings (subnet discovery, security groups, IAM role) as the workload pool.
+
+Use this for dedicated GPU pools, tenant isolation, specialized instance requirements, or batch processing pools.
+
+**Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.
+
+**Per-pool fields:**
+
+| Field | Type | Default | Required | Description |
+|-------|------|---------|----------|-------------|
+| `name` | string | | **yes** | Unique pool identifier. Lowercase alphanumeric with dashes, max 63 chars. Reserved names: `workload`, `build`, `default`, `system`. |
+| `instance_families` | string | _(all)_ | no | Comma-separated EC2 families (e.g., `g5,g6`). |
+| `instance_sizes` | string | _(all)_ | no | Comma-separated sizes (e.g., `xlarge,2xlarge`). |
+| `capacity_types` | string | `on-demand` | no | `on-demand`, `spot`, or `on-demand,spot`. |
+| `arch` | string | `amd64` | no | `amd64`, `arm64`, or `amd64,arm64`. |
+| `cpu_limit` | integer | `100` | no | Maximum total vCPUs for this pool. |
+| `memory_limit_gb` | integer | `400` | no | Maximum total memory (GiB) for this pool. |
+| `consolidation_policy` | string | `WhenEmptyOrUnderutilized` | no | `WhenEmpty` or `WhenEmptyOrUnderutilized`. |
+| `consolidate_after` | string | `30s` | no | Delay before consolidation (e.g., `30s`, `5m`). |
+| `node_expiry` | string | _(the Rack's `karpenter_node_expiry`)_ | no | Max node lifetime. `Never` to disable. From Rack version `3.25.6` a pool that omits the field inherits the Rack's [`karpenter_node_expiry`](/configuration/rack-parameters/aws/karpenter_node_expiry), which is `720h` unless you changed it; earlier versions used a fixed `720h`. |
+| `disruption_budget_nodes` | string | `10%` | no | Max nodes disrupted simultaneously: a node count, or a percentage from `0%` to `100%`. Percentages above `100%` are rejected. Applies to consolidation and drift. Node expiry is not budget-gated. |
+| `disk` | integer | _(workload value)_ | no | EBS volume size in GiB. `0` inherits workload pool disk. |
+| `volume_type` | string | `gp3` | no | `gp2`, `gp3`, `io1`, `io2`. |
+| `volume_iops` | integer | _(the Rack's `karpenter_node_volume_iops`)_ | no | Provisioned IOPS for this pool's root volume. `0`, or 3000 to 80000. gp3 only. Clamped at 500 IOPS per GiB of this pool's `disk`. From Rack version `3.25.7`. |
+| `volume_throughput` | integer | _(the Rack's `karpenter_node_volume_throughput`)_ | no | Provisioned throughput in MiB/s for this pool's root volume. `0`, or 125 to 1000. gp3 only. Clamped at a quarter of this pool's IOPS, so above 750 also needs `volume_iops`. From Rack version `3.25.7`. |
+| `ami_id` | string | _(none)_ | no | Custom AMI for this pool's nodes, e.g. `ami-0123456789abcdef0`. The pool renders `amiFamily: AL2023`, so the AMI must be AL2023-based. See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes). |
+| `weight` | integer | _(unset)_ | no | Scheduling weight (0-100). Higher = preferred. |
+| `labels` | string | _(none)_ | no | Comma-separated `key=value`. `convox.io/nodepool` is reserved. |
+| `taints` | string | _(none)_ | no | Comma-separated `key=value:Effect`. Valid effects: `NoSchedule`, `PreferNoSchedule`, `NoExecute`. Prevents pods without matching tolerations from scheduling on these nodes. See [Using Taints to Protect Nodes](#using-taints-to-protect-nodes) below. |
+| `dedicated` | bool | `false` | no | When `true`, adds a `dedicated-node={name}:NoSchedule` taint automatically. Services with `nodeSelectorLabels: { convox.io/nodepool: {name} }` get the matching toleration injected. Simpler alternative to manual `taints` for pool isolation. |
+
+Every custom pool automatically gets a `convox.io/nodepool={name}` label. Target Services to a custom pool using `nodeSelectorLabels` in `convox.yml`:
+
+```yaml
+services:
+  ml-worker:
+    build: .
+    nodeSelectorLabels:
+      convox.io/nodepool: gpu
+```
+
+**Example: Dedicated GPU pool (simple path)**
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","dedicated":true}]' -r rackName
+Updating parameters... OK
+```
+
+```yaml
+# convox.yml
+services:
+  gpu-worker:
+    build: .
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+    nodeSelectorLabels:
+      convox.io/nodepool: gpu
+```
+
+With `dedicated: true`, only services targeting this pool (via `nodeSelectorLabels`) can schedule on it. No manual taint configuration needed. `convox run gpu-worker` also inherits the placement automatically.
+
+**Example: GPU pool and high-memory pool (advanced)**
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config='[{"name":"gpu","instance_families":"g5,g6","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","disk":200},{"name":"high-mem","instance_families":"r5,r6i","instance_sizes":"xlarge,2xlarge,4xlarge","capacity_types":"on-demand,spot","cpu_limit":200,"memory_limit_gb":1600,"labels":"pool=high-mem"}]' -r rackName
+Updating parameters... OK
+```
+
+### Node Pool Validation
+
+A Service pinned to a pool the Rack does not have cannot schedule. As of `3.25.4` Convox checks the reference before the work that depends on it starts, instead of letting the pods sit Pending.
+
+Three surfaces are checked against the `convox.io/nodepool` labels on the Rack's live `NodePool` objects:
+
+| Surface | Checked on |
+|---------|------------|
+| A Service's `nodeSelectorLabels` entry keyed `convox.io/nodepool` | Release promotion, which includes `convox deploy` |
+| The `convox.io/nodepool` entry in `convox run --node-labels` | Each run |
+| The [`BuildLabels`](/configuration/app-parameters/aws/BuildLabels) App parameter | Each build |
+
+A mismatch fails immediately, naming the pool you asked for and the pools that exist:
+
+```text
+convox.yml: service "web" targets Karpenter node pool "gpu-lg", which does not exist on this rack.
+  Existing pools: build, workload
+  If you just added this pool, wait for the rack update to finish and retry.
+  Otherwise correct the node pool name, or add the pool:
+    convox rack params set additional_karpenter_nodepools_config=...
+```
+
+The opening clause names the surface that supplied the value: `convox.yml: service "web"`, `--node-labels`, or `the BuildLabels app parameter`. A [Timer](/reference/primitives/app/timer) is covered by the manifest check, because it renders the node selector labels of the Service it references.
+
+Three behaviors to know:
+
+- **A Service at `scale.count: 0` still blocks the App.** The manifest check reads every Service regardless of replica count, so a single zero-scaled Service pinned to a missing pool holds up the healthy Services beside it. `convox deploy --force` deploys it, as do `convox releases promote --force` and `convox releases rollback --force`. The error text does not mention `--force`.
+- **`convox env set --promote` has no `--force`.** Neither do `convox env unset --promote` nor `convox env edit --promote`. On an App pinned to a missing pool the Build still runs and the Release is still created; only the promote is refused, which leaves the App on its previous Release with the change recorded and unapplied. Apply it in two commands instead: run without `--promote`, then `convox releases promote <release> --force`.
+- **Commands that re-promote the current Release are not checked.** `convox apps params set`, `convox apps lock`, and `convox apps unlock` keep working on an App pinned to a pool that was deliberately removed.
+
+These three checks run on the Rack, so they apply to every client against a `3.25.4` Rack, and they fail open: when Karpenter is not enabled, when the `NodePool` list cannot be read, or when no pool carries a `convox.io/nodepool` label, the check is skipped rather than treated as a mismatch. That also covers every non-AWS provider.
+
+Dropping a pool from the Rack is guarded separately, in the CLI. See [Removing a Pool](/configuration/rack-parameters/aws/additional_karpenter_nodepools_config#removing-a-pool).
+
+### Node Overlays (Fractional GPUs)
+
+A NodeOverlay adjusts how Karpenter simulates a set of instance types without changing the NodePool itself. Overlays can advertise extended resources, override the price Karpenter uses in its cost model, or apply a percentage price adjustment. Configure them with the [`karpenter_node_overlays_config`](/configuration/rack-parameters/aws/karpenter_node_overlays_config) parameter, which also enables the Karpenter `NodeOverlay` feature gate when non-empty.
+
+The main use is fractional-GPU instance families such as `g6f` and `gr6f`. AWS reports these types with a GPU count of zero, so Karpenter prices them but will not provision them for `nvidia.com/gpu` requests. An overlay that advertises `nvidia.com/gpu` on those types lets Karpenter schedule GPU workloads onto them.
+
+**Walkthrough: schedule a GPU service on g6f**
+
+1. Advertise the GPU resource on the g6f/gr6f types with an overlay:
+
+   ```bash
+   $ convox rack params set karpenter_node_overlays_config='[{"name":"g6f-fractional-gpu","weight":100,"requirements":[{"key":"node.kubernetes.io/instance-type","operator":"In","values":["g6f.large","g6f.xlarge","g6f.2xlarge","g6f.4xlarge","gr6f.4xlarge"]}],"capacity":{"nvidia.com/gpu":"1"}}]' -r rackName
+   Updating parameters... OK
+   ```
+
+2. Create a g6f NodePool and enable the device plugin so the advertised GPU is real:
+
+   ```bash
+   $ convox rack params set additional_karpenter_nodepools_config='[{"name":"g6f","instance_families":"g6f","capacity_types":"on-demand","cpu_limit":64,"memory_limit_gb":256,"taints":"nvidia.com/gpu=true:NoSchedule","labels":"pool=g6f"}]' nvidia_device_plugin_enable=true -r rackName
+   Updating parameters... OK
+   ```
+
+3. Target the pool from `convox.yml`. GPU services auto-tolerate the `nvidia.com/gpu` taint:
+
+   ```yaml
+   # convox.yml
+   services:
+     ml-worker:
+       build: .
+       scale:
+         gpu:
+           count: 1
+           vendor: nvidia
+       nodeSelectorLabels:
+         convox.io/nodepool: g6f
+   ```
+
+> The overlay's `capacity` affects scheduling simulation only. The node still needs the NVIDIA device plugin to advertise a real `nvidia.com/gpu`, and `nvidia_device_time_slicing_replicas` (if set) multiplies fractional GPUs the same way it does full ones.
+
+### Custom AMIs on Node Pools
+
+Set `ami_id` on a pool in `additional_karpenter_nodepools_config` to run its nodes on your own AL2023-based AMI instead of the EKS-optimized one Convox selects. A GPU pool needs this to run an NVIDIA driver newer than the one AWS ships, because the driver comes from the AMI. Pinning an id also ends the pool's AMI updates, including OS security patches.
+
+See [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for the field format, the AMI build, and what changes once an id is pinned.
+
+### Using Taints to Protect Nodes
+
+Without taints, any pod can land on a custom NodePool's nodes if they have spare capacity, even pods that don't need those resources. For example, a basic web service could get scheduled to an expensive GPU instance. Taints prevent this by rejecting pods that lack a matching toleration.
+
+> **Important:** `convox.yml` does not have a `tolerations` field. You cannot manually specify tolerations in your Service definition. Instead, tolerations are handled automatically through the mechanisms described below.
+
+#### GPU workloads
+
+For GPU pools with an `nvidia.com/gpu` taint, use [`scale.gpu`](/configuration/scaling/autoscaling) in `convox.yml` to request GPU resources:
+
+```yaml
+services:
+  ml-worker:
+    build: .
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+    nodeSelectorLabels:
+      convox.io/nodepool: gpu
+```
+
+When a Service declares `scale.gpu`, Convox adds the GPU extended-resource key (e.g. `nvidia.com/gpu` or `amd.com/gpu`) to the pod's resource requests AND emits a matching `tolerations:` entry (`operator: Exists`, `effect: NoSchedule`) directly in the pod spec. Pods schedule onto tainted GPU nodepools without requiring the Kubernetes `ExtendedResourceToleration` admission controller (which is not enabled by default on EKS).
+
+You must also enable the NVIDIA device plugin on the Rack:
+
+```bash
+$ convox rack params set nvidia_device_plugin_enable=true -r rackName
+Updating parameters... OK
+```
+
+#### Dedicated pools
+
+The simplest way to isolate a pool is `dedicated: true`. This auto-applies a `dedicated-node={name}:NoSchedule` taint and Convox auto-injects the matching toleration for any Service with `nodeSelectorLabels: { convox.io/nodepool: {name} }`. No external webhooks or manual taint configuration needed.
+
+#### Non-GPU custom taints
+
+For custom taints beyond `dedicated` (e.g., tenant isolation with specific taint keys), Convox does not auto-inject tolerations. Pods targeting pools with custom non-GPU taints will need tolerations added through an external mechanism such as a Kubernetes mutating admission webhook. For most non-GPU use cases, using `dedicated: true` or `labels` + `nodeSelectorLabels` without taints is the recommended approach. Karpenter only provisions nodes for pods that need them, so unwanted pods won't cause unnecessary scaling.
+
+#### DaemonSets on tainted nodes
+
+Node-level DaemonSets (fluentd, `aws-node`, `kube-proxy`, `ebs-csi-node`, `efs-csi-node`, `eks-pod-identity-agent`) use `operator: Exists` tolerations and are **not affected** by custom taints. They will continue to run on all nodes, including tainted custom NodePool nodes.
+
+You can also use a JSON file:
+
+```bash
+$ convox rack params set additional_karpenter_nodepools_config=/path/to/nodepools.json -r rackName
+Updating parameters... OK
+```
+
+## System Node Behavior
+
+System nodes are **always** EKS managed node groups, regardless of whether Karpenter is enabled. This ensures the Karpenter controller itself and other critical Rack components cannot be disrupted by Karpenter's own consolidation or scaling decisions.
+
+Convox runs three system node groups on a `high_availability` Rack, one per availability zone, and a single group otherwise. With `karpenter_enabled=true`, each group's minimum size is [`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az), which defaults to `1`.
+
+| Rack | System node groups | System nodes at the default |
+|------|--------------------|-----------------------------|
+| `high_availability=true` | 3, one per zone | 3 |
+| `high_availability=false` | 1 | 1 |
+
+The value applies to each group, so `karpenter_system_node_min_count_per_az=2` runs six system nodes on a `high_availability` Rack and two on a Rack with `high_availability=false`.
+
+Nothing scales these groups while Karpenter is enabled. Cluster Autoscaler targets additional node groups only, and Convox never lowers a node group's running size, so nodes the Rack was already running when Karpenter was enabled keep running and lowering the parameter removes none of them.
+
+When `karpenter_enabled=true`:
+
+- System node capacity type is forced to `ON_DEMAND`
+- System nodes get the `convox.io/system-node=true` label
+- The following pods are pinned to system nodes via `nodeSelector`:
+  - Rack API server and the atom controller
+  - Router, public and internal. On a [`router_type=contour`](/configuration/rack-parameters/aws/router_type) Rack both the Contour control plane and the Envoy data plane are pinned
+  - Resolver
+  - Metrics server and metrics scraper
+  - Cluster Autoscaler (if running)
+  - Karpenter controller
+  - CoreDNS
+  - EBS CSI controller
+  - EFS CSI controller (if [`efs_csi_driver_enable`](/configuration/rack-parameters/aws/efs_csi_driver_enable) is `true`)
+  - AWS Load Balancer Controller
+  - cert-manager controller, webhook and cainjector
+  - Vertical Pod Autoscaler (if [`vpa_enable`](/configuration/rack-parameters/aws/vpa_enable) is `true`)
+  - KEDA (if [`keda_enable`](/configuration/rack-parameters/aws/keda_enable) is `true`)
+- Fluentd DaemonSet is **not** pinned; it runs on all nodes for log collection
+
+> The `convox.io/system-node=true` label is tied to `karpenter_auth_mode` (not `karpenter_enabled`) to ensure labels persist during enable/disable transitions.
+
+## Cluster Autoscaler Coexistence
+
+Karpenter and Cluster Autoscaler (CAS) can coexist when additional (non-Karpenter) node groups are present. Only [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) counts here: the CAS replica count and the explicit `--nodes` flags both read that parameter alone, and [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) reaches neither.
+
+| Scenario | CAS state | CAS targeting |
+|----------|----------|---------------|
+| Karpenter enabled, no additional node groups | Scaled to 0 replicas | N/A |
+| Karpenter enabled, additional build groups only | Scaled to 0 replicas | N/A. Those groups stay at their configured size and nothing scales them |
+| Karpenter enabled, additional node groups (all `dedicated=true`) | Running (1 replica, pinned to system nodes) | Explicit `--nodes` per additional ASG (no auto-discovery) |
+| Karpenter disabled | Running (normal) | Auto-discovery |
+
+Enabling Karpenter requires all existing [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entries to have `dedicated=true`. This prevents scheduling overlap between CAS-managed and Karpenter-managed nodes.
+
+## Disabling Karpenter
+
+When disabling Karpenter, set `node_type` to a larger instance alongside `karpenter_enabled=false` so the managed node group can accommodate workloads returning from Karpenter-provisioned nodes:
+
+```bash
+$ convox rack params set karpenter_enabled=false node_type=t3.xlarge -r rackName
+Updating parameters... OK
+```
+
+This triggers the following sequence:
+
+1. Karpenter controller drains workload and build nodes (5-minute graceful drain window)
+2. All Karpenter NodePools, EC2NodeClasses, IAM resources, and SQS queue are destroyed
+3. The system node groups are replaced rather than scaled up: the new `node_type` changes their names, so Convox creates the new groups and then drains and deletes every existing system node in the same apply
+4. The managed build node group's minimum returns to `build_node_min_count` and Cluster Autoscaler resumes managing it
+5. Cluster Autoscaler resumes normal auto-discovery mode
+6. System pod `nodeSelector` for `convox.io/system-node` is removed
+
+### Cleaning Up Orphaned Nodes
+
+If Karpenter nodes remain after disabling (for example, due to finalizer deadlocks or interrupted applies), use the cleanup command:
+
+```bash
+$ convox rack karpenter cleanup -r rackName
+Cleaning up Karpenter nodes... OK
+```
+
+This cordons, drains, and deletes any remaining Karpenter-labeled nodes, terminates their backing EC2 instances, and removes stale NodePool and EC2NodeClass CRD objects. Safe to run multiple times.
+
+> `karpenter_auth_mode` cannot be reverted. The EKS access config migration and discovery tags remain. This is safe and has no cost or operational impact. It means the cluster is ready for Karpenter to be re-enabled at any time.
+
+## Constraints and Limitations
+
+- **AWS only.** Karpenter parameters are rejected for GCP, Azure, DigitalOcean, and other providers.
+- **Rack name length.** Racks with Karpenter enabled are limited to 26-character names (due to derived AWS resource names like `{name}-karpenter-nodes`).
+- **BYOVPC shared VPCs.** If multiple Racks share a VPC (BYOVPC into another Rack's VPC), only one may enable Karpenter due to `karpenter.sh/discovery` tag collision on shared subnets and security groups.
+- **`karpenter_auth_mode` is one-way.** Cannot be reverted once enabled (matching AWS EKS behavior for access config migration).
+- **Additional node groups must be `dedicated=true`.** Required when enabling Karpenter to prevent scheduling overlap between CAS and Karpenter.
+
+## See Also
+
+- [Workload Placement](/configuration/scaling/workload-placement) for node group-based placement with Cluster Autoscaler
+- [Autoscaling](/configuration/scaling/autoscaling) for horizontal pod autoscaling and GPU scaling
+- [build_node_enabled](/configuration/rack-parameters/aws/build_node_enabled) for enabling the dedicated build node
+- [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) for custom EKS managed node groups
+- [node_type](/configuration/rack-parameters/aws/node_type) for primary node instance type
+- [node_disk](/configuration/rack-parameters/aws/node_disk) for primary node disk size
+- [GPU Nodes and Custom AMIs](/configuration/scaling/gpu-nodes) for pinning a pool to your own AMI and the NVIDIA driver it carries
+- [nvidia_device_plugin_enable](/configuration/rack-parameters/aws/nvidia_device_plugin_enable) for GPU workloads
+- [eks_access_entries](/configuration/rack-parameters/aws/eks_access_entries) for migrating to EKS Access Entries (shares the auth mode switch with `karpenter_auth_mode`)
+- [karpenter_system_node_min_count_per_az](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) for how many system nodes each availability zone runs

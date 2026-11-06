@@ -10,6 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper functions for pointer values in tests
+func ptrBool(b bool) *bool {
+	return &b
+}
+
+func ptrInt64(i int64) *int64 {
+	return &i
+}
+
 func TestManifestLoad(t *testing.T) {
 	n := &manifest.Manifest{
 		Balancers: manifest.Balancers{
@@ -62,18 +71,30 @@ func TestManifestLoad(t *testing.T) {
 		Services: manifest.Services{
 			manifest.Service{
 				Name: "api",
-				Annotations: []string{
-					"eks.amazonaws.com/role-arn=arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE",
-					"test.other.com/annotation=myothervalue",
-					"string.test.com/annotation=\"thishasquotes\""},
+				Annotations: manifest.Annotations{
+					manifest.Annotation{
+						Key:   "eks.amazonaws.com/role-arn",
+						Value: "arn:aws:iam::123456789012:role/eksctl-irptest-addon-iamsa-default-my-serviceaccount-Role1-UCGG6NDYZ3UE",
+					},
+					manifest.Annotation{
+						Key:   "test.other.com/annotation",
+						Value: "myothervalue",
+					},
+					manifest.Annotation{
+						Key:   "string.test.com/annotation",
+						Value: "\"thishasquotes\"",
+					},
+				},
 				Build: manifest.ServiceBuild{
 					Manifest: "Dockerfile2",
 					Path:     "api",
 				},
 				Command: "",
 				Deployment: manifest.ServiceDeployment{
-					Minimum: 25,
-					Maximum: 110,
+					Minimum:           25,
+					Maximum:           110,
+					ProgressDeadline:  900,
+					CrashRestartLimit: 5,
 				},
 				Domains: []string{"foo.example.org"},
 				Drain:   30,
@@ -97,7 +118,7 @@ func TestManifestLoad(t *testing.T) {
 				Resources: []string{"database"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 3, Max: 10},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -163,13 +184,23 @@ func TestManifestLoad(t *testing.T) {
 					Grace:    2,
 					Interval: 5,
 					Path:     "/",
+					Port:     manifest.ServicePortScheme{Port: 3001, Scheme: "http"},
 					Timeout:  3,
+				},
+				Liveness: manifest.ServiceLiveness{
+					Grace:            10,
+					Interval:         5,
+					Path:             "/live",
+					Port:             manifest.ServicePortScheme{Port: 3002},
+					Timeout:          5,
+					SuccessThreshold: 1,
+					FailureThreshold: 3,
 				},
 				Init: true,
 				Port: manifest.ServicePortScheme{Port: 3000, Scheme: "https"},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 0, Max: 0},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Singleton: true,
@@ -203,7 +234,7 @@ func TestManifestLoad(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -302,7 +333,7 @@ func TestManifestLoad(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 5},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 					Targets: manifest.ServiceScaleTargets{
 						Cpu:      50,
@@ -391,8 +422,53 @@ func TestManifestLoad(t *testing.T) {
 				},
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
+				},
+				Sticky: false,
+				Termination: manifest.ServiceTermination{
+					Grace: 30,
+				},
+				Timeout: 60,
+				Tls: manifest.ServiceTls{
+					Redirect: true,
+				},
+			},
+			manifest.Service{
+				Name: "secured",
+				Build: manifest.ServiceBuild{
+					Manifest: "Dockerfile",
+					Path:     ".",
+				},
+				Deployment: manifest.ServiceDeployment{
+					Minimum: 50,
+					Maximum: 200,
+				},
+				Drain: 30,
+				Health: manifest.ServiceHealth{
+					Grace:    5,
+					Path:     "/",
+					Interval: 5,
+					Timeout:  4,
+				},
+				Init: true,
+				Port: manifest.ServicePortScheme{Port: 8080, Scheme: "http"},
+				Scale: manifest.ServiceScale{
+					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
+					Cpu:    250,
+					Memory: 512,
+				},
+				SecurityContext: manifest.ServiceSecurityContext{
+					RunAsNonRoot:             ptrBool(true),
+					RunAsUser:                ptrInt64(1000),
+					RunAsGroup:               ptrInt64(1000),
+					ReadOnlyRootFilesystem:   ptrBool(true),
+					AllowPrivilegeEscalation: ptrBool(false),
+					Capabilities: &manifest.ServiceSecurityContextCapabilities{
+						Drop: []string{"ALL"},
+						Add:  []string{"NET_BIND_SERVICE"},
+					},
+					SeccompProfile: "RuntimeDefault",
 				},
 				Sticky: false,
 				Termination: manifest.ServiceTermination{
@@ -458,8 +534,10 @@ func TestManifestLoad(t *testing.T) {
 		"services.api.build.manifest",
 		"services.api.build.path",
 		"services.api.deployment",
+		"services.api.deployment.crashRestartLimit",
 		"services.api.deployment.maximum",
 		"services.api.deployment.minimum",
+		"services.api.deployment.progressDeadline",
 		"services.api.domain",
 		"services.api.environment",
 		"services.api.health",
@@ -485,7 +563,13 @@ func TestManifestLoad(t *testing.T) {
 		"services.foo.drain",
 		"services.foo.health",
 		"services.foo.health.grace",
+		"services.foo.health.port",
+		"services.foo.health.port.port",
+		"services.foo.health.port.scheme",
 		"services.foo.health.timeout",
+		"services.foo.liveness",
+		"services.foo.liveness.path",
+		"services.foo.liveness.port",
 		"services.foo.port",
 		"services.foo.port.port",
 		"services.foo.port.scheme",
@@ -533,6 +617,19 @@ func TestManifestLoad(t *testing.T) {
 		"services.scaler.scale.targets.custom.AWS/SQS/ApproximateNumberOfMessagesVisible.value",
 		"services.scaler.scale.targets.memory",
 		"services.scaler.scale.targets.requests",
+		"services.secured",
+		"services.secured.build",
+		"services.secured.port",
+		"services.secured.securityContext",
+		"services.secured.securityContext.allowPrivilegeEscalation",
+		"services.secured.securityContext.capabilities",
+		"services.secured.securityContext.capabilities.add",
+		"services.secured.securityContext.capabilities.drop",
+		"services.secured.securityContext.readOnlyRootFilesystem",
+		"services.secured.securityContext.runAsGroup",
+		"services.secured.securityContext.runAsNonRoot",
+		"services.secured.securityContext.runAsUser",
+		"services.secured.securityContext.seccompProfile",
 		"timers",
 		"timers.alpha",
 		"timers.alpha.command",
@@ -605,7 +702,7 @@ func TestManifestLoadSimple(t *testing.T) {
 				Init: true,
 				Scale: manifest.ServiceScale{
 					Count:  manifest.ServiceScaleCount{Min: 1, Max: 1},
-					Cpu:    256,
+					Cpu:    250,
 					Memory: 512,
 				},
 				Sticky: false,
@@ -690,17 +787,548 @@ func TestManifestValidate(t *testing.T) {
 		"balancer alpha has blank service",
 		"balancer alpha whitelist 1.1.1.1 is not a valid cidr range",
 		"balancer bravo refers to unknown service nosuch",
+		"balancer charlie annotation noequalssign must be in key=value format",
+		"balancer charlie port 3000 has unsupported protocol SCTP",
+		"balancer delta has UDP ports and no TCP port, set service.beta.kubernetes.io/aws-load-balancer-healthcheck-port in annotations",
+		"balancer echo declares port 53 more than once, use protocol: TCP_UDP on a single entry to serve both protocols on one port number",
 		"resource name 1resource invalid, must contain only lowercase alphanumeric and dashes",
 		"service deployment-invalid-low deployment minimum can not be less than 0",
 		"service deployment-invalid-low deployment maximum can not be less than 100",
+		"service deployment-invalid-low deployment progressDeadline must be 0 or between 30 and 21600 seconds",
+		"service deployment-invalid-low deployment crashRestartLimit must be -1 to disable, 0 to inherit the rack default, or a positive number of restarts",
 		"service deployment-invalid-high deployment minimum can not be greater than 100",
 		"service deployment-invalid-high deployment maximum can not be greater than 200",
+		"service deployment-invalid-high deployment progressDeadline must be 0 or between 30 and 21600 seconds",
 		"service internal-router-invalid can not have both internal and internalRouter set as true",
 		"service name serviceF invalid, must contain only lowercase alphanumeric and dashes",
 		"service serviceF references a resource that does not exist: foo",
+		"service grpc-path-invalid health grpcService must be a grpc service name such as myapp.v1.Greeter, not a path",
+		"service grpc-liveness-path-invalid liveness grpcService must be a grpc service name such as myapp.v1.Greeter, not a path",
 		"timer name timer_1 invalid, must contain only lowercase alphanumeric and dashes",
 		"timer timer_1 references a service that does not exist: someservice",
 	}
 
 	require.EqualError(t, err, fmt.Sprintf("validation errors:\n%s", strings.Join(errors, "\n")))
+}
+
+func TestManifestStartupProbe(t *testing.T) {
+	m, err := testdataManifest("startup-probe", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 3, len(m.Services))
+
+	// web-custom: startupProbe with explicit values should use its own values, not liveness
+	custom, err := m.Service("web-custom")
+	require.NoError(t, err)
+	require.Equal(t, "/startup", custom.StartupProbe.Path)
+	require.Equal(t, 60, custom.StartupProbe.Grace)
+	require.Equal(t, 30, custom.StartupProbe.Interval)
+	require.Equal(t, 10, custom.StartupProbe.Timeout)
+	require.Equal(t, 1, custom.StartupProbe.SuccessThreshold)
+	require.Equal(t, 10, custom.StartupProbe.FailureThreshold)
+	// verify liveness is independent
+	require.Equal(t, 10, custom.Liveness.Grace)
+	require.Equal(t, 3, custom.Liveness.FailureThreshold)
+
+	// web-inherited: startupProbe with only path should inherit timing from liveness
+	inherited, err := m.Service("web-inherited")
+	require.NoError(t, err)
+	require.Equal(t, "/startup", inherited.StartupProbe.Path)
+	require.Equal(t, 15, inherited.StartupProbe.Grace)
+	require.Equal(t, 10, inherited.StartupProbe.Interval)
+	require.Equal(t, 3, inherited.StartupProbe.Timeout)
+	require.Equal(t, 1, inherited.StartupProbe.SuccessThreshold)
+	require.Equal(t, 5, inherited.StartupProbe.FailureThreshold)
+
+	// web-tcp: tcpSocket startupProbe with partial overrides
+	tcp, err := m.Service("web-tcp")
+	require.NoError(t, err)
+	require.Equal(t, "8080", tcp.StartupProbe.TcpSocketPort)
+	require.Equal(t, 30, tcp.StartupProbe.Grace)
+	require.Equal(t, 20, tcp.StartupProbe.FailureThreshold)
+	// interval and timeout should inherit from liveness
+	require.Equal(t, 5, tcp.StartupProbe.Interval)
+	require.Equal(t, 5, tcp.StartupProbe.Timeout)
+	require.Equal(t, 1, tcp.StartupProbe.SuccessThreshold)
+}
+
+func TestManifestStartupProbeGpu(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 5, len(m.Services))
+
+	// gpu-defaults: GPU service with no Liveness and no StartupProbe should
+	// get a TCP startup probe pointed at Port.Port plus GPU-aware defaults.
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+	require.Equal(t, "", defaults.StartupProbe.Path)
+	require.Equal(t, "8080", defaults.StartupProbe.TcpSocketPort)
+	require.Equal(t, 300, defaults.StartupProbe.Grace)
+	require.Equal(t, 10, defaults.StartupProbe.Interval)
+	require.Equal(t, 5, defaults.StartupProbe.Timeout)
+	require.Equal(t, 180, defaults.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold)
+
+	// gpu-with-liveness: GPU service inheriting from Liveness — should take
+	// Liveness timings, not the GPU fallback defaults.
+	liveness, err := m.Service("gpu-with-liveness")
+	require.NoError(t, err)
+	require.Equal(t, "8080", liveness.StartupProbe.TcpSocketPort)
+	require.Equal(t, 10, liveness.StartupProbe.Grace)
+	require.Equal(t, 5, liveness.StartupProbe.Interval)
+	require.Equal(t, 5, liveness.StartupProbe.Timeout)
+	require.Equal(t, 3, liveness.StartupProbe.FailureThreshold)
+	require.Equal(t, 1, liveness.StartupProbe.SuccessThreshold)
+
+	// gpu-explicit-http: user-specified HTTP startup probe should NOT receive
+	// the GPU fallback (gate is TcpSocketPort != "").
+	explicit, err := m.Service("gpu-explicit-http")
+	require.NoError(t, err)
+	require.Equal(t, "/ready", explicit.StartupProbe.Path)
+	require.Equal(t, "", explicit.StartupProbe.TcpSocketPort)
+	require.Equal(t, 45, explicit.StartupProbe.Grace)
+	require.Equal(t, 15, explicit.StartupProbe.Interval)
+
+	// gpu-no-port: GPU service with no Port.Port should get no startup probe
+	// at all (user opts in via explicit startupProbe.path).
+	noPort, err := m.Service("gpu-no-port")
+	require.NoError(t, err)
+	require.Equal(t, "", noPort.StartupProbe.Path)
+	require.Equal(t, "", noPort.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, noPort.StartupProbe.Grace)
+
+	// cpu-no-probe: non-GPU service with no probe should remain unchanged.
+	cpu, err := m.Service("cpu-no-probe")
+	require.NoError(t, err)
+	require.Equal(t, "", cpu.StartupProbe.Path)
+	require.Equal(t, "", cpu.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, cpu.StartupProbe.Grace)
+}
+
+// TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum locks the GPU-service
+// startup-probe FailureThreshold default at 180 (= 30-min cold-start ceiling at the
+// 10s default Interval). This is intentionally redundant with the assertion in
+// TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum pins the
+// GPU cold-start ceiling at 180 attempts x 10s = 30 min.
+// Do not lower without a release-notes ticket.
+func TestManifestStartupProbeGpu_FailureThreshold180LocksMinimum(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+
+	require.Equal(t, 180, defaults.StartupProbe.FailureThreshold)
+}
+
+// TestManifestStartupProbeGpu_GraceIntervalTimeoutUnchanged guards against a wider
+// edit on the same lines accidentally changing OTHER GPU defaults. The 180
+// FailureThreshold was the only intended change in 3.24.6.
+func TestManifestStartupProbeGpu_GraceIntervalTimeoutUnchanged(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	defaults, err := m.Service("gpu-defaults")
+	require.NoError(t, err)
+
+	require.Equal(t, 300, defaults.StartupProbe.Grace, "GPU Grace default must remain 300s")
+	require.Equal(t, 10, defaults.StartupProbe.Interval, "GPU Interval default must remain 10s")
+	require.Equal(t, 5, defaults.StartupProbe.Timeout, "GPU Timeout default must remain 5s")
+	require.Equal(t, 1, defaults.StartupProbe.SuccessThreshold, "GPU SuccessThreshold default must remain 1")
+}
+
+// TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180 locks the
+// "user-supplied wins" semantic: if a user sets failureThreshold explicitly
+// on a GPU service, the 180 default must NOT clobber it.
+func TestManifestStartupProbeGpu_ExplicitFailureThresholdOverrides180(t *testing.T) {
+	data := []byte(`services:
+  gpu-explicit:
+    build: .
+    port: 8080
+    startupProbe:
+      failureThreshold: 60
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+
+	svc, err := m.Service("gpu-explicit")
+	require.NoError(t, err)
+	require.Equal(t, 60, svc.StartupProbe.FailureThreshold, "explicit failureThreshold must override the 180 GPU default")
+	// TcpSocketPort still gets auto-wired since the user did not specify path or tcpSocketPort.
+	require.Equal(t, "8080", svc.StartupProbe.TcpSocketPort)
+	// Other GPU defaults still fire when not explicit.
+	require.Equal(t, 300, svc.StartupProbe.Grace)
+	require.Equal(t, 10, svc.StartupProbe.Interval)
+	require.Equal(t, 5, svc.StartupProbe.Timeout)
+}
+
+// TestManifestStartupProbe_NonGpuFailureThresholdUnchanged locks the GPU-only
+// scope of the 180 default. Non-GPU services must still report their pre-existing
+// values (explicit, inherited from liveness, or partial-override) — the 180
+// default must not leak into CPU paths.
+func TestManifestStartupProbe_NonGpuFailureThresholdUnchanged(t *testing.T) {
+	m, err := testdataManifest("startup-probe", map[string]string{})
+	require.NoError(t, err)
+
+	// web-custom: explicit failureThreshold=10 on startupProbe must remain 10.
+	custom, err := m.Service("web-custom")
+	require.NoError(t, err)
+	require.Equal(t, 10, custom.StartupProbe.FailureThreshold, "non-GPU explicit FailureThreshold must not be replaced by 180")
+
+	// web-inherited: failureThreshold not set on startupProbe — should inherit
+	// from liveness (5), NOT pick up the GPU 180 default.
+	inherited, err := m.Service("web-inherited")
+	require.NoError(t, err)
+	require.Equal(t, 5, inherited.StartupProbe.FailureThreshold, "non-GPU inherited FailureThreshold must come from liveness, not the GPU 180 default")
+
+	// web-tcp: explicit failureThreshold=20 on startupProbe must remain 20.
+	tcp, err := m.Service("web-tcp")
+	require.NoError(t, err)
+	require.Equal(t, 20, tcp.StartupProbe.FailureThreshold, "non-GPU explicit tcp FailureThreshold must not be replaced by 180")
+}
+
+// TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet re-verifies that
+// the gate condition `s.Scale.Gpu.Count > 0 && TcpSocketPort != ""` is unchanged:
+// a GPU service with no Port.Port gets NO startup probe at all, and FailureThreshold
+// stays at the zero value (180 must NOT be written into a service without a TCP port).
+func TestManifestStartupProbeGpu_NoPortService_NoFailureThresholdSet(t *testing.T) {
+	m, err := testdataManifest("startup-probe-gpu", map[string]string{})
+	require.NoError(t, err)
+
+	noPort, err := m.Service("gpu-no-port")
+	require.NoError(t, err)
+	require.Equal(t, "", noPort.StartupProbe.Path)
+	require.Equal(t, "", noPort.StartupProbe.TcpSocketPort)
+	require.Equal(t, 0, noPort.StartupProbe.Grace)
+	require.Equal(t, 0, noPort.StartupProbe.FailureThreshold, "GPU service with no port must not receive the 180 default")
+	require.Equal(t, 0, noPort.StartupProbe.Interval)
+	require.Equal(t, 0, noPort.StartupProbe.Timeout)
+}
+
+func TestManifestGrpcHealthService(t *testing.T) {
+	m, err := testdataManifest("grpc-health", map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 7, len(m.Services))
+
+	named, err := m.Service("named")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", named.Health.GrpcService)
+
+	padded, err := m.Service("padded")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", padded.Health.GrpcService)
+
+	plain, err := m.Service("plain")
+	require.NoError(t, err)
+	require.Equal(t, "", plain.Health.GrpcService, "grpcService must stay empty when unset")
+	require.Equal(t, "/", plain.Health.Path)
+
+	shorthand, err := m.Service("shorthand")
+	require.NoError(t, err)
+	require.Equal(t, "/ready", shorthand.Health.Path)
+	require.Equal(t, "", shorthand.Health.GrpcService)
+
+	require.Equal(t, "", plain.Liveness.GrpcService, "liveness grpcService must stay empty when unset")
+
+	livenessNamed, err := m.Service("liveness-named")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Liveness", livenessNamed.Liveness.GrpcService)
+	require.Equal(t, "", livenessNamed.Health.GrpcService)
+	require.Equal(t, 0, livenessNamed.Liveness.Grace, "liveness grpcService alone must not activate the liveness defaults")
+	require.Equal(t, 0, livenessNamed.Liveness.FailureThreshold)
+
+	livenessPadded, err := m.Service("liveness-padded")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Liveness", livenessPadded.Liveness.GrpcService)
+
+	both, err := m.Service("both")
+	require.NoError(t, err)
+	require.Equal(t, "myapp.v1.Greeter", both.Health.GrpcService)
+	require.Equal(t, "myapp.v1.Liveness", both.Liveness.GrpcService)
+}
+
+func TestManifestGrpcServiceSharedNameWarning(t *testing.T) {
+	validate := func(health, liveness string) string {
+		m, err := manifest.Load([]byte(fmt.Sprintf(`services:
+  api:
+    build: .
+    port: grpc:50051
+    grpcHealthEnabled: true
+    health:
+      grpcService: %q
+    liveness:
+      grpcService: %q
+`, health, liveness)), map[string]string{})
+		require.NoError(t, err)
+
+		var verr error
+		out := captureStderr(t, func() { verr = m.Validate() })
+		require.NoError(t, verr)
+
+		return out
+	}
+
+	shared := validate("myapp.v1.Greeter", "myapp.v1.Greeter")
+	require.Contains(t, shared, `WARNING: service "api": liveness grpcService matches health grpcService`)
+	require.Equal(t, 1, strings.Count(shared, "WARNING"))
+
+	require.Empty(t, validate("myapp.v1.Greeter", "myapp.v1.Liveness"))
+	require.Empty(t, validate("", "myapp.v1.Liveness"))
+	require.Empty(t, validate("myapp.v1.Greeter", ""))
+	require.Empty(t, validate("", ""), "both unset must not warn")
+}
+
+func TestManifestKeda(t *testing.T) {
+	m, err := testdataManifest("keda", map[string]string{})
+	require.NotNil(t, m)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(m.Services))
+	require.Equal(t, true, m.Services[0].Scale.IsKedaEnabled())
+	require.Equal(t, 1, len(m.Services[0].Scale.Keda.Triggers))
+}
+
+func TestLoadPortDeduplication(t *testing.T) {
+	// port and ports with same value — ports entry removed
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortDeduplicationDifferentPorts(t *testing.T) {
+	// port and ports with different values — no dedup
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 8080
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 8080, m.Services[0].Ports[0].Port)
+	require.Equal(t, "tcp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationDifferentProtocol(t *testing.T) {
+	// port: 4001 (TCP) + ports: [4001/udp] — NOT a duplicate
+	// K8s uses (port, protocol) as composite merge key
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001/udp
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 4001, m.Services[0].Ports[0].Port)
+	require.Equal(t, "udp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationPartial(t *testing.T) {
+	// port overlaps one of several ports entries — only duplicate removed
+	data := []byte(`services:
+  web:
+    port: 4001
+    ports:
+      - 4001
+      - 8080
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+	require.Equal(t, 8080, m.Services[0].Ports[0].Port)
+	require.Equal(t, "tcp", m.Services[0].Ports[0].Protocol)
+}
+
+func TestLoadPortDeduplicationMultiService(t *testing.T) {
+	// only the service with overlapping ports gets deduped
+	data := []byte(`services:
+  api:
+    port: 3000
+    ports:
+      - 3000
+      - 8080
+  worker:
+    ports:
+      - 9090
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	api, err := m.Service("api")
+	require.NoError(t, err)
+	require.Equal(t, 3000, api.Port.Port)
+	require.Len(t, api.Ports, 1)
+	require.Equal(t, 8080, api.Ports[0].Port)
+	worker, err := m.Service("worker")
+	require.NoError(t, err)
+	require.Equal(t, 0, worker.Port.Port)
+	require.Len(t, worker.Ports, 1)
+	require.Equal(t, 9090, worker.Ports[0].Port)
+}
+
+func TestLoadPortDeduplicationWithScheme(t *testing.T) {
+	// port with https scheme + same port in ports — still deduped
+	data := []byte(`services:
+  web:
+    port: https:4001
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Equal(t, "https", m.Services[0].Port.Scheme)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortNoDeduplicationPortOnly(t *testing.T) {
+	// port only — no change
+	data := []byte(`services:
+  web:
+    port: 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestLoadPortNoDeduplicationPortsOnly(t *testing.T) {
+	// ports only — no change
+	data := []byte(`services:
+  web:
+    ports:
+      - 4001
+`)
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 0, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 1)
+}
+
+func TestLoadPortDeduplicationEmptyProtocol(t *testing.T) {
+	// Quoted string port without protocol suffix parses Protocol=""
+	// The dedup normalizes empty protocol to "tcp" before comparison
+	data := []byte("services:\n  web:\n    port: 4001\n    ports:\n      - \"4001\"\n")
+	m, err := manifest.Load(data, map[string]string{})
+	require.NoError(t, err)
+	require.Equal(t, 4001, m.Services[0].Port.Port)
+	require.Len(t, m.Services[0].Ports, 0)
+}
+
+func TestVolumeAzureFilesValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		vol     manifest.VolumeAzureFiles
+		wantErr string
+	}{
+		{
+			name: "valid",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+		},
+		{
+			name: "missing id",
+			vol: manifest.VolumeAzureFiles{
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.id is required",
+		},
+		{
+			name: "invalid id format",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "My Volume/data",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.id must match ^[a-z][a-z0-9-]*$",
+		},
+		{
+			name: "missing mountPath",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+			},
+			wantErr: "azureFiles.mountPath is required",
+		},
+		{
+			name: "invalid accessMode",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "Invalid",
+				MountPath:  "/mnt/data",
+			},
+			wantErr: "azureFiles.accessMode must be one of these values: ReadOnlyMany, ReadWriteMany, ReadWriteOnce",
+		},
+		{
+			name: "valid with shareSize",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "200Gi",
+			},
+		},
+		{
+			name: "invalid shareSize format",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "banana",
+			},
+			wantErr: "azureFiles.shareSize is invalid: banana",
+		},
+		{
+			name: "shareSize below minimum",
+			vol: manifest.VolumeAzureFiles{
+				Id:         "models",
+				AccessMode: "ReadWriteMany",
+				MountPath:  "/mnt/data",
+				ShareSize:  "1Gi",
+			},
+			wantErr: "azureFiles.shareSize must be at least 100Gi (Azure Premium NFS minimum)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.vol.Validate()
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestVolumeOptionAzureFilesValidate(t *testing.T) {
+	vo := manifest.VolumeOption{
+		AzureFiles: &manifest.VolumeAzureFiles{
+			Id:         "shared",
+			AccessMode: "ReadWriteMany",
+			MountPath:  "/data",
+		},
+	}
+	require.NoError(t, vo.Validate())
 }

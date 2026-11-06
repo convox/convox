@@ -8,15 +8,16 @@ resource "random_string" "password" {
 }
 
 resource "google_container_cluster" "rack" {
-  name     = var.name
-  location = data.google_client_config.current.region
-  network  = google_compute_network.rack.name
+  name                = var.name
+  location            = data.google_client_config.current.region
+  network             = google_compute_network.rack.name
+  deletion_protection = false
 
   remove_default_node_pool = true
   initial_node_count       = 1
 
   release_channel {
-    channel = "UNSPECIFIED"
+    channel = "EXTENDED"
   }
 
   min_master_version = var.k8s_version
@@ -35,9 +36,12 @@ resource "google_container_cluster" "rack" {
 }
 
 resource "google_container_node_pool" "rack" {
-  name               = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
-  location           = google_container_cluster.rack.location
-  cluster            = google_container_cluster.rack.name
+  name     = "${google_container_cluster.rack.name}-nodes-${var.node_type}"
+  location = google_container_cluster.rack.location
+  cluster  = google_container_cluster.rack.name
+
+  version = var.k8s_version
+
   initial_node_count = 1
 
   autoscaling {
@@ -48,6 +52,7 @@ resource "google_container_node_pool" "rack" {
   node_config {
     machine_type = var.node_type
     preemptible  = var.preemptible
+    disk_size_gb = var.node_disk
 
     metadata = {
       disable-legacy-endpoints = "true"
@@ -72,27 +77,12 @@ resource "google_container_node_pool" "rack" {
     max_unavailable = 1
   }
 
+  timeouts {
+    update = var.terraform_update_timeout
+  }
+
   lifecycle {
     create_before_destroy = true
-  }
-}
-
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    kubernetes_cluster_role_binding.client,
-    google_container_node_pool.rack,
-  ]
-
-  filename = pathexpand("~/.kube/config.gcp.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca                 = google_container_cluster.rack.master_auth[0].cluster_ca_certificate
-    endpoint           = google_container_cluster.rack.endpoint
-    client_certificate = google_container_cluster.rack.master_auth[0].client_certificate
-    client_key         = google_container_cluster.rack.master_auth[0].client_key
-  })
-
-  lifecycle {
-    ignore_changes = [content]
   }
 }
 
@@ -102,6 +92,16 @@ provider "kubernetes" {
   host                   = "https://${google_container_cluster.rack.endpoint}"
   token                  = data.google_client_config.current.access_token
   cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
+}
+
+provider "helm" {
+  alias = "direct"
+
+  kubernetes {
+    host                   = "https://${google_container_cluster.rack.endpoint}"
+    token                  = data.google_client_config.current.access_token
+    cluster_ca_certificate = base64decode(google_container_cluster.rack.master_auth[0].cluster_ca_certificate)
+  }
 }
 
 resource "kubernetes_cluster_role_binding" "client" {

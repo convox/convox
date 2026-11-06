@@ -1,7 +1,7 @@
 ---
 title: "Service Discovery"
-draft: false
-slug: Service Discovery
+description: "Find a Service's load balancer hostname with convox services and connect to it to distribute traffic across all Processes of that Service."
+slug: service-discovery
 url: /configuration/service-discovery
 ---
 # Service Discovery
@@ -15,15 +15,15 @@ Connecting to this hostname will distribute traffic across all processes of a gi
 [Service](/reference/primitives/app/service).
 
 For an app named `myapp` with a `convox.yml` like this:
-```html
-    services:
-      auth:
-        port: 5000
-      web:
-        port: 3000
+```yaml
+services:
+  auth:
+    port: 5000
+  web:
+    port: 3000
 ```
 You would see a `convox services` output similar to this:
-```html
+```bash
     $ convox services
     SERVICE  DOMAIN                                PORTS
     auth     auth.myapp.0a1b2c3d4e5f.convox.cloud  443:5000
@@ -32,7 +32,7 @@ You would see a `convox services` output similar to this:
 The `web` [Service](/reference/primitives/app/service) could reach the `auth`
 [Service](/reference/primitives/app/service) using `https://auth.myapp.0a1b2c3d4e5f.convox.cloud:443`
 
-> Note that both of these [Services](/reference/primitives/app/service) are available to the public internet.
+> Both of these [Services](/reference/primitives/app/service) are available to the public internet.
 
 ### Internal Services
 
@@ -40,25 +40,25 @@ You can make a [Service](/reference/primitives/app/service) accessible only insi
 by setting its `internal` attribute to `true`.
 
 For an app named `myapp` with a `convox.yml` like this:
-```html
-    services:
-      auth:
-        internal: true
-        port: 5000
-      web:
-        port: 3000
+```yaml
+services:
+  auth:
+    internal: true
+    port: 5000
+  web:
+    port: 3000
 ```
 You would see a `convox services` output similar to this:
-```html
+```bash
     $ convox services
-    SERVICE  DOMAIN                               PORTS
-    auth     auth.myapp.convox.local              5000
-    web      web.myapp.0a1b2c3d4e5f.convox.cloud  443:3000
+    SERVICE  DOMAIN                                PORTS
+    auth     auth.myapp.convox.local               5000
+    web      web.myapp.0a1b2c3d4e5f.convox.cloud   443:3000
 ```
 The `web` [Service](/reference/primitives/app/service) could reach the `auth` [Service](/reference/primitives/app/service) using the following URL:
 
 * `http://auth.myapp.convox.local:5000`
 
-> Note that the internal port of the `auth` [Service](/reference/primitives/app/service) is not receiving
+> The internal port of the `auth` [Service](/reference/primitives/app/service) is not receiving
 > automatic SSL termination. If you want this connection to be encrypted you would need to handle SSL
 > inside the [Service](/reference/primitives/app/service).

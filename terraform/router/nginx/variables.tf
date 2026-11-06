@@ -1,3 +1,7 @@
+variable "docker_hub_authentication" {
+  type    = string
+  default = null
+}
 
 variable "internal_router" {
   type    = bool
@@ -6,12 +10,23 @@ variable "internal_router" {
 
 variable "nginx_image" {
   type    = string
-  default = "registry.k8s.io/ingress-nginx/controller:v1.3.0@sha256:d1707ca76d3b044ab8a28277a2466a02100ee9f58a86af1535a3edf9323ea1b5"
+  default = ""
 }
 
 variable "nginx_user" {
   type    = string
   default = "101"
+}
+
+variable "nginx_additional_config" {
+  description = "Comma-separated key=value pairs (e.g., 'key1=value1,key2=value2')"
+  type        = string
+  default     = ""
+}
+
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
 }
 
 variable "namespace" {

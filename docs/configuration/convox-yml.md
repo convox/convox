@@ -1,122 +1,224 @@
 ---
 title: "convox.yml"
-draft: false
-slug: convox.yml
+description: "convox.yml is the manifest that describes your application and all of its infrastructure needs, including services, resources, environment, and settings."
+slug: convox-yml
 url: /configuration/convox-yml
 ---
 
 # convox.yml
 
 `convox.yml` is a manifest used to describe your application and all of its infrastructure needs.
-```html
+```yaml
+environment:
+  - COMPANY=Convox
+  - DOCS_URL
+labels:
+  team: platform
+configs:
+  - id: app-config
+appSettings:
+  awsLogs:
+    cwRetention: 30
+    disableRetention: false
+resources:
+  database:
+    type: postgres
+    options:
+      storage: 200
+  queue:
+    type: redis
+services:
+  api:
+    annotations:
+      - test.annotation.org/value=foobar
+    build: .
+    command: bin/api
     environment:
-      - COMPANY=Convox
-      - DOCS_URL
+      - ENCRYPTION_KEY
+    health: /check
+    internal: true
+    port: 3000
     resources:
-      database:
-        type: postgres
-        options:
-          storage: 200
-      queue:
-        type: redis
-    services:
-      api:
-        annotations:
-          - test.annotation.org/value=foobar
-        build: .
-        command: bin/api
-        environment:
-          - ENCRYPTION_KEY
-        health: /check
-        internal: true
-        port: 3000
-        resources:
-          - database
-          - queue
-        termination:
-          grace: 45
-        test: make test
-        timeout: 120
-        deployment:
-          minimum: 50
-          maximum: 200
-      web:
-        build: .
-        command: bin/web
-        environment:
-          - SESSION_SECRET
-        port: 3000
-      worker:
-        build: ./worker
-        command: bin/worker
-        environment:
-          - ENCRYPTION_KEY
-        resources:
-          - database
-          - queue
-      metrics:
-        agent: true
-        image: awesome/metrics
-    timers:
-      cleanup:
-        schedule: "0 3 * * * *"
-        command: bin/cleanup
-        service: worker
+      - database
+      - queue
+    termination:
+      grace: 45
+    test: make test
+    timeout: 120
+    deployment:
+      minimum: 50
+      maximum: 200
+      progressDeadline: 600
+      crashRestartLimit: 5
+  web:
+    build: .
+    command: bin/web
+    environment:
+      - SESSION_SECRET
+    port: 3000
+  worker:
+    build: ./worker
+    command: bin/worker
+    environment:
+      - ENCRYPTION_KEY
+    resources:
+      - database
+      - queue
+  metrics:
+    agent: true
+    image: awesome/metrics
+  inference:
+    image: nvcr.io/nim/meta/llama-3.1-8b-instruct:latest
+    imagePullSecrets:
+      - registry: nvcr.io
+        username: $oauthtoken
+        passwordEnv: NGC_API_KEY
+timers:
+  cleanup:
+    schedule: "0 3 * * *"
+    command: bin/cleanup
+    service: worker
 ```
 ## environment
 
 The top-level `environment` section defines [Environment Variables](/configuration/environment) that are available to every
 [Service](/reference/primitives/app/service).
-```html
-    environment:
-      - COMPANY=Convox  # has a default value of "Convox"
-      - DOCS_URL        # must be set before deployment
+```yaml
+environment:
+  - COMPANY=Convox  # has a default value of "Convox"
+  - DOCS_URL        # must be set before deployment
 ```
 See [Environment Variables](/configuration/environment) for configuration options.
+
+## app settings
+
+The `appSettings` section defines settings that apply exclusively to a particular app within the rack. These settings are independent of the global rack-level parameters and provide a mechanism for tailoring configuration to individual applications.
+
+```yaml
+appSettings:
+  awsLogs:
+    cwRetention: 30
+    disableRetention: false
+```
+See [App Settings](/configuration/app-settings) for configuration options.
 
 ## resources
 
 The `resources` section defines network-accessible [Resources](/reference/primitives/app/resource)
 such as databases that can be made available to [Services](/reference/primitives/app/service).
-```html
-    resources:
-      database:
-        type: postgres
-        options:
-          storage: 200
+```yaml
+resources:
+  database:
+    type: postgres
+    options:
+      storage: 200
 ```
 See [Resource](/reference/primitives/app/resource) for configuration options.
 
 ## services
 
-The `services` section horizontally-scalable [Services](/reference/primitives/app/service)
+The `services` section defines horizontally-scalable [Services](/reference/primitives/app/service)
 that can be optionally placed behind a load balancer.
-```html
-    services:
-      api:
-        build: .
-        command: bin/api
-        environment:
-          - ENCRYPTION_KEY
-        health: /check
-        internal: true
-        port: 3000
-        resources:
-          - database
-          - queue
-        test: make test
+```yaml
+services:
+  api:
+    build: .
+    command: bin/api
+    environment:
+      - ENCRYPTION_KEY
+    health: /check
+    internal: true
+    port: 3000
+    resources:
+      - database
+      - queue
+    test: make test
 ```
-See [Service](/reference/primitives/app/service) for configuration options.
+See [Service](/reference/primitives/app/service) for configuration options. A Service can also be declared as an [Agent](/configuration/agents) to run one process on every node. The `deployment` block also sets rollout failure detection; see [Rolling Updates: Failure Detection](/deployment/rolling-updates#failure-detection) for `progressDeadline` and `crashRestartLimit`.
+
+## labels
+
+The top-level `labels` section defines labels applied to all [Services](/reference/primitives/app/service) in the app. Service-level labels override top-level labels with the same key.
+```yaml
+labels:
+  team: platform
+  cost-center: engineering
+```
+The following label keys are reserved and cannot be used: `system`, `rack`, `app`, `name`, `service`, `release`, `type`.
+
+## configs
+
+The `configs` section defines named configuration objects that can be mounted into service containers as files.
+```yaml
+configs:
+  - id: app-config
+```
+See [Config Mounts](/configuration/config-mounts) for configuration options.
 
 ## timers
 
 The `timers` section defines [Processes](/reference/primitives/app/process)
 that run periodically on a set interval.
-```html
-    timers:
-      cleanup:
-        schedule: "0 3 * * * *"
-        command: bin/cleanup
-        service: worker
+```yaml
+timers:
+  cleanup:
+    schedule: "0 3 * * *"
+    command: bin/cleanup
+    service: worker
 ```
 See [Timer](/reference/primitives/app/timer) for configuration options.
+
+## balancers
+
+The `balancers` section defines custom TCP/UDP load balancers for [Services](/reference/primitives/app/service) that need to expose arbitrary ports.
+```yaml
+balancers:
+  custom:
+    service: web
+    ports:
+      5000: 5001
+```
+See [Balancer](/reference/primitives/app/balancer) and [Load Balancers](/configuration/load-balancers#custom-load-balancers) for configuration options.
+
+## budget
+
+The `budget` section declares the schema for monthly cost caps and the action taken when an app exceeds them. See [Budget Caps](/management/budget-caps) for the operational guide and [Cost Tracking](/management/cost-tracking) for how spend is computed.
+
+Persistence: enforcement-bearing fields (`monthlyCapUsd`, `alertThresholdPercent`, `atCapAction`, `pricingAdjustment`) take effect only when set at runtime via `convox budget set` or the Console budget tab; a deploy never writes the values in this block to the app's budget. The build validates the `budget:` block, and while cost tracking is off a promote is rejected with HTTP 422 if the block sets `monthlyCapUsd`, `alertThresholdPercent` or `atCapAction`. Auto-shutdown runtime fields (`atCapWebhookUrl`, `notifyBeforeMinutes`, `shutdownGracePeriod`, `recoveryMode`, `shutdownOrder`, `neverAutoShutdown`) are read fresh from the current release's manifest each accumulator tick and take effect on the next deploy.
+
+```yaml
+budget:
+  monthlyCapUsd: 250
+  alertThresholdPercent: 80
+  atCapAction: auto-shutdown
+  atCapWebhookUrl: https://hooks.example.com/budget
+  notifyBeforeMinutes: 15
+  shutdownGracePeriod: 30s
+  recoveryMode: auto-on-reset
+  shutdownOrder: largest-cost
+  neverAutoShutdown:
+    - api
+```
+
+| Field | Description |
+|-------|-------------|
+| `monthlyCapUsd` | Monthly cap in USD. Reset on the first of each month. |
+| `alertThresholdPercent` | Percent of cap at which `app:budget:threshold` fires. Default 80. |
+| `atCapAction` | One of `alert-only`, `block-new-deploys`, `auto-shutdown`. |
+| `atCapWebhookUrl` | Optional webhook URL to notify when the cap fires. |
+| `pricingAdjustment` | Accepted but not read. Set the spend multiplier with `convox budget set --pricing-adjustment` or in the Console. |
+| `notifyBeforeMinutes` | (auto-shutdown only) Minutes between `:armed` and `:fired`. |
+| `shutdownGracePeriod` | (auto-shutdown only) Pod terminationGracePeriod for shutdown. |
+| `recoveryMode` | (auto-shutdown only) `auto-on-reset` or `manual`. |
+| `shutdownOrder` | (auto-shutdown only) `largest-cost` or `newest`. |
+| `neverAutoShutdown` | (auto-shutdown only) List of services that must remain up. |
+
+## See Also
+
+- [App Definition](/configuration/app-definition) for a hub of all app definition configuration topics
+- [Networking](/configuration/networking) for network configuration including load balancers, DNS, and custom domains
+- [Environment Variables](/configuration/environment) for configuring app settings
+- [Health Checks](/configuration/health-checks) for configuring service health checks
+- [Scaling](/configuration/scaling) for controlling service scale and autoscaling
+- [Config Mounts](/configuration/config-mounts) for mounting configuration files into containers
+- [Deploying Changes](/deployment/deploying-changes#external-builds) for the `--external` build flag that bypasses source upload

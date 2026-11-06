@@ -12,16 +12,18 @@ import (
 
 func TestInstances(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("InstanceList").Return(structs.Instances{*fxInstance(), *fxInstance()}, nil)
+		blank := *fxInstance()
+		blank.InstanceType = ""
+		i.On("InstanceList").Return(structs.Instances{*fxInstance(), blank}, nil)
 
 		res, err := testExecute(e, "instances", nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{
-			"ID         STATUS  STARTED     PS  CPU     MEM     PUBLIC  PRIVATE",
-			"instance1  status  2 days ago  3   42.30%  71.80%  public  private",
-			"instance1  status  2 days ago  3   42.30%  71.80%  public  private",
+			"ID         STATUS  STARTED     PS  CPU     MEM     PUBLIC  PRIVATE  TYPE",
+			"instance1  status  2 days ago  3   42.30%  71.80%  public  private  t3.xlarge",
+			"instance1  status  2 days ago  3   42.30%  71.80%  public  private  ",
 		})
 	})
 }

@@ -1,0 +1,15 @@
+{
+  "key_hex": "5257a869e7ecebeda32affa62cdca3fa37e8c0a98c3f2db5a8f5da3b2a3e9c4e",
+  "timestamp": 1745497200,
+  "fixtures": {
+    "event-cap-set": {
+      "expected_signature": "539873005b7a07a2f0dade81cdb14ab6a1a3a39ac4d6f5be567ef676522e5956"
+    },
+    "event-app-create": {
+      "expected_signature": "cf7567fd98676a9bca994a0e27b627fbc7caf99434994eb4a1184d1bcc2cb931"
+    },
+    "event-rack-update": {
+      "expected_signature": "1531a8a38a62d163bd63bacc1a43d884c6cd8c53f2a606dfdb4a1c11f0312b5c"
+    }
+  }
+}

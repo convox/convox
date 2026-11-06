@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/structs"
 )
 
 func (p *Provider) ManifestValidate(m *manifest.Manifest) error {
@@ -18,7 +19,7 @@ func (p *Provider) ManifestValidate(m *manifest.Manifest) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("manifest valiation errors:\n%s", strings.Join(errs, "\n"))
+		return structs.ErrBadRequest("manifest valiation errors:\n%s", strings.Join(errs, "\n"))
 	}
 
 	return nil

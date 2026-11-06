@@ -1,0 +1,42 @@
+services:
+  gpu-defaults:
+    build: .
+    port: 8080
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+  gpu-with-liveness:
+    build: .
+    port: 8080
+    liveness:
+      path: /live
+      grace: 10
+      interval: 5
+      timeout: 5
+      successThreshold: 1
+      failureThreshold: 3
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+  gpu-explicit-http:
+    build: .
+    port: 8080
+    startupProbe:
+      path: /ready
+      grace: 45
+      interval: 15
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+  gpu-no-port:
+    build: .
+    scale:
+      gpu:
+        count: 1
+        vendor: nvidia
+  cpu-no-probe:
+    build: .
+    port: 8080

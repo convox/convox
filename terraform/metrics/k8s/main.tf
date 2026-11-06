@@ -143,10 +143,30 @@ resource "kubernetes_deployment" "metrics" {
         automount_service_account_token = true
         service_account_name            = kubernetes_service_account.metrics.metadata[0].name
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
 
         container {
           name              = "metrics-server"
-          image             = "registry.k8s.io/metrics-server/metrics-server:v0.6.1"
+          image             = "registry.k8s.io/metrics-server/metrics-server:v0.9.0@sha256:d9862115e7c7881280d3d75ca26bda8ffc0fc213315979575bf23ce9826205c0"
           image_pull_policy = "IfNotPresent"
           args = [
             "--cert-dir=/tmp",
@@ -161,6 +181,31 @@ resource "kubernetes_deployment" "metrics" {
             run_as_non_root            = true
             run_as_user                = 1000
             allow_privilege_escalation = false
+
+            capabilities {
+              drop = ["ALL"]
+            }
+          }
+
+          readiness_probe {
+            http_get {
+              path   = "/readyz"
+              port   = 10250
+              scheme = "HTTPS"
+            }
+            initial_delay_seconds = 20
+            period_seconds        = 10
+            failure_threshold     = 3
+          }
+
+          liveness_probe {
+            http_get {
+              path   = "/livez"
+              port   = 10250
+              scheme = "HTTPS"
+            }
+            period_seconds    = 10
+            failure_threshold = 3
           }
 
           port {

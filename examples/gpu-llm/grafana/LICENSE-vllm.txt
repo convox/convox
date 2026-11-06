@@ -1,0 +1,22 @@
+License attestation for examples/gpu-llm/grafana/06-vllm.json (D6)
+================================================================
+
+The dashboard 06-vllm.json is adapted from upstream artifacts published
+by the vLLM project (https://github.com/vllm-project/vllm), which is
+licensed under Apache License 2.0. The Grafana.com listing for the
+upstream dashboard is at https://grafana.com/grafana/dashboards/23991/.
+
+Convox redistribution preserves panel structure, metric names, and the
+Apache 2.0 license terms. Convox-authored extension panels (if any) are
+annotated with `_source: "convox-authored:*"` in the JSON and remain
+under Convox's standard license; the upstream-derived panels remain
+under Apache 2.0 as inherited from the vLLM project.
+
+Apache License 2.0 — http://www.apache.org/licenses/LICENSE-2.0
+
+The upstream LICENSE text is canonical at:
+  https://github.com/vllm-project/vllm/blob/main/LICENSE
+
+Users redistributing this dashboard JSON must preserve this
+attestation file alongside the JSON in any downstream copies, per the
+Apache 2.0 attribution clause.

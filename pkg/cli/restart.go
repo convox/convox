@@ -11,7 +11,7 @@ func init() {
 	register("restart", "restart an app", Restart, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 }
 
 func Restart(rack sdk.Interface, c *stdcli.Context) error {

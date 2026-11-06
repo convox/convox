@@ -3,6 +3,8 @@ package k8s
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,8 +12,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -20,6 +26,8 @@ import (
 	"github.com/convox/convox/pkg/structs"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
 	"github.com/pkg/errors"
+	ac "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -35,9 +43,84 @@ func (*Provider) buildPrivileged(provider string) bool {
 	return strings.Contains("do gcp aws azure local", provider) // skipcq
 }
 
+// escapeVarRefs keeps Kubernetes from expanding $(VAR) in a build pod arg or env value on a tid rack.
+func (p *Provider) escapeVarRefs(s string) string {
+	if !p.FeatureGates[options.FeatureGateTid] {
+		return s
+	}
+	return strings.ReplaceAll(s, "$", "$$")
+}
+
+func (p *Provider) BuildCancel(app, id string) error {
+	b, err := p.BuildGet(app, id)
+	if k8serrors.IsNotFound(err) {
+		return errors.WithStack(structs.ErrNotFound("no such build: %s", id))
+	}
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if b.Status != "running" || b.Process == "" {
+		return errors.WithStack(structs.ErrBadRequest("build %s is not running", b.Id))
+	}
+
+	pd, ns, err := p.buildPod(app, b.Process)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if pd != nil {
+		uid := pd.UID
+		err := p.Cluster.CoreV1().Pods(ns).Delete(context.TODO(), pd.Name, am.DeleteOptions{
+			Preconditions: &am.Preconditions{UID: &uid},
+		})
+		if err != nil && !k8serrors.IsNotFound(err) && !k8serrors.IsConflict(err) {
+			return errors.WithStack(err)
+		}
+	}
+
+	// Re-read now the builder is gone, so a build that finished during the
+	// call keeps its own outcome.
+	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if kb.Spec.Status != "running" {
+		return nil
+	}
+
+	kb.Spec.Ended = time.Now().UTC().Format(common.SortableTime)
+	kb.Spec.Reason = fmt.Sprintf("cancelled by %s", p.ContextActor())
+	kb.Spec.Status = "failed"
+
+	if _, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Update(kb); err != nil {
+		if k8serrors.IsConflict(err) {
+			return errors.WithStack(structs.ErrConflict("build %s is being modified, try again", b.Id))
+		}
+		return errors.WithStack(err)
+	}
+
+	_ = p.EventSend("build:cancel", structs.EventSendOptions{Data: map[string]string{"app": app, "id": b.Id}})
+
+	return nil
+}
+
 func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
-	if _, err := p.AppGet(app); err != nil {
+	appObj, err := p.appGetLive(app)
+	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	manifestPath := common.CoalesceString(common.DefaultString(opts.Manifest, ""), "convox.yml")
+
+	if !common.DefaultBool(opts.External, false) {
+		if !strings.HasPrefix(url, "object://") {
+			return nil, structs.ErrBadRequest("invalid build source: %s", url)
+		}
+		if !filepath.IsLocal(strings.TrimLeft(manifestPath, "/")) {
+			return nil, structs.ErrBadRequest("invalid manifest: %s", manifestPath)
+		}
 	}
 
 	b := structs.NewBuild(app)
@@ -56,7 +139,11 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 			return nil, err
 		}
 
-		b.Repository = fmt.Sprintf("https://convox:%s@api.%s/%s%s", p.Password, p.Domain, p.Engine.RepositoryPrefix(), app)
+		// This URL embeds the rack password, which is not tenant-scoped. Image
+		// import never reads it, so withhold it rather than refusing the build.
+		if !p.FeatureGates[options.FeatureGateTid] {
+			b.Repository = fmt.Sprintf("https://convox:%s@api.%s/%s%s", p.Password, p.Domain, p.Engine.RepositoryPrefix(), app)
+		}
 
 		return b, nil
 	}
@@ -66,21 +153,28 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		return nil, errors.WithStack(err)
 	}
 
-	cache := common.DefaultBool(opts.NoCache, true)
+	cache := !common.DefaultBool(opts.NoCache, false)
 
 	env := map[string]string{
-		"BUILD_APP":                    app,
-		"BUILD_AUTH":                   string(auth),
-		"BUILD_DEVELOPMENT":            fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
-		"BUILD_GENERATION":             "2",
-		"BUILD_ID":                     b.Id,
-		"BUILD_MANIFEST":               common.DefaultString(opts.Manifest, "convox.yml"),
-		"BUILD_RACK":                   p.Name,
-		"BUILD_URL":                    url,
-		"BUILDKIT_ENABLED":             p.BuildkitEnabled,
-		"PROVIDER":                     os.Getenv("PROVIDER"),
-		"DISABLE_IMAGE_MANIFEST_CACHE": os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
-		"RACK_URL":                     fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+		"BUILD_APP":                       app,
+		"BUILD_AUTH":                      string(auth),
+		"BUILD_DEVELOPMENT":               fmt.Sprintf("%t", common.DefaultBool(opts.Development, false)),
+		"BUILD_GENERATION":                "2",
+		"BUILD_ID":                        b.Id,
+		"BUILD_MANIFEST":                  manifestPath,
+		"BUILD_RACK":                      p.Name,
+		"BUILD_URL":                       url,
+		"BUILD_GIT_SHA":                   b.GitSha,
+		"BUILDKIT_ENABLED":                p.BuildkitEnabled,
+		"PROVIDER":                        os.Getenv("PROVIDER"),
+		"DISABLE_IMAGE_MANIFEST_CACHE":    os.Getenv("DISABLE_IMAGE_MANIFEST_CACHE"),
+		"ECR_IMMUTABLE_TAGS_ENABLED":      os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED"),
+		"BUILDKIT_HOST_PATH_CACHE_ENABLE": os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE"),
+		"BUILD_ARCHS":                     os.Getenv("BUILD_ARCHS"),
+		"RACK_URL":                        fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+		"CONVOX_TID":                      p.ContextTID(),
+		// Propagate audit actor so build pod callbacks don't use the rack password as actor.
+		"CONVOX_ACTOR": p.ContextActor(),
 	}
 
 	repo, _, err := p.Engine.RepositoryHost(app)
@@ -93,18 +187,47 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 	buildCmd := fmt.Sprintf("build -method tgz -cache %t", cache)
 	if opts.BuildArgs != nil {
 		for _, v := range *opts.BuildArgs {
-			if len(strings.SplitN(v, "=", 2)) != 2 {
-				return nil, errors.New("invalid build args:" + v)
+			if len(strings.SplitN(v, "=", 2)) > 2 {
+				return nil, structs.ErrBadRequest("invalid build args:%s", v)
 			}
-			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, v)
+			buildCmd = fmt.Sprintf("%s -build-args %s", buildCmd, p.escapeVarRefs(v))
 		}
 	}
 
 	psOpts := structs.ProcessRunOptions{
 		Command:     options.String(buildCmd),
-		Cpu:         options.Int(512),
 		Environment: env,
+		IsBuild:     true,
 	}
+
+	if nlbs := appObj.Parameters[structs.AppParamBuildLabels]; nlbs != "" {
+		psOpts.NodeLabels = options.String(nlbs)
+	}
+
+	if arch := appObj.Parameters[structs.AppParamBuildArch]; arch != "" {
+		if arch != "amd64" && arch != "arm64" {
+			return nil, fmt.Errorf("invalid BuildArch: %s, must be amd64 or arm64", arch)
+		}
+		psOpts.BuildArch = options.String(arch)
+		env["BUILD_ARCHS"] = arch
+	}
+
+	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
+		v, err := strconv.ParseInt(cpu, 10, 32)
+		if err != nil {
+			return nil, structs.ErrBadRequest("invalid build cpu: %s, err: %s", cpu, err)
+		}
+		psOpts.Cpu = options.Int(int(v))
+	}
+
+	if mem := appObj.Parameters[structs.AppParamBuildMem]; mem != "" {
+		v, err := strconv.ParseInt(mem, 10, 32)
+		if err != nil {
+			return nil, structs.ErrBadRequest("invalid build mem: %s, err: %s", mem, err)
+		}
+		psOpts.Memory = options.Int(int(v))
+	}
+
 	if p.BuildkitEnabled == "true" {
 		psOpts.Image = options.String(p.buildImage(os.Getenv("PROVIDER")))
 		psOpts.Privileged = options.Bool(p.buildPrivileged(os.Getenv("PROVIDER")))
@@ -113,6 +236,10 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		psOpts.Volumes = map[string]string{
 			p.Socket: "/var/run/docker.sock",
 		}
+	}
+
+	for k, v := range env {
+		env[k] = p.escapeVarRefs(v)
 	}
 
 	ps, err := p.ProcessRun(app, "build", psOpts)
@@ -164,7 +291,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 	}
 
 	if len(services) < 1 {
-		return errors.WithStack(fmt.Errorf("no services found to export"))
+		return errors.WithStack(structs.ErrBadRequest("no services found to export"))
 	}
 
 	bjson, err := json.MarshalIndent(build, "", "  ")
@@ -212,7 +339,7 @@ func (p *Provider) BuildExport(app, id string, w io.Writer) error {
 		from := fmt.Sprintf("docker://%s:%s.%s", repo, service, build.Id)
 		to := fmt.Sprintf("oci-archive:%s/%s.%s.tar", tmp, service, build.Id)
 
-		if err := exec.Command("skopeo", "copy", "--src-creds", fmt.Sprintf("%s:%s", user, pass), from, to).Run(); err != nil {
+		if err := exec.Command("skopeo", "copy", "--all", "--src-creds", fmt.Sprintf("%s:%s", user, pass), from, to).Run(); err != nil { //nolint:gosec // fixed argv; refs derive from rack build records
 			return errors.WithStack(err)
 		}
 	}
@@ -272,6 +399,316 @@ func (p *Provider) BuildGet(app, id string) (*structs.Build, error) {
 	return b, nil
 }
 
+// skopeoExec wraps the skopeo binary; overridden in tests.
+var skopeoExec = func(ctx context.Context, args ...string) ([]byte, error) {
+	return exec.CommandContext(ctx, "skopeo", args...).CombinedOutput()
+}
+
+// skopeoCopyTimeout caps a single skopeo copy (multi-GB images need time).
+const skopeoCopyTimeout = 30 * time.Minute
+
+// maxConcurrentImports caps in-flight BuildImportImage calls per API pod.
+var maxConcurrentImports = 4
+
+// importSlots is a counting semaphore (buffered channel). Lazily initialized
+// so tests can override maxConcurrentImports before first use.
+var (
+	importSlotsMu   sync.Mutex
+	importSlotsOnce sync.Once
+	importSlots     chan struct{}
+)
+
+// snapshotImportSlots returns the current semaphore channel under the mutex.
+func snapshotImportSlots() chan struct{} {
+	importSlotsMu.Lock()
+	defer importSlotsMu.Unlock()
+	importSlotsOnce.Do(func() {
+		importSlots = make(chan struct{}, maxConcurrentImports)
+	})
+	return importSlots
+}
+
+// acquireImportSlotOn attempts a non-blocking semaphore acquire.
+func acquireImportSlotOn(ch chan struct{}) bool {
+	if ch == nil {
+		return false
+	}
+	select {
+	case ch <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+// releaseImportSlot frees one semaphore slot. No-op if none was acquired.
+func releaseImportSlot(ch chan struct{}) {
+	if ch == nil {
+		return
+	}
+	select {
+	case <-ch:
+	default:
+	}
+}
+
+// validImageRef allowlists docker-reference characters. Leading anchor blocks
+// `-` prefix which skopeo would parse as a flag.
+var validImageRef = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$`)
+
+// isDangerousImageRef rejects flag-smuggling and malformed separator sequences.
+func isDangerousImageRef(image string) bool {
+	bad := []string{"//", "@-", ":-", "/-", "::", "@@", ":@", "/@"}
+	for _, b := range bad {
+		if strings.Contains(image, b) {
+			return true
+		}
+	}
+	if strings.HasSuffix(image, ":") || strings.HasSuffix(image, "@") || strings.HasSuffix(image, "/") {
+		return true
+	}
+	return false
+}
+
+// Credential scrubbers run before storing error text in Build.Reason.
+var credScrub = regexp.MustCompile(`(://)[A-Za-z0-9._+-]*:[^\s@/]+@`)
+var bearerScrub = regexp.MustCompile(`([Bb]earer\s+)[A-Za-z0-9._~+/=-]{10,}`)
+var registryAuthScrub = regexp.MustCompile(`([Xx]-[Rr]egistry-[Aa]uth:\s*)[A-Za-z0-9._~+/=-]+`)
+
+func scrubCredentials(s string) string {
+	s = credScrub.ReplaceAllString(s, "${1}[REDACTED]@")
+	s = bearerScrub.ReplaceAllString(s, "${1}[REDACTED]")
+	s = registryAuthScrub.ReplaceAllString(s, "${1}[REDACTED]")
+	if len(s) > 500 {
+		s = s[:500]
+	}
+	return s
+}
+
+// parseRegistryHost extracts the registry host; defaults to docker.io.
+func parseRegistryHost(image string) string {
+	if i := strings.Index(image, "/"); i != -1 {
+		first := image[:i]
+		if strings.ContainsAny(first, ".:") || first == "localhost" {
+			return first
+		}
+	}
+	return "docker.io"
+}
+
+// writeImportAuthFile writes a temp auth.json for skopeo. Uses --authfile
+// instead of --src-creds/--dest-creds to keep secrets out of /proc/cmdline.
+// Caller must os.Remove(path).
+func writeImportAuthFile(srcImage, srcUser, srcPass, destHost, destUser, destPass string) (string, error) {
+	auths := map[string]map[string]string{}
+	if srcUser != "" && srcPass != "" {
+		srcHost := parseRegistryHost(srcImage)
+		auths[srcHost] = map[string]string{"auth": base64.StdEncoding.EncodeToString([]byte(srcUser + ":" + srcPass))}
+	}
+	if destUser != "" && destHost != "" {
+		// Strip repo path from destHost so skopeo's auth lookup matches.
+		bareDest := destHost
+		if i := strings.Index(bareDest, "/"); i != -1 {
+			bareDest = bareDest[:i]
+		}
+		auths[bareDest] = map[string]string{"auth": base64.StdEncoding.EncodeToString([]byte(destUser + ":" + destPass))}
+	}
+	data, err := json.Marshal(map[string]map[string]map[string]string{"auths": auths})
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	f, err := os.CreateTemp("", "convox-import-auth-*.json")
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	path := f.Name()
+	if err := os.Chmod(path, 0600); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", errors.WithStack(err)
+	}
+	return path, nil
+}
+
+// finalizeImportImageBuild records terminal state. Falls back to captured build
+// if BuildGet fails so the record is never stuck at "running".
+func (p *Provider) finalizeImportImageBuild(app string, captured *structs.Build, runErr error) *structs.Build {
+	fresh, getErr := p.BuildGet(app, captured.Id)
+	if getErr != nil {
+		fmt.Printf("err: BuildImportImage refresh %s: %+v\n", captured.Id, getErr)
+		fresh = captured
+	}
+	fresh.Ended = time.Now().UTC()
+	if runErr != nil {
+		fresh.Status = "failed"
+		fresh.Reason = scrubCredentials(runErr.Error())
+	} else {
+		fresh.Status = "complete"
+		fresh.Reason = ""
+	}
+	if _, err := p.buildUpdate(fresh); err != nil {
+		fmt.Printf("err: BuildImportImage final update %s: %+v\n", captured.Id, err)
+	}
+	return fresh
+}
+
+func (p *Provider) BuildImportImage(app, id, image string, opts structs.BuildImportImageOptions) error {
+	if image == "" {
+		return errors.WithStack(structs.ErrUnprocessable("image ref required"))
+	}
+	if !validImageRef.MatchString(image) || isDangerousImageRef(image) {
+		return errors.WithStack(structs.ErrUnprocessable("invalid image ref: must start with a letter or digit, contain only A-Z a-z 0-9 . _ : / @ + -, and not include // @- :- or /-"))
+	}
+
+	b, err := p.BuildGet(app, id)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Reject re-invocation; buildUpdate below closes TOCTOU via K8s optimistic concurrency.
+	if b.Status == "running" {
+		return errors.WithStack(structs.ErrConflict("build %s is already importing; wait for completion before retrying", id))
+	}
+
+	if strings.TrimSpace(b.Manifest) == "" {
+		return errors.WithStack(structs.ErrUnprocessable("build %s has no manifest; populate via BuildUpdate before BuildImportImage", id))
+	}
+
+	m, err := manifest.Load([]byte(b.Manifest), map[string]string{})
+	if err != nil {
+		return errors.WithStack(structs.ErrUnprocessable("manifest parse failed: %s", err.Error()))
+	}
+	if len(m.Services) == 0 {
+		return errors.WithStack(structs.ErrUnprocessable("manifest has no services to relay"))
+	}
+
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.AppNamespace(app), am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	a, err := p.appFromNamespaceOnly(*ns)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	arch := a.Parameters[structs.AppParamBuildArch]
+	if arch != "" && arch != "amd64" && arch != "arm64" {
+		return errors.WithStack(structs.ErrUnprocessable("invalid BuildArch: %s, must be amd64 or arm64", arch))
+	}
+
+	// Acquire slot before flipping to running so rejection leaves build unchanged.
+	importSlot := snapshotImportSlots()
+	if !acquireImportSlotOn(importSlot) {
+		return errors.WithStack(structs.ErrConflict("rack at concurrent-import cap (%d in flight); wait and retry", maxConcurrentImports))
+	}
+
+	b.Status = "running"
+	b.Started = time.Now().UTC()
+	b.Reason = ""
+	if _, err := p.buildUpdate(b); err != nil {
+		releaseImportSlot(importSlot)
+		// Surface K8s 409 (stale ResourceVersion) as a clean conflict.
+		if k8serrors.IsConflict(err) {
+			return errors.WithStack(structs.ErrConflict("build %s is currently being modified; wait and retry", id))
+		}
+		return errors.WithStack(err)
+	}
+
+	var srcUser, srcPass string
+	if opts.SrcCredsUser != nil {
+		srcUser = *opts.SrcCredsUser
+	}
+	if opts.SrcCredsPass != nil {
+		srcPass = *opts.SrcCredsPass
+	}
+
+	// Snapshot actor before goroutine launch; goroutine must not re-read p.ContextActor().
+	capturedActor := p.ContextActor()
+
+	// :start must be emitted synchronously before :done can fire.
+	_ = p.EventSend("build:import-image:start", structs.EventSendOptions{
+		Data: map[string]string{"actor": capturedActor, "app": app, "build": b.Id, "image": image},
+	})
+
+	// Value-copy for goroutine; nil Tags to avoid aliasing caller's map.
+	captured := *b
+	captured.Tags = nil
+	go func() {
+		var runErr error
+		defer func() {
+			// Release slot last so panics in finalize/EventSend don't leak.
+			defer releaseImportSlot(importSlot)
+			if r := recover(); r != nil {
+				fmt.Printf("panic in BuildImportImage for build %s: %v\nstack: %s\n", captured.Id, r, debug.Stack())
+				runErr = fmt.Errorf("panic during image import: %v", r)
+			}
+			final := p.finalizeImportImageBuild(app, &captured, runErr)
+			_ = p.EventSend("build:import-image:done", structs.EventSendOptions{
+				Data: map[string]string{"actor": capturedActor, "app": app, "build": captured.Id, "status": final.Status},
+			})
+		}()
+
+		runErr = p.buildImportImageRun(app, &captured, m, image, srcUser, srcPass, arch)
+	}()
+
+	return nil
+}
+
+func (p *Provider) buildImportImageRun(app string, b *structs.Build, m *manifest.Manifest, imageRef, srcUser, srcPass, arch string) error {
+	repo, _, err := p.Engine.RepositoryHost(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	destUser, destPass, err := p.Engine.RepositoryAuth(app)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Unified authfile keeps creds out of /proc/cmdline.
+	authPath, err := writeImportAuthFile(imageRef, srcUser, srcPass, repo, destUser, destPass)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() { _ = os.Remove(authPath) }()
+
+	for i := range m.Services {
+		svc := &m.Services[i]
+		src := imageRef
+		if svc.Image != "" {
+			src = svc.Image
+		}
+		if !validImageRef.MatchString(src) || isDangerousImageRef(src) {
+			return fmt.Errorf("invalid image ref for service %s", svc.Name)
+		}
+		dst := fmt.Sprintf("%s:%s.%s", repo, svc.Name, b.Id)
+
+		args := []string{"copy", "--authfile", authPath}
+		if len(common.BuildArchs(os.Getenv("BUILD_ARCHS"))) > 0 {
+			args = append(args, "--all")
+		} else if arch != "" {
+			args = append(args, "--override-arch", arch)
+		}
+		args = append(args, "--", fmt.Sprintf("docker://%s", src), fmt.Sprintf("docker://%s", dst))
+
+		ctx, cancel := context.WithTimeout(context.Background(), skopeoCopyTimeout)
+		out, runErr := skopeoExec(ctx, args...)
+		cancel()
+		if runErr != nil {
+			return fmt.Errorf("image relay failed for service %s: %s (output: %s)", svc.Name, runErr, strings.TrimSpace(string(out)))
+		}
+	}
+
+	return nil
+}
+
 func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) {
 	var source structs.Build
 
@@ -307,15 +744,23 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 		}
 
 		if strings.HasSuffix(header.Name, ".tar") {
-			f, err := os.Create(fmt.Sprintf("%s/%s", tmp, header.Name))
+			path, err := common.SafeExtractPath(tmp, header.Name)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			f, err := os.Create(path)
 			if err != nil {
 				return nil, errors.Errorf("failed to untar image - %s", err.Error())
 			}
 
 			// skipcq
 			_, err = io.Copy(f, tr)
+			if closeErr := f.Close(); err == nil {
+				err = closeErr
+			}
 			if err != nil {
-				errors.Errorf("failed to write image - %s", err.Error())
+				return nil, errors.Errorf("failed to write image - %s", err.Error())
 			}
 
 			svc := strings.Split(header.Name, ".")[0]
@@ -349,9 +794,9 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	for svc, img := range imgBySvc {
 		dst := fmt.Sprintf("%s:%s.%s", repo, svc, target.Id)
 
-		b, err := exec.Command("skopeo", "copy", "--dest-creds", fmt.Sprintf("%s:%s", user, pass), fmt.Sprintf("oci-archive:%s", img), fmt.Sprintf("docker://%s", dst)).CombinedOutput()
+		b, err := exec.Command("skopeo", "copy", "--all", "--dest-creds", fmt.Sprintf("%s:%s", user, pass), fmt.Sprintf("oci-archive:%s", img), fmt.Sprintf("docker://%s", dst)).CombinedOutput() //nolint:gosec // fixed argv; refs derive from rack build records
 		if err != nil {
-			errors.Errorf("failed to push image - %s\n%s", err.Error(), string(b))
+			return nil, errors.Errorf("failed to push image - %s\n%s", err.Error(), string(b))
 		}
 	}
 
@@ -379,6 +824,38 @@ func (p *Provider) BuildImport(app string, r io.Reader) (*structs.Build, error) 
 	return target, nil
 }
 
+// buildPod finds the build pod wherever it actually runs; label-aware routing
+// can change between pod creation and the call that looks for it.
+func (p *Provider) buildPod(app, process string) (*ac.Pod, string, error) {
+	ns := p.processBuildNamespace(app)
+	pd, err := p.Cluster.CoreV1().Pods(ns).Get(context.TODO(), process, am.GetOptions{})
+	switch {
+	case err == nil:
+		return pd, ns, nil
+	case !k8serrors.IsNotFound(err):
+		return nil, ns, errors.WithStack(err)
+	}
+
+	alt := p.buildNamespace(app)
+	if alt == ns {
+		alt = p.AppNamespace(app)
+	}
+	pd, err = p.Cluster.CoreV1().Pods(alt).Get(context.TODO(), process, am.GetOptions{})
+	switch {
+	case err == nil:
+		return pd, alt, nil
+	case !k8serrors.IsNotFound(err):
+		return nil, ns, errors.WithStack(err)
+	}
+
+	return nil, ns, nil
+}
+
+func (p *Provider) buildLogsNamespace(app, process string) string {
+	_, ns, _ := p.buildPod(app, process)
+	return ns
+}
+
 func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	b, err := p.BuildGet(app, id)
 	if err != nil {
@@ -389,19 +866,138 @@ func (p *Provider) BuildLogs(app, id string, opts structs.LogsOptions) (io.ReadC
 
 	switch b.Status {
 	case "running":
-		return p.ProcessLogs(app, b.Process, opts)
+		if b.Process == "" {
+			return nil, fmt.Errorf("build %s has running status but no process ID", id)
+		}
+		return p.processLogsNamespace(p.buildLogsNamespace(app, b.Process), b.Process, opts)
+	case "created":
+		return p.buildLogsStreamFromCreated(app, id, opts)
 	default:
-		u, err := url.Parse(b.Logs)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+		return p.buildLogsFromStorage(app, id, b)
+	}
+}
 
-		switch u.Scheme {
-		case "object":
-			return p.ObjectFetch(u.Hostname(), u.Path)
-		default:
-			return nil, errors.WithStack(fmt.Errorf("unable to read logs for build: %s", id))
+func (p *Provider) buildLogsStreamFromCreated(app, id string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	r, w := io.Pipe()
+	go p.streamBuildLogsFromCreated(w, app, id, opts)
+	return r, nil
+}
+
+func (p *Provider) streamBuildLogsFromCreated(w io.WriteCloser, app, id string, opts structs.LogsOptions) {
+	defer w.Close()
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("panic in streamBuildLogsFromCreated for build %s: %v\nstack: %s\n", id, r, debug.Stack())
 		}
+	}()
+
+	timeout := time.After(5 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+
+	heartbeat := time.NewTicker(10 * time.Second)
+	defer heartbeat.Stop()
+
+	startTime := time.Now()
+	useDirectAPI := false
+
+	for {
+		select {
+		case <-timeout:
+			fmt.Fprintf(w, "build %s did not start within 5 minutes\n", id)
+			return
+
+		case <-heartbeat.C:
+			if _, err := fmt.Fprintf(w, "waiting for build to start...\n"); err != nil {
+				return
+			}
+
+		case <-tick.C:
+			if !useDirectAPI && time.Since(startTime) >= 10*time.Second {
+				useDirectAPI = true
+			}
+
+			b, err := p.getBuildStatus(app, id, useDirectAPI)
+			if err != nil {
+				fmt.Printf("err: build status check for %s: %+v\n", id, err)
+				continue
+			}
+
+			switch b.Status {
+			case "running":
+				if b.Process == "" {
+					continue
+				}
+				tick.Stop()
+				heartbeat.Stop()
+				p.streamProcessLogs(w, p.buildLogsNamespace(app, b.Process), b.Process, opts)
+				return
+			case "failed", "complete":
+				p.writeStoredBuildLogs(w, app, id, b)
+				return
+			case "created":
+				continue
+			default:
+				fmt.Fprintf(w, "unexpected build status: %s\n", b.Status)
+				return
+			}
+		}
+	}
+}
+
+func (p *Provider) getBuildStatus(app, id string, useDirectAPI bool) (*structs.Build, error) {
+	if useDirectAPI {
+		kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(
+			strings.ToLower(id), am.GetOptions{},
+		)
+		if err != nil {
+			return nil, err
+		}
+		return p.buildUnmarshal(kb)
+	}
+	return p.BuildGet(app, id)
+}
+
+func (p *Provider) writeStoredBuildLogs(w io.Writer, app, id string, b *structs.Build) {
+	if b.Logs == "" {
+		if b.Status == "failed" {
+			fmt.Fprintf(w, "build failed -- no build logs available\n")
+		}
+		return
+	}
+
+	u, err := url.Parse(b.Logs)
+	if err != nil {
+		fmt.Printf("err: parse build %s logs URL: %+v\n", id, err)
+		return
+	}
+
+	switch u.Scheme {
+	case "object":
+		r, err := p.ObjectFetch(u.Hostname(), u.Path)
+		if err != nil {
+			fmt.Printf("err: fetch stored logs for build %s: %+v\n", id, err)
+			return
+		}
+		defer r.Close()
+		io.Copy(w, r)
+	default:
+		fmt.Printf("err: unknown log scheme %q for build %s\n", u.Scheme, id)
+	}
+}
+
+func (p *Provider) buildLogsFromStorage(app, id string, b *structs.Build) (io.ReadCloser, error) {
+	u, err := url.Parse(b.Logs)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	switch u.Scheme {
+	case "object":
+		return p.ObjectFetch(u.Hostname(), u.Path)
+	default:
+		return nil, errors.WithStack(fmt.Errorf("unable to read logs for build: %s", id))
 	}
 }
 
@@ -411,14 +1007,16 @@ func (p *Provider) BuildList(app string, opts structs.BuildListOptions) (structs
 		return nil, errors.WithStack(err)
 	}
 
-	bs, err := p.buildList(app)
+	limit := common.DefaultInt(opts.Limit, 10)
+
+	bs, err := p.buildList(app, limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(bs, func(i, j int) bool { return bs[i].Started.After(bs[j].Started) })
 
-	if limit := common.DefaultInt(opts.Limit, 10); len(bs) > limit {
+	if len(bs) > limit {
 		bs = bs[0:limit]
 	}
 
@@ -529,7 +1127,7 @@ func (p *Provider) buildCreate(b *structs.Build) (*structs.Build, error) {
 
 // skipcq
 func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
-	kb, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kb, err := p.GetBuildFromInformer(strings.ToLower(id), p.AppNamespace(app))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -538,8 +1136,8 @@ func (p *Provider) buildGet(app, id string) (*structs.Build, error) {
 }
 
 // skipcq
-func (p *Provider) buildList(app string) (structs.Builds, error) {
-	kbs, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(app)).List(am.ListOptions{})
+func (p *Provider) buildList(app string, limit int) (structs.Builds, error) {
+	kbs, err := p.ListBuildsFromInformer(p.AppNamespace(app), "", limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -580,6 +1178,7 @@ func (p *Provider) buildMarshal(b *structs.Build) *ca.Build {
 			Logs:        b.Logs,
 			Manifest:    b.Manifest,
 			Process:     b.Process,
+			Reason:      b.Reason,
 			Release:     b.Release,
 			Started:     b.Started.UTC().Format(common.SortableTime),
 			Status:      b.Status,
@@ -609,6 +1208,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 		Logs:        kb.Spec.Logs,
 		Manifest:    kb.Spec.Manifest,
 		Process:     kb.Spec.Process,
+		Reason:      kb.Spec.Reason,
 		Release:     kb.Spec.Release,
 		Started:     started,
 		Status:      kb.Spec.Status,
@@ -619,7 +1219,7 @@ func (p *Provider) buildUnmarshal(kb *ca.Build) (*structs.Build, error) {
 
 // skipcq
 func (p *Provider) buildUpdate(b *structs.Build) (*structs.Build, error) {
-	kbo, err := p.Convox.ConvoxV1().Builds(p.AppNamespace(b.App)).Get(strings.ToLower(b.Id), am.GetOptions{})
+	kbo, err := p.GetBuildFromInformer(strings.ToLower(b.Id), p.AppNamespace(b.App))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

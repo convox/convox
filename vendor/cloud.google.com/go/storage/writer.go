@@ -16,7 +16,6 @@ package storage
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -24,18 +23,18 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"google.golang.org/api/googleapi"
-	raw "google.golang.org/api/storage/v1"
-	storagepb "google.golang.org/genproto/googleapis/storage/v2"
+	"cloud.google.com/go/internal/trace"
 )
 
-const (
-	// Maximum amount of content that can be sent per WriteObjectRequest message.
-	// A buffer reaching this amount will precipitate a flush of the buffer.
-	//
-	// This is only used for the gRPC-based Writer.
-	maxPerMessageWriteSize int = int(storagepb.ServiceConstants_MAX_WRITE_CHUNK_BYTES)
-)
+// Interface internalWriter wraps low-level implementations which may vary
+// across client types.
+type internalWriter interface {
+	io.WriteCloser
+	Flush() (int64, error)
+	// CloseWithError terminates the write operation and sets its status.
+	// Note that CloseWithError always returns nil.
+	CloseWithError(error) error
+}
 
 // A Writer writes a Cloud Storage object.
 type Writer struct {
@@ -88,18 +87,59 @@ type Writer struct {
 	// For uploads of larger files, the Writer will attempt to retry if the
 	// request to upload a particular chunk fails with a transient error.
 	// If a single chunk has been attempting to upload for longer than this
-	// deadline and the request fails, it will no longer be retried, and the error
-	// will be returned to the caller. This is only applicable for files which are
-	// large enough to require a multi-chunk resumable upload. The default value
-	// is 32s. Users may want to pick a longer deadline if they are using larger
-	// values for ChunkSize or if they expect to have a slow or unreliable
-	// internet connection.
+	// deadline and the request fails, it will no longer be retried, and the
+	// error will be returned to the caller. This is only applicable for files
+	// which are large enough to require a multi-chunk resumable upload. The
+	// default value is 32s. Users may want to pick a longer deadline if they
+	// are using larger values for ChunkSize or if they expect to have a slow or
+	// unreliable internet connection.
 	//
 	// To set a deadline on the entire upload, use context timeout or
 	// cancellation.
 	ChunkRetryDeadline time.Duration
 
-	// ProgressFunc can be used to monitor the progress of a large write.
+	// ChunkTransferTimeout sets a per-chunk request timeout for resumable uploads.
+	//
+	// For resumable uploads, the Writer will terminate the request and attempt
+	// a retry if the request to upload a particular chunk stalls for longer than
+	// this duration. Retries may continue until the ChunkRetryDeadline is reached.
+	//
+	// ChunkTransferTimeout is not applicable to uploads made using a gRPC client.
+	//
+	// The default value is no timeout.
+	ChunkTransferTimeout time.Duration
+
+	// ForceEmptyContentType is an optional parameter that is used to disable
+	// auto-detection of Content-Type. By default, if a blank Content-Type
+	// is provided, then gax.DetermineContentType is called to sniff the type.
+	ForceEmptyContentType bool
+
+	// Append is a parameter to indicate whether the writer should use appendable
+	// object semantics for the new object generation. Appendable objects are
+	// visible on the first Write() call, and can be appended to until they are
+	// finalized. If Writer.FinalizeOnClose is set to true, the object is finalized
+	// when Writer.Close() is called; otherwise, the object is left unfinalized
+	// and can be appended to later.
+	//
+	// Defaults to false unless the experiemental WithZonalBucketAPIs option was
+	// set.
+	//
+	// Append is only supported for gRPC. This feature is in preview and is not
+	// yet available for general use.
+	Append bool
+
+	// FinalizeOnClose indicates whether the Writer should finalize an object when
+	// closing the write stream. This only applies to Writers where Append is
+	// true, since append semantics allow a prefix of the object to be durable and
+	// readable. By default, objects written with Append semantics will not be
+	// finalized, which means they can be appended to later. If Append is set
+	// to false, this parameter will be ignored; non-appendable objects will
+	// always be finalized when Writer.Close returns without error.
+	//
+	// This feature is in preview and is not yet available for general use.
+	FinalizeOnClose bool
+
+	// ProgressFunc can be used to monitor the progress of a large write
 	// operation. If ProgressFunc is not nil and writing requires multiple
 	// calls to the underlying service (see
 	// https://cloud.google.com/storage/docs/json_api/v1/how-tos/resumable-upload),
@@ -113,109 +153,15 @@ type Writer struct {
 	o   *ObjectHandle
 
 	opened bool
-	pw     *io.PipeWriter
+	closed bool
+	iw     internalWriter
 
 	donec chan struct{} // closed after err and obj are set.
 	obj   *ObjectAttrs
 
-	mu  sync.Mutex
-	err error
-}
-
-func (w *Writer) open() error {
-	if err := w.validateWriteAttrs(); err != nil {
-		return err
-	}
-
-	pr, pw := io.Pipe()
-	w.pw = pw
-	w.opened = true
-
-	go w.monitorCancel()
-
-	attrs := w.ObjectAttrs
-	mediaOpts := []googleapi.MediaOption{
-		googleapi.ChunkSize(w.ChunkSize),
-	}
-	if c := attrs.ContentType; c != "" {
-		mediaOpts = append(mediaOpts, googleapi.ContentType(c))
-	}
-	if w.ChunkRetryDeadline != 0 {
-		mediaOpts = append(mediaOpts, googleapi.ChunkRetryDeadline(w.ChunkRetryDeadline))
-	}
-
-	go func() {
-		defer close(w.donec)
-
-		rawObj := attrs.toRawObject(w.o.bucket)
-		if w.SendCRC32C {
-			rawObj.Crc32c = encodeUint32(attrs.CRC32C)
-		}
-		if w.MD5 != nil {
-			rawObj.Md5Hash = base64.StdEncoding.EncodeToString(w.MD5)
-		}
-		call := w.o.c.raw.Objects.Insert(w.o.bucket, rawObj).
-			Media(pr, mediaOpts...).
-			Projection("full").
-			Context(w.ctx).
-			Name(w.o.object)
-
-		if w.ProgressFunc != nil {
-			call.ProgressUpdater(func(n, _ int64) { w.ProgressFunc(n) })
-		}
-		if attrs.KMSKeyName != "" {
-			call.KmsKeyName(attrs.KMSKeyName)
-		}
-		if attrs.PredefinedACL != "" {
-			call.PredefinedAcl(attrs.PredefinedACL)
-		}
-		if err := setEncryptionHeaders(call.Header(), w.o.encryptionKey, false); err != nil {
-			w.mu.Lock()
-			w.err = err
-			w.mu.Unlock()
-			pr.CloseWithError(err)
-			return
-		}
-		var resp *raw.Object
-		err := applyConds("NewWriter", w.o.gen, w.o.conds, call)
-		if err == nil {
-			if w.o.userProject != "" {
-				call.UserProject(w.o.userProject)
-			}
-			setClientHeader(call.Header())
-
-			// The internals that perform call.Do automatically retry both the initial
-			// call to set up the upload as well as calls to upload individual chunks
-			// for a resumable upload (as long as the chunk size is non-zero). Hence
-			// there is no need to add retries here.
-
-			// Retry only when the operation is idempotent or the retry policy is RetryAlways.
-			isIdempotent := w.o.conds != nil && (w.o.conds.GenerationMatch >= 0 || w.o.conds.DoesNotExist == true)
-			var useRetry bool
-			if (w.o.retry == nil || w.o.retry.policy == RetryIdempotent) && isIdempotent {
-				useRetry = true
-			} else if w.o.retry != nil && w.o.retry.policy == RetryAlways {
-				useRetry = true
-			}
-			if useRetry {
-				if w.o.retry != nil {
-					call.WithRetry(w.o.retry.backoff, w.o.retry.shouldRetry)
-				} else {
-					call.WithRetry(nil, nil)
-				}
-			}
-			resp, err = call.Do()
-		}
-		if err != nil {
-			w.mu.Lock()
-			w.err = err
-			w.mu.Unlock()
-			pr.CloseWithError(err)
-			return
-		}
-		w.obj = newObject(resp)
-	}()
-	return nil
+	mu             sync.Mutex
+	err            error
+	takeoverOffset int64 // offset from which the writer started appending to the object.
 }
 
 // Write appends to w. It implements the io.Writer interface.
@@ -235,16 +181,11 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 		return 0, werr
 	}
 	if !w.opened {
-		// gRPC client has been initialized - use gRPC to upload.
-		if w.o.c.tc != nil {
-			if err := w.openWriter(); err != nil {
-				return 0, err
-			}
-		} else if err := w.open(); err != nil {
+		if err := w.openWriter(); err != nil {
 			return 0, err
 		}
 	}
-	n, err = w.pw.Write(p)
+	n, err = w.iw.Write(p)
 	if err != nil {
 		w.mu.Lock()
 		werr := w.err
@@ -259,28 +200,68 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
+// Flush syncs all bytes currently in the Writer's buffer to Cloud Storage.
+// It returns the offset of bytes that have been currently synced to
+// Cloud Storage and an error.
+//
+// If Flush is never called, Writer will sync data automatically every
+// [Writer.ChunkSize] bytes and on [Writer.Close].
+//
+// [Writer.ProgressFunc] will be called on Flush if present.
+//
+// Do not call Flush concurrently with Write or Close. A single Writer is not
+// safe for unsynchronized use across threads.
+//
+// Note that calling Flush very early (before 512 bytes) may interfere with
+// automatic content sniffing in the Writer.
+//
+// Flush is supported only on gRPC clients where [Writer.Append] is set
+// to true. This feature is in preview and is not yet available for general use.
+func (w *Writer) Flush() (int64, error) {
+	// Return error if Append is not true.
+	if !w.Append {
+		return 0, errors.New("storage: Flush not supported unless client uses gRPC and Append is set to true")
+	}
+	if w.closed {
+		return 0, errors.New("storage: Flush called on closed Writer")
+	}
+	// Return error if already in error state.
+	w.mu.Lock()
+	werr := w.err
+	w.mu.Unlock()
+	if werr != nil {
+		return 0, werr
+	}
+	// If Flush called before any bytes written, it should start the upload
+	// at zero bytes. This will make the object visible with zero length data.
+	if !w.opened {
+		if err := w.openWriter(); err != nil {
+			return 0, err
+		}
+	}
+
+	return w.iw.Flush()
+}
+
 // Close completes the write operation and flushes any buffered data.
 // If Close doesn't return an error, metadata about the written object
 // can be retrieved by calling Attrs.
 func (w *Writer) Close() error {
 	if !w.opened {
-		if w.o.c.tc != nil {
-			if err := w.openWriter(); err != nil {
-				return err
-			}
-		} else if err := w.open(); err != nil {
+		if err := w.openWriter(); err != nil {
 			return err
 		}
 	}
 
-	// Closing either the read or write causes the entire pipe to close.
-	if err := w.pw.Close(); err != nil {
+	if err := w.iw.Close(); err != nil {
 		return err
 	}
 
 	<-w.donec
+	w.closed = true
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	trace.EndSpan(w.ctx, w.err)
 	return w.err
 }
 
@@ -288,27 +269,46 @@ func (w *Writer) openWriter() (err error) {
 	if err := w.validateWriteAttrs(); err != nil {
 		return err
 	}
-
-	go w.monitorCancel()
-	params := &openWriterParams{
-		ctx:                w.ctx,
-		chunkSize:          w.ChunkSize,
-		chunkRetryDeadline: w.ChunkRetryDeadline,
-		bucket:             w.o.bucket,
-		attrs:              &w.ObjectAttrs,
-		conds:              w.o.conds,
-		encryptionKey:      w.o.encryptionKey,
-		sendCRC32C:         w.SendCRC32C,
-		donec:              w.donec,
-		setError:           w.error,
-		progress:           w.progress,
-		setObj:             func(o *ObjectAttrs) { w.obj = o },
+	if w.o.gen != defaultGen && !w.Append {
+		return fmt.Errorf("storage: generation supported on Writer for appendable objects only, got %v", w.o.gen)
 	}
-	w.pw, err = w.o.c.tc.OpenWriter(params)
+
+	isIdempotent := w.o.conds != nil && (w.o.conds.GenerationMatch >= 0 || w.o.conds.DoesNotExist)
+	opts := makeStorageOpts(isIdempotent, w.o.retry, w.o.userProject)
+	params := &openWriterParams{
+		ctx:                  w.ctx,
+		chunkSize:            w.ChunkSize,
+		chunkRetryDeadline:   w.ChunkRetryDeadline,
+		chunkTransferTimeout: w.ChunkTransferTimeout,
+		bucket:               w.o.bucket,
+		attrs:                &w.ObjectAttrs,
+		conds:                w.o.conds,
+		appendGen:            w.o.gen,
+		encryptionKey:        w.o.encryptionKey,
+		sendCRC32C:           w.SendCRC32C,
+		append:               w.Append,
+		finalizeOnClose:      w.FinalizeOnClose,
+		donec:                w.donec,
+		setError:             w.error,
+		progress:             w.progress,
+		setObj:               func(o *ObjectAttrs) { w.obj = o },
+		setSize: func(n int64) {
+			if w.obj != nil {
+				w.obj.Size = n
+			}
+		},
+		setTakeoverOffset:     func(n int64) { w.takeoverOffset = n },
+		forceEmptyContentType: w.ForceEmptyContentType,
+	}
+	if err := w.ctx.Err(); err != nil {
+		return err // short-circuit
+	}
+	w.iw, err = w.o.c.tc.OpenWriter(params, opts...)
 	if err != nil {
 		return err
 	}
 	w.opened = true
+	go w.monitorCancel()
 
 	return nil
 }
@@ -324,7 +324,6 @@ func (w *Writer) monitorCancel() {
 		w.err = werr
 		w.mu.Unlock()
 
-		// Closing either the read or write causes the entire pipe to close.
 		w.CloseWithError(werr)
 	case <-w.donec:
 	}
@@ -338,7 +337,7 @@ func (w *Writer) CloseWithError(err error) error {
 	if !w.opened {
 		return nil
 	}
-	return w.pw.CloseWithError(err)
+	return w.iw.CloseWithError(err)
 }
 
 // Attrs returns metadata about a successfully-written object.
@@ -367,9 +366,9 @@ func (w *Writer) validateWriteAttrs() error {
 }
 
 // progress is a convenience wrapper that reports write progress to the Writer
-// ProgressFunc if it is set and progress is non-zero.
+// ProgressFunc if it is set.
 func (w *Writer) progress(p int64) {
-	if w.ProgressFunc != nil && p != 0 {
+	if w.ProgressFunc != nil {
 		w.ProgressFunc(p)
 	}
 }

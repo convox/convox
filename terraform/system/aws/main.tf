@@ -1,16 +1,63 @@
 provider "aws" {
-  region = var.region
+  region     = var.region
+  sts_region = var.region
 }
 
 provider "kubernetes" {
-  cluster_ca_certificate = module.cluster.ca
-  host                   = module.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+  host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", local.name]
-    command     = "aws"
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", local.name]
+      command     = "aws"
+    }
   }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+    host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
+
+    dynamic "exec" {
+      for_each = var.private_eks_host != "" ? [] : [1]
+      content {
+        api_version = "client.authentication.k8s.io/v1beta1"
+        args        = ["eks", "get-token", "--cluster-name", local.name]
+        command     = "aws"
+      }
+    }
+
+    insecure = var.private_eks_host != "" ? true : false
+    username = var.private_eks_host != "" ? var.private_eks_user : null
+    password = var.private_eks_host != "" ? var.private_eks_pass : null
+  }
+}
+
+provider "kubectl" {
+  host                   = var.private_eks_host != "" ? var.private_eks_host : module.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : module.cluster.ca
+  load_config_file       = false
+
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", local.name]
+      command     = "aws"
+    }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
 }
 
 data "aws_eks_cluster_auth" "cluster" {
@@ -30,18 +77,50 @@ locals {
 
   // var.node_type can be assigned a comma separated list of instance types
   node_type       = split(",", var.node_type)[0]
-  build_node_type = var.build_node_type != "" ? var.build_node_type : local.node_type
-  arm_type        = substr(local.node_type, 0, 2) == "a1" || substr(local.node_type, 0, 3) == "c6g" || substr(local.node_type, 0, 3) == "c7g" || substr(local.node_type, 0, 3) == "m6g" || substr(local.node_type, 0, 3) == "r6g" || substr(local.node_type, 0, 3) == "t4g"
-  build_arm_type  = substr(local.build_node_type, 0, 2) == "a1" || substr(local.build_node_type, 0, 3) == "c6g" || substr(local.build_node_type, 0, 3) == "c7g" || substr(local.build_node_type, 0, 3) == "m6g" || substr(local.build_node_type, 0, 3) == "r6g" || substr(local.build_node_type, 0, 3) == "t4g"
+  build_node_type = var.build_node_type != "" ? split(",", var.build_node_type)[0] : local.node_type
+  arm_type        = module.node_arch.is_arm
+  build_arm_type  = module.build_node_arch.is_arm
   current         = jsondecode(data.http.releases.response_body).tag_name
   gpu_type        = substr(local.node_type, 0, 1) == "g" || substr(local.node_type, 0, 1) == "p"
   build_gpu_type  = substr(local.build_node_type, 0, 1) == "g" || substr(local.build_node_type, 0, 1) == "p"
   image           = var.image
-  release         = local.arm_type ? format("%s-%s", coalesce(var.release, local.current), "arm64") : coalesce(var.release, local.current)
+  release         = coalesce(var.release, local.current)
   tag_map = length(var.tags) == 0 ? {} : {
     for v in split(",", var.tags) :
     "${split("=", v)[0]}" => split("=", v)[1]
   }
+
+  additional_node_groups  = try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)), [])
+  additional_build_groups = try(jsondecode(var.additional_build_groups_config), jsondecode(base64decode(var.additional_build_groups_config)), [])
+
+  additional_karpenter_nodepools = try(jsondecode(var.additional_karpenter_nodepools_config), jsondecode(base64decode(var.additional_karpenter_nodepools_config)), [])
+  karpenter_node_overlays        = try(jsondecode(var.karpenter_node_overlays_config), jsondecode(base64decode(var.karpenter_node_overlays_config)), [])
+
+  karpenter_arch_effective = var.karpenter_arch != "" ? var.karpenter_arch : (local.arm_type ? "arm64" : "amd64")
+  karpenter_arch_all = distinct(compact([for a in flatten([
+    split(",", local.karpenter_arch_effective),
+    [for np in local.additional_karpenter_nodepools : split(",", lookup(np, "arch", "amd64"))],
+  ]) : trimspace(a)]))
+  node_archs = distinct(concat(
+    local.karpenter_arch_all,
+    [local.arm_type ? "arm64" : "amd64"],
+    var.build_node_enabled ? [local.build_arm_type ? "arm64" : "amd64"] : [],
+  ))
+  build_archs = var.karpenter_enabled == "true" && length(local.node_archs) > 1 ? join(",", sort(local.karpenter_arch_all)) : ""
+
+  public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
+  private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
+  eks_log_types        = var.eks_log_types == "" ? [] : split(",", var.eks_log_types)
+}
+
+module "node_arch" {
+  source    = "../../helpers/aws"
+  node_type = local.node_type
+}
+
+module "build_node_arch" {
+  source    = "../../helpers/aws"
+  node_type = local.build_node_type
 }
 
 module "cluster" {
@@ -51,44 +130,124 @@ module "cluster" {
     aws = aws
   }
 
-  arm_type                 = local.arm_type
-  build_arm_type           = local.build_arm_type
-  availability_zones       = var.availability_zones
-  build_node_enabled       = var.build_node_enabled
-  build_node_min_count     = var.build_node_min_count
-  build_node_type          = var.build_node_type != "" ? var.build_node_type : var.node_type
-  cidr                     = var.cidr
-  coredns_version          = var.coredns_version
-  gpu_type                 = local.gpu_type
-  build_gpu_type           = local.build_gpu_type
-  gpu_tag_enable           = var.gpu_tag_enable
-  high_availability        = var.high_availability
-  internet_gateway_id      = var.internet_gateway_id
-  imds_http_tokens         = var.imds_http_tokens
-  imds_http_hop_limit      = var.imds_http_hop_limit
-  imds_tags_enable         = var.imds_tags_enable
-  key_pair_name            = var.key_pair_name
-  kube_proxy_version       = var.kube_proxy_version
-  k8s_version              = var.k8s_version
-  max_on_demand_count      = var.max_on_demand_count
-  min_on_demand_count      = var.min_on_demand_count
-  name                     = local.name
-  node_capacity_type       = upper(var.node_capacity_type)
-  node_disk                = var.node_disk
-  node_type                = var.node_type
-  private                  = var.private
-  schedule_rack_scale_down = var.schedule_rack_scale_down
-  schedule_rack_scale_up   = var.schedule_rack_scale_up
-  tags                     = local.tag_map
-  vpc_cni_version          = var.vpc_cni_version
-  vpc_id                   = var.vpc_id
-  private_subnets_ids      = compact(split(",", var.private_subnets_ids))
-  public_subnets_ids       = compact(split(",", var.public_subnets_ids))
+  additional_node_groups                  = local.additional_node_groups
+  additional_build_groups                 = local.additional_build_groups
+  arm_type                                = local.arm_type
+  aws_ebs_csi_driver_version              = var.aws_ebs_csi_driver_version
+  build_arm_type                          = local.build_arm_type
+  availability_zones                      = var.availability_zones
+  build_node_enabled                      = var.build_node_enabled
+  build_node_minimal_role_enabled         = var.build_node_minimal_role_enabled
+  build_node_min_count                    = var.build_node_min_count
+  build_node_type                         = var.build_node_type != "" ? var.build_node_type : var.node_type
+  cidr                                    = var.cidr
+  coredns_version                         = var.coredns_version
+  disable_public_access                   = var.disable_public_access
+  enable_private_access                   = var.enable_private_access
+  eks_control_plane_private_subnets       = var.eks_control_plane_private_subnets
+  ebs_volume_encryption_enabled           = var.ebs_volume_encryption_enabled
+  efs_csi_driver_enable                   = var.efs_csi_driver_enable
+  efs_csi_driver_version                  = var.efs_csi_driver_version
+  gpu_type                                = local.gpu_type
+  build_gpu_type                          = local.build_gpu_type
+  gpu_tag_enable                          = var.gpu_tag_enable
+  high_availability                       = var.high_availability
+  internet_gateway_id                     = var.internet_gateway_id
+  imds_http_tokens                        = var.imds_http_tokens
+  imds_http_hop_limit                     = var.imds_http_hop_limit
+  imds_tags_enable                        = var.imds_tags_enable
+  pod_imds_block_enabled                  = var.pod_imds_block_enabled
+  network_policy_enable                   = var.network_policy_enable
+  eks_access_entries                      = var.eks_access_entries == "true"
+  karpenter_ami_alias                     = var.karpenter_ami_alias
+  karpenter_auth_mode                     = var.karpenter_auth_mode == "true"
+  karpenter_enabled                       = var.karpenter_enabled == "true"
+  karpenter_system_node_min_count_per_az  = var.karpenter_system_node_min_count_per_az
+  karpenter_instance_families             = var.karpenter_instance_families
+  karpenter_instance_sizes                = var.karpenter_instance_sizes
+  karpenter_capacity_types                = var.karpenter_capacity_types
+  karpenter_arch                          = local.karpenter_arch_effective
+  karpenter_cpu_limit                     = var.karpenter_cpu_limit
+  karpenter_memory_limit_gb               = var.karpenter_memory_limit_gb
+  karpenter_consolidation_enabled         = var.karpenter_consolidation_enabled
+  karpenter_consolidate_after             = var.karpenter_consolidate_after
+  karpenter_node_expiry                   = var.karpenter_node_expiry
+  karpenter_disruption_budget_nodes       = var.karpenter_disruption_budget_nodes
+  karpenter_disruption_block_schedule     = var.karpenter_disruption_block_schedule
+  karpenter_disruption_block_duration     = var.karpenter_disruption_block_duration
+  karpenter_node_disk                     = var.karpenter_node_disk
+  karpenter_node_volume_type              = var.karpenter_node_volume_type
+  karpenter_node_volume_iops              = var.karpenter_node_volume_iops
+  karpenter_node_volume_throughput        = var.karpenter_node_volume_throughput
+  karpenter_node_os                       = var.karpenter_node_os
+  karpenter_node_labels                   = var.karpenter_node_labels
+  karpenter_node_taints                   = var.karpenter_node_taints
+  karpenter_config                        = var.karpenter_config != "" ? try(base64decode(var.karpenter_config), var.karpenter_config) : "{}"
+  karpenter_build_instance_families       = var.karpenter_build_instance_families
+  karpenter_build_instance_sizes          = var.karpenter_build_instance_sizes
+  karpenter_build_capacity_types          = var.karpenter_build_capacity_types
+  karpenter_build_cpu_limit               = var.karpenter_build_cpu_limit
+  karpenter_build_memory_limit_gb         = var.karpenter_build_memory_limit_gb
+  karpenter_build_consolidate_after       = var.karpenter_build_consolidate_after
+  karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
+  karpenter_build_node_labels             = var.karpenter_build_node_labels
+  karpenter_build_imds_tokens             = var.karpenter_build_imds_tokens
+  karpenter_build_imds_hop_limit          = var.karpenter_build_imds_hop_limit
+  additional_karpenter_nodepools          = local.additional_karpenter_nodepools
+  karpenter_node_overlays                 = local.karpenter_node_overlays
+  keda_enable                             = var.keda_enable
+  key_pair_name                           = var.key_pair_name
+  kube_proxy_version                      = var.kube_proxy_version
+  k8s_version                             = var.k8s_version
+  max_on_demand_count                     = var.max_on_demand_count
+  min_on_demand_count                     = var.min_on_demand_count
+  name                                    = local.name
+  node_capacity_type                      = upper(var.node_capacity_type)
+  node_disk                               = var.node_disk
+  node_volume_iops                        = var.node_volume_iops
+  node_volume_throughput                  = var.node_volume_throughput
+  node_type                               = var.node_type
+  node_max_unavailable_percentage         = var.node_max_unavailable_percentage
+  terraform_update_timeout                = var.terraform_update_timeout
+  nvidia_device_plugin_enable             = var.nvidia_device_plugin_enable
+  nvidia_device_time_slicing_replicas     = var.nvidia_device_time_slicing_replicas
+  gpu_observability_enable                = var.gpu_observability_enable
+  gpu_observability_chart_version         = var.gpu_observability_chart_version == "4.8.1" ? "" : var.gpu_observability_chart_version # 4.8.1 is the old default that Console stored at install
+  dcgm_scrape_interval                    = var.dcgm_scrape_interval
+  private                                 = var.private
+  private_subnets_ids                     = compact(split(",", var.private_subnets_ids))
+  public_subnets_ids                      = compact(split(",", var.public_subnets_ids))
+  pod_identity_agent_enable               = var.pod_identity_agent_enable
+  pod_identity_agent_version              = var.pod_identity_agent_version
+  private_eks_host                        = var.private_eks_host
+  private_eks_user                        = var.private_eks_user
+  private_eks_pass                        = var.private_eks_pass
+  private_access_cidrs                    = local.private_access_cidrs
+  public_access_cidrs                     = local.public_access_cidrs
+  eks_log_types                           = local.eks_log_types
+  kubelet_registry_pull_qps               = var.kubelet_registry_pull_qps
+  kubelet_registry_burst                  = var.kubelet_registry_burst
+  fast_image_pull_enable                  = var.fast_image_pull_enable
+  schedule_rack_scale_down                = var.schedule_rack_scale_down
+  schedule_rack_scale_up                  = var.schedule_rack_scale_up
+  tags                                    = local.tag_map
+  user_data                               = var.user_data
+  user_data_url                           = var.user_data_url
+  vpc_cni_version                         = var.vpc_cni_version
+  vpc_id                                  = var.vpc_id
+  vpa_enable                              = var.vpa_enable
+  ecr_docker_hub_cache                    = var.ecr_docker_hub_cache
+  docker_hub_username                     = var.docker_hub_username
+  docker_hub_password                     = var.docker_hub_password
 }
 
 resource "null_resource" "wait_for_cluster" {
+  triggers = {
+    cluster_ready = join(",", module.cluster.eks_addons)
+  }
+
   provisioner "local-exec" {
-    command = "sleep 1 && echo ${module.cluster.eks_addons[0]}"
+    command = "echo cluster_ready"
   }
 }
 
@@ -105,15 +264,19 @@ module "fluentd" {
   ]
 
   access_log_retention_in_days = var.access_log_retention_in_days
-  arm_type                     = local.arm_type
+  app_cloudwatch_disable       = var.app_cloudwatch_disable
   cluster                      = module.cluster.id
   eks_addons                   = module.cluster.eks_addons
   fluentd_disable              = var.fluentd_disable
+  fluentd_memory               = var.fluentd_memory
   namespace                    = "kube-system"
   oidc_arn                     = module.cluster.oidc_arn
   oidc_sub                     = module.cluster.oidc_sub
   rack                         = local.name
+  router_log_redact_params     = var.router_log_redact_params
   syslog                       = var.syslog
+  syslog_access_logs           = var.syslog_access_logs
+  syslog_tls_verify            = var.syslog_tls_verify
 }
 
 module "rack" {
@@ -122,36 +285,88 @@ module "rack" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    helm       = helm
+    kubectl    = kubectl
   }
 
   depends_on = [
     null_resource.wait_for_cluster
   ]
 
-  build_node_enabled             = var.build_node_enabled
-  cluster                        = module.cluster.id
-  convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
-  docker_hub_username            = var.docker_hub_username
-  docker_hub_password            = var.docker_hub_password
-  disable_image_manifest_cache   = var.disable_image_manifest_cache
-  eks_addons                     = module.cluster.eks_addons
-  high_availability              = var.high_availability
-  idle_timeout                   = var.idle_timeout
-  internal_router                = var.internal_router
-  image                          = local.image
-  name                           = local.name
-  rack_name                      = local.rack_name
-  oidc_arn                       = module.cluster.oidc_arn
-  oidc_sub                       = module.cluster.oidc_sub
-  proxy_protocol                 = var.proxy_protocol
-  release                        = local.release
-  ssl_ciphers                    = var.ssl_ciphers
-  ssl_protocols                  = var.ssl_protocols
-  subnets                        = module.cluster.subnets
-  tags                           = local.tag_map
-  telemetry                      = var.telemetry
-  telemetry_map                  = local.telemetry_map
-  telemetry_default_map          = local.telemetry_default_map
-  whitelist                      = split(",", var.whitelist)
-  ebs_csi_driver_name            = module.cluster.ebs_csi_driver_name
+  api_feature_gates                         = var.api_feature_gates
+  build_disable_convox_resolver             = var.build_disable_convox_resolver
+  cost_tracking_enable                      = var.cost_tracking_enable
+  cost_tracking_history_days                = var.cost_tracking_history_days
+  seccomp_default_enabled                   = var.seccomp_default_enabled
+  karpenter_enabled                         = var.karpenter_enabled == "true"
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
+  build_archs                               = local.build_archs
+  build_node_enabled                        = var.build_node_enabled
+  buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
+  cluster                                   = module.cluster.id
+  convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
+  convox_rack_domain                        = var.convox_rack_domain
+  custom_provided_bucket                    = var.custom_provided_bucket
+  deploy_crash_restart_limit                = var.deploy_crash_restart_limit
+  deploy_progress_deadline                  = var.deploy_progress_deadline
+  deploy_extra_nlb                          = var.deploy_extra_nlb
+  docker_hub_username                       = var.docker_hub_username
+  docker_hub_password                       = var.docker_hub_password
+  disable_convox_resolver                   = var.disable_convox_resolver
+  disable_image_manifest_cache              = var.disable_image_manifest_cache
+  eks_addons                                = module.cluster.eks_addons
+  efs_csi_driver_enable                     = var.efs_csi_driver_enable
+  efs_file_system_id                        = module.cluster.efs_file_system_id
+  high_availability                         = var.high_availability
+  idle_timeout                              = var.idle_timeout
+  internal_router                           = var.internal_router
+  contour_internal_tls                      = var.contour_internal_tls
+  image                                     = local.image
+  keda_enable                               = var.keda_enable
+  lbc_helm_id                               = module.cluster.lbc_helm_id
+  name                                      = local.name
+  rack_name                                 = local.rack_name
+  nlb_security_group                        = var.nlb_security_group
+  nginx_image                               = var.nginx_image
+  nginx_additional_config                   = var.nginx_additional_config
+  oidc_arn                                  = module.cluster.oidc_arn
+  oidc_sub                                  = module.cluster.oidc_sub
+  pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  prometheus_url                            = var.prometheus_url
+  proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
+  network_policy_enable                     = var.network_policy_enable
+  release                                   = local.release
+  releases_to_retain_after_active           = var.releases_to_retain_after_active
+  releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+  release_watcher_gc_interval               = var.release_watcher_gc_interval
+  gpu_metrics_max_pods                      = var.gpu_metrics_max_pods
+  gpu_metrics_max_concurrent                = var.gpu_metrics_max_concurrent
+  ssl_ciphers                               = var.ssl_ciphers
+  ssl_protocols                             = var.ssl_protocols
+  subnets                                   = module.cluster.subnets
+  tags                                      = local.tag_map
+  telemetry                                 = var.telemetry
+  telemetry_map                             = local.telemetry_map
+  telemetry_default_map                     = local.telemetry_default_map
+  whitelist                                 = [for c in split(",", var.whitelist) : cidrsubnet(c, 0, 0)]
+  ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
+  ecr_full_access                           = var.ecr_full_access
+  ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
+  ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  app_cloudwatch_disable                    = var.app_cloudwatch_disable
+  cloudwatch_disable                        = var.cloudwatch_disable
+  cloudwatch_retention_in_days              = var.cloudwatch_retention_in_days
+  ecr_docker_hub_cache_prefix               = module.cluster.ecr_docker_hub_cache_prefix
+  vpc_id                                    = module.cluster.vpc
+  vpa_enable                                = var.vpa_enable
+  webhook_signing_key                       = var.webhook_signing_key
+  router_type                               = var.router_type
+  pod_security_standard                     = var.pod_security_standard
+  pod_security_mode                         = var.pod_security_mode
+  cert_duration                             = var.cert_duration
+  contour_cpu_request                       = var.contour_cpu_request
+  contour_memory_request                    = var.contour_memory_request
+  envoy_cpu_request                         = var.envoy_cpu_request
+  envoy_memory_request                      = var.envoy_memory_request
 }

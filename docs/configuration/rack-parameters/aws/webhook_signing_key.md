@@ -1,0 +1,60 @@
+---
+title: "webhook_signing_key"
+description: "The webhook_signing_key AWS rack parameter sets a per-rack HMAC secret that signs outbound webhook deliveries with a Convox-Signature header, unset by default."
+slug: webhook_signing_key
+url: /configuration/rack-parameters/aws/webhook_signing_key
+---
+
+# webhook_signing_key
+
+## Description
+The `webhook_signing_key` parameter sets a per-rack HMAC secret that the rack uses to sign every outbound webhook delivery. With this parameter set, the rack adds a `Convox-Signature` HTTP header to each webhook POST. The header carries `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]`, a Stripe-style multi-segment value where `t` is the Unix timestamp at emit time and each `v1=<hex>` segment is the HMAC-SHA256 of `<t>.<body>` keyed by the configured signing key. Multiple `v1=` segments may appear during key rotation; receivers verify against any one. See [Webhook Signing](/console/webhook-signing) for the receiver-side verification example.
+
+When unset (the default), no signature header is emitted, so receivers cannot distinguish authentic Convox webhooks from spoofed payloads. Set this parameter and configure the same secret on your receiver to enable HMAC verification.
+
+The parameter value is treated as a credential. It is stored as a Kubernetes Secret on the rack, never in plaintext, and never logged. Convox telemetry emits only a hash of the value, never the key itself.
+
+## Default Value
+The default value for `webhook_signing_key` is `""` (empty string). Empty value means "no signature header on outbound webhooks", so receivers cannot HMAC-verify.
+
+## Use Cases
+- **Webhook authenticity verification**: Enable HMAC verification on receivers so a leaked webhook URL cannot be replayed by a third party with crafted payloads.
+- **Compliance with PCI / SOC 2 webhook requirements**: Many compliance frameworks require signed webhook deliveries; this parameter is the rack-side enabler for that requirement.
+- **Receiver-side replay protection**: The `t=<unix-ts>` segment embedded in `Convox-Signature` lets receivers reject deliveries outside a tolerance window (Convox recommends 5 minutes) to mitigate replay attacks.
+- **Rotation testing**: Rotating this parameter during a maintenance window lets you exercise your receiver's HMAC-verification path with a known-bad signature (the OLD secret) and a known-good signature (the NEW secret) to validate end-to-end.
+
+## Setting Parameters
+The recommended secret is a 256-bit random value rendered as 64 hex characters. Generate one with:
+```bash
+$ openssl rand -hex 32
+0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+
+To set:
+```bash
+$ convox rack params set webhook_signing_key=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef -r rackName
+Updating parameters... OK
+```
+
+`webhook_signing_key` cannot be cleared once set. Once HMAC signing is enabled at 3.24.6, it stays enabled at this rack version; downstream receivers that have already adopted signature verification would otherwise silently start rejecting unsigned payloads. To revert to unsigned mode, downgrade the rack to a pre-3.24.6 release (the variable is removed by Terraform on the older module).
+
+To rotate to a new secret without disabling signing, set a comma-separated pair (`newkey,oldkey`) so receivers continue to verify against either segment during the rotation window:
+```bash
+$ convox rack params set webhook_signing_key="$NEW_KEY,$OLD_KEY" -r rackName
+Updating parameters... OK
+```
+Then update receivers to the new key and run `convox rack params set webhook_signing_key="$NEW_KEY"` to retire the old segment.
+
+## Additional Information
+- The value is treated as sensitive: stored as a Kubernetes Secret (not a ConfigMap), never logged in plaintext, and hashed before emission to telemetry.
+- Rotation is safe at any time. The rack re-reads the secret on each delivery, so a rotation takes effect on the next webhook event. Plan rotations to follow a "set new secret on receiver, rotate rack secret, observe verification success" sequence so no deliveries are lost.
+- The signature is computed over the Unix timestamp, a literal `.`, then the raw request body. The header value `t=<unix-ts>,v1=<hex1>[,v1=<hex2>]` packs the timestamp and one or more hex-encoded HMAC-SHA256 outputs into a single header line; multiple `v1=` segments support zero-downtime key rotation.
+- Signing applies to every outbound webhook the rack sends, including budget, release lifecycle, and scale-override events.
+- If your receiver does not yet support HMAC verification, leaving this parameter unset preserves the pre-3.24.6 behavior (no signature header). The parameter is purely opt-in.
+
+## Related Parameters
+- [docker_hub_password](/configuration/rack-parameters/aws/docker_hub_password): Another rack-level credential that is stored in a Kubernetes Secret and SHA-256-hashed before telemetry emission.
+- [cost_tracking_enable](/configuration/rack-parameters/aws/cost_tracking_enable): The cost-tracking accumulator emits webhook events; HMAC signing applies to those events when this parameter is set.
+
+## Version Requirements
+This parameter requires at least Convox rack version `3.24.6`.

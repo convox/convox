@@ -1,8 +1,8 @@
 locals {
-  tags = {
+  tags = merge(var.tags, {
     System = "convox"
     Rack   = var.name
-  }
+  })
 }
 
 module "nginx" {
@@ -12,14 +12,25 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
-  namespace = var.namespace
-  rack      = var.name
+  docker_hub_authentication = var.docker_hub_authentication
+  namespace                 = var.namespace
+  nginx_image               = var.nginx_image
+  nginx_additional_config   = var.nginx_additional_config
+  rack                      = var.name
+  replicas_max              = var.high_availability ? 10 : 1
+  replicas_min              = var.high_availability ? 2 : 1
+  ssl_ciphers               = var.ssl_ciphers
+  ssl_protocols             = var.ssl_protocols
 }
 
 resource "kubernetes_service" "router" {
   metadata {
     namespace = var.namespace
     name      = "router"
+
+    annotations = {
+      "service.beta.kubernetes.io/azure-load-balancer-tcp-idle-timeout" = "${var.idle_timeout}"
+    }
   }
 
   spec {
@@ -42,10 +53,6 @@ resource "kubernetes_service" "router" {
     }
 
     selector = module.nginx.selector
-  }
-
-  lifecycle {
-    ignore_changes = [metadata[0].annotations]
   }
 }
 

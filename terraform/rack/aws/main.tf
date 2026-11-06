@@ -22,26 +22,71 @@ module "api" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    kubectl    = kubectl
   }
 
-  buildkit_enabled               = var.buildkit_enabled
-  build_node_enabled             = var.build_node_enabled
-  convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
-  docker_hub_authentication      = module.k8s.docker_hub_authentication
-  domain                         = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
-  domain_internal                = module.router.endpoint_internal
-  disable_image_manifest_cache   = var.disable_image_manifest_cache
-  high_availability              = var.high_availability
-  metrics_scraper_host           = module.metrics.metrics_scraper_host
-  image                          = var.image
-  name                           = var.name
-  rack_name                      = var.rack_name
-  namespace                      = module.k8s.namespace
-  oidc_arn                       = var.oidc_arn
-  oidc_sub                       = var.oidc_sub
-  release                        = var.release
-  resolver                       = module.resolver.endpoint
-  router                         = module.router.endpoint
+  buildkit_enabled                          = var.buildkit_enabled
+  build_archs                               = var.build_archs
+  build_disable_convox_resolver             = var.build_disable_convox_resolver
+  build_node_enabled                        = var.build_node_enabled
+  buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
+  convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
+  custom_provided_bucket                    = var.custom_provided_bucket
+  deploy_crash_restart_limit                = var.deploy_crash_restart_limit
+  deploy_progress_deadline                  = var.deploy_progress_deadline
+  docker_hub_authentication                 = module.k8s.docker_hub_authentication
+  docker_hub_username                       = var.docker_hub_username
+  docker_hub_password                       = var.docker_hub_password
+  domain                                    = try(module.router.endpoint, "") # terraform destroy sometimes failes to resolve the value
+  domain_internal                           = module.router.endpoint_internal
+  disable_image_manifest_cache              = var.disable_image_manifest_cache
+  ecr_additional_policy_arn                 = var.ecr_additional_policy_arn
+  ecr_full_access                           = var.ecr_full_access
+  ecr_immutable_tags_enabled                = var.ecr_immutable_tags_enabled
+  ecr_scan_on_push_enable                   = var.ecr_scan_on_push_enable
+  app_cloudwatch_disable                    = var.app_cloudwatch_disable
+  cloudwatch_disable                        = var.cloudwatch_disable
+  cloudwatch_retention_in_days              = var.cloudwatch_retention_in_days
+  ecr_docker_hub_cache_prefix               = var.ecr_docker_hub_cache_prefix
+  efs_csi_driver_enable                     = var.efs_csi_driver_enable
+  efs_file_system_id                        = var.efs_file_system_id
+  cost_tracking_enable                      = var.cost_tracking_enable
+  cost_tracking_history_days                = var.cost_tracking_history_days
+  seccomp_default_enabled                   = var.seccomp_default_enabled
+  high_availability                         = var.high_availability
+  image                                     = var.image
+  karpenter_enabled                         = var.karpenter_enabled
+  system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
+  keda_enable                               = var.keda_enable
+  name                                      = var.name
+  rack_name                                 = var.rack_name
+  namespace                                 = module.k8s.namespace
+  oidc_arn                                  = var.oidc_arn
+  oidc_sub                                  = var.oidc_sub
+  pdb_default_min_available_percentage      = var.pdb_default_min_available_percentage
+  prometheus_url                            = var.prometheus_url
+  release                                   = var.release
+  disable_convox_resolver                   = var.disable_convox_resolver
+  resolver                                  = module.resolver.endpoint
+  router                                    = module.router.endpoint
+  releases_to_retain_after_active           = var.releases_to_retain_after_active
+  releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
+  release_watcher_gc_interval               = var.release_watcher_gc_interval
+  gpu_metrics_max_pods                      = var.gpu_metrics_max_pods
+  gpu_metrics_max_concurrent                = var.gpu_metrics_max_concurrent
+  subnets                                   = var.subnets
+  vpc_id                                    = var.vpc_id
+  vpa_enable                                = var.vpa_enable
+  webhook_signing_key                       = var.webhook_signing_key
+  api_feature_gates                         = var.api_feature_gates
+  router_type                               = var.router_type
+  pod_security_standard                     = var.pod_security_standard
+  pod_security_mode                         = var.pod_security_mode
+  cert_duration                             = var.cert_duration
+  proxy_protocol                            = var.proxy_protocol
+  pod_imds_block_enabled                    = var.pod_imds_block_enabled
+  network_policy_enable                     = var.network_policy_enable
+  contour_internal_tls                      = var.contour_internal_tls
 }
 
 module "metrics" {
@@ -51,6 +96,8 @@ module "metrics" {
     kubernetes = kubernetes
   }
 
+  karpenter_enabled       = var.karpenter_enabled
+  seccomp_default_enabled = var.seccomp_default_enabled
 }
 
 module "resolver" {
@@ -61,12 +108,16 @@ module "resolver" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  high_availability         = var.high_availability
-  image                     = var.image
-  namespace                 = module.k8s.namespace
-  rack                      = var.name
-  release                   = var.release
+  docker_hub_authentication      = module.k8s.docker_hub_authentication
+  high_availability              = var.high_availability
+  image                          = var.image
+  internal_router                = var.internal_router
+  karpenter_enabled              = var.karpenter_enabled
+  seccomp_default_enabled        = var.seccomp_default_enabled
+  system_readonly_rootfs_enabled = var.system_readonly_rootfs_enabled
+  namespace                      = module.k8s.namespace
+  rack                           = var.name
+  release                        = var.release
 }
 
 module "router" {
@@ -75,19 +126,33 @@ module "router" {
   providers = {
     aws        = aws
     kubernetes = kubernetes
+    helm       = helm
   }
 
-  high_availability = var.high_availability
-  idle_timeout      = var.idle_timeout
-  internal_router   = var.internal_router
-  name              = var.name
-  namespace         = module.k8s.namespace
-  oidc_arn          = var.oidc_arn
-  oidc_sub          = var.oidc_sub
-  proxy_protocol    = var.proxy_protocol
-  release           = var.release
-  ssl_ciphers       = var.ssl_ciphers
-  ssl_protocols     = var.ssl_protocols
-  tags              = var.tags
-  whitelist         = var.whitelist
+  convox_rack_domain        = var.convox_rack_domain
+  deploy_extra_nlb          = var.deploy_extra_nlb
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  high_availability         = var.high_availability
+  karpenter_enabled         = var.karpenter_enabled
+  idle_timeout              = var.idle_timeout
+  internal_router           = var.internal_router
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  nlb_security_group        = var.nlb_security_group
+  nginx_image               = var.nginx_image
+  nginx_additional_config   = var.nginx_additional_config
+  oidc_arn                  = var.oidc_arn
+  oidc_sub                  = var.oidc_sub
+  proxy_protocol            = var.proxy_protocol
+  release                   = var.release
+  ssl_ciphers               = var.ssl_ciphers
+  ssl_protocols             = var.ssl_protocols
+  tags                      = var.tags
+  whitelist                 = var.whitelist
+  lbc_helm_id               = var.lbc_helm_id
+  router_type               = var.router_type
+  contour_cpu_request       = var.contour_cpu_request
+  contour_memory_request    = var.contour_memory_request
+  envoy_cpu_request         = var.envoy_cpu_request
+  envoy_memory_request      = var.envoy_memory_request
 }

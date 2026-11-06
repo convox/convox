@@ -1,0 +1,355 @@
+package k8s_test
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	ac "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
+	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
+)
+
+func TestEnsureBuildNamespaceUnlabeled(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+
+		kk, _ := p.Cluster.(*fake.Clientset)
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-build-app1", am.GetOptions{})
+		require.NoError(t, err)
+
+		for k := range ns.Labels {
+			assert.NotContains(t, k, "pod-security.kubernetes.io", "build namespace must not carry a PSA label")
+		}
+		assert.Equal(t, "build", ns.Labels["type"])
+		_, hasApp := ns.Labels["app"]
+		assert.False(t, hasApp, "build namespace must omit the app label to avoid budget double-count")
+
+		// idempotent: a second ensure does not error
+		require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+	})
+}
+
+func TestAppDeleteBuildNamespaceCollisionSafe(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, _ := p.Atom.(*atom.MockInterface)
+		kk, _ := p.Cluster.(*fake.Clientset)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		// A separate real app whose namespace name (rack1-build-app1) collides
+		// with app1's build-namespace name. Deleting app1 must NOT delete it.
+		require.NoError(t, appCreate(kk, "rack1", "build-app1"))
+
+		aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Once()
+
+		require.NoError(t, p.AppDelete("app1"))
+
+		_, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.Error(t, err)
+
+		_, err = kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-build-app1", am.GetOptions{})
+		require.NoError(t, err, "a different app's live namespace must survive AppDelete of the colliding app")
+	})
+}
+
+func TestProcessBuildNamespace(t *testing.T) {
+	cases := []struct {
+		name     string
+		standard string
+		mode     string
+		want     string
+	}{
+		{name: "off", standard: "", mode: "warn", want: "rack1-app1"},
+		{name: "warn", standard: "baseline", mode: "warn", want: "rack1-app1"},
+		{name: "audit", standard: "baseline", mode: "audit", want: "rack1-app1"},
+		{name: "enforce", standard: "baseline", mode: "enforce", want: "rack1-build-app1"},
+		{name: "restricted-enforce", standard: "restricted", mode: "enforce", want: "rack1-build-app1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = tc.standard
+				p.PodSecurityMode = tc.mode
+				assert.Equal(t, tc.want, p.ProcessBuildNamespaceForTest("app1"))
+			})
+		})
+	}
+}
+
+func TestProcessBuildNamespaceEnforceTransition(t *testing.T) {
+	enforceLabel := map[string]string{"pod-security.kubernetes.io/enforce": "baseline"}
+
+	cases := []struct {
+		name     string
+		standard string
+		mode     string
+		labels   map[string]string
+		noNs     bool
+		want     string
+	}{
+		{name: "label-persists-after-enforce", standard: "baseline", mode: "warn", labels: enforceLabel, want: "rack1-build-app1"},
+		{name: "label-persists-standard-cleared", standard: "", mode: "warn", labels: enforceLabel, want: "rack1-build-app1"},
+		{name: "unlabeled-warn", standard: "baseline", mode: "warn", want: "rack1-app1"},
+		{name: "warn-label-only", standard: "baseline", mode: "warn", labels: map[string]string{"pod-security.kubernetes.io/warn": "baseline"}, want: "rack1-app1"},
+		{name: "params-enforce-skips-read", standard: "baseline", mode: "enforce", noNs: true, want: "rack1-build-app1"},
+		{name: "read-error-falls-back", standard: "baseline", mode: "warn", noNs: true, want: "rack1-app1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = tc.standard
+				p.PodSecurityMode = tc.mode
+
+				if !tc.noNs {
+					kk, _ := p.Cluster.(*fake.Clientset)
+					_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{
+						ObjectMeta: am.ObjectMeta{Name: "rack1-app1", Labels: tc.labels},
+					}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				assert.Equal(t, tc.want, p.ProcessBuildNamespaceForTest("app1"))
+			})
+		})
+	}
+}
+
+func TestBuildLogsNamespaceFollowsPod(t *testing.T) {
+	enforceLabel := map[string]string{"pod-security.kubernetes.io/enforce": "baseline"}
+
+	cases := []struct {
+		name     string
+		nsLabels map[string]string
+		podNs    string
+		want     string
+	}{
+		{name: "pod-in-build-ns-label-gone", nsLabels: nil, podNs: "rack1-build-app1", want: "rack1-build-app1"},
+		{name: "pod-in-app-ns-label-present", nsLabels: enforceLabel, podNs: "rack1-app1", want: "rack1-app1"},
+		{name: "pod-matches-routing", nsLabels: enforceLabel, podNs: "rack1-build-app1", want: "rack1-build-app1"},
+		{name: "pod-missing-falls-back-to-routing", nsLabels: nil, podNs: "", want: "rack1-app1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = "baseline"
+				p.PodSecurityMode = "warn"
+
+				kk, _ := p.Cluster.(*fake.Clientset)
+				_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{
+					ObjectMeta: am.ObjectMeta{Name: "rack1-app1", Labels: tc.nsLabels},
+				}, am.CreateOptions{})
+				require.NoError(t, err)
+
+				if tc.podNs != "" {
+					_, err := kk.CoreV1().Pods(tc.podNs).Create(context.TODO(), &ac.Pod{
+						ObjectMeta: am.ObjectMeta{Name: "build-xxxxx"},
+					}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				assert.Equal(t, tc.want, p.BuildLogsNamespaceForTest("app1", "build-xxxxx"))
+			})
+		})
+	}
+}
+
+func TestAppCreatePodSecurity(t *testing.T) {
+	cases := []struct {
+		name     string
+		standard string
+		mode     string
+		want     string
+		absent   bool
+	}{
+		{name: "baseline-warn", standard: "baseline", mode: "warn", want: "pod-security.kubernetes.io/warn: baseline"},
+		{name: "baseline-enforce", standard: "baseline", mode: "enforce", want: "pod-security.kubernetes.io/enforce: baseline"},
+		{name: "restricted-audit", standard: "restricted", mode: "audit", want: "pod-security.kubernetes.io/audit: restricted"},
+		{name: "default-off", standard: "", mode: "warn", absent: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodSecurityStandard = tc.standard
+				p.PodSecurityMode = tc.mode
+
+				aa, _ := p.Atom.(*atom.MockInterface)
+				aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once().Run(func(args mock.Arguments) {
+					cfg, _ := args.Get(2).(*atom.ApplyConfig)
+					rendered := string(cfg.Template)
+					if tc.absent {
+						assert.NotContains(t, rendered, "pod-security.kubernetes.io/")
+					} else {
+						assert.Contains(t, rendered, tc.want)
+						assert.Equal(t, 1, strings.Count(rendered, "pod-security.kubernetes.io/"))
+					}
+				})
+				aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Times(3)
+
+				_, err := p.AppCreate("app1", structs.AppCreateOptions{})
+				require.NoError(t, err)
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+				require.NoError(t, err)
+				if tc.absent {
+					for k := range ns.Labels {
+						assert.NotContains(t, k, "pod-security.kubernetes.io")
+					}
+				} else {
+					assert.Equal(t, tc.standard, ns.Labels["pod-security.kubernetes.io/"+tc.mode])
+				}
+			})
+		})
+	}
+}
+
+func TestEnsureBuildNamespaceImdsBlock(t *testing.T) {
+	cases := []struct {
+		name     string
+		tid      bool
+		param    bool
+		pss      bool
+		existing bool
+		policy   bool
+		want     bool
+	}{
+		{name: "tid-new-namespace", tid: true, param: true, want: true},
+		{name: "tid-existing-namespace", tid: true, param: true, existing: true, want: true},
+		{name: "tid-param-off-removes", tid: true, existing: true, policy: true, want: false},
+		{name: "no-tid-pss-enforce", param: true, pss: true, want: false},
+		{name: "no-tid-param-off-leaves", existing: true, policy: true, want: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.FeatureGates = map[string]bool{options.FeatureGateTid: tc.tid}
+				p.PodImdsBlockEnabled = tc.param
+				if tc.pss {
+					p.PodSecurityStandard = "baseline"
+					p.PodSecurityMode = "enforce"
+				}
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+
+				if tc.existing {
+					_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack1-build-app1", Labels: map[string]string{"name": "app1", "type": "build"}}}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+				if tc.policy {
+					_, err := kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Create(context.TODO(), &networkingv1.NetworkPolicy{ObjectMeta: am.ObjectMeta{Name: "convox-imds-block"}}, am.CreateOptions{})
+					require.NoError(t, err)
+				}
+
+				require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+				require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+
+				_, err := kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+				if tc.want {
+					require.NoError(t, err)
+				} else {
+					require.True(t, ae.IsNotFound(err))
+				}
+			})
+		})
+	}
+}
+
+func TestEnsureBuildNamespaceCollisionNoImdsBlock(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+		p.PodImdsBlockEnabled = true
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		_, err := kk.CoreV1().Namespaces().Create(context.TODO(), &ac.Namespace{ObjectMeta: am.ObjectMeta{Name: "rack1-build-app1", Labels: map[string]string{"type": "app"}}}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.Error(t, p.EnsureBuildNamespaceForTest("app1"))
+
+		_, err = kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+		require.True(t, ae.IsNotFound(err))
+	})
+}
+
+func TestEnsureBuildNamespaceImdsBlockCreateError(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+		p.PodImdsBlockEnabled = true
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		kk.PrependReactor("create", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("boom")
+		})
+
+		require.ErrorContains(t, p.EnsureBuildNamespaceForTest("app1"), "boom")
+	})
+}
+
+func TestEnsureBuildNamespaceImdsBlockRemoveErrorContinues(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		kk.PrependReactor("delete", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("boom")
+		})
+
+		require.NoError(t, p.EnsureBuildNamespaceForTest("app1"))
+	})
+}
+
+func TestAppCreateImdsBlock(t *testing.T) {
+	cases := []struct {
+		name  string
+		param bool
+	}{
+		{name: "on", param: true},
+		{name: "off", param: false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				p.PodImdsBlockEnabled = tc.param
+
+				aa, ok := p.Atom.(*atom.MockInterface)
+				require.True(t, ok)
+				aa.On("Apply", "rack1-app1", "app", mock.Anything).Return(nil).Once()
+				aa.On("Status", "rack1-app1", "app").Return("Updating", "R1234567", nil).Times(3)
+
+				_, err := p.AppCreate("app1", structs.AppCreateOptions{})
+				require.NoError(t, err)
+
+				kk, ok := p.Cluster.(*fake.Clientset)
+				require.True(t, ok)
+				_, err = kk.NetworkingV1().NetworkPolicies("rack1-app1").Get(context.TODO(), "convox-imds-block", am.GetOptions{})
+				if tc.param {
+					require.NoError(t, err)
+				} else {
+					require.True(t, ae.IsNotFound(err))
+				}
+			})
+		})
+	}
+}

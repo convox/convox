@@ -1,0 +1,50 @@
+---
+title: "node_max_unavailable_percentage"
+description: "The node_max_unavailable_percentage AWS rack parameter caps the percentage of nodes unavailable at once during EKS node group updates, defaulting to 0 (AWS default)."
+slug: node_max_unavailable_percentage
+url: /configuration/rack-parameters/aws/node_max_unavailable_percentage
+---
+
+# node_max_unavailable_percentage
+
+## Description
+The `node_max_unavailable_percentage` parameter controls the maximum percentage of nodes that can be unavailable simultaneously during EKS node group updates. This applies to operations like Kubernetes version upgrades, AMI updates, and node group scaling changes.
+
+When set, this value is applied to the `update_config` block on the primary node groups and on the additional node groups. The build node group and any additional build groups do not receive it and always recycle one node at a time.
+
+## Default Value
+The default value for `node_max_unavailable_percentage` is `0` (disabled).
+
+When set to `0`, no explicit update configuration is applied and AWS EKS uses its default node group update behavior.
+
+## Use Cases
+- **Faster Updates**: Set a higher percentage (e.g., 50) to allow more nodes to update simultaneously, reducing the total time for node group updates.
+- **Stability**: Set a lower percentage (e.g., 10-25) to limit the blast radius of node updates, keeping more of the cluster available during rolling updates.
+- **Cost vs Speed**: Higher values speed up updates but temporarily reduce available capacity. Lower values preserve capacity but slow down the update process.
+
+## Setting Parameters
+To set the node max unavailable percentage:
+```bash
+$ convox rack params set node_max_unavailable_percentage=25 -r rackName
+Updating parameters... OK
+```
+
+The value must be between 1 and 100.
+
+To disable the explicit update configuration and revert to AWS defaults:
+```bash
+$ convox rack params set node_max_unavailable_percentage=0 -r rackName
+Updating parameters... OK
+```
+
+## Additional Information
+- This parameter affects **EKS node group updates** (infrastructure-level node rolling), not application pod disruptions. For controlling pod-level disruptions, see [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage).
+- The setting applies to the primary node groups and to any additional node groups configured via [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config). The build node group and the groups configured via [additional_build_groups_config](/configuration/rack-parameters/aws/additional_build_groups_config) carry no `update_config` block, so they always recycle one node at a time regardless of this value.
+- When combined with [high_availability](/configuration/rack-parameters/aws/high_availability), ensure the percentage allows enough nodes to remain available to run your workloads during updates.
+- On a Rack with [`karpenter_enabled`](/configuration/rack-parameters/aws/karpenter_enabled) set to `true`, [`karpenter_system_node_min_count_per_az`](/configuration/rack-parameters/aws/karpenter_system_node_min_count_per_az) sets how many nodes each system node group runs. At the default `0` here, EKS replaces one node per group at a time, so raising the system node count lengthens every roll of those groups in proportion: a Kubernetes version bump, an AMI change, or any launch template change. Set this parameter before raising the count on a large Rack.
+
+## See Also
+- [terraform_update_timeout](/configuration/rack-parameters/aws/terraform_update_timeout) controls how long Terraform waits for node group updates to complete (increase if high unavailable percentage still causes timeouts)
+- [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) for pod-level disruption budgets
+- [high_availability](/configuration/rack-parameters/aws/high_availability) for cluster redundancy settings
+- [key_pair_name](/configuration/rack-parameters/aws/key_pair_name) for SSH access to nodes

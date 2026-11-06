@@ -1,14 +1,15 @@
 package api
 
 import (
-	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/convox/stdapi"
 )
 
 func (s *Server) AppCancelValidate(c *stdapi.Context) error {
-	a, err := s.Provider.AppGet(c.Var("name"))
+	p := s.provider(c).WithContext(contextFrom(c))
+	a, err := p.AppGet(c.Var("app"))
 	if err != nil {
 		return err
 	}
@@ -21,7 +22,8 @@ func (s *Server) AppCancelValidate(c *stdapi.Context) error {
 }
 
 func (s *Server) ProcessExecValidate(c *stdapi.Context) error {
-	if _, err := s.Provider.AppGet(c.Var("app")); err != nil {
+	p := s.provider(c).WithContext(contextFrom(c))
+	if _, err := p.AppGet(c.Var("app")); err != nil {
 		return err
 	}
 
@@ -29,7 +31,8 @@ func (s *Server) ProcessExecValidate(c *stdapi.Context) error {
 }
 
 func (s *Server) ProcessRunValidate(c *stdapi.Context) error {
-	if _, err := s.Provider.AppGet(c.Var("app")); err != nil {
+	p := s.provider(c).WithContext(contextFrom(c))
+	if _, err := p.AppGet(c.Var("app")); err != nil {
 		return err
 	}
 
@@ -38,8 +41,8 @@ func (s *Server) ProcessRunValidate(c *stdapi.Context) error {
 
 func (s *Server) ReleasePromoteValidate(c *stdapi.Context) error {
 	app := c.Var("app")
-
-	a, err := s.Provider.AppGet(app)
+	p := s.provider(c).WithContext(contextFrom(c))
+	a, err := p.AppGet(app)
 	if err != nil {
 		return err
 	}
@@ -48,23 +51,23 @@ func (s *Server) ReleasePromoteValidate(c *stdapi.Context) error {
 		return stdapi.Errorf(403, "app is currently updating")
 	}
 
-	r, err := s.Provider.ReleaseGet(app, c.Var("id"))
+	r, err := p.ReleaseGet(app, c.Var("id"))
 	if err != nil {
 		return err
 	}
 
 	if strings.TrimSpace(r.Manifest) == "" {
-		return fmt.Errorf("can not promote a release with an empty manifest")
+		return stdapi.Errorf(http.StatusBadRequest, "can not promote a release with an empty manifest")
 	}
 
 	if a.Release != "" {
-		or, err := s.Provider.ReleaseGet(app, a.Release)
+		or, err := p.ReleaseGet(app, a.Release)
 		if err != nil {
 			return err
 		}
 
 		if r.Created.Before(or.Created) {
-			return fmt.Errorf("can not promote an older release, try rollback")
+			return stdapi.Errorf(http.StatusBadRequest, "can not promote an older release, try rollback")
 		}
 	}
 

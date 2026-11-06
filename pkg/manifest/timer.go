@@ -6,10 +6,11 @@ type Timer struct {
 	Name        string             `yaml:"-"`
 	Annotations ServiceAnnotations `yaml:"annotations,omitempty"`
 
-	Command     string `yaml:"command"`
-	Schedule    string `yaml:"schedule"`
-	Service     string `yaml:"service"`
-	Concurrency string `yaml:"concurrency"`
+	Command       string `yaml:"command,omitempty"`
+	Schedule      string `yaml:"schedule"`
+	Service       string `yaml:"service"`
+	Concurrency   string `yaml:"concurrency,omitempty"`
+	ParallelCount int    `yaml:"parallelCount,omitempty"`
 }
 
 type Timers []Timer
@@ -26,7 +27,7 @@ func (t Timer) AnnotationsMap() map[string]string {
 	return annotations
 }
 
-func (t *Timer) GetName() string {
+func (t Timer) GetName() string {
 	return t.Name
 }
 

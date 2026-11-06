@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/convox/convox/pkg/manifest"
@@ -18,8 +19,41 @@ var (
 	ProviderWaitDuration = 5 * time.Second
 )
 
+// safeWriter wraps an io.Writer with a mutex for concurrent goroutine safety.
+type safeWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (s *safeWriter) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.w.Write(p)
+}
+
+// streamerExitedHookForTest is a test-only hook; see export_test.go.
+var streamerExitedHookForTest func()
+
 func AppEnvironment(p structs.Provider, app string) (structs.Environment, error) {
 	rs, err := ReleaseLatest(p, app)
+	if err != nil {
+		return nil, err
+	}
+	if rs == nil {
+		return structs.Environment{}, nil
+	}
+
+	env := structs.Environment{}
+
+	if err := env.Load([]byte(rs.Env)); err != nil {
+		return nil, err
+	}
+
+	return env, nil
+}
+
+func AppEnvironmentForRelease(p structs.Provider, app, releaseId string) (structs.Environment, error) {
+	rs, err := p.ReleaseGet(app, releaseId)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +116,46 @@ func ReleaseManifest(p structs.Provider, app, release string) (*manifest.Manifes
 	return m, r, nil
 }
 
+// StreamAppProcessStates polls ProcessList and emits one line per pod status
+// transition. Fills the V3 deploy-progress gap where AppLogs is unimplemented.
+func StreamAppProcessStates(ctx context.Context, p structs.Provider, w io.Writer, app string) {
+	seen := map[string]string{} // pod_id → last status emitted
+	ticker := time.NewTicker(processStatePollInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		psList, err := p.ProcessList(app, structs.ProcessListOptions{})
+		if err != nil {
+			continue // transient error; next tick retries
+		}
+
+		for i := range psList {
+			ps := &psList[i]
+			prev, hadPrev := seen[ps.Id]
+
+			// Suppress pre-existing healthy pods on first observation.
+			if !hadPrev && ps.Status == "running" {
+				seen[ps.Id] = ps.Status
+				continue
+			}
+
+			if prev != ps.Status {
+				fmt.Fprintf(w, "  %-32s  %-12s  %s\n", ps.Id, ps.Name, ps.Status)
+				seen[ps.Id] = ps.Status
+			}
+		}
+	}
+}
+
+// processStatePollInterval controls StreamAppProcessStates tick rate.
+var processStatePollInterval = 3 * time.Second
+
 func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app string) {
 	for {
 		select {
@@ -95,9 +169,26 @@ func StreamAppLogs(ctx context.Context, p structs.Provider, w io.Writer, app str
 			return
 		}
 
-		copySystemLogs(ctx, w, r)
+		// Close reader on cancel or EOF to unblock Scanner.Scan and avoid leaks.
+		closed := make(chan struct{})
+		go func(rc io.ReadCloser) {
+			select {
+			case <-ctx.Done():
+			case <-closed:
+			}
+			if rc != nil {
+				rc.Close()
+			}
+		}(r)
 
-		time.Sleep(1 * time.Second)
+		copySystemLogs(ctx, w, r)
+		close(closed)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
 	}
 }
 
@@ -114,9 +205,26 @@ func StreamSystemLogs(ctx context.Context, p structs.Provider, w io.Writer) {
 			return
 		}
 
-		copySystemLogs(ctx, w, r)
+		// Same close-on-cancel/EOF pattern as StreamAppLogs.
+		closed := make(chan struct{})
+		go func(rc io.ReadCloser) {
+			select {
+			case <-ctx.Done():
+			case <-closed:
+			}
+			if rc != nil {
+				rc.Close()
+			}
+		}(r)
 
-		time.Sleep(1 * time.Second)
+		copySystemLogs(ctx, w, r)
+		close(closed)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(1 * time.Second):
+		}
 	}
 }
 
@@ -147,18 +255,32 @@ func WaitForAppRunningContext(ctx context.Context, p structs.Provider, app strin
 
 	var waitError error
 
-	return WaitContext(ctx, ProviderWaitDuration, 35*time.Minute, 2, func() (bool, error) {
+	err := WaitContext(ctx, ProviderWaitDuration, 35*time.Minute, 2, func() (bool, error) {
 		a, err := p.AppGet(app)
 		if err != nil {
 			return false, err
 		}
 
 		if a.Status == "rollback" {
-			waitError = fmt.Errorf("rollback")
+			waitError = RolloutFailedError(app)
 		}
 
 		return a.Status == "running", waitError
 	})
+	if errors.Is(err, ErrWaitTimeout) {
+		return fmt.Errorf("%s did not reach a running state within 35m, the rack may still be rolling out\n  convox deploy-debug -a %s\n  convox apps cancel -a %s", app, app, app)
+	}
+
+	return err
+}
+
+// ErrRolloutFailed is wrapped by every RolloutFailedError.
+var ErrRolloutFailed = errors.New("rollout failed")
+
+// RolloutFailedError names the app and where to look, rather than the bare
+// "rollback" every failure path used to print.
+func RolloutFailedError(app string) error {
+	return fmt.Errorf("%w for %s, the previous release was restored\n  convox deploy-debug -a %s", ErrRolloutFailed, app, app)
 }
 
 func WaitForAppWithLogs(p structs.Provider, w io.Writer, app string) error {
@@ -169,13 +291,31 @@ func WaitForAppWithLogs(p structs.Provider, w io.Writer, app string) error {
 }
 
 func WaitForAppWithLogsContext(ctx context.Context, p structs.Provider, w io.Writer, app string) error {
-	go StreamAppLogs(ctx, p, w, app)
+	sw := &safeWriter{w: w}
+	streamCtx, streamCancel := context.WithCancel(ctx)
 
-	if err := WaitForAppRunningContext(ctx, p, app); err != nil {
-		return err
-	}
+	// App log stream (V2 only; V3 AppLogs is unimplemented).
+	logsDone := make(chan struct{})
+	go func() {
+		defer close(logsDone)
+		if streamerExitedHookForTest != nil {
+			defer streamerExitedHookForTest()
+		}
+		StreamAppLogs(streamCtx, p, sw, app)
+	}()
 
-	return nil
+	// Per-pod state transitions via ProcessList polling (primary signal on V3).
+	statesDone := make(chan struct{})
+	go func() {
+		defer close(statesDone)
+		StreamAppProcessStates(streamCtx, p, sw, app)
+	}()
+
+	err := WaitForAppRunningContext(ctx, p, app)
+	streamCancel()
+	<-logsDone
+	<-statesDone
+	return err
 }
 
 func WaitForProcessRunning(p structs.Provider, w io.Writer, app, pid string) error {
@@ -206,13 +346,21 @@ func WaitForRackWithLogs(p structs.Provider, w io.Writer) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go StreamSystemLogs(ctx, p, w)
+	sw := &safeWriter{w: w}
+	streamCtx, streamCancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if streamerExitedHookForTest != nil {
+			defer streamerExitedHookForTest()
+		}
+		StreamSystemLogs(streamCtx, p, sw)
+	}()
 
-	if err := WaitForRackRunning(p, w); err != nil {
-		return err
-	}
-
-	return nil
+	err := WaitForRackRunning(p, w)
+	streamCancel()
+	<-done
+	return err
 }
 
 func copySystemLogs(ctx context.Context, w io.Writer, r io.Reader) {

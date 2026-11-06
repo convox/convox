@@ -21,7 +21,7 @@ func (p *Provider) ObjectDelete(app, key string) error {
 	}
 
 	if !exists {
-		return fmt.Errorf("object not found: %s", key)
+		return structs.ErrNotFound("object not found: %s", key)
 	}
 
 	_, err = p.s3.DeleteObject(&s3.DeleteObjectInput{
@@ -57,7 +57,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 		Key:    aws.String(p.objectKey(app, key)),
 	})
 	if ae, ok := err.(awserr.Error); ok && ae.Code() == "NoSuchKey" {
-		return nil, fmt.Errorf("object not found: %s", key)
+		return nil, structs.ErrNotFound("object not found: %s", key)
 	}
 	if err != nil {
 		return nil, err

@@ -9,11 +9,12 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/stdsdk"
 	"github.com/pkg/errors"
 )
 
 func (p *Provider) Proxy(host string, port int, rw io.ReadWriter, opts structs.ProxyOptions) error {
-	cn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), 3*time.Second)
+	cn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), 5*time.Second)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -22,7 +23,7 @@ func (p *Provider) Proxy(host string, port int, rw io.ReadWriter, opts structs.P
 		cn = tls.Client(cn, &tls.Config{})
 	}
 
-	if err := common.Pipe(cn, rw); err != nil {
+	if err := stdsdk.CopyStreamToEachOther(cn, rw); err != nil {
 		return errors.WithStack(err)
 	}
 

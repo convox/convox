@@ -28,3 +28,17 @@ resource "aws_s3_bucket_acl" "storage" {
   bucket = aws_s3_bucket.storage.bucket
   acl    = "private"
 }
+
+resource "aws_s3_bucket_public_access_block" "storage" {
+  bucket = aws_s3_bucket.storage.bucket
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+data "aws_s3_bucket" "custom_bucket" {
+  count  = var.custom_provided_bucket != "" ? 1 : 0
+  bucket = var.custom_provided_bucket
+}

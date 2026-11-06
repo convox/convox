@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"net"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -16,8 +16,8 @@ import (
 
 	aa "github.com/convox/convox/pkg/atom/pkg/apis/atom/v1"
 	av "github.com/convox/convox/pkg/atom/pkg/client/clientset/versioned"
+	atomTmpl "github.com/convox/convox/pkg/atom/templates"
 	"github.com/convox/convox/pkg/templater"
-	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 	ac "k8s.io/api/core/v1"
@@ -25,19 +25,21 @@ import (
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
 var (
-	templates = templater.New(packr.NewBox("../atom/templates"), templateHelpers())
+	templates = templater.New(atomTmpl.TemplatesFS)
 )
 
 type Client struct {
 	Atom   av.Interface
 	config *rest.Config
 	k8s    kubernetes.Interface
+	ctx    context.Context
 }
 
 func New(cfg *rest.Config) (*Client, error) {
@@ -55,53 +57,21 @@ func New(cfg *rest.Config) (*Client, error) {
 		Atom:   ac,
 		config: cfg,
 		k8s:    kc,
+		ctx:    context.Background(),
 	}
 
 	return c, nil
 }
 
-func Apply(namespace, name, release string, template []byte, timeout int32) error {
-	params := map[string]interface{}{
-		"Name":      name,
-		"Namespace": namespace,
-		"Release":   release,
-		"Template":  base64.StdEncoding.EncodeToString(template),
-		"Timeout":   timeout,
-		"Version":   time.Now().UTC().UnixNano(),
-	}
-
-	if err := exec.Command("kubectl", "get", fmt.Sprintf("ns/%s", namespace)).Run(); err != nil {
-		if err := kubectlApplyTemplate("namespace.yml.tmpl", params); err != nil {
-			return errors.WithStack(err)
-		}
-
-		for {
-			if err := exec.Command("kubectl", "get", fmt.Sprintf("ns/%s", namespace)).Run(); err == nil {
-				break
-			}
-
-			time.Sleep(1 * time.Second)
-		}
-	}
-
-	data, err := templates.Render("version.yml.tmpl", params)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if data, err := kubectlCreate(data); err != nil {
-		return errors.WithStack(fmt.Errorf("could not create atom version for %s/%s: %s", name, release, strings.TrimSpace(string(data))))
-	}
-
-	if err := kubectlApplyTemplate("atom.yml.tmpl", params); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+type ApplyConfig struct {
+	Release      string
+	Template     []byte
+	Timeout      int32
+	Dependencies []string
 }
 
 func Initialize() error {
-	data, err := templates.Render("crd.yml.tmpl", nil)
+	data, err := templates.Render("crd.yml.tmpl", nil, templateHelpers())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -113,49 +83,51 @@ func Initialize() error {
 	return nil
 }
 
-func (c *Client) Apply(ns, name, release string, template []byte, timeout int32) error {
+func (c *Client) Apply(ns, name string, cfg *ApplyConfig) error {
 	if _, err := c.k8s.CoreV1().Namespaces().Get(context.Background(), ns, am.GetOptions{}); ae.IsNotFound(err) {
 		if err := c.createNamespace(ns); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	v, err := c.Atom.AtomV1().AtomVersions(ns).Create(&aa.AtomVersion{
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Create(c.ctx, &aa.AtomVersion{
 		ObjectMeta: am.ObjectMeta{
 			Name: fmt.Sprintf("%s-%d", name, time.Now().UTC().UnixNano()),
 		},
 		Spec: aa.AtomVersionSpec{
-			Release:  release,
-			Template: template,
+			Release:  cfg.Release,
+			Template: cfg.Template,
 		},
-	})
+	}, am.CreateOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(c.ctx, name, am.GetOptions{})
 	switch {
 	case ae.IsNotFound(err):
-		a, err = c.Atom.AtomV1().Atoms(ns).Create(&aa.Atom{
+		a, err = c.Atom.AtomV1().Atoms(ns).Create(c.ctx, &aa.Atom{
 			ObjectMeta: am.ObjectMeta{
 				Name: name,
 			},
-		})
+		}, am.CreateOptions{})
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	case err != nil:
 		return errors.WithStack(err)
-	default:
+	case a.Status != "Pending":
 		a.Spec.PreviousVersion = a.Spec.CurrentVersion
 	}
 
 	a.Spec.CurrentVersion = v.Name
-	a.Spec.ProgressDeadlineSeconds = timeout
+	a.Spec.ProgressDeadlineSeconds = cfg.Timeout
+	a.Spec.Dependencies = cfg.Dependencies
+	a.Spec.ReleaseCache = GenAtomReleaseCache(v.Name, v.Spec.Release)
 	a.Started = am.Now()
 	a.Status = "Pending"
 
-	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(c.ctx, a, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -163,7 +135,7 @@ func (c *Client) Apply(ns, name, release string, template []byte, timeout int32)
 }
 
 func (c *Client) Cancel(ns, name string) error {
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(c.ctx, name, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -171,21 +143,55 @@ func (c *Client) Cancel(ns, name string) error {
 	switch a.Status {
 	case "Rollback":
 		a.Status = "Failure"
-	case "Updating":
+	case "Pending", "Updating":
 		a.Status = "Cancelled"
 	default:
 		return errors.WithStack(fmt.Errorf("not currently updating"))
 	}
 
-	if _, err := c.Atom.AtomV1().Atoms(ns).Update(a); err != nil {
+	if _, err := c.Atom.AtomV1().Atoms(ns).Update(c.ctx, a, am.UpdateOptions{}); err != nil {
 		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
+func (c *Client) updateReleaseCache(a *aa.Atom) {
+	atomVersion, _ := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+	if atomVersion == a.Spec.CurrentVersion {
+		return
+	}
+
+	v, err := c.Atom.AtomV1().AtomVersions(a.Namespace).Get(c.ctx, a.Spec.CurrentVersion, am.GetOptions{})
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+
+	a.Spec.ReleaseCache = GenAtomReleaseCache(a.Spec.CurrentVersion, v.Spec.Release)
+
+	// Create the patch data
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"releaseCache": a.Spec.ReleaseCache,
+		},
+	}
+
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+
+	_, err = c.Atom.AtomV1().Atoms(a.Namespace).Patch(c.ctx, a.Name, types.MergePatchType, patchBytes, am.PatchOptions{})
+	if err != nil {
+		fmt.Printf("ns=atom at=updateReleaseCache ns=%q err=%q\n", a.Namespace, err)
+		return
+	}
+}
+
 func (c *Client) Status(ns, name string) (string, string, error) {
-	a, err := c.Atom.AtomV1().Atoms(ns).Get(name, am.GetOptions{})
+	a, err := c.Atom.AtomV1().Atoms(ns).Get(c.ctx, name, am.GetOptions{})
 	if ae.IsNotFound(err) {
 		return "", "", nil
 	}
@@ -193,18 +199,44 @@ func (c *Client) Status(ns, name string) (string, string, error) {
 		return "", "", errors.WithStack(err)
 	}
 
-	release := ""
-
-	if a.Spec.CurrentVersion != "" {
-		v, err := c.Atom.AtomV1().AtomVersions(ns).Get(a.Spec.CurrentVersion, am.GetOptions{})
-		if err != nil {
-			return "", "", errors.WithStack(err)
-		}
-
-		release = v.Spec.Release
+	atomVersion, release := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+	if atomVersion == a.Spec.CurrentVersion {
+		return string(a.Status), release, nil
 	}
 
+	c.updateReleaseCache(a)
+
+	_, release = ParseAtomReleaseCache(a.Spec.ReleaseCache)
+
 	return string(a.Status), release, nil
+}
+
+type AtomStatusInfo struct {
+	Namespace string
+	Status    string
+	Release   string
+}
+
+func (c *Client) StatusAll() ([]AtomStatusInfo, error) {
+	aList, err := c.Atom.AtomV1().Atoms(am.NamespaceAll).List(c.ctx, am.ListOptions{
+		FieldSelector: "metadata.name=app",
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	result := []AtomStatusInfo{}
+	for i := range aList.Items {
+		a := &aList.Items[i]
+		c.updateReleaseCache(a)
+		_, release := ParseAtomReleaseCache(a.Spec.ReleaseCache)
+		result = append(result, AtomStatusInfo{
+			Namespace: a.Namespace,
+			Status:    string(a.Status),
+			Release:   release,
+		})
+	}
+	return result, err
 }
 
 func (c *Client) apply(a *aa.Atom) error {
@@ -221,16 +253,15 @@ func (c *Client) apply(a *aa.Atom) error {
 		return err
 	}
 
-	av, err := c.Atom.AtomV1().AtomVersions(ua.Namespace).Get(ua.Spec.CurrentVersion, am.GetOptions{})
+	av, err := c.Atom.AtomV1().AtomVersions(ua.Namespace).Get(c.ctx, ua.Spec.CurrentVersion, am.GetOptions{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%s.%s", ua.Namespace, ua.Name))))[0:60]
 
-	if out, err := applyTemplate(a.ObjectMeta.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
-		fmt.Println(string(av.Spec.Template))
-		fmt.Println(string(out))
+	if out, err := c.applyTemplate(a.Namespace, av.Spec.Template, fmt.Sprintf("atom=%s", hash)); err != nil {
+		fmt.Println(string(redactObjects(out)))
 		return errors.WithStack(err)
 	}
 
@@ -249,7 +280,7 @@ func (c *Client) check(ns, version string) (bool, error) {
 	cfg.APIPath = "/apis"
 	cfg.NegotiatedSerializer = serializer.WithoutConversionCodecFactory{CodecFactory: scheme.Codecs}
 
-	v, err := c.Atom.AtomV1().AtomVersions(ns).Get(version, am.GetOptions{})
+	v, err := c.Atom.AtomV1().AtomVersions(ns).Get(c.ctx, version, am.GetOptions{})
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
@@ -275,6 +306,17 @@ func (c *Client) check(ns, version string) (bool, error) {
 		data, err := rc.Get().Namespace(c.Namespace).Name(c.Name).VersionedParams(&am.GetOptions{}, scheme.ParameterCodec).Resource(fmt.Sprintf("%ss", strings.ToLower(c.Kind))).Do(context.TODO()).Raw()
 		if err != nil {
 			return false, errors.WithStack(err)
+		}
+
+		if strings.EqualFold(c.Kind, "StatefulSet") {
+			ready, err := statefulSetReady(data)
+			if err != nil {
+				return false, errors.WithStack(err)
+			}
+			if !ready {
+				return false, nil
+			}
+			continue
 		}
 
 		var o struct {
@@ -312,6 +354,47 @@ func (c *Client) check(ns, version string) (bool, error) {
 	return true, nil
 }
 
+func statefulSetReady(data []byte) (bool, error) {
+	var o struct {
+		Metadata struct {
+			Generation int64 `json:"generation"`
+		} `json:"metadata"`
+		Spec struct {
+			Replicas *int32 `json:"replicas"`
+		} `json:"spec"`
+		Status struct {
+			AvailableReplicas  int32  `json:"availableReplicas"`
+			CurrentRevision    string `json:"currentRevision"`
+			ObservedGeneration int64  `json:"observedGeneration"`
+			ReadyReplicas      int32  `json:"readyReplicas"`
+			Replicas           int32  `json:"replicas"`
+			UpdatedReplicas    int32  `json:"updatedReplicas"`
+			UpdateRevision     string `json:"updateRevision"`
+		} `json:"status"`
+	}
+
+	if err := json.Unmarshal(data, &o); err != nil {
+		return false, err
+	}
+
+	desired := int32(1)
+	if o.Spec.Replicas != nil {
+		desired = *o.Spec.Replicas
+	}
+	if o.Status.ObservedGeneration < o.Metadata.Generation ||
+		o.Status.Replicas != desired ||
+		o.Status.ReadyReplicas != desired ||
+		o.Status.AvailableReplicas != desired ||
+		o.Status.UpdatedReplicas != desired {
+		return false, nil
+	}
+	if desired == 0 {
+		return true, nil
+	}
+
+	return o.Status.CurrentRevision != "" && o.Status.CurrentRevision == o.Status.UpdateRevision, nil
+}
+
 func (c *Client) createNamespace(ns string) error {
 	_, err := c.k8s.CoreV1().Namespaces().Create(
 		context.Background(),
@@ -339,6 +422,7 @@ func (c *Client) rollback(a *aa.Atom) error {
 	ua, err := c.update(a, func(ua *aa.Atom) {
 		ua.Spec.CurrentVersion = a.Spec.PreviousVersion
 		ua.Spec.PreviousVersion = ""
+		ua.Spec.Dependencies = []string{}
 	})
 	if err != nil {
 		return err
@@ -354,19 +438,33 @@ func (c *Client) rollback(a *aa.Atom) error {
 // use a callback for updates so we can fetch a fresh atom and update
 // immediately
 func (c *Client) update(a *aa.Atom, fn func(ua *aa.Atom)) (*aa.Atom, error) {
-	ua, err := c.Atom.AtomV1().Atoms(a.Namespace).Get(a.Name, am.GetOptions{})
+	ua, err := c.Atom.AtomV1().Atoms(a.Namespace).Get(c.ctx, a.Name, am.GetOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	fn(ua)
 
-	fa, err := c.Atom.AtomV1().Atoms(a.Namespace).Update(ua)
+	fa, err := c.Atom.AtomV1().Atoms(a.Namespace).Update(c.ctx, ua, am.UpdateOptions{})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return fa, nil
+}
+
+func (c *Client) SyncReleaseCache() error {
+	aList, err := c.Atom.AtomV1().Atoms(am.NamespaceAll).List(c.ctx, am.ListOptions{
+		FieldSelector: "metadata.name=app",
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for i := range aList.Items {
+		c.updateReleaseCache(&aList.Items[i])
+	}
+	return nil
 }
 
 func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
@@ -409,7 +507,51 @@ func applyLabels(data []byte, labels map[string]string) ([]byte, error) {
 	return pd, nil
 }
 
-func applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
+// Kubernetes 1.36 rejects source ranges with host bits set, including those in templates stored by older releases.
+func canonicalSourceRanges(data []byte) ([]byte, error) {
+	var v map[string]interface{}
+
+	if err := yaml.Unmarshal(data, &v); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	spec, ok := v["spec"].(map[interface{}]interface{})
+	if !ok || v["kind"] != "Service" {
+		return data, nil
+	}
+
+	ranges, ok := spec["loadBalancerSourceRanges"].([]interface{})
+	if !ok {
+		return data, nil
+	}
+
+	changed := false
+
+	for i, r := range ranges {
+		s, ok := r.(string)
+		if !ok {
+			continue
+		}
+
+		if _, n, err := net.ParseCIDR(s); err == nil && n.String() != s {
+			ranges[i] = n.String()
+			changed = true
+		}
+	}
+
+	if !changed {
+		return data, nil
+	}
+
+	pd, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return pd, nil
+}
+
+func (c *Client) applyTemplate(namespace string, data []byte, filter string) ([]byte, error) {
 	rs, err := templateResources(filter)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -417,8 +559,10 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 
 	labels := parseLabels(filter)
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := SplitDocuments(data)
 	re := regexp.MustCompile(`^Kind: (extensions\/v1beta|networking\.k8s\.io\/v1beta1)`) // skipcq: GO-C4007
+
+	serverSide := [][]byte{}
 
 	for i := range parts {
 		// skip previous atom version's deprecated resources
@@ -431,26 +575,47 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 			return nil, errors.WithStack(err)
 		}
 
+		dp, err = canonicalSourceRanges(dp)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
 		parts[i] = dp
+
+		ss, err := c.balancerNeedsServerSide(namespace, dp)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if ss {
+			serverSide = append(serverSide, dp)
+		}
 	}
 
 	data = bytes.Join(parts, []byte("---\n"))
 
+	if len(serverSide) > 0 {
+		// no --field-manager: the apiserver refreshes last-applied-configuration, which --prune keys on, only for the manager named kubectl
+		if out, err := kubectlApply(bytes.Join(serverSide, []byte("---\n")), "--server-side", "--force-conflicts", "--namespace", namespace); err != nil {
+			return out, errors.WithStack(err)
+		}
+	}
+
 	args := []string{"--prune", "-l", filter, "--namespace", namespace}
 
 	for _, r := range rs {
-		args = append(args, "--prune-whitelist", r)
+		args = append(args, "--prune-allowlist", r)
 	}
 
 	out, err := kubectlApply(data, args...)
-	fmt.Printf("string(out): %+v\n", string(out))
-	fmt.Printf("err: %+v\n", err)
 	if err != nil {
-		if !strings.Contains(string(out), "is immutable") {
+		if !isRecoverableApplyError(out) {
 			return out, errors.WithStack(err)
 		}
 
-		out, err := kubectlApply(data, "--force")
+		fmt.Printf("ns=atom at=applyTemplate ns=%q force-recreate=true\n", namespace)
+
+		out, err = kubectlApply(data, "--force")
 		if err != nil {
 			return out, errors.WithStack(err)
 		}
@@ -459,10 +624,122 @@ func applyTemplate(namespace string, data []byte, filter string) ([]byte, error)
 	return out, nil
 }
 
+// Client-side apply keys Service ports on the port number alone, so it cannot edit a balancer
+// that serves TCP and UDP on one number. Those go through server-side apply first.
+func (c *Client) balancerNeedsServerSide(namespace string, data []byte) (bool, error) {
+	var o struct {
+		Kind     string
+		Metadata struct {
+			Labels map[string]interface{}
+			Name   string
+		}
+	}
+
+	if err := yaml.Unmarshal(data, &o); err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	if o.Kind != "Service" || o.Metadata.Name == "" || fmt.Sprintf("%v", o.Metadata.Labels["type"]) != "balancer" {
+		return false, nil
+	}
+
+	paired, clientSideOnly, err := documentPorts(data)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	s, err := c.k8s.CoreV1().Services(namespace).Get(c.ctx, o.Metadata.Name, am.GetOptions{})
+	if ae.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	return servicePortsPaired(s.Spec.Ports) || (paired && !clientSideOnly), nil
+}
+
+func documentPorts(data []byte) (paired, clientSideOnly bool, err error) {
+	var o struct {
+		Spec struct {
+			Ports []struct {
+				Name     string
+				Port     int
+				Protocol string
+			}
+		}
+	}
+
+	if err := yaml.Unmarshal(data, &o); err != nil {
+		return false, false, errors.WithStack(err)
+	}
+
+	names := map[string]bool{}
+	entries := map[string]bool{}
+	protocols := map[int]string{}
+
+	for _, p := range o.Spec.Ports {
+		entry := fmt.Sprintf("%d/%s", p.Port, p.Protocol)
+
+		if p.Protocol == "" || names[p.Name] || entries[entry] {
+			return false, true, nil
+		}
+
+		names[p.Name] = true
+		entries[entry] = true
+
+		if protocol, ok := protocols[p.Port]; ok && protocol != p.Protocol {
+			paired = true
+		}
+
+		protocols[p.Port] = p.Protocol
+	}
+
+	return paired, false, nil
+}
+
+func servicePortsPaired(ports []ac.ServicePort) bool {
+	protocols := map[int32]string{}
+
+	for _, p := range ports {
+		if protocol, ok := protocols[p.Port]; ok && protocol != string(p.Protocol) {
+			return true
+		}
+
+		protocols[p.Port] = string(p.Protocol)
+	}
+
+	return false
+}
+
+// kubectl prints the objects it failed to patch as one-line JSON, Secret data included
+func redactObjects(out []byte) []byte {
+	lines := bytes.Split(out, []byte("\n"))
+
+	for i := range lines {
+		if l := bytes.TrimSpace(lines[i]); bytes.HasPrefix(l, []byte("{")) || bytes.HasPrefix(l, []byte("&{")) {
+			lines[i] = []byte("[redacted]")
+		}
+	}
+
+	return bytes.Join(lines, []byte("\n"))
+}
+
+// isRecoverableApplyError reports whether a failed kubectl apply can be retried with --force
+// (delete + recreate): an immutable-field change, or a strategic-merge patch that deletes a
+// required field because last-applied-configuration was written by an older rack (kubernetes #105610).
+func isRecoverableApplyError(out []byte) bool {
+	s := string(out)
+	if strings.Contains(s, "is immutable") {
+		return true
+	}
+	return strings.Contains(s, "error when applying patch") && strings.Contains(s, `"$patch":"delete"`)
+}
+
 func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 	cs := []aa.AtomCondition{}
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := SplitDocuments(data)
 
 	for _, p := range parts {
 		var o struct {
@@ -507,7 +784,7 @@ func extractConditions(data []byte) ([]aa.AtomCondition, error) {
 	return cs, nil
 }
 
-func kubectlApply(data []byte, args ...string) ([]byte, error) {
+var kubectlApply = func(data []byte, args ...string) ([]byte, error) {
 	ka := append([]string{"apply", "-f", "-"}, args...)
 
 	cmd := exec.Command("kubectl", ka...)
@@ -528,7 +805,7 @@ func kubectlCreate(data []byte, args ...string) ([]byte, error) {
 }
 
 func kubectlApplyTemplate(template string, params map[string]interface{}) error {
-	data, err := templates.Render(template, params)
+	data, err := templates.Render(template, params, templateHelpers())
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -553,8 +830,8 @@ func parseLabels(labels string) map[string]string {
 	return ls
 }
 
-func templateResources(filter string) ([]string, error) {
-	data, err := exec.Command("kubectl", "api-resources", "--verbs=list", "--namespaced", "-o", "name").CombinedOutput()
+var templateResources = func(filter string) ([]string, error) {
+	data, err := exec.Command("kubectl", "api-resources", "--verbs=list", "--namespaced", "-o", "name").Output()
 	if err != nil {
 		return []string{}, nil
 	}
@@ -563,7 +840,7 @@ func templateResources(filter string) ([]string, error) {
 
 	rsh := map[string]bool{}
 
-	data, err = exec.Command("kubectl", "get", "-l", filter, "--all-namespaces", "-o", "json", strings.Join(ars, ",")).CombinedOutput()
+	data, err = exec.Command("kubectl", "get", "-l", filter, "--all-namespaces", "-o", "json", strings.Join(ars, ",")).Output()
 	if err != nil {
 		return []string{}, nil
 	}
@@ -610,4 +887,43 @@ func templateHelpers() map[string]interface{} {
 			return template.HTML(fmt.Sprintf("%q", s))
 		},
 	}
+}
+
+func GenAtomReleaseCache(atomVersion, release string) string {
+	return fmt.Sprintf("%s|%s", atomVersion, release)
+}
+
+func ParseAtomReleaseCache(cache string) (atomVerion string, relese string) {
+	parts := strings.Split(cache, "|")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", ""
+}
+
+// SplitDocuments splits a release stream at its document boundaries: a line that is exactly "---", or "---" ending a line that starts with "#".
+func SplitDocuments(data []byte) [][]byte {
+	parts := [][]byte{}
+	start, lineStart := 0, 0
+
+	for i := range data {
+		if data[i] != '\n' {
+			continue
+		}
+
+		line := data[lineStart : i+1]
+
+		switch {
+		case bytes.Equal(line, []byte("---\n")):
+			parts = append(parts, data[start:lineStart])
+			start = i + 1
+		case len(line) > 4 && line[0] == '#' && bytes.HasSuffix(line, []byte("---\n")):
+			parts = append(parts, data[start:i-3])
+			start = i + 1
+		}
+
+		lineStart = i + 1
+	}
+
+	return append(parts, data[start:])
 }

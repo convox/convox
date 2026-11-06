@@ -1,3 +1,14 @@
+locals {
+  default_nginx_image = "convox/ingress-nginx:1.15.1-1@sha256:40b907401d849828ea5645b258b68dc4afe1b8f329130a0043541c7fe1bb395b"
+  nginx_image         = var.nginx_image != "" ? var.nginx_image : local.default_nginx_image
+
+  additional_config_str = try(base64decode(var.nginx_additional_config), var.nginx_additional_config)
+  additional_config_map = local.additional_config_str != "" ? {
+    for item in split(",", local.additional_config_str) :
+    split("=", item)[0] => split("=", item)[1]
+  } : {}
+}
+
 resource "kubernetes_config_map" "nginx-configuration" {
   count = var.cloud_provider == "aws" ? 0 : 1
   metadata {
@@ -5,12 +16,17 @@ resource "kubernetes_config_map" "nginx-configuration" {
     name      = "nginx-configuration"
   }
 
-  data = {
-    "proxy-body-size"     = "0"
-    "use-proxy-protocol"  = var.proxy_protocol ? "true" : "false"
-    "ssl-ciphers"         = var.ssl_ciphers == "" ? null : var.ssl_ciphers
-    "ssl-protocols"       = var.ssl_protocols == "" ? null : var.ssl_protocols
-  }
+  data = merge(
+    {
+      "proxy-body-size"           = "0"
+      "use-proxy-protocol"        = var.proxy_protocol ? "true" : "false"
+      "ssl-ciphers"               = var.ssl_ciphers == "" ? null : var.ssl_ciphers
+      "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
+      "allow-snippet-annotations" = "true"
+      "annotations-risk-level"    = "Critical"
+    },
+    local.additional_config_map
+  )
 }
 
 
@@ -53,7 +69,13 @@ resource "kubernetes_cluster_role" "ingress-nginx" {
 
   rule {
     api_groups = [""]
-    resources  = ["configmaps", "endpoints", "nodes", "pods", "secrets"]
+    resources  = ["configmaps", "endpoints", "nodes", "pods", "secrets", "namespaces"]
+    verbs      = ["list", "watch"]
+  }
+
+  rule {
+    api_groups = ["coordination.k8s.io"]
+    resources  = ["leases"]
     verbs      = ["list", "watch"]
   }
 
@@ -67,12 +89,6 @@ resource "kubernetes_cluster_role" "ingress-nginx" {
     api_groups = [""]
     resources  = ["services"]
     verbs      = ["get", "list", "watch"]
-  }
-
-  rule {
-    api_groups = [""]
-    resources  = ["events"]
-    verbs      = ["create", "patch"]
   }
 
   rule {
@@ -98,6 +114,13 @@ resource "kubernetes_cluster_role" "ingress-nginx" {
     resources  = ["ingresses/status"]
     verbs      = ["update"]
   }
+
+  rule {
+    api_groups = ["discovery.k8s.io"]
+    resources  = ["endpointslices"]
+    verbs      = ["list", "watch", "get"]
+  }
+
 }
 
 resource "kubernetes_cluster_role_binding" "ingress-nginx" {
@@ -126,8 +149,26 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups = [""]
-    resources  = ["configmaps", "pods", "secrets", "namespaces"]
+    resources  = ["namespaces"]
     verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "pods", "secrets", "endpoints", "services"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingresses", "ingressclasses"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.k8s.io"]
+    resources  = ["ingresses/status"]
+    verbs      = ["update"]
   }
 
   rule {
@@ -145,13 +186,13 @@ resource "kubernetes_role" "ingress-nginx" {
 
   rule {
     api_groups = [""]
-    resources  = ["endpoints"]
-    verbs      = ["get"]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
   }
 
   rule {
     api_groups     = ["coordination.k8s.io"]
-    resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
+    resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader", "ingress-nginx-leader", "ingress-nginx-internal-leader"]
     resources      = ["leases"]
     verbs          = ["get", "update"]
   }
@@ -163,16 +204,16 @@ resource "kubernetes_role" "ingress-nginx" {
   }
 
   rule {
-    api_groups = ["networking.k8s.io"]
-    resources  = ["ingressclasses"]
-    verbs      = ["get", "list", "watch"]
-  }
-
-  rule {
     api_groups     = [""]
     resource_names = ["ingress-controller-leader", "ingress-internal-controller-leader"]
     resources      = ["configmaps"]
     verbs          = ["get", "update"]
+  }
+
+  rule {
+    api_groups = ["discovery.k8s.io"]
+    resources  = ["endpointslices"]
+    verbs      = ["get", "list", "watch"]
   }
 }
 
@@ -199,6 +240,14 @@ resource "kubernetes_deployment" "ingress-nginx" {
   metadata {
     namespace = var.namespace
     name      = "ingress-nginx"
+    labels = {
+      app     = "system"
+      name    = "ingress-nginx"
+      rack    = var.rack
+      system  = "convox"
+      service = "ingress-nginx"
+      type    = "service"
+    }
   }
 
   spec {
@@ -227,19 +276,32 @@ resource "kubernetes_deployment" "ingress-nginx" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
-        security_context {
-          sysctl {
-            name  = "net.ipv4.ip_unprivileged_port_start"
-            value = "1"
+        node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
           }
         }
 
         container {
           name  = "system"
-          image = var.nginx_image
+          image = local.nginx_image
           args = [
             "/nginx-ingress-controller",
             "--watch-ingress-without-class=true",
+            "--election-id=ingress-nginx-leader",
             "--configmap=$(POD_NAMESPACE)/nginx-configuration",
             "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
@@ -265,6 +327,11 @@ resource "kubernetes_deployment" "ingress-nginx" {
                 field_path = "metadata.namespace"
               }
             }
+          }
+
+          env {
+            name  = "LD_PRELOAD"
+            value = "/usr/local/lib/libmimalloc.so"
           }
 
           port {
@@ -295,6 +362,21 @@ resource "kubernetes_deployment" "ingress-nginx" {
               path   = "/healthz"
               port   = 10254
               scheme = "HTTP"
+            }
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            capabilities {
+              add  = ["NET_BIND_SERVICE"]
+              drop = ["ALL"]
+            }
+            read_only_root_filesystem = false
+            run_as_group              = 82
+            run_as_non_root           = true
+            run_as_user               = 101
+            seccomp_profile {
+              type = "RuntimeDefault"
             }
           }
 
@@ -364,6 +446,9 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
   metadata {
     namespace = var.namespace
     name      = "ingress-nginx-internal"
+    annotations = {
+      "managed-by" = "convox"
+    }
   }
 
   spec {
@@ -377,6 +462,10 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
 
     template {
       metadata {
+        annotations = {
+          "managed-by" = "convox"
+        }
+
         labels = {
           app            = "system"
           name           = "ingress-nginx-internal"
@@ -393,19 +482,32 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
-        security_context {
-          sysctl {
-            name  = "net.ipv4.ip_unprivileged_port_start"
-            value = "1"
+        node_selector                    = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
+        dynamic "image_pull_secrets" {
+          for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
+          content {
+            name = var.docker_hub_authentication
           }
         }
 
         container {
           name  = "system"
-          image = var.nginx_image
+          image = local.nginx_image
           args = [
             "/nginx-ingress-controller",
             "--watch-ingress-without-class=false",
+            "--election-id=ingress-nginx-internal-leader",
             "--configmap=$(POD_NAMESPACE)/nginx-internal-configuration",
             "--tcp-services-configmap=$(POD_NAMESPACE)/tcp-services",
             "--udp-services-configmap=$(POD_NAMESPACE)/udp-services",
@@ -413,7 +515,6 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
             "--annotations-prefix=nginx.ingress.kubernetes.io",
             "--controller-class=k8s.io/ingress-nginx-internal",
             "--ingress-class=nginx-internal",
-            "--election-id=ingress-internal-controller-leader",
           ]
 
           env {
@@ -432,6 +533,11 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
                 field_path = "metadata.namespace"
               }
             }
+          }
+
+          env {
+            name  = "LD_PRELOAD"
+            value = "/usr/local/lib/libmimalloc.so"
           }
 
           port {
@@ -475,6 +581,21 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
               path   = "/healthz"
               port   = 10254
               scheme = "HTTP"
+            }
+          }
+
+          security_context {
+            allow_privilege_escalation = false
+            capabilities {
+              add  = ["NET_BIND_SERVICE"]
+              drop = ["ALL"]
+            }
+            read_only_root_filesystem = false
+            run_as_group              = 82
+            run_as_non_root           = true
+            run_as_user               = 101
+            seccomp_profile {
+              type = "RuntimeDefault"
             }
           }
 

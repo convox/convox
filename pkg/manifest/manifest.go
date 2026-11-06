@@ -4,14 +4,27 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/options"
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	// DefaultProgressDeadlineSeconds is the rollout progress deadline Convox has always waited.
+	DefaultProgressDeadlineSeconds = 3000
+
+	// ProgressDeadlineFloor is the lowest deployment.progressDeadline a service may set.
+	ProgressDeadlineFloor = 30
+
+	// ProgressDeadlineCeiling is the highest deployment.progressDeadline a service may set.
+	ProgressDeadlineCeiling = 21600
+)
+
 var (
-	DefaultCpu        = 256
+	DefaultCpu        = 250
 	DefaultMem        = 512
 	ReservedLabelKeys = map[string]bool{
 		"system":  true,
@@ -25,7 +38,10 @@ var (
 )
 
 type Manifest struct {
-	Balancers   Balancers   `yaml:"balancers,omitempty"`
+	AppSettings AppSettings    `yaml:"appSettings,omitempty"`
+	Balancers   Balancers      `yaml:"balancers,omitempty"`
+	Budget      BudgetSettings `yaml:"budget,omitempty"`
+	Configs     AppConfigs     `yaml:"configs,omitempty"`
 	Environment Environment `yaml:"environment,omitempty"`
 	Labels      Labels      `yaml:"labels,omitempty"`
 	Params      Params      `yaml:"params,omitempty"`
@@ -118,6 +134,7 @@ func (m *Manifest) ApplyCompatibility() error {
 }
 
 func (m *Manifest) ApplyDefaults() error {
+
 	for i, s := range m.Services {
 		if s.Build.Path == "" && s.Image == "" {
 			m.Services[i].Build.Path = "."
@@ -163,6 +180,9 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Health.Timeout = m.Services[i].Health.Interval - 1
 		}
 
+		m.Services[i].Health.GrpcService = strings.TrimSpace(s.Health.GrpcService)
+		m.Services[i].Liveness.GrpcService = strings.TrimSpace(s.Liveness.GrpcService)
+
 		s.Liveness.Path = strings.TrimSpace(s.Liveness.Path)
 		if s.Liveness.Path != "" {
 			if s.Liveness.Grace == 0 {
@@ -182,6 +202,54 @@ func (m *Manifest) ApplyDefaults() error {
 			}
 		}
 
+		s.StartupProbe.Path = strings.TrimSpace(s.StartupProbe.Path)
+		s.StartupProbe.TcpSocketPort = strings.TrimSpace(s.StartupProbe.TcpSocketPort)
+
+		if s.Scale.Gpu.Count > 0 && s.StartupProbe.Path == "" && s.StartupProbe.TcpSocketPort == "" && s.Port.Port > 0 {
+			port := strconv.Itoa(s.Port.Port)
+			m.Services[i].StartupProbe.TcpSocketPort = port
+			s.StartupProbe.TcpSocketPort = port
+		}
+
+		if s.StartupProbe.Path != "" || s.StartupProbe.TcpSocketPort != "" {
+			if s.StartupProbe.Grace == 0 {
+				m.Services[i].StartupProbe.Grace = m.Services[i].Liveness.Grace
+			}
+			if s.StartupProbe.Interval == 0 {
+				m.Services[i].StartupProbe.Interval = m.Services[i].Liveness.Interval
+			}
+			if s.StartupProbe.Timeout == 0 {
+				m.Services[i].StartupProbe.Timeout = m.Services[i].Liveness.Timeout
+			}
+			if s.StartupProbe.SuccessThreshold == 0 {
+				m.Services[i].StartupProbe.SuccessThreshold = m.Services[i].Liveness.SuccessThreshold
+			}
+			if s.StartupProbe.FailureThreshold == 0 {
+				m.Services[i].StartupProbe.FailureThreshold = m.Services[i].Liveness.FailureThreshold
+			}
+		}
+
+		// GPU services may take 10-25min to load large models from cold cache (vLLM, Triton, HF Transformers).
+		// Defaults: Grace=300s + Interval=10s x FailureThreshold=180 = 30-min cold-start ceiling.
+		// Users with longer cold-start should set explicit failureThreshold in convox.yml.
+		if s.Scale.Gpu.Count > 0 && m.Services[i].StartupProbe.TcpSocketPort != "" {
+			if m.Services[i].StartupProbe.Grace == 0 {
+				m.Services[i].StartupProbe.Grace = 300
+			}
+			if m.Services[i].StartupProbe.Interval == 0 {
+				m.Services[i].StartupProbe.Interval = 10
+			}
+			if m.Services[i].StartupProbe.Timeout == 0 {
+				m.Services[i].StartupProbe.Timeout = 5
+			}
+			if m.Services[i].StartupProbe.FailureThreshold == 0 {
+				m.Services[i].StartupProbe.FailureThreshold = 180
+			}
+			if m.Services[i].StartupProbe.SuccessThreshold == 0 {
+				m.Services[i].StartupProbe.SuccessThreshold = 1
+			}
+		}
+
 		if !m.AttributeExists(fmt.Sprintf("services.%s.init", s.Name)) {
 			m.Services[i].Init = true
 		}
@@ -190,7 +258,56 @@ func (m *Manifest) ApplyDefaults() error {
 			m.Services[i].Port.Scheme = "http"
 		}
 
+		// deduplicate ports: remove entries from Ports that match Port.Port
+		// with the same effective protocol. Port (main) takes priority because
+		// it controls health checks, probes, and ingress routing.
+		if s.Port.Port > 0 && len(s.Ports) > 0 {
+			filtered := make([]ServicePortProtocol, 0, len(s.Ports))
+			for _, p := range s.Ports {
+				proto := strings.ToLower(p.Protocol)
+				if proto == "" {
+					proto = "tcp"
+				}
+				if p.Port != s.Port.Port || proto != "tcp" {
+					filtered = append(filtered, p)
+				}
+			}
+			m.Services[i].Ports = filtered
+		}
+
+		// Populate AutoscaleMode discriminators from parent slot name.
+		// User YAML does not set `mode:`; we derive it post-load so that
+		// downstream code can switch on `a.Cpu.Mode` etc. without inspecting
+		// which pointer is non-nil.
+		m.Services[i].Scale.Autoscale.applyModeDiscriminator()
+
 		sp := fmt.Sprintf("services.%s.scale", s.Name)
+
+		{
+			svc := &m.Services[i]
+			switch {
+			case svc.Scale.Min != nil && svc.Scale.Max != nil:
+				svc.Scale.Count = ServiceScaleCount{Min: *svc.Scale.Min, Max: *svc.Scale.Max}
+			case svc.Scale.Min != nil && svc.Scale.Max == nil:
+				svc.Scale.Count.Min = *svc.Scale.Min
+				if svc.Scale.Autoscale.IsEnabled() {
+					if svc.Scale.Count.Max == 0 {
+						svc.Scale.Count.Max = 10
+					}
+				} else {
+					svc.Scale.Count.Max = *svc.Scale.Min
+				}
+			case svc.Scale.Max != nil && svc.Scale.Min == nil:
+				svc.Scale.Count.Max = *svc.Scale.Max
+				if svc.Scale.Count.Min == 0 && !svc.Scale.Autoscale.IsEnabled() {
+					svc.Scale.Count.Min = *svc.Scale.Max
+				}
+			}
+
+			if svc.Scale.Autoscale.IsEnabled() && svc.Scale.Count.Max == 0 {
+				svc.Scale.Count.Max = 10
+			}
+		}
 
 		// if no scale attributes set
 		if len(m.AttributesByPrefix(sp)) == 0 {
@@ -198,7 +315,8 @@ func (m *Manifest) ApplyDefaults() error {
 		}
 
 		// if no explicit count attribute set yet has multiple scale attributes other than count
-		if !m.AttributeExists(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 {
+		if !m.AttributeExists(fmt.Sprintf("%s.count", sp)) && len(m.AttributesByPrefix(sp)) > 1 &&
+			!m.Services[i].Scale.Autoscale.IsEnabled() && m.Services[i].Scale.Min == nil && m.Services[i].Scale.Max == nil {
 			m.Services[i].Scale.Count = ServiceScaleCount{Min: 1, Max: 1}
 		}
 
@@ -216,6 +334,18 @@ func (m *Manifest) ApplyDefaults() error {
 					m.Services[i].Scale.Memory = m.Services[i].Scale.Limit.Memory
 				}
 			}
+		}
+
+		if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+			m.Services[i].DisableHostUsers = true
+		}
+
+		if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] {
+			m.Services[i].Scale.Cpu = options.CoalesceInt(m.Services[i].Scale.Cpu, options.CoalesceInt(m.Services[i].Scale.Limit.Cpu, DefaultCpu))
+			m.Services[i].Scale.Memory = options.CoalesceInt(m.Services[i].Scale.Memory, options.CoalesceInt(m.Services[i].Scale.Limit.Memory, DefaultMem))
+
+			m.Services[i].Scale.Limit.Cpu = options.CoalesceInt(m.Services[i].Scale.Limit.Cpu, m.Services[i].Scale.Cpu)
+			m.Services[i].Scale.Limit.Memory = options.CoalesceInt(m.Services[i].Scale.Limit.Memory, m.Services[i].Scale.Memory)
 		}
 
 		if m.Services[i].Scale.Limit.Cpu > 0 && m.Services[i].Scale.Limit.Cpu < m.Services[i].Scale.Cpu {
@@ -239,6 +369,31 @@ func (m *Manifest) ApplyDefaults() error {
 
 		if !m.AttributeExists(fmt.Sprintf("services.%s.tls.redirect", s.Name)) {
 			m.Services[i].Tls.Redirect = true
+		}
+	}
+
+	for i := range m.Resources {
+		if m.Resources[i].Options == nil {
+			m.Resources[i].Options = map[string]string{}
+		}
+		if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && m.Resources[i].IsContainerizedResource() {
+			// set default options
+			if m.Resources[i].Options["cpu"] == "" {
+				m.Resources[i].Options["cpu"] = "250" // 0.25 vCPU
+			} else {
+				cpu, _ := strconv.Atoi(m.Resources[i].Options["cpu"])
+				if cpu < 100 || cpu > 10000 {
+					return fmt.Errorf("resource cpu must be between 100 and 10000 millicpu")
+				}
+			}
+			if m.Resources[i].Options["mem"] == "" {
+				m.Resources[i].Options["mem"] = "512" // 512 MB
+			} else {
+				mem, _ := strconv.Atoi(m.Resources[i].Options["mem"])
+				if mem < 256 || mem > 10240 {
+					return fmt.Errorf("resource mem must be between 256 and 10240 megabyte")
+				}
+			}
 		}
 	}
 

@@ -19,4 +19,8 @@
   #define THREADS_WINDOWS
 #endif
 
+#ifndef PRINTF_FORMAT
+#define PRINTF_FORMAT(a,b)
+#endif
+
 #endif /* CONFIG_H */

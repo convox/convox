@@ -1,0 +1,30 @@
+---
+title: "internet_gateway_id"
+description: "The internet_gateway_id AWS rack parameter specifies the ID of an attached internet gateway when installing the rack into an existing VPC, empty by default."
+slug: internet_gateway_id
+url: /configuration/rack-parameters/aws/internet_gateway_id
+---
+
+# internet_gateway_id
+
+## Description
+The `internet_gateway_id` parameter is used when you are using an existing VPC for your rack. This parameter allows you to specify the ID of the attached internet gateway.
+
+## Default Value
+The default value for `internet_gateway_id` is an empty string. When set to an empty string, Convox will automatically create an internet gateway if one does not already exist for the VPC.
+
+## Use Cases
+- **Existing VPC Integration**: Use this parameter to integrate your Convox rack with an existing VPC that has an internet gateway attached.
+- **Network Configuration**: Ensures that your rack can access the internet through the specified internet gateway.
+
+## Setting Parameters
+The `internet_gateway_id` parameter must be configured at rack installation. Example:
+
+| Key                    | Value                                         |
+|------------------------|-----------------------------------------------|
+| `internet_gateway_id`   | `igw-1234567890abcdef0` |
+
+## Additional Information
+Setting the `internet_gateway_id` parameter attaches your rack to the specified internet gateway so it integrates with your existing AWS network infrastructure.
+
+It is also important to configure the [cidr](/configuration/rack-parameters/aws/cidr) block to avoid collisions with existing VPC subnets. To avoid CIDR block collision with existing VPC subnets, add a new CIDR block to your VPC to separate rack resources.

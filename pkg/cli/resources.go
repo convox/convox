@@ -16,16 +16,16 @@ import (
 )
 
 func init() {
-	register("resources", "list resources", Resources, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack, flagApp},
+	register("resources", "list resources", watch(Resources), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp, flagWatchInterval},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 
 	register("resources console", "start a console for a resource", ResourcesConsole, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("resources export", "export data from a resource", ResourcesExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -35,7 +35,7 @@ func init() {
 		},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("resources import", "import data to a resource", ResourcesImport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -44,13 +44,13 @@ func init() {
 			stdcli.StringFlag("file", "f", "import from a file"),
 		},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("resources info", "get information about a resource", ResourcesInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("resources proxy", "proxy a local port to a resource", ResourcesProxy, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -61,16 +61,16 @@ func init() {
 		},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("resources url", "get url for a resource", ResourcesUrl, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<resource>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
-	register("rack resources", "list resources", RackResources, stdcli.CommandOptions{
-		Flags:     []stdcli.Flag{flagRack},
+	register("rack resources", "list resources", watch(RackResources), stdcli.CommandOptions{
+		Flags:     []stdcli.Flag{flagRack, flagWatchInterval},
 		Invisible: true,
 		Validate:  stdcli.Args(0),
 	})
@@ -153,15 +153,6 @@ func init() {
 }
 
 func Resources(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
-	if s.Version <= "20190111211123" {
-		return fmt.Errorf("command unavailable, please upgrade this rack")
-	}
-
 	rs, err := rack.ResourceList(app(c))
 	if err != nil {
 		return err
@@ -247,15 +238,6 @@ func ResourcesImport(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func ResourcesInfo(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
-	if s.Version <= "20190111211123" {
-		return fmt.Errorf("command unavailable, please upgrade this rack")
-	}
-
 	r, err := rack.ResourceGet(app(c), c.Arg(0))
 	if err != nil {
 		return err
@@ -274,13 +256,8 @@ func ResourcesInfo(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
-	if s.Version <= "20190111211123" {
-		return fmt.Errorf("command unavailable, please upgrade this rack")
+	if rack.ClientType() == "machine" {
+		return fmt.Errorf("resources proxy is not available on Cloud machines")
 	}
 
 	r, err := rack.ResourceGet(app(c), c.Arg(0))
@@ -292,7 +269,20 @@ func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
 		return fmt.Errorf("no url for resource: %s", r.Name)
 	}
 
-	u, err := url.Parse(r.Url)
+	escapedUrl := r.Url
+
+	// this is to resolve url parsing error when there is special char on password
+	if _, err := url.Parse(escapedUrl); err != nil {
+		if strings.Contains(r.Url, "@") {
+			frontParts := strings.SplitN(r.Url, "://", 2)
+			if len(frontParts) > 0 {
+				backParts := strings.SplitN(r.Url, "@", 2)
+				escapedUrl = fmt.Sprintf("%s://%s", frontParts[0], backParts[len(backParts)-1])
+			}
+		}
+	}
+
+	u, err := url.Parse(escapedUrl)
 	if err != nil {
 		return err
 	}
@@ -307,7 +297,7 @@ func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
 		case "https":
 			remoteport = "443"
 		default:
-			return fmt.Errorf("unknown port for url: %s", r.Url)
+			return fmt.Errorf("unknown port for url: %s", escapedUrl)
 		}
 	}
 
@@ -330,15 +320,6 @@ func ResourcesProxy(rack sdk.Interface, c *stdcli.Context) error {
 }
 
 func ResourcesUrl(rack sdk.Interface, c *stdcli.Context) error {
-	s, err := rack.SystemGet()
-	if err != nil {
-		return err
-	}
-
-	if s.Version <= "20190111211123" {
-		return fmt.Errorf("command unavailable, please upgrade this rack")
-	}
-
 	r, err := rack.ResourceGet(app(c), c.Arg(0))
 	if err != nil {
 		return err

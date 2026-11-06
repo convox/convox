@@ -1,23 +1,36 @@
 package k8s
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	gojson "encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"path"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/scheme"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
-	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/client-go/kubernetes"
+	tc "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/client-go/tools/record"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
@@ -36,85 +49,16 @@ type Patch struct {
 	Value interface{} `json:"value"`
 }
 
-func (p *Provider) ingressSecrets(a *structs.App, ss manifest.Services) (map[string]string, error) {
-	domains := map[string]bool{}
-
-	for i := range ss {
-		for _, d := range ss[i].Domains {
-			domains[d] = false
-		}
-	}
-
-	cs, err := p.CertificateList()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	sort.Slice(cs, func(i, j int) bool { return cs[i].Expiration.After(cs[i].Expiration) })
-
-	secrets := map[string]string{}
-
-	for _, c := range cs {
-		count := 0
-
-		for _, d := range c.Domains {
-			if v, ok := domains[d]; ok && !v {
-				domains[d] = true
-				count++
-			}
-		}
-
-		if count > 0 {
-			for _, d := range c.Domains {
-				secrets[d] = c.Id
-			}
-		}
-	}
-
-	for d, matched := range domains {
-		if !matched {
-			c, err := p.CertificateGenerate([]string{d})
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			secrets[d] = c.Id
-		}
-	}
-
-	ids := map[string]bool{}
-
-	for _, id := range secrets {
-		ids[id] = true
-	}
-
-	for id := range ids {
-		if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Get(context.TODO(), id, am.GetOptions{}); ae.IsNotFound(err) {
-
-			kc, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(context.TODO(), id, am.GetOptions{})
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-
-			kc.ObjectMeta.Namespace = p.AppNamespace(a.Name)
-			kc.ResourceVersion = ""
-			kc.UID = ""
-
-			if _, err := p.Cluster.CoreV1().Secrets(p.AppNamespace(a.Name)).Create(context.TODO(), kc, am.CreateOptions{}); err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
-	}
-
-	return secrets, nil
-}
-
 // skipcq
 func (p *Provider) environment(a *structs.App, r *structs.Release, s manifest.Service, e structs.Environment) (map[string]string, error) {
 	env := map[string]string{}
 
-	for k, v := range p.systemEnvironment() {
-		env[k] = v
+	if p.ContextTID() != "" {
+		env["TID"] = p.ContextTID()
+	} else {
+		for k, v := range p.systemEnvironment() {
+			env[k] = v
+		}
 	}
 
 	for k, v := range p.appEnvironment(a) {
@@ -187,6 +131,9 @@ func (p *Provider) serviceEnvironment(a *structs.App, s manifest.Service) map[st
 }
 
 func (p *Provider) systemEnvironment() map[string]string {
+	if p.FeatureGates[options.FeatureGateSystemEnvDisable] {
+		return map[string]string{}
+	}
 	return map[string]string{
 		"RACK":     p.Name,
 		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
@@ -233,8 +180,28 @@ func (p *Provider) volumeSources(app, service string, vs []string) []string {
 	return vsu
 }
 
+// namespaceTid returns the tenant segment of an app namespace, or "" when it has none.
+func (p *Provider) namespaceTid(ns, app string) string {
+	rest := strings.TrimPrefix(ns, p.Name+"-")
+	if rest == ns || !strings.HasSuffix(rest, "-"+app) {
+		return ""
+	}
+	return strings.TrimSuffix(rest, "-"+app)
+}
+
 func nameFilter(name string) string {
 	return kubernetesNameFilter.ReplaceAllString(name, "")
+}
+
+func nameFilterV2(name string) string {
+	name = strings.ToLower(name)
+	var builder strings.Builder
+	for _, char := range name {
+		if unicode.IsLetter(char) || (unicode.IsDigit(char) && builder.Len() > 0) || char == '-' {
+			builder.WriteRune(char)
+		}
+	}
+	return builder.String()
 }
 
 func primaryContainer(cs []ac.Container, app string) (*ac.Container, error) {
@@ -280,7 +247,7 @@ func volumeTo(v string) (string, error) {
 	case 2:
 		return parts[1], nil
 	default:
-		return "", errors.WithStack(fmt.Errorf("invalid volume %q", v))
+		return "", errors.WithStack(structs.ErrBadRequest("invalid volume %q", v))
 	}
 }
 
@@ -357,4 +324,225 @@ func caculatePercentage(cur, total float64) float64 {
 		return 0
 	}
 	return (cur / total) * 100
+}
+
+func RunUsingLeaderElection(ctx context.Context, ns, name string, cluster kubernetes.Interface, onStarted func(context.Context), onStopped func()) error {
+	identifier, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("starting elector: %s/%s (%s)\n", ns, name, identifier)
+
+	eb := record.NewBroadcaster()
+	eb.StartRecordingToSink(&tc.EventSinkImpl{Interface: cluster.CoreV1().Events("")})
+
+	recorder := eb.NewRecorder(scheme.Scheme, ac.EventSource{Component: name})
+
+	rl := &resourcelock.LeaseLock{
+		LeaseMeta: am.ObjectMeta{Namespace: ns, Name: name},
+		Client:    cluster.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity:      identifier,
+			EventRecorder: recorder,
+		},
+	}
+
+	el, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: 60 * time.Second,
+		RenewDeadline: 15 * time.Second,
+		RetryPeriod:   5 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: onStarted,
+			OnStoppedLeading: onStopped,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	go el.Run(ctx)
+
+	return nil
+}
+
+func SerializeK8sObjToYaml(obj runtime.Object) ([]byte, error) {
+	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil)
+
+	var buf []byte
+	w := bytes.NewBuffer(buf)
+	err := serializer.Encode(obj, w)
+	if err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
+type tempStateLogStorage struct {
+	lock      sync.Mutex
+	s         map[string][]string
+	threshold int
+}
+
+func (t *tempStateLogStorage) Add(tid, app, value string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	key := stateLogKey(tid, app)
+	if _, has := t.s[key]; !has {
+		t.s[key] = []string{}
+	}
+	t.s[key] = append(t.s[key], value)
+
+	l := len(t.s[key])
+	if l > t.threshold {
+		t.s[key] = t.s[key][l-t.threshold:]
+	}
+}
+
+func (t *tempStateLogStorage) Get(tid, app string) []string {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	return t.s[stateLogKey(tid, app)]
+}
+
+func (t *tempStateLogStorage) Reset(tid, app string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.s[stateLogKey(tid, app)] = []string{}
+}
+
+func stateLogKey(tid, app string) string {
+	return fmt.Sprintf("%s/%s", tid, app)
+}
+
+// gpuResourceKey maps a convox.yml gpu.vendor value to the Kubernetes
+// extended-resource key. Accepts both the short form (e.g. "nvidia") and the
+// ".com"-suffixed form (e.g. "nvidia.com") for backward compatibility with the
+// pre-R1 template heuristic. Unknown or unset vendors default to
+// "nvidia.com/gpu" (the most common case) instead of emitting garbage.
+func gpuResourceKey(vendor string) string {
+	switch vendor {
+	case "nvidia", "nvidia.com":
+		return "nvidia.com/gpu"
+	case "amd", "amd.com":
+		return "amd.com/gpu"
+	case "google", "google.com", "tpu":
+		return "google.com/tpu"
+	default:
+		return "nvidia.com/gpu"
+	}
+}
+
+// gpuKeyToVendor is the reverse of gpuResourceKey: for each supported resource
+// key, the short vendor string that appears on the Service.GpuVendor / Process
+// fields returned by the rack API. Kept in sync with gpuResourceKey — adding a
+// new vendor here without adding it to gpuResourceKey (or vice versa) will
+// produce a rack that reports a vendor it cannot emit.
+var gpuKeyToVendor = map[string]string{
+	"nvidia.com/gpu": "nvidia",
+	"amd.com/gpu":    "amd",
+	"google.com/tpu": "google",
+}
+
+type resourceSubstitution struct {
+	App     string
+	RType   string
+	RName   string
+	StateId string
+	Tid     string
+}
+
+func resourceSubstitutionId(r *resourceSubstitution) string {
+	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|stateId:%s|tid:%s|##", r.App, r.RType, r.RName, r.StateId, r.Tid)
+}
+
+func parseResourceSubstitutionId(id string) *resourceSubstitution {
+	rs := &resourceSubstitution{}
+
+	for _, part := range strings.Split(id, "|") {
+		k, v, has := strings.Cut(part, ":")
+		if !has {
+			continue
+		}
+
+		switch k {
+		case "app":
+			rs.App = v
+		case "type":
+			rs.RType = v
+		case "resource":
+			rs.RName = v
+		case "stateId":
+			rs.StateId = v
+		case "tid":
+			rs.Tid = v
+		}
+	}
+
+	return rs
+}
+
+// resourceSubstitutionStateId recomputes the id for dependencies recorded before
+// the state id travelled in the substitution payload.
+func (p *Provider) resourceSubstitutionStateId(rs *resourceSubstitution) string {
+	if rs.StateId != "" {
+		return rs.StateId
+	}
+	return generateResourceStateId(p.Name, rs.Tid, rs.App, rs.RName)
+}
+
+func patchBytes(patch map[string]interface{}) ([]byte, error) {
+	return gojson.Marshal(patch)
+}
+
+// serviceSecurityContext maps a manifest service's Privileged flag and
+// ServiceSecurityContext block to a Kubernetes container SecurityContext.
+// Returns nil when no settings are configured so callers can leave the
+// container SecurityContext unset. Mirrors the rendering logic in
+// provider/k8s/template/app/{service,timer}.yml.tmpl so one-off `convox run`
+// pods apply the same hardening as Deployment and CronJob pods.
+func serviceSecurityContext(s *manifest.Service) *ac.SecurityContext {
+	if s == nil {
+		return nil
+	}
+	if !s.Privileged && !s.SecurityContext.HasSecurityContext() {
+		return nil
+	}
+
+	sc := &ac.SecurityContext{}
+
+	if s.Privileged {
+		sc.Privileged = options.Bool(true)
+	}
+	if s.SecurityContext.RunAsNonRoot != nil {
+		sc.RunAsNonRoot = options.Bool(*s.SecurityContext.RunAsNonRoot)
+	}
+	if s.SecurityContext.RunAsUser != nil {
+		sc.RunAsUser = options.Int64(*s.SecurityContext.RunAsUser)
+	}
+	if s.SecurityContext.RunAsGroup != nil {
+		sc.RunAsGroup = options.Int64(*s.SecurityContext.RunAsGroup)
+	}
+	if s.SecurityContext.ReadOnlyRootFilesystem != nil {
+		sc.ReadOnlyRootFilesystem = options.Bool(*s.SecurityContext.ReadOnlyRootFilesystem)
+	}
+	if s.SecurityContext.AllowPrivilegeEscalation != nil {
+		sc.AllowPrivilegeEscalation = options.Bool(*s.SecurityContext.AllowPrivilegeEscalation)
+	}
+	if s.SecurityContext.Capabilities.HasCapabilities() {
+		caps := &ac.Capabilities{}
+		for _, c := range s.SecurityContext.Capabilities.Add {
+			caps.Add = append(caps.Add, ac.Capability(c))
+		}
+		for _, c := range s.SecurityContext.Capabilities.Drop {
+			caps.Drop = append(caps.Drop, ac.Capability(c))
+		}
+		sc.Capabilities = caps
+	}
+	if s.SecurityContext.SeccompProfile != "" {
+		sc.SeccompProfile = &ac.SeccompProfile{Type: ac.SeccompProfileType(s.SecurityContext.SeccompProfile)}
+	}
+
+	return sc
 }

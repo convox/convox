@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math/rand"
 	"net"
 	"testing"
 	"time"
@@ -40,7 +38,7 @@ func TestProxy(t *testing.T) {
 			rwc.Close()
 		})
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -50,14 +48,11 @@ func TestProxy(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 
-		data, err := ioutil.ReadAll(cn)
+		data, err := io.ReadAll(cn)
 		require.NoError(t, err)
 		require.Equal(t, "out", string(data))
 
@@ -86,7 +81,7 @@ func TestProxyError(t *testing.T) {
 		}
 		i.On("Proxy", "test.example.org", 5000, mock.Anything, opts).Return(fmt.Errorf("err1"))
 
-		port := rand.Intn(30000) + 10000
+		port := freePort(t)
 
 		ch := make(chan *result)
 
@@ -96,14 +91,11 @@ func TestProxyError(t *testing.T) {
 			ch <- res
 		}()
 
-		time.Sleep(500 * time.Millisecond)
-
-		cn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		require.NoError(t, err)
+		cn := dialEventually(t, port)
 
 		cn.Write([]byte("in"))
 
-		data, _ := ioutil.ReadAll(cn)
+		data, _ := io.ReadAll(cn)
 		require.Len(t, data, 0)
 
 		cancel()
@@ -119,4 +111,25 @@ func TestProxyError(t *testing.T) {
 			fmt.Sprintf("connect: %d", port),
 		})
 	})
+}
+
+func freePort(t *testing.T) int {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr, ok := ln.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	require.NoError(t, ln.Close())
+	return addr.Port
+}
+
+func dialEventually(t *testing.T, port int) net.Conn {
+	t.Helper()
+	var cn net.Conn
+	require.Eventually(t, func() bool {
+		var err error
+		cn, err = net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		return err == nil
+	}, 5*time.Second, 20*time.Millisecond)
+	return cn
 }

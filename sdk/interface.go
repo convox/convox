@@ -11,6 +11,8 @@ import (
 type Interface interface {
 	structs.Provider
 
+	ClientType() string
+
 	// raw http
 	Get(string, stdsdk.RequestOptions, interface{}) error
 
@@ -24,11 +26,15 @@ type Interface interface {
 	BuildImportMultipart(string, io.Reader) (*structs.Build, error)
 	BuildImportUrl(string, io.Reader) (*structs.Build, error)
 	CertificateCreateClassic(string, string, structs.CertificateCreateOptions) (*structs.Certificate, error)
+	CertificateDnsClassic() (*structs.CertificateDns, error)
+	CertificateMigrateClassic([]string) (structs.CertificateMigrations, error)
+	CertificateMigrationListClassic([]string) (structs.CertificateMigrations, error)
 	EnvironmentSet(string, []byte) (*structs.Release, error)
 	EnvironmentUnset(string, string) (*structs.Release, error)
 	FormationGet(string) (structs.Services, error)
 	FormationUpdate(string, string, structs.ServiceUpdateOptions) error
 	InstanceShellClassic(string, io.ReadWriter, structs.InstanceShellOptions) (int, error)
+	MachineList() (structs.Machines, error)
 	ProcessRunAttached(string, string, io.ReadWriter, int, structs.ProcessRunOptions) (int, error)
 	ProcessRunDetached(string, string, structs.ProcessRunOptions) (string, error)
 	RegistryRemoveClassic(string) error

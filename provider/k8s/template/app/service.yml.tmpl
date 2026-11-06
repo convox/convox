@@ -7,37 +7,39 @@ metadata:
     type: env
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 type: Opaque
 data:
   {{ range keyValue .Environment }}
-  {{.Key}}: {{ safe (base64 .Value) }}
+  {{ yamlScalar .Key }}: {{ safe (base64 .Value) }}
   {{ end }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   annotations:
-    {{ range keyValue .Annotations }}
-    {{.Key}}: "{{ quoteEscape .Value}}"
-    {{ end }}
+    {{- range $k, $v := .Annotations }}
+    {{ yamlQuote $k }}: {{ yamlQuote $v }}
+    {{- end }}
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   labels:
     service: {{.Service.Name}}
     type: serviceaccount
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 ---
 apiVersion: apps/v1
-kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else }} Deployment {{ end }}
+kind: {{ if .Service.Agent.Enabled }} DaemonSet {{ else if .Service.Stateful }} StatefulSet {{ else }} Deployment {{ end }}
 metadata:
   namespace: {{.Namespace}}
   name: {{.Service.Name}}
   annotations:
-    {{ if not .Service.Agent.Enabled }}
+    {{ if .Service.Stateful }}
+    atom.conditions: Ready=True
+    {{ else if not .Service.Agent.Enabled }}
     atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
     {{ end }}
   labels:
@@ -45,7 +47,7 @@ metadata:
     type: service
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   selector:
@@ -54,8 +56,17 @@ spec:
       rack: {{.Rack}}
       app: {{.App.Name}}
       service: {{.Service.Name}}
-  {{ if not .Service.Agent.Enabled }}
+  {{ if .Service.Stateful }}
+  serviceName: {{.Service.Name}}-headless
+  podManagementPolicy: {{ yamlScalar (coalesce .Service.PodManagementPolicy "OrderedReady") }}
   replicas: {{.Replicas}}
+  updateStrategy:
+    type: RollingUpdate
+  {{ else if not .Service.Agent.Enabled }}
+  replicas: {{.Replicas}}
+  {{- if .ProgressDeadline }}
+  progressDeadlineSeconds: {{.ProgressDeadline}}
+  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -70,9 +81,9 @@ spec:
         {{ if .Service.Agent.Enabled }}
         scheduler.alpha.kubernetes.io/critical-pod: ""
         {{ end }}
-        {{ range keyValue .Annotations }}
-        {{.Key}}: "{{ quoteEscape .Value}}"
-        {{ end }}
+        {{- range $k, $v := .Annotations }}
+        {{ yamlQuote $k }}: {{ yamlQuote $v }}
+        {{- end }}
       labels:
         system: convox
         rack: {{.Rack}}
@@ -82,9 +93,133 @@ spec:
         release: {{.Release.Id}}
         type: service
         {{ range keyValue .Service.Labels }}
-        {{.Key}}: "{{.Value}}"
+        {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
         {{ end }}
     spec:
+      {{ with .Service.SecurityContext.FsGroup }}
+      securityContext:
+        fsGroup: {{ . }}
+        fsGroupChangePolicy: OnRootMismatch
+      {{ end }}
+      {{ if or .Service.SpreadAcrossZones (eq .Service.SpreadAcrossNodes "balanced") }}
+      topologySpreadConstraints:
+      - maxSkew: {{ if .Service.SpreadAcrossZones }}1{{ else }}5{{ end }}
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
+        {{ if not .Service.Stateful }}
+        matchLabelKeys:
+        - pod-template-hash
+        {{ end }}
+      {{ if eq .Service.SpreadAcrossNodes "balanced" }}
+      - maxSkew: 1
+        minDomains: 2
+        nodeTaintsPolicy: Honor
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
+        {{ if not .Service.Stateful }}
+        matchLabelKeys:
+        - pod-template-hash
+        {{ end }}
+      {{ else }}
+      - maxSkew: 3
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            system: convox
+            rack: {{.Rack}}
+            app: {{.App.Name}}
+            service: {{.Service.Name}}
+            type: service
+      {{ end }}
+      {{ end }}
+      {{ if or .Service.NodeSelectorLabels .Service.NodeAffinityLabels (eq .Service.SpreadAcrossNodes "one-per-node") }}
+      affinity:
+        {{ if or .Service.NodeSelectorLabels .Service.NodeAffinityLabels }}
+        nodeAffinity:
+          {{ if .Service.NodeSelectorLabels }}
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              {{ range keyValue .Service.NodeSelectorLabels }}
+              - key: {{ yamlScalar .Key }}
+                operator: In
+                values:
+                - {{ yamlScalar .Value }}
+              {{ end }}
+          {{ end }}
+          {{ if .Service.NodeAffinityLabels }}
+          preferredDuringSchedulingIgnoredDuringExecution:
+          {{ range .Service.NodeAffinityLabels }}
+          - weight: {{ .Weight }}
+            preference:
+              matchExpressions:
+              - key: {{ yamlScalar .Label }}
+                operator: In
+                values:
+                - {{ yamlScalar .Value }}
+          {{ end }}
+          {{ end }}
+        {{ end }}
+        {{ if eq .Service.SpreadAcrossNodes "one-per-node" }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                system: convox
+                rack: {{.Rack}}
+                app: {{.App.Name}}
+                service: {{.Service.Name}}
+                type: service
+            {{ if not .Service.Stateful }}
+            matchLabelKeys:
+            - pod-template-hash
+            {{ end }}
+        {{ end }}
+      {{ end }}
+      {{ $hasDedicatedNode := false }}
+      {{ range keyValue .Service.NodeSelectorLabels }}
+        {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
+          {{ $hasDedicatedNode = true }}
+        {{ end }}
+      {{ end }}
+      {{ $hasGpu := gt .Service.Scale.Gpu.Count 0 }}
+      {{ if or $hasDedicatedNode $hasGpu }}
+      tolerations:
+        {{ if $hasDedicatedNode }}
+        {{ range keyValue .Service.NodeSelectorLabels }}
+        {{ if or (eq .Key "convox.io/label") (eq .Key "convox.io/nodepool") }}
+        - key: "dedicated-node"
+          operator: "Equal"
+          value: {{ yamlQuote .Value }}
+          effect: "NoSchedule"
+        {{ end }}
+        {{ end }}
+        {{ end }}
+        {{ if $hasGpu }}
+        - key: {{ gpuResourceKey .Service.Scale.Gpu.Vendor }}
+          operator: Exists
+          effect: NoSchedule
+        {{ end }}
+      {{ end }}
+      {{ if .Service.DisableHostUsers }}
+      hostUsers: false
+      {{ end }}
       {{ if or (.Resolver) (gt .Service.DnsConfig.Ndots 0) }}
       dnsPolicy: "None"
       dnsConfig:
@@ -96,6 +231,7 @@ spec:
         {{ with .Resolver }}
         nameservers:
           - "{{ . }}"
+        {{ if not (index $ "DisableDnsSearches") }}
         searches:
           - "{{$.App.Name}}.{{$.Rack}}.local"
           - "{{$.Namespace}}.svc.cluster.local"
@@ -103,10 +239,71 @@ spec:
           - "svc.cluster.local"
           - "cluster.local"
         {{ end }}
+        {{ end }}
+      {{ end }}
+      {{ if or .DockerHubAuth .ImagePullSecretNames .RegistryAuth }}
+      imagePullSecrets:
+      {{ if .DockerHubAuth }}
+      - name: docker-hub-authentication
+      {{ end }}
+      {{ range .ImagePullSecretNames }}
+      - name: {{ yamlScalar . }}
+      {{ end }}
+      {{ if .RegistryAuth }}
+      - name: convox-registry-authentication
+      {{ end }}
       {{ end }}
       serviceAccountName: {{.Service.Name}}
       shareProcessNamespace: {{.Service.Init}}
       terminationGracePeriodSeconds: {{$.Service.Termination.Grace}}
+      {{if .Service.InitContainer }}
+      initContainers:
+      - name: init
+        image: {{ yamlScalar (coalesce .Service.InitContainer.Image (image .App .Service .Release)) }}
+        {{ with .Service.InitContainer.Command }}
+        args:
+        {{ range shellsplit . }}
+          - {{ safe . }}
+        {{ end }}
+        {{ end }}
+        env:
+        - name: INIT_CONTAINER
+          value: "true"
+        {{ range $.Resources }}
+        - name: {{ yamlQuote .Env }}
+          valueFrom:
+            configMapKeyRef:
+              name: resource-{{ k8sname .Name }}
+              key: {{ .GetConfigMapKey }}
+        {{ end }}
+        envFrom:
+        - secretRef:
+            name: env-{{.Service.Name}}
+        volumeMounts:
+        {{ range .Service.InitContainer.VolumeOptions }}
+        {{ with .EmptyDir }}
+        - name: ed-{{ .Id }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .AwsEfs }}
+        - name: efs-{{ .Id }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .AzureFiles }}
+        - name: azurefiles-{{ .Id }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .PersistentVolumeClaim }}
+        - name: pvc-{{ .Id }}
+          mountPath: {{ json .MountPath }}
+        {{ end }}
+        {{ end }}
+        {{ range .Service.InitContainer.ConfigMounts }}
+        - name: cfg-{{ .Id }}
+          mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+          subPath: {{ yamlQuote .Filename }}
+        {{ end }}
+      {{ end }}
       containers:
       - name: {{.App.Name}}
         {{ with .Service.Command }}
@@ -121,7 +318,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         {{ range $.Resources }}
-        - name: "{{.Env}}"
+        - name: {{ yamlQuote .Env }}
           valueFrom:
             configMapKeyRef:
               name: resource-{{ k8sname .Name }}
@@ -152,35 +349,69 @@ spec:
           {{ end }}
         {{ end }}
         {{ with .Service.Port.Port }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
+        {{ if or (not (eq $.Service.StartupProbe.Path "")) (not (eq $.Service.StartupProbe.TcpSocketPort ""))}}
+        startupProbe:
+          {{ if not (eq $.Service.StartupProbe.Path "")}}
+          httpGet:
+            path: {{ yamlQuote $.Service.StartupProbe.Path }}
+            port: {{.}}
+          {{ end }}
+          {{ if not (eq $.Service.StartupProbe.TcpSocketPort "")}}
+          tcpSocket:
+            port: {{ yamlScalar $.Service.StartupProbe.TcpSocketPort }}
+          {{ end }}
+          initialDelaySeconds: {{$.Service.StartupProbe.Grace}}
+          periodSeconds: {{$.Service.StartupProbe.Interval}}
+          timeoutSeconds: {{$.Service.StartupProbe.Timeout}}
+          successThreshold: {{$.Service.StartupProbe.SuccessThreshold}}
+          failureThreshold: {{$.Service.StartupProbe.FailureThreshold}}
+        {{ end }}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Liveness.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not (eq $.Service.Liveness.Path ""))}}
         livenessProbe:
           httpGet:
-            path: {{$.Service.Liveness.Path}}"
-            port: {{.}}
+            path: {{ yamlQuote $.Service.Liveness.Path }}
+            port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Liveness.Port.Scheme "") }}
+            scheme: {{ yamlQuote (upper $.Service.Liveness.Port.Scheme) }}
+            {{ end }}
           initialDelaySeconds: {{$.Service.Liveness.Grace}}
           periodSeconds: {{$.Service.Liveness.Interval}}
           timeoutSeconds: {{$.Service.Liveness.Timeout}}
           successThreshold: {{$.Service.Liveness.SuccessThreshold}}
           failureThreshold: {{$.Service.Liveness.FailureThreshold}}
         {{ end }}
-        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not $.Service.Health.Disable) }}
+        {{ if and (not (eq $.Service.Port.Scheme "GRPC")) (not (eq (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme) "GRPC")) (not $.Service.Health.Disable) }}
         readinessProbe:
           httpGet:
-            path: "{{$.Service.Health.Path}}"
-            port: {{.}}
-            scheme: "{{ upper $.Service.Port.Scheme }}"
+            path: {{ yamlQuote $.Service.Health.Path }}
+            port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
+            scheme: {{ yamlQuote (upper (coalesce $.Service.Health.Port.Scheme $.Service.Port.Scheme)) }}
           initialDelaySeconds: {{$.Service.Health.Grace}}
           periodSeconds: {{$.Service.Health.Interval}}
           timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 3
-        {{ else if $.Service.GrpcHealthEnabled }}
+        {{ else if and $.Service.GrpcHealthEnabled (not $.Service.Health.Disable) }}
+        readinessProbe:
+          grpc:
+            port: {{ if gt $.Service.Health.Port.Port 0 }}{{ $.Service.Health.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Health.GrpcService "") }}
+            service: {{ yamlQuote $.Service.Health.GrpcService }}
+            {{ end }}
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
+          successThreshold: 1
+          failureThreshold: 5
         livenessProbe:
           grpc:
-            port: {{.}}
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          timeoutSeconds: 15
+            port: {{ if gt $.Service.Liveness.Port.Port 0 }}{{ $.Service.Liveness.Port.Port }}{{ else }}{{.}}{{ end }}
+            {{ if not (eq $.Service.Liveness.GrpcService "") }}
+            service: {{ yamlQuote $.Service.Liveness.GrpcService }}
+            {{ end }}
+          initialDelaySeconds: {{$.Service.Health.Grace}}
+          periodSeconds: {{$.Service.Health.Interval}}
+          timeoutSeconds: {{$.Service.Health.Timeout}}
           successThreshold: 1
           failureThreshold: 5
         {{ end }}
@@ -193,7 +424,7 @@ spec:
         {{ range .Service.Ports }}
           - name: port-{{.Port}}
             containerPort: {{.Port}}
-            protocol: {{ upper .Protocol }}
+            protocol: {{ yamlScalar (upper .Protocol) }}
             {{ if $.Service.Agent.Enabled }}
             hostPort: {{.Port}}
             {{ end }}
@@ -204,7 +435,7 @@ spec:
             cpu: "{{.Service.Scale.Limit.Cpu}}m"
             {{ end }}
             {{ with .Service.Scale.Gpu.Count }}
-            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
             {{ end }}
             {{ if (gt .Service.Scale.Limit.Memory 0)}}
             memory: "{{.Service.Scale.Limit.Memory}}Mi"
@@ -216,22 +447,82 @@ spec:
             cpu: "{{.}}m"
             {{ end }}
             {{ with .Service.Scale.Gpu.Count }}
-            {{$.Service.Scale.Gpu.Vendor}}.com/gpu: "{{.}}"
+            {{ gpuResourceKey $.Service.Scale.Gpu.Vendor }}: "{{.}}"
             {{ end }}
             {{ with .Service.Scale.Memory }}
             memory: "{{.}}Mi"
             {{ end }}
+        {{ if or .Service.Privileged .Service.SecurityContext.HasSecurityContext }}
+        securityContext:
+          {{ if .Service.Privileged }}
+          privileged: true
+          {{ end }}
+          {{ with .Service.SecurityContext.RunAsNonRoot }}
+          runAsNonRoot: {{ . }}
+          {{ end }}
+          {{ with .Service.SecurityContext.RunAsUser }}
+          runAsUser: {{ . }}
+          {{ end }}
+          {{ with .Service.SecurityContext.RunAsGroup }}
+          runAsGroup: {{ . }}
+          {{ end }}
+          {{ with .Service.SecurityContext.ReadOnlyRootFilesystem }}
+          readOnlyRootFilesystem: {{ . }}
+          {{ end }}
+          {{ if ne .Service.SecurityContext.AllowPrivilegeEscalation nil }}
+          allowPrivilegeEscalation: {{ deref .Service.SecurityContext.AllowPrivilegeEscalation }}
+          {{ end }}
+          {{ if .Service.SecurityContext.Capabilities.HasCapabilities }}
+          capabilities:
+            {{ with .Service.SecurityContext.Capabilities.Drop }}
+            drop:
+            {{ range . }}
+              - {{ yamlScalar . }}
+            {{ end }}
+            {{ end }}
+            {{ with .Service.SecurityContext.Capabilities.Add }}
+            add:
+            {{ range . }}
+              - {{ yamlScalar . }}
+            {{ end }}
+            {{ end }}
+          {{ end }}
+          {{ with .Service.SecurityContext.SeccompProfile }}
+          seccompProfile:
+            type: {{ yamlScalar . }}
+          {{ end }}
+        {{ end }}
         volumeMounts:
         - name: ca
           mountPath: /etc/convox
         {{ range .Service.Volumes }}
         - name: {{ volumeName $.App.Name (volumeFrom $.App.Name $.Service.Name .) }}
-          mountPath: "{{ volumeTo . }}"
+          mountPath: {{ yamlQuote (volumeTo .) }}
+        {{ end }}
+        {{ range .Service.ConfigMounts }}
+        - name: cfg-{{ .Id }}
+          mountPath: {{ yamlQuote (pathJoin .Dir .Filename) }}
+          subPath: {{ yamlQuote .Filename }}
         {{ end }}
         {{ range .Service.VolumeOptions }}
         {{ with .EmptyDir }}
         - name: ed-{{ .Id }}
-          mountPath: {{ .MountPath }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .AwsEfs }}
+        - name: efs-{{ .Id }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .AzureFiles }}
+        - name: azurefiles-{{ .Id }}
+          mountPath: {{ yamlScalar .MountPath }}
+        {{ end }}
+        {{ with .PersistentVolumeClaim }}
+        - name: pvc-{{ .Id }}
+          mountPath: {{ json .MountPath }}
+          {{ if eq .AccessMode "ReadOnlyMany" }}
+          readOnly: true
+          {{ end }}
         {{ end }}
         {{ end }}
       volumes:
@@ -245,22 +536,64 @@ spec:
         hostPath:
           path: "{{.}}"
         {{ else }}
-        persistentVolumeClaim:
-          claimName: {{ volumeName $.App.Name . }}
+        emptyDir: {}
         {{ end }}
       {{ end }}
       {{ range .Service.VolumeOptions }}
       {{ with .EmptyDir }}
       - name: ed-{{ .Id }}
-        {{ if .Medium }}
+        {{ if or .Medium .SizeLimit }}
         emptyDir:
-          medium: {{ .Medium }}
+          {{ if .Medium }}
+          medium: {{ yamlScalar .Medium }}
+          {{ end }}
+          {{ if .SizeLimit }}
+          sizeLimit: {{ yamlScalar .SizeLimit }}
+          {{ end }}
         {{ else }}
         emptyDir: {}
         {{ end }}
       {{ end }}
+      {{ with .AwsEfs }}
+      - name: efs-{{ .Id }}
+        persistentVolumeClaim:
+          claimName: efs-{{$.Service.Name}}-{{.Id}}
       {{ end }}
-{{ if not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max) }}
+      {{ with .AzureFiles }}
+      - name: azurefiles-{{ .Id }}
+        persistentVolumeClaim:
+          claimName: azurefiles-{{$.Service.Name}}-{{.Id}}
+      {{ end }}
+      {{ end }}
+      {{ range $.Service.ConfigMounts }}
+      - name: cfg-{{ .Id }}
+        secret:
+          secretName: cfg-{{ .Id }}
+          items:
+            - key: app.json
+              path: {{ yamlScalar .Filename }}
+      {{ end }}
+  {{ if .Service.Stateful }}
+  volumeClaimTemplates:
+  {{ range .Service.VolumeOptions }}
+  {{ with .PersistentVolumeClaim }}
+  - metadata:
+      name: pvc-{{ .Id }}
+    spec:
+      accessModes:
+      - {{ yamlScalar (coalesce .AccessMode "ReadWriteOnce") }}
+      {{ with .StorageClass }}
+      storageClassName: {{ json . }}
+      {{ end }}
+      volumeMode: Filesystem
+      resources:
+        requests:
+          storage: {{ yamlScalar .Size }}
+  {{ end }}
+  {{ end }}
+  {{ end }}
+ 
+{{ if and (and (and (and (and (not (eq .Service.Scale.Count.Min .Service.Scale.Count.Max)) (not $.KedaIsEnabled)) (not $.AutoscaleIsEnabled)) (not .Service.Agent.Enabled)) (not .Service.Stateful)) (not $.TriggersOverrideActive) }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -270,7 +603,7 @@ metadata:
   labels:
     service: {{.Service.Name}}
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   scaleTargetRef:
@@ -300,11 +633,11 @@ spec:
   - type: External
     external:
       metric:
-        name: {{ .Name }}
+        name: {{ yamlScalar .Name }}
         selector:
           matchLabels:
             {{ range $k, $v := .MatchLabels }}
-            {{ $k }}: {{ $v }}
+            {{ yamlScalar $k }}: {{ yamlScalar $v }}
             {{ end }}
       target:
         {{ if .AverageValue }}
@@ -315,6 +648,28 @@ spec:
         value: {{ .Value }}
         {{ end }}
   {{ end }}
+{{ end }}
+{{ if .Service.Stateful }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{.Namespace}}
+  name: {{.Service.Name}}-headless
+  labels:
+    app: {{.App.Name}}
+    service: {{.Service.Name}}
+    rack: {{.Rack}}
+    system: convox
+    {{ range keyValue .Service.Labels }}
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
+    {{ end }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    service: {{.Service.Name}}
+    type: service
 {{ end }}
 {{ if or .Service.Port.Port .Service.Ports }}
 ---
@@ -331,7 +686,7 @@ metadata:
     rack: {{.Rack}}
     system: convox
     {{ range keyValue .Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   type: ClusterIP
@@ -348,7 +703,7 @@ spec:
     {{ range .Service.Ports }}
     - name: port-{{.Port}}
       port: {{.Port}}
-      protocol: {{ upper .Protocol }}
+      protocol: {{ yamlScalar (upper .Protocol) }}
       targetPort: {{.Port}}
     {{ end }}
 {{ end }}

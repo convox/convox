@@ -2,14 +2,24 @@ package api_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/api"
+	cjwt "github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/logger"
+	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,12 +78,12 @@ func TestSystemGetError(t *testing.T) {
 func TestSystemLogs(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		d1 := []byte("test")
-		r1 := ioutil.NopCloser(bytes.NewReader(d1))
+		r1 := io.NopCloser(bytes.NewReader(d1))
 		opts := structs.LogsOptions{Since: options.Duration(2 * time.Minute)}
 		p.On("SystemLogs", opts).Return(r1, nil)
 		r2, err := c.Websocket("/system/logs", stdsdk.RequestOptions{})
 		require.NoError(t, err)
-		d2, err := ioutil.ReadAll(r2)
+		d2, err := io.ReadAll(r2)
 		require.NoError(t, err)
 		require.Equal(t, d1, d2)
 	})
@@ -86,7 +96,7 @@ func TestSystemLogsError(t *testing.T) {
 		r1, err := c.Websocket("/system/logs", stdsdk.RequestOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, r1)
-		d1, err := ioutil.ReadAll(r1)
+		d1, err := io.ReadAll(r1)
 		require.NoError(t, err)
 		require.Equal(t, []byte("ERROR: err1\n"), d1)
 	})
@@ -204,5 +214,308 @@ func TestSystemUpdateError(t *testing.T) {
 		p.On("SystemUpdate", structs.SystemUpdateOptions{}).Return(fmt.Errorf("err1"))
 		err := c.Put("/system", stdsdk.RequestOptions{}, nil)
 		require.EqualError(t, err, "err1")
+	})
+}
+
+func TestSystemJwtToken_UnknownRole_Returns400(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		form := url.Values{}
+		form.Set("role", "bogus")
+		form.Set("durationInHour", "1")
+		req, err := http.NewRequest(http.MethodPost, c.Endpoint.String()+"/system/jwt/token", strings.NewReader(form.Encode()))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+		bodyBytes, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(bodyBytes), "invalid role")
+	})
+}
+
+func TestSystemJwtToken_GeneratesRwaRole_VerifiesOnRack(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		form := url.Values{}
+		form.Set("role", "admin")
+		form.Set("durationInHour", "1")
+		req, err := http.NewRequest(http.MethodPost, c.Endpoint.String()+"/system/jwt/token", strings.NewReader(form.Encode()))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusOK, res.StatusCode)
+
+		var jwtRes structs.SystemJwt
+		decErr := json.NewDecoder(res.Body).Decode(&jwtRes)
+		require.NoError(t, decErr)
+		require.NotEmpty(t, jwtRes.Token)
+
+		jm := cjwt.NewJwtManager("test")
+		data, err := jm.Verify(jwtRes.Token)
+		require.NoError(t, err)
+		require.Equal(t, "rwa", data.Role)
+		require.Equal(t, "system-admin", data.User)
+	})
+}
+
+func jwtAuthTestServer(t *testing.T, fn func(*httptest.Server, *structs.MockProvider, *cjwt.JwtManager)) {
+	t.Helper()
+	p := &structs.MockProvider{}
+	p.On("Initialize", mock.Anything).Return(nil)
+	p.On("Start").Return(nil)
+	p.On("WithContext", mock.Anything).Return(p).Maybe()
+	p.On("SystemJwtSignKey").Return("test", nil)
+
+	s := api.NewWithProvider(p)
+	s.Logger = logger.Discard
+	s.Server.Recover = func(err error, c *stdapi.Context) {
+		require.NoError(t, err, "httptest server panic")
+	}
+
+	ht := httptest.NewServer(s)
+	defer ht.Close()
+
+	jm := cjwt.NewJwtManager("test")
+	fn(ht, p, jm)
+
+	p.AssertExpectations(t)
+}
+
+// TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint verifies admin tokens
+// pass CanWrite-gated endpoints.
+func TestSystemJwtToken_AdminTokenWorksOnWriteEndpoint(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetSet", "myapp", structs.AppBudgetOptions{}, "system-admin").Return(nil)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "Admin token must satisfy CanWrite — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetReset_RoleMatrix verifies read/write/admin role access for
+// plain budget reset (no force_clear_cooldown).
+func TestAppBudgetReset_RoleMatrix(t *testing.T) {
+	tests := []struct {
+		name           string
+		mintToken      func(jm *cjwt.JwtManager) (string, error)
+		expectedStatus int
+		providerCalled bool
+	}{
+		{
+			name: "read-token-401",
+			mintToken: func(jm *cjwt.JwtManager) (string, error) {
+				return jm.ReadToken(time.Hour)
+			},
+			expectedStatus: http.StatusUnauthorized,
+			providerCalled: false,
+		},
+		{
+			name: "write-token-200",
+			mintToken: func(jm *cjwt.JwtManager) (string, error) {
+				return jm.WriteToken(time.Hour)
+			},
+			expectedStatus: http.StatusOK,
+			providerCalled: true,
+		},
+		{
+			name: "admin-token-200",
+			mintToken: func(jm *cjwt.JwtManager) (string, error) {
+				return jm.AdminToken(time.Hour)
+			},
+			expectedStatus: http.StatusOK,
+			providerCalled: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+				tk, err := tc.mintToken(jm)
+				require.NoError(t, err)
+
+				if tc.providerCalled {
+					switch tc.name {
+					case "write-token-200":
+						p.On("AppBudgetResetWithOptions", "myapp", "system-write", mock.MatchedBy(resetOptsPlain)).Return(nil)
+					case "admin-token-200":
+						p.On("AppBudgetResetWithOptions", "myapp", "system-admin", mock.MatchedBy(resetOptsPlain)).Return(nil)
+					}
+				}
+
+				req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader(""))
+				require.NoError(t, err)
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				req.SetBasicAuth("jwt", tk)
+
+				res, err := http.DefaultClient.Do(req)
+				require.NoError(t, err)
+				defer res.Body.Close()
+				bodyBytes, _ := io.ReadAll(res.Body)
+				require.Equal(t, tc.expectedStatus, res.StatusCode, "row=%s body=%q", tc.name, string(bodyBytes))
+			})
+		})
+	}
+}
+
+// TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole
+// verifies write-role is rejected for force-clear-cooldown before any
+// provider call.
+func TestAppBudgetReset_ForceClearCooldown_RequiresAdminRole_403sOnWriteRole(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("force_clear_cooldown=true&ack_by=alice"))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusForbidden, res.StatusCode, "w-token must 403 on force-clear-cooldown — got body %q", string(bodyBytes))
+		require.Contains(t, string(bodyBytes), "--force-clear-cooldown")
+		p.AssertNotCalled(t, "AppBudgetReset")
+		p.AssertNotCalled(t, "AppBudgetResetWithOptions")
+	})
+}
+
+// TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock verifies admin-role JWT
+// passes the gate and ack_by override is honored.
+func TestAppBudgetReset_AcceptsAdminRole_NoGuardBlock(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetResetWithOptions", "myapp", "alice", mock.MatchedBy(resetOptsPlain)).Return(nil)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("ack_by=alice"))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "Admin token must satisfy CanAdmin — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString verifies
+// the 403 response body matches the exact string CLI/GUI tooling parses.
+func TestAppBudgetReset_ForceClearCooldown_403BodyMatchesPinnedString(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget/reset", strings.NewReader("force_clear_cooldown=true"))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		require.Equal(t, http.StatusForbidden, res.StatusCode)
+		bodyBytes, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+
+		got := strings.TrimRight(string(bodyBytes), "\n")
+		want := "{\"error\":\"AppBudgetReset --force-clear-cooldown requires Admin role; current role is 'w'. Contact rack admin or use Admin token.\"}"
+		require.Equal(t, want, got, "403 body must match pinned string verbatim")
+
+		require.Contains(t, got, "requires Admin role; current role is 'w'")
+		require.Contains(t, got, "Contact rack admin or use Admin token.")
+	})
+}
+
+// TestAppBudgetSet_StillAcceptsWriteRole_NoElevation verifies AppBudgetSet
+// stays CanWrite-gated (Set/Clear = write, Reset = admin).
+func TestAppBudgetSet_StillAcceptsWriteRole_NoElevation(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetSet", "myapp", structs.AppBudgetOptions{}, "system-write").Return(nil)
+
+		req, err := http.NewRequest(http.MethodPost, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "AppBudgetSet must stay CanWrite-only — got body %q", string(bodyBytes))
+	})
+}
+
+// TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly verifies write-role
+// callers cannot clear a budget (admin-only).
+func TestAppBudgetClear_RequiresAdminRole_RejectsWriteOnly(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.WriteToken(time.Hour)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusForbidden, res.StatusCode, "AppBudgetClear must require admin role — got body %q", string(bodyBytes))
+		require.Contains(t, string(bodyBytes), "admin role required", "403 body must explain admin requirement")
+	})
+}
+
+func TestAppBudgetClear_AcceptsAdminRole(t *testing.T) {
+	jwtAuthTestServer(t, func(ht *httptest.Server, p *structs.MockProvider, jm *cjwt.JwtManager) {
+		tk, err := jm.AdminToken(time.Hour)
+		require.NoError(t, err)
+
+		p.On("AppBudgetClear", "myapp", "system-admin").Return(nil)
+
+		req, err := http.NewRequest(http.MethodDelete, ht.URL+"/apps/myapp/budget", strings.NewReader(""))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.SetBasicAuth("jwt", tk)
+
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(res.Body)
+		require.Equal(t, http.StatusOK, res.StatusCode, "AppBudgetClear must accept admin role — got body %q", string(bodyBytes))
 	})
 }

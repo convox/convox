@@ -1,11 +1,8 @@
 package structs
 
 import (
-	"fmt"
 	"os"
 	"time"
-
-	docker "github.com/fsouza/go-dockerclient"
 )
 
 type Instance struct {
@@ -13,7 +10,10 @@ type Instance struct {
 	Cpu               float64   `json:"cpu"`
 	CpuCapacity       float64   `json:"cpu-capacity"`
 	CpuAllocatable    float64   `json:"cpu-allocatable"`
+	GpuCapacity       int       `json:"gpu-capacity"`
+	GpuAllocatable    int       `json:"gpu-allocatable"`
 	Id                string    `json:"id"`
+	InstanceType      string    `json:"instance-type"`
 	Memory            float64   `json:"memory"`
 	MemoryCapacity    float64   `json:"memory-capacity"`
 	MemoryAllocatable float64   `json:"memory-allocatable"`
@@ -39,18 +39,6 @@ func (i *Instance) Ip() string {
 	}
 
 	return i.PrivateIp
-}
-
-func (i *Instance) DockerHost() string {
-	if h := os.Getenv("TEST_DOCKER_HOST"); h != "" {
-		return h
-	}
-
-	return fmt.Sprintf("http://%s:2376", i.Ip())
-}
-
-func (i *Instance) DockerClient() (*docker.Client, error) {
-	return docker.NewClient(i.DockerHost())
 }
 
 func (ii Instances) Len() int           { return len(ii) }

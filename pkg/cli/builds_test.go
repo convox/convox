@@ -3,8 +3,9 @@ package cli_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 
 func TestBuild(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -25,6 +28,7 @@ func TestBuild(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil).Once()
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 
@@ -44,8 +48,32 @@ func TestBuild(t *testing.T) {
 	})
 }
 
+func TestBuildReportsACancelReason(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		cancelled := fxBuild()
+		cancelled.Status = "failed"
+		cancelled.Reason = "cancelled by someone"
+
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(cancelled, nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: build failed: cancelled by someone"})
+	})
+}
+
 func TestBuildFinalizeLogs(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -53,6 +81,7 @@ func TestBuildFinalizeLogs(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil).Once()
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogsLonger()), nil)
 
@@ -73,8 +102,42 @@ func TestBuildFinalizeLogs(t *testing.T) {
 	})
 }
 
+func TestBuildColoredStream(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogsChunked("log1", "\x1b[36mINFO\x1b[0m log2", "log3"), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs([]string{"log1", "\x1b[36mINFO\x1b[0m log2", "log3", "log4"}), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Packaging source... OK",
+			"Uploading source... OK",
+			"Starting build... OK",
+			"log1",
+			"INFO log2",
+			"log3",
+			"log4",
+			"Build:   build1",
+			"Release: release1",
+		})
+	})
+}
+
 func TestBuildError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -95,10 +158,14 @@ func TestBuildError(t *testing.T) {
 
 func TestBuildClassic(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("BuildCreateUpload", "app1", mock.Anything, structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 
 		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
@@ -113,6 +180,174 @@ func TestBuildClassic(t *testing.T) {
 			"Build:   build1",
 			"Release: release1",
 		})
+	})
+}
+
+func TestBuildEnvDropWarns(t *testing.T) {
+	t.Setenv("CONVOX_ENV_DROP_GUARD", "")
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "WARNING: this build will drop env var(s) that are set in your running release release1: SECRET_KEY")
+		require.Contains(t, res.Stderr, "missing from the latest release (release2)")
+		require.Contains(t, res.Stderr, "pass --force")
+		require.Contains(t, res.Stderr, "CONVOX_ENV_DROP_GUARD=strict")
+		require.NotContains(t, res.Stderr, "proceeding with --force")
+	})
+}
+
+func TestBuildEnvDropStrictBlocked(t *testing.T) {
+	t.Setenv("CONVOX_ENV_DROP_GUARD", "strict")
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "this build will drop env var(s) that are set in your running release release1: SECRET_KEY")
+		require.Contains(t, res.Stderr, "missing from the latest release (release2)")
+		require.Contains(t, res.Stderr, "re-run with --force")
+		i.AssertNotCalled(t, "BuildCreate", mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildEnvDropStrictForce(t *testing.T) {
+	t.Setenv("CONVOX_ENV_DROP_GUARD", "strict")
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo --force", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: SECRET_KEY")
+	})
+}
+
+func TestBuildEnvDropGuardUnrecognizedValue(t *testing.T) {
+	t.Setenv("CONVOX_ENV_DROP_GUARD", "true")
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "WARNING: this build will drop env var(s) that are set in your running release release1: SECRET_KEY")
+		require.Contains(t, res.Stderr, "CONVOX_ENV_DROP_GUARD=strict")
+	})
+}
+
+func TestBuildEnvDropForce(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "SECRET_KEY=abc\nFOO=bar", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo --force", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Contains(t, res.Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: SECRET_KEY")
+	})
+}
+
+// diverged newest that only adds/changes vars (drops none) must proceed silently
+func TestBuildEnvDivergeNoDrop(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=changed\nKEEP=1\nNEW=x", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(&structs.Release{Id: "release1", App: "app1", Env: "FOO=bar\nKEEP=1", Created: fxStarted}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
+	})
+}
+
+// running release newer than the listed newest (stale release cache) must skip the guard
+func TestBuildEnvStaleListSkips(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release2", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release1", App: "app1", Env: "FOO=bar", Created: fxStarted}}, nil)
+		i.On("ReleaseGet", "app1", "release2").Return(&structs.Release{Id: "release2", App: "app1", Env: "FOO=bar\nSECRET_KEY=abc", Created: fxStarted.Add(time.Hour)}, nil)
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
+	})
+}
+
+// running-release fetch failure must fail open (proceed), never block
+func TestBuildEnvDropFailOpen(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Release: "release1", Status: "running", Generation: "2"}, nil)
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release2", App: "app1", Env: "FOO=bar", Created: fxStarted.Add(time.Hour)}}, nil)
+		i.On("ReleaseGet", "app1", "release1").Return(nil, fmt.Errorf("boom"))
+		i.On("SystemGet").Return(fxSystem(), nil)
+		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil)
+		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
+		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
+		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
+
+		res, err := testExecute(e, "build ./testdata/httpd -a app1 -d foo", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "will drop env var")
 	})
 }
 
@@ -150,14 +385,50 @@ func TestBuildsError(t *testing.T) {
 	})
 }
 
+func TestBuildsCancel(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(nil)
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Cancelling build build1... OK"})
+	})
+}
+
+func TestBuildsCancelError(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(fmt.Errorf("build BUILD1 is not running"))
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: build BUILD1 is not running"})
+	})
+}
+
+// A rack without the cancel route answers 404; the user must be told to
+// upgrade rather than shown a bare status line.
+func TestBuildsCancelOldRack(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildCancel", "app1", "build1").Return(fmt.Errorf("response status 404"))
+
+		res, err := testExecute(e, "builds cancel build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: convox builds cancel requires rack version 3.25.7 or later"})
+	})
+}
+
 func TestBuildsExport(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		data, err := ioutil.ReadFile("testdata/build.tgz")
+		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildExport", "app1", "build1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			args.Get(2).(io.Writer).Write(data)
+			args.Get(2).(io.Writer).Write(data) //nolint:errcheck // mock type assertion
 		})
-		tmpd, err := ioutil.TempDir("", "")
+		tmpd, err := os.MkdirTemp("", "")
 		require.NoError(t, err)
 		tmpf := filepath.Join(tmpd, "export.tgz")
 
@@ -166,7 +437,7 @@ func TestBuildsExport(t *testing.T) {
 		require.Equal(t, 0, res.Code)
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{"Exporting build... OK"})
-		tdata, err := ioutil.ReadFile(tmpf)
+		tdata, err := os.ReadFile(tmpf)
 		require.NoError(t, err)
 		require.Equal(t, data, tdata)
 	})
@@ -174,10 +445,10 @@ func TestBuildsExport(t *testing.T) {
 
 func TestBuildsExportStdout(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		data, err := ioutil.ReadFile("testdata/build.tgz")
+		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("BuildExport", "app1", "build1", mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			args.Get(2).(io.Writer).Write(data)
+			args.Get(2).(io.Writer).Write(data) //nolint:errcheck // mock type assertion
 		})
 
 		res, err := testExecute(e, "builds export build1 -a app1", nil)
@@ -202,11 +473,11 @@ func TestBuildsExportError(t *testing.T) {
 
 func TestBuildsImport(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		data, err := ioutil.ReadFile("testdata/build.tgz")
+		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("BuildImport", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := ioutil.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, data, rdata)
 		})
@@ -232,13 +503,278 @@ func TestBuildsImportError(t *testing.T) {
 	})
 }
 
+func TestBuildsImportImage(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		manifestData, err := os.ReadFile("testdata/import-manifest/convox.yml")
+		require.NoError(t, err)
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bRunning := &structs.Build{Id: "build1", App: "app1", Status: "running"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(manifestData))}).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm-openai:v0.6.3", structs.BuildImportImageOptions{}).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bRunning, nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", structs.ReleaseCreateOptions{Build: options.String("build1")}).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Release: options.String("release1")}).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm-openai:v0.6.3 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{
+			"Creating build... OK, build1",
+			"Relaying image vllm/vllm-openai:v0.6.3... OK",
+			"Waiting for import to complete... OK",
+			"Creating release... OK, release1",
+			"Build:   build1",
+			"Release: release1",
+		})
+	})
+}
+
+func TestBuildsImportImageFailure(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bFailed := &structs.Build{Id: "build1", App: "app1", Status: "failed", Reason: "manifest unknown"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "bad/image:1", structs.BuildImportImageOptions{}).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bFailed, nil)
+
+		res, err := testExecute(e, "builds import-image bad/image:1 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: import failed: manifest unknown"})
+	})
+}
+
+func TestBuildsImportImageWithCreds(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		t.Setenv("CONVOX_SRC_CREDS_PASS", "nvapi-key")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		opts := structs.BuildImportImageOptions{
+			SrcCredsUser: options.String("$oauthtoken"),
+			SrcCredsPass: options.String("nvapi-key"),
+		}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "nvcr.io/nim/x:1.0", opts).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image nvcr.io/nim/x:1.0 -a app1 -m testdata/import-manifest/convox.yml --src-creds-user $oauthtoken --src-creds-pass-env CONVOX_SRC_CREDS_PASS", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassEnv_ReadsFromEnvVar(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		t.Setenv("MY_REGISTRY_PASS", "secret123")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MY_REGISTRY_PASS", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret123", *captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassStdin_ReadsLine(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-stdin", strings.NewReader("secret456\n"))
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret456", *captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassEnv_UnsetReturnsError(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		os.Unsetenv("MY_REGISTRY_PASS_UNSET")
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MY_REGISTRY_PASS_UNSET", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--src-creds-pass-env=MY_REGISTRY_PASS_UNSET: environment variable not set")
+		i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPassStdin_EmptyReturnsError(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-stdin", strings.NewReader(""))
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		require.Contains(t, res.Stderr, "--src-creds-pass-stdin: no input received")
+		i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	})
+}
+
+func TestBuildsImportImage_SrcCredsPass_MutualExclusion(t *testing.T) {
+	cases := []string{
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-env MYV",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-stdin",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass-env MYV --src-creds-pass-stdin",
+		"builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=p1 --src-creds-pass-env MYV --src-creds-pass-stdin",
+	}
+	for _, cmd := range cases {
+		t.Run(cmd, func(t *testing.T) {
+			testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+				bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+				i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+				i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+
+				res, err := testExecute(e, cmd, nil)
+				require.NoError(t, err)
+				require.Equal(t, 1, res.Code)
+				require.Contains(t, res.Stderr, "at most one of --src-creds-pass, --src-creds-pass-env, --src-creds-pass-stdin may be specified")
+				i.AssertNotCalled(t, "BuildImportImage", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+			})
+		})
+	}
+}
+
+func TestBuildsImportImage_PlaintextSrcCredsPass_EmitsDeprecationWarning(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=secret789", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.NotNil(t, captured.SrcCredsPass)
+		require.Equal(t, "secret789", *captured.SrcCredsPass)
+		// Pinned warning text — locks R3 UX wording in source. Any future PR that
+		// changes the wording must update this assertion.
+		require.Contains(t, res.Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+	})
+}
+
+func TestBuildsImportImage_PlaintextSrcCredsPass_WarningGoesToStderrNotStdout(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.Anything).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil)
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml --src-creds-pass=secret789", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		// Channel discipline: warning must appear ONLY on stderr.
+		require.NotContains(t, res.Stdout, "WARNING")
+		require.NotContains(t, res.Stdout, "src-creds-pass")
+		require.NotContains(t, res.Stdout, "deprecat")
+		require.Contains(t, res.Stderr, "WARNING")
+	})
+}
+
+func TestBuildsImportImage_NoCredsAtAll_NoWarning(t *testing.T) {
+	testClientWait(t, 10*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		manifestData, err := os.ReadFile("testdata/import-manifest/convox.yml")
+		require.NoError(t, err)
+
+		bExternal := &structs.Build{Id: "build1", App: "app1", Status: "created"}
+		bComplete := &structs.Build{Id: "build1", App: "app1", Status: "complete"}
+
+		var captured structs.BuildImportImageOptions
+		i.On("BuildCreate", "app1", "", structs.BuildCreateOptions{External: options.Bool(true)}).Return(bExternal, nil)
+		i.On("BuildUpdate", "app1", "build1", structs.BuildUpdateOptions{Manifest: options.String(string(manifestData))}).Return(bExternal, nil).Once()
+		i.On("BuildImportImage", "app1", "build1", "vllm/vllm:v1", mock.AnythingOfType("structs.BuildImportImageOptions")).Return(nil).Run(func(args mock.Arguments) {
+			captured = args.Get(3).(structs.BuildImportImageOptions) //nolint:errcheck // mock type assertion
+		})
+		i.On("BuildGet", "app1", "build1").Return(bComplete, nil)
+		i.On("ReleaseCreate", "app1", mock.Anything).Return(&structs.Release{Id: "release1"}, nil)
+		i.On("BuildUpdate", "app1", "build1", mock.MatchedBy(func(o structs.BuildUpdateOptions) bool {
+			return o.Release != nil && *o.Release == "release1"
+		})).Return(bComplete, nil).Once()
+
+		res, err := testExecute(e, "builds import-image vllm/vllm:v1 -a app1 -m testdata/import-manifest/convox.yml", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		require.Nil(t, captured.SrcCredsPass)
+		require.NotContains(t, res.Stderr, "WARNING")
+	})
+}
+
 func TestBuildsImportClassic(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		data, err := ioutil.ReadFile("testdata/build.tgz")
+		data, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
 		i.On("SystemGet").Return(fxSystemClassic(), nil)
 		i.On("BuildImportMultipart", "app1", mock.Anything).Return(fxBuild(), nil).Run(func(args mock.Arguments) {
-			rdata, err := ioutil.ReadAll(args.Get(1).(io.Reader))
+			rdata, err := io.ReadAll(args.Get(1).(io.Reader)) //nolint:errcheck // mock type assertion
 			require.NoError(t, err)
 			require.Equal(t, data, rdata)
 		})
@@ -262,6 +798,29 @@ func TestBuildsInfo(t *testing.T) {
 		res.RequireStdout(t, []string{
 			"Id           build1",
 			"Status       complete",
+			"Release      release1",
+			"Description  desc",
+			"Started      2 days ago",
+			"Elapsed      2m0s",
+		})
+	})
+}
+
+func TestBuildsInfoCancelled(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		b := fxBuild()
+		b.Status = "failed"
+		b.Reason = "cancelled by someone"
+		i.On("BuildGet", "app1", "build1").Return(b, nil)
+
+		res, err := testExecute(e, "builds info build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"Id           build1",
+			"Status       failed",
+			"Reason       cancelled by someone",
 			"Release      release1",
 			"Description  desc",
 			"Started      2 days ago",
@@ -298,6 +857,22 @@ func TestBuildsLogs(t *testing.T) {
 	})
 }
 
+func TestBuildsLogsColoredStream(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogsChunked("log1", "\x1b[36mINFO\x1b[0m log2", "log3"), nil)
+
+		res, err := testExecute(e, "builds logs build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"log1",
+			"INFO log2",
+			"log3",
+		})
+	})
+}
+
 func TestBuildsLogsError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		opts := structs.LogsOptions{}
@@ -308,5 +883,20 @@ func TestBuildsLogsError(t *testing.T) {
 		require.Equal(t, 1, res.Code)
 		res.RequireStderr(t, []string{"ERROR: err1"})
 		res.RequireStdout(t, []string{""})
+	})
+}
+
+func TestBuildsLogsCut(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testCutLogs(fxLogs(), fmt.Errorf("connection reset by peer")), nil)
+
+		res, err := testExecute(e, "builds logs build1 -a app1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: log stream ended before the end of output"})
+		res.RequireStdout(t, []string{
+			fxLogs()[0],
+			fxLogs()[1],
+		})
 	})
 }

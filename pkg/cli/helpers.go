@@ -1,16 +1,22 @@
 package cli
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
@@ -28,15 +34,21 @@ func app(c *stdcli.Context) string {
 	return coalesce(c.String("app"), c.LocalSetting("app"), filepath.Base(wd))
 }
 
-func argsToOptions(args []string) map[string]string {
+func argsToOptions(args []string) (map[string]string, error) {
 	options := map[string]string{}
 
 	for _, arg := range args {
 		parts := strings.SplitN(arg, "=", 2)
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("invalid parameter %q, expected Key=Value format (use -r to specify rack)", arg)
+		}
+		if parts[0] == "" {
+			return nil, fmt.Errorf("invalid parameter %q, key must not be empty", arg)
+		}
 		options[parts[0]] = parts[1]
 	}
 
-	return options
+	return options, nil
 }
 
 func coalesce(ss ...string) string {
@@ -56,6 +68,16 @@ func executableName() string {
 	default:
 		return "convox"
 	}
+}
+
+// execExitError expands a missing exit status. Many things can cause one and the
+// client cannot tell them apart, so it points at the output instead of guessing.
+func execExitError(err error, detail string) error {
+	if !errors.Is(err, sdk.ErrExecIncomplete) {
+		return err
+	}
+
+	return fmt.Errorf("%w, so it may not have finished.\n       Check the output above for a reason. %s\n       A command that must gate a deploy should write its own success marker to the output for the caller to check", err, detail)
 }
 
 func generateTempKey() (string, error) {
@@ -89,8 +111,16 @@ func tag(name, value string) string {
 	return fmt.Sprintf("<%s>%s</%s>", name, value, name)
 }
 
+func rackSystem(rack sdk.Interface) (*structs.System, error) {
+	if rack.ClientType() == "machine" {
+		return &structs.System{Version: "v3"}, nil
+	}
+
+	return rack.SystemGet()
+}
+
 func waitForResourceDeleted(rack sdk.Interface, c *stdcli.Context, resource string) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -118,7 +148,7 @@ func waitForResourceDeleted(rack sdk.Interface, c *stdcli.Context, resource stri
 }
 
 func waitForResourceRunning(rack sdk.Interface, c *stdcli.Context, resource string) error {
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -142,9 +172,93 @@ func waitForResourceRunning(rack sdk.Interface, c *stdcli.Context, resource stri
 	})
 }
 
+func clearScreen() {
+	switch runtime.GOOS {
+	case "windows":
+		cmd := exec.Command("cmd", "/c", "cls") //Windows example, its tested
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	default:
+		cmd := exec.Command("clear") //Linux example, its tested
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
+
+func watch(fn func(r sdk.Interface, c *stdcli.Context) error) func(sdk.Interface, *stdcli.Context) error {
+	return func(rr sdk.Interface, cc *stdcli.Context) error {
+		watchIntervalStr := cc.String("watch")
+		watchInterval, _ := strconv.Atoi(watchIntervalStr)
+		if watchInterval <= 0 {
+			return fn(rr, cc)
+		}
+
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+		ticker := time.NewTicker(time.Second * time.Duration(watchInterval))
+		for {
+			select {
+			case <-ch:
+				ticker.Stop()
+				return nil
+			case <-ticker.C:
+				clearScreen()
+				cc.Writef("Every %ds:\n\n", watchInterval)
+				err := fn(rr, cc)
+				if err != nil {
+					cc.Error(err)
+				}
+			}
+		}
+	}
+}
+
 func checkRackNameRegex(name string) error {
-	if !regexp.MustCompile(`^[a-z0-9-]+$`).MatchString(name) {
-		return fmt.Errorf("only lowercase alphanumeric characters and hyphen allowed and must not start with hyphen")
+	if len(name) > 26 {
+		return fmt.Errorf("rack name must be 26 characters or fewer")
+	}
+	if !regexp.MustCompile(`^[a-z][a-z0-9-]*$`).MatchString(name) {
+		return fmt.Errorf("rack name must start with a lowercase letter and contain only lowercase alphanumeric characters and hyphens")
 	}
 	return nil
+}
+
+func printPromotingInProgress(ctx context.Context, cliCtx *stdcli.Context) {
+	ticket := time.NewTicker(15 * time.Second)
+
+	for {
+		select {
+		case <-ticket.C:
+			cliCtx.Writef("Promoting still in progress...\n")
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// IsTerminalFn reports whether the context's writer is attached to a real
+// terminal, used to gate masking of sensitive output in `convox env` and
+// `convox rack params`. This is a VAR, not a function, so that tests can
+// override it.
+//
+// Not to be confused with stdcli.IsTerminal(*os.File) — that is the
+// underlying syscall helper from the vendored stdcli package. IsTerminalFn
+// wraps the stdcli call at the *stdcli.Context layer so test code can
+// swap the behavior without producing a real PTY.
+//
+// Not public API. Exported only because test files use `package cli_test`
+// (black-box), which cannot reach unexported symbols. External consumers
+// of pkg/cli must not take a dependency on this var — it may be renamed
+// or removed without a deprecation cycle.
+//
+// Callers: pkg/cli/env.go (Env), pkg/cli/rack.go (RackParams),
+// pkg/cli/balancers.go (Balancers).
+//
+// CONCURRENCY: this var is mutable package state. Tests that override it
+// MUST restore via t.Cleanup AND MUST NOT call t.Parallel anywhere in
+// pkg/cli that executes concurrently with an override — the race will
+// surface under `go test -race`. At patch time no test in pkg/cli
+// calls t.Parallel (verified).
+var IsTerminalFn = func(c *stdcli.Context) bool {
+	return c.Writer().IsTerminal()
 }

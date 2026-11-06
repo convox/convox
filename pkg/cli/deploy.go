@@ -14,7 +14,7 @@ func init() {
 		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagApp, flagId, flagRack, flagForce),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 }
 
 func Deploy(rack sdk.Interface, c *stdcli.Context) error {
@@ -35,7 +35,7 @@ func Deploy(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil

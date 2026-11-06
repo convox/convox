@@ -1,6 +1,10 @@
 package local
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/convox/convox/pkg/structs"
+)
 
 func (p *Provider) RepositoryAuth(app string) (string, string, error) {
 	return "docker", p.Secret, nil
@@ -12,4 +16,8 @@ func (p *Provider) RepositoryHost(app string) (string, bool, error) {
 
 func (p *Provider) RepositoryPrefix() string {
 	return ""
+}
+
+func (p *Provider) RepositoryImagesBatchDelete(app string, tags []string) error {
+	return structs.ErrNotImplemented("not implemented")
 }

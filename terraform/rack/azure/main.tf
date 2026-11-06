@@ -23,22 +23,32 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  cluster                   = var.cluster
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain                    = module.router.endpoint
-  image                     = var.image
-  name                      = var.name
-  rack_name                 = var.rack_name
-  namespace                 = module.k8s.namespace
-  region                    = var.region
-  release                   = var.release
-  resolver                  = module.resolver.endpoint
-  resource_group            = var.resource_group
-  resource_group_name       = var.resource_group_name
-  resource_group_location   = var.resource_group_location
-  router                    = module.router.endpoint
-  syslog                    = var.syslog
-  workspace                 = var.workspace
+  cluster                              = var.cluster
+  azure_files_enable                   = var.azure_files_enable
+  cost_tracking_enable                 = var.cost_tracking_enable
+  cost_tracking_history_days           = var.cost_tracking_history_days
+  docker_hub_authentication            = module.k8s.docker_hub_authentication
+  elasticsearch_disk                   = var.elasticsearch_disk
+  fluentd_memory                       = var.fluentd_memory
+  domain                               = module.router.endpoint
+  high_availability                    = var.high_availability
+  image                                = var.image
+  name                                 = var.name
+  rack_name                            = var.rack_name
+  namespace                            = module.k8s.namespace
+  pdb_default_min_available_percentage = var.pdb_default_min_available_percentage
+  region                               = var.region
+  release                              = var.release
+  resolver                             = module.resolver.endpoint
+  resource_group                       = var.resource_group
+  resource_group_name                  = var.resource_group_name
+  resource_group_location              = var.resource_group_location
+  router                               = module.router.endpoint
+  router_log_redact_params             = var.router_log_redact_params
+  syslog                               = var.syslog
+  syslog_tls_verify                    = var.syslog_tls_verify
+  webhook_signing_key                  = var.webhook_signing_key
+  workspace                            = var.workspace
 }
 
 module "resolver" {
@@ -64,9 +74,17 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name      = var.name
-  namespace = module.k8s.namespace
-  region    = var.region
-  release   = var.release
-  whitelist = var.whitelist
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  high_availability         = var.high_availability
+  idle_timeout              = var.idle_timeout
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  nginx_additional_config   = var.nginx_additional_config
+  nginx_image               = var.nginx_image
+  region                    = var.region
+  release                   = var.release
+  ssl_ciphers               = var.ssl_ciphers
+  ssl_protocols             = var.ssl_protocols
+  tags                      = var.tags
+  whitelist                 = var.whitelist
 }

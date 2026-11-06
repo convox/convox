@@ -13,17 +13,23 @@ import (
 type HandlerFunc func(sdk.Interface, *stdcli.Context) error
 
 var (
-	Image        = "convox/convox"
-	Starter      = start.New()
-	WaitDuration = 5 * time.Second
+	CertsWaitInterval = 10 * time.Second
+	CertsWaitTimeout  = 15 * time.Minute
+	Image             = "convox/convox"
+	Starter           = start.New()
+	WaitDuration      = 5 * time.Second
 )
 
 var (
-	flagApp      = stdcli.StringFlag("app", "a", "app name")
-	flagForce    = stdcli.BoolFlag("force", "", "force version update")
-	flagId       = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
-	flagNoFollow = stdcli.BoolFlag("no-follow", "", "do not follow logs")
-	flagRack     = stdcli.StringFlag("rack", "r", "rack name")
+	flagApp           = stdcli.StringFlag("app", "a", "app name")
+	flagForce         = stdcli.BoolFlag("force", "", "force version update")
+	flagForceParams   = stdcli.BoolFlag("force", "f", "override known-key, managed-param and fast-image-pull guards")
+	flagId            = stdcli.BoolFlag("id", "", "put logs on stderr, release id on stdout")
+	flagNoFollow      = stdcli.BoolFlag("no-follow", "", "do not follow logs")
+	flagRack          = stdcli.StringFlag("rack", "r", "rack name")
+	flagWatchInterval = stdcli.StringFlag("watch", "", "cmd watch/rerun interval in seconds")
+	flagWait          = stdcli.BoolFlag("wait", "w", "wait for completion")
+	flagMachine       = stdcli.StringFlag("machine", "i", "machine name")
 )
 
 func New(name, version string) *Engine {

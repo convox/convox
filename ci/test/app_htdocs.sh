@@ -1,8 +1,10 @@
 #!/bin/bash
 
+. "$(dirname "$0")/../lib.sh"
+
 set -ex
 
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+ps=$(web_ps httpd)
 convox exec $ps "ls -la" -a httpd | grep htdocs
 cat /dev/null | convox exec $ps 'sh -c "sleep 2; echo test"' -a httpd | grep test
 convox run web "ls -la" -a httpd | grep htdocs
@@ -19,4 +21,10 @@ cat /tmp/dir2/file | grep foo
 convox cp $ps:/file /tmp/file2 -a httpd
 cat /tmp/file2 | grep foo
 convox ps stop $ps -a httpd
-convox ps -a httpd | grep -v $ps
+i=0
+while convox ps -a httpd | grep -q $ps; do
+  if [ $((i++)) -gt 12 ]; then
+    exit 1
+  fi
+  sleep 5
+done

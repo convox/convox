@@ -1,0 +1,11 @@
+description: multi-service
+ended: 20200101.000000.000000000
+manifest:
+  services:
+    web:
+      image: placeholder
+      port: 5000
+    worker:
+      image: placeholder
+      port: 6000
+started: 20200101.000000.000000000

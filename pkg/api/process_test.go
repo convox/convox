@@ -3,7 +3,6 @@ package api_test
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +19,7 @@ var fxProcess = structs.Process{
 	App:      "app1",
 	Command:  "command",
 	Cpu:      1.0,
+	Gpu:      0,
 	Host:     "host",
 	Image:    "image",
 	Instance: "instance",
@@ -53,13 +53,13 @@ func TestProcessExec(t *testing.T) {
 		p.On("ProcessExec", "app1", "pid1", "command", mock.Anything, opts).Return(1, nil).Run(func(args mock.Arguments) {
 			rw := args.Get(3).(io.ReadWriter)
 			rw.Write([]byte("out"))
-			data, err := ioutil.ReadAll(rw)
+			data, err := io.ReadAll(rw)
 			require.NoError(t, err)
 			require.Equal(t, "in", string(data))
 		})
 		r, err := c.Websocket("/apps/app1/processes/pid1/exec", ro)
 		require.NoError(t, err)
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		require.NoError(t, err)
 		require.Equal(t, "outF1E49A85-0AD7-4AEF-A618-C249C6E6568D:1\n", string(data))
 	})
@@ -88,9 +88,38 @@ func TestProcessExecError(t *testing.T) {
 		p.On("ProcessExec", "app1", "pid1", "command", mock.Anything, opts).Return(0, fmt.Errorf("err1"))
 		r, err := c.Websocket("/apps/app1/processes/pid1/exec", ro)
 		require.NoError(t, err)
-		d, err := ioutil.ReadAll(r)
+		d, err := io.ReadAll(r)
 		require.NoError(t, err)
-		require.Equal(t, []byte("ERROR: err1\n"), d)
+		require.Equal(t, []byte("ERROR: err1\n"), d, "a command that never ran must not be given an exit status of 0")
+	})
+}
+
+func TestProcessExecErrorWithStatus(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		opts := structs.ProcessExecOptions{
+			Entrypoint: options.Bool(true),
+			Height:     options.Int(1),
+			Tty:        options.Bool(false),
+			Width:      options.Int(2),
+		}
+		ro := stdsdk.RequestOptions{
+			Body: strings.NewReader("in"),
+			Headers: stdsdk.Headers{
+				"Command":    "command",
+				"Entrypoint": "true",
+				"Height":     "1",
+				"Tty":        "false",
+				"Width":      "2",
+			},
+		}
+		p.On("ProcessExec", "app1", "pid1", "command", mock.Anything, opts).Return(1, fmt.Errorf("err1"))
+		r, err := c.Websocket("/apps/app1/processes/pid1/exec", ro)
+		require.NoError(t, err)
+		d, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.Equal(t, []byte("F1E49A85-0AD7-4AEF-A618-C249C6E6568D:1\nERROR: err1\n"), d, "a real status must still reach clients that only read the marker")
 	})
 }
 
@@ -99,7 +128,7 @@ func TestProcessExecValidate(t *testing.T) {
 		p.On("AppGet", "app1").Return(nil, fmt.Errorf("no such app: app1"))
 		r, err := c.Websocket("/apps/app1/processes/pid1/exec", stdsdk.RequestOptions{})
 		require.NoError(t, err)
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		require.NoError(t, err)
 		require.Equal(t, "ERROR: no such app: app1\n", string(data))
 	})
@@ -178,6 +207,32 @@ func TestProcessRun(t *testing.T) {
 				"Memory":      "2",
 				"Release":     "release",
 				"Width":       "3",
+			},
+		}
+		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)
+		err := c.Post("/apps/app1/services/service1/processes", ro, &p2)
+		require.NoError(t, err)
+		require.Equal(t, p1, p2)
+	})
+}
+
+func TestProcessRunGpu(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		p1 := fxProcess
+		p2 := structs.Process{}
+		opts := structs.ProcessRunOptions{
+			Command:   options.String("nvidia-smi"),
+			Gpu:       options.Int(1),
+			GpuVendor: options.String("nvidia"),
+		}
+		ro := stdsdk.RequestOptions{
+			Body: strings.NewReader(""),
+			Headers: stdsdk.Headers{
+				"Command":    "nvidia-smi",
+				"Gpu":        "1",
+				"Gpu-Vendor": "nvidia",
 			},
 		}
 		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)

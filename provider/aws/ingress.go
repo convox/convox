@@ -2,7 +2,8 @@ package aws
 
 func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, error) {
 	as := map[string]string{
-		"cert-manager.io/cluster-issuer": "letsencrypt",
+		"cert-manager.io/cluster-issuer":              "letsencrypt",
+		"cert-manager.io/private-key-rotation-policy": "Never",
 	}
 
 	if certDuration != "" {
@@ -13,9 +14,15 @@ func (p *Provider) IngressAnnotations(certDuration string) (map[string]string, e
 }
 
 func (p *Provider) IngressClass() string {
+	if p.RouterType == "contour" {
+		return "contour"
+	}
 	return "nginx"
 }
 
 func (p *Provider) IngressInternalClass() string {
+	if p.RouterType == "contour" {
+		return "contour-internal"
+	}
 	return "nginx-internal"
 }

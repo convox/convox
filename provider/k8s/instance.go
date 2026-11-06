@@ -5,21 +5,25 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	ac "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 )
 
 func (p *Provider) InstanceKeyroll() (*structs.KeyPair, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) InstanceList() (structs.Instances, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	ns, err := p.ListNodesFromInformer("")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -74,11 +78,24 @@ func (p *Provider) InstanceList() (structs.Instances, error) {
 		cpuAllocatable := toCpuCore(n.Status.Allocatable.Cpu().MilliValue())
 		memAllocatable := toMemMB(n.Status.Allocatable.Memory().Value())
 
+		var gpuCapacity, gpuAllocatable int
+		for key := range gpuKeyToVendor {
+			if q, ok := n.Status.Capacity[ac.ResourceName(key)]; ok {
+				gpuCapacity += int(q.Value())
+			}
+			if q, ok := n.Status.Allocatable[ac.ResourceName(key)]; ok {
+				gpuAllocatable += int(q.Value())
+			}
+		}
+
 		is = append(is, structs.Instance{
 			Cpu:               cpu,
 			CpuCapacity:       cpuCapacity,
 			CpuAllocatable:    cpuAllocatable,
+			GpuCapacity:       gpuCapacity,
+			GpuAllocatable:    gpuAllocatable,
 			Id:                n.ObjectMeta.Name,
+			InstanceType:      nodeInstanceType(&n),
 			Memory:            mem,
 			MemoryCapacity:    memCapacity,
 			MemoryAllocatable: memAllocatable,
@@ -106,11 +123,11 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 		}
 	}
 	if instance == nil {
-		return 0, fmt.Errorf("instance not found")
+		return 0, structs.ErrNotFound("instance not found")
 	}
 
 	if opts.PrivateKey == nil || *opts.PrivateKey == "" {
-		return 0, fmt.Errorf("private key is not provided")
+		return 0, structs.ErrBadRequest("private key is not provided")
 	}
 
 	privateKeyBytes, err := base64.StdEncoding.DecodeString(*opts.PrivateKey)
@@ -184,6 +201,152 @@ func (p *Provider) InstanceShell(id string, rw io.ReadWriter, opts structs.Insta
 	return code, nil
 }
 
+const (
+	drainTimeout          = 5 * time.Minute
+	evictionRetryInterval = 5 * time.Second
+
+	// orphanedPodReaperNotReadyThreshold is how long a node must remain
+	// NotReady (or Unknown) before its Terminating pods are force-deleted.
+	// 5 minutes is comfortably longer than the kubelet's typical recovery
+	// window (~minutes for OOM/crash-loop) but short enough to unblock
+	// stuck StatefulSet replacements within an operator-noticeable window.
+	orphanedPodReaperNotReadyThreshold = 5 * time.Minute
+
+	// orphanedPodReaperTickInterval is the cadence between reaper passes.
+	// Each pass is a node list + per-NotReady-node pod list, so 60s keeps
+	// API server load negligible even on large clusters.
+	orphanedPodReaperTickInterval = 60 * time.Second
+)
+
 func (p *Provider) InstanceTerminate(id string) error {
-	return errors.WithStack(fmt.Errorf("unimplemented"))
+	ctx := context.TODO()
+
+	node, err := p.Cluster.CoreV1().Nodes().Get(ctx, id, am.GetOptions{})
+	if err != nil {
+		if ae.IsNotFound(err) {
+			return errors.WithStack(structs.ErrNotFound("instance not found: %s", id))
+		}
+		return errors.WithStack(err)
+	}
+
+	// cordon the node (mark unschedulable)
+	if !node.Spec.Unschedulable {
+		patch := []byte(`{"spec":{"unschedulable":true}}`)
+		if _, err := p.Cluster.CoreV1().Nodes().Patch(ctx, id, types.StrategicMergePatchType, patch, am.PatchOptions{}); err != nil {
+			return errors.WithStack(fmt.Errorf("failed to cordon node %s: %s", id, err))
+		}
+	}
+
+	nodeReady := isNodeReady(node)
+
+	if err := p.drainNode(ctx, id, nodeReady); err != nil {
+		return errors.WithStack(fmt.Errorf("failed to drain node %s: %s", id, err))
+	}
+
+	if err := p.Cluster.CoreV1().Nodes().Delete(ctx, id, am.DeleteOptions{}); err != nil {
+		if !ae.IsNotFound(err) {
+			return errors.WithStack(fmt.Errorf("failed to delete node %s: %s", id, err))
+		}
+	}
+
+	return nil
+}
+
+func isNodeReady(node *ac.Node) bool {
+	for _, c := range node.Status.Conditions {
+		if c.Type == ac.NodeReady {
+			return c.Status == ac.ConditionTrue
+		}
+	}
+	return false
+}
+
+func (p *Provider) drainNode(ctx context.Context, nodeName string, nodeReady bool) error {
+	pods, err := p.Cluster.CoreV1().Pods("").List(ctx, am.ListOptions{
+		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
+	})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	deadline := time.Now().Add(drainTimeout)
+
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+
+		// skip mirror pods (managed by kubelet directly)
+		if _, isMirror := pod.Annotations[ac.MirrorPodAnnotationKey]; isMirror {
+			continue
+		}
+
+		// skip DaemonSet-managed pods
+		if isDaemonSetPod(pod) {
+			continue
+		}
+
+		if nodeReady {
+			if err := p.evictPod(ctx, pod, deadline); err != nil {
+				return err
+			}
+		} else {
+			// on NotReady nodes the kubelet can't process evictions
+			if err := p.forceDeletePod(ctx, pod); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func isDaemonSetPod(pod *ac.Pod) bool {
+	for _, ref := range pod.OwnerReferences {
+		if ref.Kind == "DaemonSet" {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Provider) evictPod(ctx context.Context, pod *ac.Pod, deadline time.Time) error {
+	eviction := &policyv1.Eviction{
+		ObjectMeta: am.ObjectMeta{
+			Name:      pod.Name,
+			Namespace: pod.Namespace,
+		},
+	}
+
+	for {
+		err := p.Cluster.CoreV1().Pods(pod.Namespace).EvictV1(ctx, eviction)
+		if err == nil {
+			return nil
+		}
+
+		if ae.IsNotFound(err) {
+			return nil
+		}
+
+		// PDB is blocking eviction — retry until deadline
+		if ae.IsTooManyRequests(err) {
+			if time.Now().After(deadline) {
+				return p.forceDeletePod(ctx, pod)
+			}
+			time.Sleep(evictionRetryInterval)
+			continue
+		}
+
+		// other errors — force delete
+		return p.forceDeletePod(ctx, pod)
+	}
+}
+
+func (p *Provider) forceDeletePod(ctx context.Context, pod *ac.Pod) error {
+	grace := int64(0)
+	err := p.Cluster.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, am.DeleteOptions{
+		GracePeriodSeconds: &grace,
+	})
+	if err != nil && !ae.IsNotFound(err) {
+		return errors.WithStack(fmt.Errorf("failed to force-delete pod %s/%s: %s", pod.Namespace, pod.Name, err))
+	}
+	return nil
 }

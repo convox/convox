@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,6 +18,8 @@ import (
 	mockstdcli "github.com/convox/convox/pkg/mock/stdcli"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/sdk"
+	"github.com/convox/stdapi"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
 )
@@ -41,6 +43,7 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 	os.Unsetenv("CONVOX_PASSWORD")
 	os.Unsetenv("CONVOX_RACK")
 	os.Unsetenv("RACK_URL")
+	os.Setenv("TEST", "true")
 
 	i := &mocksdk.Interface{}
 
@@ -51,17 +54,32 @@ func testClientWait(t *testing.T, wait time.Duration, fn func(*cli.Engine, *mock
 
 	rack.TestClient = i
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
 	e.Settings = tmp
 	defer os.RemoveAll(tmp)
 
-	err = ioutil.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
+	err = os.WriteFile(filepath.Join(tmp, "current"), []byte(`{"type":"test","name":"rack1"}`), 0600)
 	require.NoError(t, err)
+
+	i.On("ClientType").Return("standard").Maybe()
 
 	fn(e, i)
 
 	i.AssertExpectations(t)
+}
+
+func testRealRack(t *testing.T, routes func(*stdapi.Server)) {
+	s := stdapi.New("api", "api")
+	routes(s)
+
+	ts := httptest.NewServer(s)
+	t.Cleanup(ts.Close)
+
+	c, err := sdk.New(ts.URL)
+	require.NoError(t, err)
+
+	rack.TestClient = c
 }
 
 func testExecute(e *cli.Engine, cmd string, stdin io.Reader) (*result, error) {
@@ -108,7 +126,7 @@ func testLocalRack(e *cli.Engine, name, provider, api string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(dir, "main.tf"), []byte{}, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "main.tf"), []byte{}, 0600); err != nil {
 		return err
 	}
 
@@ -121,8 +139,27 @@ func testLocalRack(e *cli.Engine, name, provider, api string) error {
 	return nil
 }
 
+// testLocalRackSymlink is like testLocalRack, but the rack directory lives outside the settings directory and is
+// linked into it, as when a rack's Terraform is kept in a git checkout.
+func testLocalRackSymlink(t *testing.T, e *cli.Engine, name, provider, api string) {
+	t.Helper()
+
+	target := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(target, "main.tf"), []byte{}, 0600))
+
+	racks := filepath.Join(e.Settings, "racks")
+	require.NoError(t, os.MkdirAll(racks, 0700))
+	require.NoError(t, os.Symlink(target, filepath.Join(racks, name)))
+
+	data := []byte(fmt.Sprintf(`{"api":{"value":%q},"provider":{"value":%q}}`, api, provider))
+
+	me := &mockstdcli.Executor{}
+	me.On("Execute", "terraform", "output", "-json").Return(data, nil)
+	e.Executor = me
+}
+
 func testLogs(logs []string) io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("%s\n", strings.Join(logs, "\n"))))
+	return io.NopCloser(strings.NewReader(fmt.Sprintf("%s\n", strings.Join(logs, "\n"))))
 }
 
 type result struct {

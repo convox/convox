@@ -11,6 +11,7 @@ type Process struct {
 	App      string    `json:"app"`
 	Command  string    `json:"command"`
 	Cpu      float64   `json:"cpu"`
+	Gpu      int       `json:"gpu"`
 	Host     string    `json:"host"`
 	Image    string    `json:"image"`
 	Instance string    `json:"instance"`
@@ -20,15 +21,35 @@ type Process struct {
 	Release  string    `json:"release"`
 	Started  time.Time `json:"started"`
 	Status   string    `json:"status"`
+
+	// Service is the convox.yml service name; empty for system/build pods.
+	Service string `json:"service,omitempty"`
+
+	// GPU runtime telemetry — pointer-typed: nil = no data, non-nil zero = idle, non-nil > 0 = load.
+	GpuUtil     *float64 `json:"gpu-util,omitempty"`      // percent 0-100
+	GpuMemUsed  *int64   `json:"gpu-mem-used,omitempty"`  // bytes
+	GpuMemTotal *int64   `json:"gpu-mem-total,omitempty"` // bytes
+
+	// Extended per-pod DCGM profiling counters; same pointer tri-state as GpuUtil.
+	GpuTensorActive *float64 `json:"gpu-tensor-active,omitempty"` // percent 0-100
+	GpuSmActive     *float64 `json:"gpu-sm-active,omitempty"`     // percent 0-100
+	GpuDramActive   *float64 `json:"gpu-dram-active,omitempty"`   // percent 0-100
+	GpuFp16Active   *float64 `json:"gpu-fp16-active,omitempty"`   // percent 0-100
+	GpuFp32Active   *float64 `json:"gpu-fp32-active,omitempty"`   // percent 0-100
+	GpuPowerW       *float64 `json:"gpu-power-w,omitempty"`       // watts
+
+	// ExitCode is the primary container's terminated exit status; nil while running or unknown.
+	ExitCode *int `json:"exit-code,omitempty"`
 }
 
 type Processes []Process
 
 type ProcessExecOptions struct {
-	Entrypoint *bool `header:"Entrypoint"`
-	Height     *int  `header:"Height"`
-	Tty        *bool `header:"Tty" default:"true"`
-	Width      *int  `header:"Width"`
+	Entrypoint   *bool `header:"Entrypoint"`
+	Height       *int  `header:"Height"`
+	Tty          *bool `header:"Tty" default:"true"`
+	Width        *int  `header:"Width"`
+	DisableStdin *bool `header:"Disable-Stdin"`
 }
 
 type ProcessListOptions struct {
@@ -37,18 +58,39 @@ type ProcessListOptions struct {
 }
 
 type ProcessRunOptions struct {
-	Command     *string           `header:"Command"`
-	Cpu         *int              `flag:"cpu" header:"Cpu"`
-	CpuLimit    *int              `flag:"cpu-limit" header:"Cpu-Limit"`
-	Environment map[string]string `header:"Environment"`
-	Height      *int              `header:"Height"`
-	Image       *string           `header:"Image"`
-	Memory      *int              `flag:"memory" header:"Memory"`
-	MemoryLimit *int              `flag:"memory-limit" header:"Memory-Limit"`
-	Release     *string           `flag:"release" header:"Release"`
-	Volumes     map[string]string `header:"Volumes"`
-	Width       *int              `header:"Width"`
-	Privileged  *bool             `header:"Privileged"`
+	Command          *string           `header:"Command"`
+	Cpu              *int              `flag:"cpu" header:"Cpu"`
+	CpuLimit         *int              `flag:"cpu-limit" header:"Cpu-Limit"`
+	Environment      map[string]string `header:"Environment"`
+	Gpu              *int              `flag:"gpu" header:"Gpu"`
+	GpuVendor        *string           `flag:"gpu-vendor" header:"Gpu-Vendor"`
+	Height           *int              `header:"Height"`
+	Image            *string           `header:"Image"`
+	Memory           *int              `flag:"memory" header:"Memory"`
+	MemoryLimit      *int              `flag:"memory-limit" header:"Memory-Limit"`
+	Release          *string           `flag:"release" header:"Release"`
+	Volumes          map[string]string `header:"Volumes"`
+	UseServiceVolume *bool             `flag:"use-service-volume" header:"Use-Service-Volume"`
+	Width            *int              `header:"Width"`
+	Privileged       *bool             `header:"Privileged"`
+	NodeLabels       *string           `flag:"node-labels" header:"Node-Labels"`
+	SystemCritical   *bool             `flag:"system-critical" header:"System-Critical"`
+
+	TerminationGrace    *int    `flag:"termination-grace" header:"Termination-Grace"`
+	Annotations         *string `flag:"annotations" header:"Run-Annotations"`
+	Labels              *string `flag:"labels" header:"Run-Labels"`
+	UseServiceLifecycle *bool   `flag:"use-service-lifecycle" header:"Use-Service-Lifecycle"`
+	NodeAffinity        *string `flag:"node-affinity" header:"Node-Affinity"`
+	Tolerations         *string `flag:"tolerations" header:"Run-Tolerations"`
+	Retain              *int    `header:"Retain"`
+
+	IsBuild   bool
+	BuildArch *string
+}
+
+// Terminal reports whether the process has stopped and will not run again.
+func (p *Process) Terminal() bool {
+	return p.Status == "complete" || p.Status == "failed"
 }
 
 func (p *Process) sortKey() string {

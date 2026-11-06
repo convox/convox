@@ -4,12 +4,12 @@
 // This file is released under the 3-clause BSD license. Note however that Linux
 // support depends on libusb, released under GNU LGPL 2.1 or later.
 
-// +build !linux,!darwin,!windows ios !cgo
+//go:build (!linux && !darwin && !windows) || ios || !cgo
 
 package hid
 
 // Supported returns whether this platform is supported by the HID library or not.
-// The goal of this method is to allow programatically handling platforms that do
+// The goal of this method is to allow programmatically handling platforms that do
 // not support USB HID and not having to fall back to build constraints.
 func Supported() bool {
 	return false
@@ -26,6 +26,12 @@ func Enumerate(vendorID uint16, productID uint16) []DeviceInfo {
 // implements the type lacks the actual HID device and all methods are noop.
 type Device struct {
 	DeviceInfo // Embed the infos for easier access
+}
+
+// OpenByPath connects to an HID device by the given path name. On platforms that this file
+// implements the method just returns an error.
+func OpenByPath(p string) (*Device, error) {
+	return nil, ErrUnsupportedPlatform
 }
 
 // Open connects to an HID device by its path name. On platforms that this file
@@ -97,4 +103,14 @@ func (dev *Device) GetInputReport(b []byte) (int, error) {
 // there is data to read before returning.
 func (dev *Device) SetNonblocking(b bool) error {
 	return ErrUnsupportedPlatform
+}
+
+// GetDeviceInfo gets the DeviceInfo from a HID device.
+func (dev *Device) GetDeviceInfo() (*DeviceInfo, error) {
+	return nil, ErrUnsupportedPlatform
+}
+
+// GetDeviceInfo gets a report descriptor from a HID device.
+func (dev *Device) GetReportDescriptor() ([]byte, error) {
+	return nil, ErrUnsupportedPlatform
 }

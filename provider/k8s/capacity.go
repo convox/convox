@@ -1,17 +1,16 @@
 package k8s
 
 import (
-	"context"
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (p *Provider) CapacityGet() (*structs.Capacity, error) {
-	ns, err := p.Cluster.CoreV1().Nodes().List(context.TODO(), am.ListOptions{})
+	ns, err := p.ListNodesFromInformer("")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -21,6 +20,11 @@ func (p *Provider) CapacityGet() (*structs.Capacity, error) {
 	for _, n := range ns.Items {
 		c.ClusterCPU += n.Status.Capacity.Cpu().MilliValue()
 		c.ClusterMemory += n.Status.Capacity.Memory().ScaledValue(resource.Mega)
+		for key := range gpuKeyToVendor {
+			if q, ok := n.Status.Capacity[corev1.ResourceName(key)]; ok {
+				c.ClusterGPU += q.Value()
+			}
+		}
 	}
 
 	filters := []string{
@@ -28,17 +32,27 @@ func (p *Provider) CapacityGet() (*structs.Capacity, error) {
 		"type in (process,service)",
 	}
 
-	ps, err := p.Cluster.CoreV1().Pods("").List(context.TODO(), am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	ps, err := p.ListPodsFromInformer("", strings.Join(filters, ","))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, p := range ps.Items {
+		// a pod that has exited still carries its requests but reserves nothing
+		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
+			continue
+		}
+
 		c.ProcessCount += 1
 
 		for _, pc := range p.Spec.Containers {
 			c.ProcessCPU += pc.Resources.Requests.Cpu().MilliValue()
 			c.ProcessMemory += pc.Resources.Requests.Memory().ScaledValue(resource.Mega)
+			for key := range gpuKeyToVendor {
+				if q, ok := pc.Resources.Requests[corev1.ResourceName(key)]; ok {
+					c.ProcessGPU += q.Value()
+				}
+			}
 		}
 	}
 

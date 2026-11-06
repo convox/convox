@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/structs"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/proxy"
 	"k8s.io/client-go/rest"
@@ -62,13 +64,17 @@ func (p *Provider) apiProxyAuthenticate(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ := r.BasicAuth()
 		if username == "jwt" && p.JwtMngr != nil {
-			_, err := p.JwtMngr.Verify(password)
+			data, err := p.JwtMngr.Verify(password)
 			if err != nil {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
+			if data.Role != structs.ConvoxRoleAdmin {
+				http.Error(w, "admin role required for kubernetes api access", http.StatusForbidden)
+				return
+			}
 		} else {
-			if password != p.Password {
+			if p.Password == "" || subtle.ConstantTimeCompare([]byte(p.Password), []byte(password)) != 1 {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

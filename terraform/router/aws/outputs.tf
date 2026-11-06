@@ -1,5 +1,5 @@
 output "endpoint" {
-  value = data.http.alias.response_body
+  value = var.convox_rack_domain == "" ? data.http.alias.response_body : var.convox_rack_domain
 }
 
 output "endpoint_internal" {

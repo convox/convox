@@ -3,7 +3,7 @@ package api_test
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -176,12 +176,28 @@ func TestAppListError(t *testing.T) {
 func TestAppLogs(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		d1 := []byte("test")
-		r1 := ioutil.NopCloser(bytes.NewReader(d1))
+		r1 := io.NopCloser(bytes.NewReader(d1))
 		opts := structs.LogsOptions{Since: options.Duration(2 * time.Minute)}
 		p.On("AppLogs", "app1", opts).Return(r1, nil)
 		r2, err := c.Websocket("/apps/app1/logs", stdsdk.RequestOptions{})
 		require.NoError(t, err)
-		d2, err := ioutil.ReadAll(r2)
+		d2, err := io.ReadAll(r2)
+		require.NoError(t, err)
+		require.Equal(t, d1, d2)
+	})
+}
+
+func TestAppLogsMaxLogRequests(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		d1 := []byte("test")
+		r1 := io.NopCloser(bytes.NewReader(d1))
+		opts := structs.LogsOptions{Since: options.Duration(2 * time.Minute), MaxLogRequests: options.Int(50)}
+		p.On("AppLogs", "app1", opts).Return(r1, nil)
+		r2, err := c.Websocket("/apps/app1/logs", stdsdk.RequestOptions{
+			Headers: stdsdk.Headers{"Maxlogrequests": "50"},
+		})
+		require.NoError(t, err)
+		d2, err := io.ReadAll(r2)
 		require.NoError(t, err)
 		require.Equal(t, d1, d2)
 	})
@@ -194,9 +210,66 @@ func TestAppLogsError(t *testing.T) {
 		r1, err := c.Websocket("/apps/app1/logs", stdsdk.RequestOptions{})
 		require.NoError(t, err)
 		require.NotNil(t, r1)
-		d1, err := ioutil.ReadAll(r1)
+		d1, err := io.ReadAll(r1)
 		require.NoError(t, err)
 		require.Equal(t, []byte("ERROR: err1\n"), d1)
+	})
+}
+
+// TestAppManifestService is the happy path for the
+// /apps/{app}/manifest/services/{service} route — delegates to the
+// provider and renders the ManifestService transport struct as JSON.
+func TestAppManifestService(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		min, max := 1, 5
+		ms := &structs.ManifestService{
+			Name:        "api",
+			Environment: []string{"FOO=bar", "BAZ=qux"},
+			Scale:       &structs.ManifestServiceScale{Min: &min, Max: &max},
+		}
+		p.On("AppManifestService", "app1", "api").Return(ms, nil)
+
+		var got structs.ManifestService
+		err := c.Get("/apps/app1/manifest/services/api", stdsdk.RequestOptions{}, &got)
+		require.NoError(t, err)
+		require.Equal(t, "api", got.Name)
+		require.Equal(t, []string{"FOO=bar", "BAZ=qux"}, got.Environment)
+		require.NotNil(t, got.Scale)
+		require.NotNil(t, got.Scale.Min)
+		require.Equal(t, 1, *got.Scale.Min)
+		require.NotNil(t, got.Scale.Max)
+		require.Equal(t, 5, *got.Scale.Max)
+	})
+}
+
+// TestAppManifestServiceNoScale — service with no scale block returns
+// Scale=nil; omitempty drops the field from JSON.
+func TestAppManifestServiceNoScale(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		ms := &structs.ManifestService{
+			Name:        "worker",
+			Environment: []string{"WORKER_QUEUE=default"},
+		}
+		p.On("AppManifestService", "app1", "worker").Return(ms, nil)
+
+		var got structs.ManifestService
+		err := c.Get("/apps/app1/manifest/services/worker", stdsdk.RequestOptions{}, &got)
+		require.NoError(t, err)
+		require.Equal(t, "worker", got.Name)
+		require.Equal(t, []string{"WORKER_QUEUE=default"}, got.Environment)
+		require.Nil(t, got.Scale)
+	})
+}
+
+// TestAppManifestServiceError — provider error propagates as HTTP error to
+// caller. Covers both the service-not-found case (the only synthetic path
+// in the K8s provider implementation) and any underlying common.AppManifest
+// failure (no release, AppGet error).
+func TestAppManifestServiceError(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		p.On("AppManifestService", "app1", "missing").Return(nil, fmt.Errorf("service missing not found in manifest for app app1"))
+		err := c.Get("/apps/app1/manifest/services/missing", stdsdk.RequestOptions{}, nil)
+		require.EqualError(t, err, "service missing not found in manifest for app app1")
 	})
 }
 

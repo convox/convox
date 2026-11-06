@@ -3,7 +3,8 @@ package start_test
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +32,7 @@ func TestStart2(t *testing.T) {
 	p.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2"}, nil)
 	p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{{Id: "release1"}}, nil)
 	p.On("ReleaseGet", "app1", "release1").Return(&structs.Release{}, nil)
-	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(ioutil.NopCloser(strings.NewReader(logs)), nil)
+	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(io.NopCloser(strings.NewReader(logs)), nil)
 
 	e := &exec.MockInterface{}
 	start.Exec = e
@@ -86,10 +87,10 @@ func TestStart2Options(t *testing.T) {
 	p.On("ReleaseGet", "app1", "release1").Return(&structs.Release{}, nil)
 	p.On("ObjectStore", "app1", "", mock.Anything, structs.ObjectStoreOptions{}).Return(&structs.Object{Url: "object://app1/object1.tgz"}, nil)
 	p.On("BuildCreate", "app1", "object://app1/object1.tgz", structs.BuildCreateOptions{Development: options.Bool(true), External: options.Bool(false), Manifest: options.String("convox2.yml")}).Return(&structs.Build{Id: "build1"}, nil)
-	p.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(ioutil.NopCloser(strings.NewReader(buildLogs)), nil)
+	p.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(io.NopCloser(strings.NewReader(buildLogs)), nil)
 	p.On("BuildGet", "app1", "build1").Return(&structs.Build{Id: "build1", Release: "release1", Status: "complete"}, nil)
 	p.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{Development: options.Bool(true), Force: options.Bool(true), Idle: options.Bool(false), Min: options.Int(0), Timeout: options.Int(300)}).Return(nil)
-	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(ioutil.NopCloser(strings.NewReader(appLogs)), nil).Once()
+	p.On("AppLogs", "app1", structs.LogsOptions{Prefix: options.Bool(true), Since: options.Duration(1 * time.Second)}).Return(io.NopCloser(strings.NewReader(appLogs)), nil)
 	p.On("ReleasePromote", "app1", "old", structs.ReleasePromoteOptions{Development: options.Bool(false), Force: options.Bool(true)}).Return(nil)
 
 	e := &exec.MockInterface{}
@@ -138,4 +139,26 @@ func TestStart2Options(t *testing.T) {
 
 	p.AssertExpectations(t)
 	e.AssertExpectations(t)
+}
+
+func TestStart2NoCache(t *testing.T) {
+	p := &structs.MockProvider{}
+
+	p.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2"}, nil)
+	p.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{}, nil)
+	p.On("ObjectStore", "app1", "", mock.Anything, structs.ObjectStoreOptions{}).Return(&structs.Object{Url: "object://app1/object1.tgz"}, nil)
+	p.On("BuildCreate", "app1", "object://app1/object1.tgz", structs.BuildCreateOptions{Development: options.Bool(true), External: options.Bool(false), NoCache: options.Bool(true)}).Return(nil, fmt.Errorf("err1"))
+
+	t.Chdir("testdata/httpd")
+
+	opts := start.Options2{
+		App:      "app1",
+		Build:    true,
+		Provider: p,
+	}
+
+	err := start.New().Start2(t.Context(), io.Discard, opts)
+	require.EqualError(t, err, "err1")
+
+	p.AssertExpectations(t)
 }

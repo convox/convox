@@ -1,15 +1,15 @@
 variable "annotations" {
-  type    = map
+  type    = map(any)
   default = {}
 }
 
 variable "docker_hub_authentication" {
-  type = string
+  type    = string
   default = null
 }
 
 variable "env" {
-  type    = map
+  type    = map(any)
   default = {}
 }
 
@@ -31,6 +31,26 @@ variable "release" {
 
 variable "replicas" {
   default = 2
+}
+
+variable "karpenter_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "seccomp_default_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "system_readonly_rootfs_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "internal_router" {
+  type    = bool
+  default = false
 }
 
 variable "set_priority_class" {

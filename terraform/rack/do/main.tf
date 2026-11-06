@@ -27,6 +27,8 @@ module "api" {
   buildkit_enabled          = var.buildkit_enabled
   cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication
+  elasticsearch_disk        = var.elasticsearch_disk
+  fluentd_memory            = var.fluentd_memory
   domain                    = module.router.endpoint
   high_availability         = var.high_availability
   image                     = var.image
@@ -37,9 +39,12 @@ module "api" {
   release                   = var.release
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
+  router_log_redact_params  = var.router_log_redact_params
   secret                    = random_string.secret.result
   secret_key                = var.secret_key
   syslog                    = var.syslog
+  syslog_tls_verify         = var.syslog_tls_verify
+  webhook_signing_key       = var.webhook_signing_key
 }
 
 module "resolver" {
@@ -66,10 +71,11 @@ module "router" {
     kubernetes   = kubernetes
   }
 
-  high_availability = var.high_availability
-  name              = var.name
-  namespace         = module.k8s.namespace
-  region            = var.region
-  release           = var.release
-  whitelist         = var.whitelist
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  high_availability         = var.high_availability
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  region                    = var.region
+  release                   = var.release
+  whitelist                 = var.whitelist
 }

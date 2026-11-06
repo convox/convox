@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/convox/convox/pkg/options"
@@ -11,9 +12,11 @@ import (
 
 func init() {
 	register("logs", "get logs for an app", Logs, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.LogsOptions{}), flagApp, flagNoFollow, flagRack),
+		Flags: append(stdcli.OptionFlags(structs.LogsOptions{}), flagApp, flagNoFollow, flagRack,
+			stdcli.StringFlag("service", "s", "service name"),
+		),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
 }
 
 func Logs(rack sdk.Interface, c *stdcli.Context) error {
@@ -29,12 +32,35 @@ func Logs(rack sdk.Interface, c *stdcli.Context) error {
 
 	opts.Prefix = options.Bool(true)
 
-	r, err := rack.AppLogs(app(c), opts)
-	if err != nil {
-		return err
+	if rack.ClientType() != "standard" && c.String("service") == "" {
+		return fmt.Errorf("logs must specify --service")
 	}
 
-	_, err = io.Copy(c, r)
+	var r io.ReadCloser
+	var err error
+	if c.String("service") != "" {
+		r, err = rack.ServiceLogs(app(c), c.String("service"), opts)
+		if err != nil {
+			return err
+		}
+	} else {
+		r, err = rack.AppLogs(app(c), opts)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, err = io.Copy(c, r); err == nil && c.Bool("no-follow") {
+		return logStreamErr(r)
+	}
+
+	return nil
+}
+
+func logStreamErr(r io.Reader) error {
+	if s, ok := r.(interface{ Err() error }); ok && s.Err() != nil {
+		return fmt.Errorf("log stream ended before the end of output")
+	}
 
 	return nil
 }

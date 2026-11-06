@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"strings"
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/miekg/dns"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -17,14 +21,18 @@ const (
 )
 
 type Resolver struct {
-	dnsExternal    *DNS
-	dnsInternal    *DNS
-	ingress        *Ingress
-	kubernetes     *kubernetes.Clientset
-	namespace      string
-	routerExternal string
-	routerInternal string
-	service        *Service
+	discovery               discovery.DiscoveryInterface
+	dnsExternal             *DNS
+	dnsInternal             *DNS
+	dynamic                 dynamic.Interface
+	httpproxy               *HTTPProxy
+	ingress                 *Ingress
+	kubernetes              kubernetes.Interface
+	namespace               string
+	routerExternal          string
+	routerExternalClusterIP string
+	routerInternal          string
+	service                 *Service
 }
 
 type Server interface {
@@ -51,6 +59,10 @@ func New(namespace string) (*Resolver, error) {
 		return nil, err
 	}
 
+	if err := r.setupHTTPProxy(); err != nil {
+		return nil, err
+	}
+
 	if err := r.setupRouter(); err != nil {
 		return nil, err
 	}
@@ -69,6 +81,7 @@ func (r *Resolver) Serve() error {
 	go serve(ch, r.dnsInternal)
 
 	go r.ingress.Start()
+	go r.httpproxy.Start()
 	go r.service.Start()
 
 	return <-ch
@@ -79,13 +92,14 @@ func (r *Resolver) Shutdown(ctx context.Context) error {
 	_ = r.dnsInternal.Shutdown(ctx)
 
 	r.ingress.Stop()
+	r.httpproxy.Stop()
 	r.service.Stop()
 
 	return nil
 }
 
 func (r *Resolver) resolve(typ, host, router string) (string, bool) {
-	if r.ingress.HostExists(host) {
+	if r.ingress.HostExists(host) || (r.httpproxy != nil && r.httpproxy.HostExists(host)) {
 		switch typ {
 		case "A":
 			if net.ParseIP(router) != nil {
@@ -123,7 +137,11 @@ func (r *Resolver) resolveExternal(typ, host string) (string, bool) {
 }
 
 func (r *Resolver) resolveInternal(typ, host string) (string, bool) {
-	return r.resolve(typ, host, r.routerInternal)
+	router := r.routerExternalClusterIP
+	if r.ingress.HostInternal(host) || (r.httpproxy != nil && r.httpproxy.HostInternal(host)) {
+		router = r.routerInternal
+	}
+	return r.resolve(typ, host, router)
 }
 
 func (r *Resolver) setupDNS() error {
@@ -169,6 +187,20 @@ func (r *Resolver) setupKubernetes() error {
 
 	r.kubernetes = kc
 
+	dc, err := dynamic.NewForConfig(c)
+	if err != nil {
+		return err
+	}
+
+	r.dynamic = dc
+
+	disco, err := discovery.NewDiscoveryClientForConfig(c)
+	if err != nil {
+		return err
+	}
+
+	r.discovery = disco
+
 	return nil
 }
 
@@ -183,7 +215,30 @@ func (r *Resolver) setupIngress() error {
 	return nil
 }
 
+func (r *Resolver) setupHTTPProxy() error {
+	h, err := NewHTTPProxy(r.dynamic, r.discovery)
+	if err != nil {
+		return err
+	}
+
+	r.httpproxy = h
+
+	return nil
+}
+
 func (r *Resolver) setupRouter() error {
+	if override := os.Getenv("ROUTER_IP_OVERRIDE"); override != "" {
+		override = strings.TrimSpace(override)
+		if ip := net.ParseIP(override); ip == nil || ip.To4() == nil {
+			return fmt.Errorf("ROUTER_IP_OVERRIDE is not a valid IPv4 address: %q", override)
+		}
+		fmt.Printf("ns=resolver fn=setupRouter using ROUTER_IP_OVERRIDE=%s\n", override)
+		r.routerInternal = override
+		r.routerExternal = override
+		r.routerExternalClusterIP = override
+		return nil
+	}
+
 	s, err := r.kubernetes.CoreV1().Services(r.namespace).Get(context.TODO(), "router", am.GetOptions{})
 	if err != nil {
 		return err
@@ -191,9 +246,19 @@ func (r *Resolver) setupRouter() error {
 
 	r.routerInternal = s.Spec.ClusterIP
 	r.routerExternal = s.Spec.ClusterIP
+	r.routerExternalClusterIP = s.Spec.ClusterIP
 
 	if is := s.Status.LoadBalancer.Ingress; len(is) > 0 {
 		r.routerExternal = common.CoalesceString(is[0].IP, is[0].Hostname)
+	}
+
+	si, err := r.kubernetes.CoreV1().Services(r.namespace).Get(context.TODO(), "router-internal", am.GetOptions{})
+	if err == nil {
+		r.routerInternal = si.Spec.ClusterIP
+
+		if is := si.Status.LoadBalancer.Ingress; len(is) > 0 {
+			r.routerInternal = common.CoalesceString(is[0].IP, is[0].Hostname)
+		}
 	}
 
 	return nil
@@ -211,6 +276,10 @@ func (r *Resolver) setupService() error {
 }
 
 func (r *Resolver) upstream() string {
+	if dns_upstream := os.Getenv("DNS_UPSTREAM"); dns_upstream != "" {
+		return dns_upstream
+	}
+
 	cc, err := dns.ClientConfigFromFile("/etc/resolv.conf")
 	if err != nil {
 		return UpstreamFallback

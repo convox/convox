@@ -3,11 +3,11 @@
 set -ex
 
 case $provider in
-   gcp)
-      convox logs -a httpd --no-follow --since 10m | grep timer/example/timer-example | grep "Hello Timer"
+   aws)
+      convox logs -a httpd --no-follow --since 10m | grep service/web/timer-example | grep "Hello Timer"
       ;;
    *)
-      convox logs -a httpd --no-follow --since 10m | grep service/web/timer-example | grep "Hello Timer"
+      convox logs -a httpd --no-follow --since 10m | grep timer/example/timer-example | grep "Hello Timer"
       ;;
 esac
 

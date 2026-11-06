@@ -11,6 +11,7 @@ import (
 
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/console"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
@@ -44,8 +45,27 @@ func CreateConsole(c *stdcli.Context, name string, md *Metadata) (*Console, erro
 	return cr, nil
 }
 
-func InstallConsole(c *stdcli.Context, provider, name, version string, options map[string]string) error {
-	return fmt.Errorf("console install from cli not yet supported")
+func InstallConsole(c *stdcli.Context, provider, name, version, runtime string, options map[string]string) error {
+	host, err := currentConsole(c)
+	if err != nil {
+		return err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return err
+	}
+
+	if options["region"] == "" {
+		return fmt.Errorf("region not provided")
+	}
+
+	_, err = cc.RackInstall(name, provider, version, runtime, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
@@ -61,6 +81,78 @@ func LoadConsole(c *stdcli.Context, name string) (*Console, error) {
 	}
 
 	return nil, fmt.Errorf("no such console rack: %s", name)
+}
+
+func CurrentConsoleClientWithMachine(c *stdcli.Context, machine string) (*console.Client, error) {
+	host, err := currentConsole(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := consoleClient(c, host, "")
+	if err != nil {
+		return nil, err
+	}
+
+	mList := structs.Machines{}
+
+	mstr, _ := c.SettingRead("machines")
+	if mstr == "" || json.Unmarshal([]byte(mstr), &mList) != nil {
+		mList, err = cc.Machines()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	mid, err := findMachineId(mList, machine)
+	if err != nil {
+		// try to refresh the machine list from the server
+		mList, err = cc.Machines()
+		if err != nil {
+			return nil, err
+		}
+		mid, err = findMachineId(mList, machine)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if mid == "" {
+		return nil, fmt.Errorf("no machine found matching '%s'", machine)
+	}
+	cc.SetMachine(mid)
+
+	mBytes, err := json.Marshal(mList)
+	if err != nil {
+		return nil, err
+	}
+
+	c.SettingWrite("machines", string(mBytes))
+
+	return cc, nil
+}
+
+func findMachineId(mList structs.Machines, machine string) (string, error) {
+	foundMatch := false
+	mid := ""
+	for _, m := range mList {
+		orgMachine := fmt.Sprintf("%s/%s", m.OrganizationInfo["name"], m.Name)
+		if strings.Contains(orgMachine, machine) {
+			if foundMatch {
+				return "", fmt.Errorf("multiple machines match for '%s', please be more specific (e.g. <org-name>/<machine-name>)", machine)
+			}
+			mid = m.ID
+			foundMatch = true
+			if orgMachine == machine || m.Name == machine {
+				return mid, nil
+			}
+		}
+	}
+
+	if !foundMatch {
+		return "", fmt.Errorf("no machine found matching '%s'", machine)
+	}
+
+	return mid, nil
 }
 
 func (c Console) Client() (sdk.Interface, error) {
@@ -89,6 +181,10 @@ func (c Console) Endpoint() (*url.URL, error) {
 	username := base64.StdEncoding.EncodeToString([]byte(c.name))
 
 	endpoint := fmt.Sprintf("https://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+	if os.Getenv("X_DEV_ALLOW_HTTP") == "true" {
+		fmt.Println("waring: using http inscure mode")
+		endpoint = fmt.Sprintf("http://%s:%s@%s", string(username), url.QueryEscape(pw), c.host)
+	}
 
 	return url.Parse(endpoint)
 }
@@ -345,6 +441,10 @@ func consoleClient(c *stdcli.Context, host, rack string) (*console.Client, error
 	}
 
 	endpoint := fmt.Sprintf("https://convox:%s@%s", url.QueryEscape(pw), host)
+	if os.Getenv("X_DEV_ALLOW_HTTP") == "true" {
+		fmt.Println("waring: using http inscure mode")
+		endpoint = fmt.Sprintf("http://convox:%s@%s", url.QueryEscape(pw), host)
+	}
 
 	cc, err := console.NewClient(endpoint, rack, c)
 	if err != nil {
@@ -400,6 +500,9 @@ func listConsole(c *stdcli.Context) ([]Console, error) {
 		return nil, err
 	case nil:
 	default:
+		if os.Getenv("CONVOX_DEBUG") == "true" {
+			fmt.Fprintf(os.Stderr, "debug: listConsole: unable to reach console at %s: %s\n", host, err)
+		}
 		return []Console{}, nil
 	}
 

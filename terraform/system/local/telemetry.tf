@@ -12,6 +12,7 @@ locals {
     release             = var.release
     settings            = var.settings
     telemetry           = var.telemetry
+    webhook_signing_key = var.webhook_signing_key
   }
 
   telemetry_default_map = {
@@ -24,5 +25,6 @@ locals {
     release             = ""
     settings            = ""
     telemetry           = "false"
+    webhook_signing_key = ""
   }
 }

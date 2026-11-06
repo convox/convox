@@ -6,18 +6,33 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/convox/convox/pkg/atom"
 	"github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"
 )
 
-func (p *Provider) Apply(namespace, name, version string, data []byte, labels string, timeout int32) error {
-	ldata, err := ApplyLabels(data, labels)
+type PromoteApplyConfig struct {
+	Version      string
+	Data         []byte
+	Labels       string
+	Timeout      int32
+	Dependencies []string
+}
+
+// version string, data []byte, labels string, timeout int32
+func (p *Provider) Apply(namespace, name string, cfg PromoteApplyConfig) error {
+	ldata, err := ApplyLabels(cfg.Data, cfg.Labels)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	return p.Atom.Apply(namespace, name, version, ldata, timeout)
+	return p.Atom.Apply(namespace, name, &atom.ApplyConfig{
+		Release:      cfg.Version,
+		Template:     ldata,
+		Timeout:      cfg.Timeout,
+		Dependencies: cfg.Dependencies,
+	})
 }
 
 func Apply(data []byte, args ...string) error {
@@ -53,7 +68,7 @@ func Delete(data []byte, args ...string) error {
 func ApplyLabels(data []byte, labels string) ([]byte, error) {
 	ls := parseLabels(labels)
 
-	parts := bytes.Split(data, []byte("---\n"))
+	parts := atom.SplitDocuments(data)
 
 	for i := range parts {
 		dp, err := applyLabels(parts[i], ls)

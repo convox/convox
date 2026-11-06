@@ -1,13 +1,14 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -19,17 +20,79 @@ import (
 	"github.com/convox/stdcli"
 )
 
+// resolveSrcCredsPass returns the source registry password from one of the
+// three input modes (plaintext flag, env var, stdin) honoring mutual
+// exclusion. Emits a deprecation warning to stderr when the plaintext form is
+// used. Returns nil + nil error when no form is set (caller leaves
+// opts.SrcCredsPass unset; no source-creds path).
+//
+// Deprecation contract: 3.24.6 warns + continues; 3.25.0 will reject the
+// plaintext form. RFC 8594 deprecation pattern.
+func resolveSrcCredsPass(c *stdcli.Context) (*string, error) {
+	plain := c.String("src-creds-pass")
+	envName := c.String("src-creds-pass-env")
+	stdinFlag := c.Bool("src-creds-pass-stdin")
+
+	setCount := 0
+	if plain != "" {
+		setCount++
+	}
+	if envName != "" {
+		setCount++
+	}
+	if stdinFlag {
+		setCount++
+	}
+	if setCount > 1 {
+		return nil, fmt.Errorf("at most one of --src-creds-pass, --src-creds-pass-env, --src-creds-pass-stdin may be specified")
+	}
+	if setCount == 0 {
+		return nil, nil
+	}
+
+	if plain != "" {
+		// Pin by R3 (UX): exact text reviewed; do NOT alter wording without re-pinning.
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+		return options.String(plain), nil
+	}
+
+	if envName != "" {
+		v := os.Getenv(envName)
+		if v == "" {
+			return nil, fmt.Errorf("--src-creds-pass-env=%s: environment variable not set", envName)
+		}
+		return options.String(v), nil
+	}
+
+	// stdinFlag must be true here.
+	raw, err := bufio.NewReader(c.Reader()).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("--src-creds-pass-stdin: read failed: %w", err)
+	}
+	raw = strings.TrimRight(raw, "\r\n")
+	if raw == "" {
+		return nil, fmt.Errorf("--src-creds-pass-stdin: no input received")
+	}
+	return options.String(raw), nil
+}
+
 func init() {
 	register("build", "create a build", Build, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagRack, flagApp, flagId),
+		Flags:    append(stdcli.OptionFlags(structs.BuildCreateOptions{}), flagRack, flagApp, flagId, flagForce),
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
-	register("builds", "list builds", Builds, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.BuildListOptions{}), flagRack, flagApp),
+	register("builds", "list builds", watch(Builds), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.BuildListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
+
+	register("builds cancel", "cancel a running build", BuildsCancel, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagApp},
+		Usage:    "<build>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
 
 	register("builds export", "export a build", BuildsExport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -39,7 +102,7 @@ func init() {
 		},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("builds import", "import a build", BuildsImport, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
@@ -49,19 +112,33 @@ func init() {
 			stdcli.StringFlag("file", "f", "import from file"),
 		},
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
+
+	register("builds import-image", "import a prebuilt container image into a new build", BuildsImportImage, stdcli.CommandOptions{
+		Flags: []stdcli.Flag{
+			flagRack,
+			flagApp,
+			stdcli.StringFlag("manifest", "m", "path to convox.yml manifest"),
+			stdcli.StringFlag("src-creds-user", "", "source registry username"),
+			stdcli.StringFlag("src-creds-pass", "", "source registry password (DEPRECATED — use --src-creds-pass-env or --src-creds-pass-stdin; will be rejected in 3.25.0)"),
+			stdcli.StringFlag("src-creds-pass-env", "", "read source registry password from named environment variable"),
+			stdcli.BoolFlag("src-creds-pass-stdin", "", "read source registry password from stdin (single line)"),
+		},
+		Usage:    "<source-image>",
+		Validate: stdcli.Args(1),
+	}, WithCloud())
 
 	register("builds info", "get information about a build", BuildsInfo, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("builds logs", "get logs for a build", BuildsLogs, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<build>",
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Build(rack sdk.Interface, c *stdcli.Context) error {
@@ -81,13 +158,91 @@ func Build(rack sdk.Interface, c *stdcli.Context) error {
 	c.Writef("Release: <release>%s</release>\n", b.Release)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil
 }
 
+// checkPendingEnvDrop warns when the newest release drops env vars still set
+// in the running release (the env-unset-without-promote trap). Fail-open;
+// CONVOX_ENV_DROP_GUARD=strict blocks instead; --force shortens the warning.
+func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) error {
+	a, _ := rack.AppGet(appName)
+	if a == nil || a.Release == "" {
+		return nil
+	}
+
+	rs, _ := rack.ReleaseList(appName, structs.ReleaseListOptions{Limit: options.Int(1)})
+	if len(rs) == 0 {
+		return nil
+	}
+
+	newest := rs[0]
+	if newest.Id == a.Release {
+		return nil
+	}
+
+	// A running release newer than the listed newest means the release cache
+	// is lagging; skip rather than compare against stale data.
+	runningRel, _ := rack.ReleaseGet(appName, a.Release)
+	if runningRel == nil || runningRel.Created.After(newest.Created) {
+		return nil
+	}
+
+	runningEnv := structs.Environment{}
+	_ = runningEnv.Load([]byte(runningRel.Env))
+
+	newestEnv := structs.Environment{}
+	if err := newestEnv.Load([]byte(newest.Env)); err != nil {
+		return nil //nolint:nilerr // fail-open: an unparseable newest env must not block the build
+	}
+
+	dropped := []string{}
+	for k := range runningEnv {
+		if _, ok := newestEnv[k]; !ok {
+			dropped = append(dropped, k)
+		}
+	}
+	if len(dropped) == 0 {
+		return nil
+	}
+	sort.Strings(dropped)
+
+	if !c.Bool("force") {
+		if os.Getenv("CONVOX_ENV_DROP_GUARD") == "strict" {
+			return fmt.Errorf("this build will drop env var(s) that are set in your running release %s: %s\n\n"+
+				"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+				"To keep them, set them again with --promote before deploying, for example:\n"+
+				"    convox env set %s=... --promote\n\n"+
+				"If you meant to drop these vars, or you believe this is a false alarm, re-run with --force",
+				a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+		}
+
+		fmt.Fprintf(c.Writer().Stderr, "WARNING: this build will drop env var(s) that are set in your running release %s: %s\n\n"+
+			"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+			"To keep them, set them again with --promote before deploying, for example:\n"+
+			"    convox env set %s=... --promote\n\n"+
+			"If this drop is intentional, pass --force to reduce this to a one-line notice. To make this check blocking, set CONVOX_ENV_DROP_GUARD=strict.\n",
+			a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+
+		return nil
+	}
+
+	fmt.Fprintf(c.Writer().Stderr, "WARNING: proceeding with --force; this build drops env var(s) set in the running release: %s\n", strings.Join(dropped, ", "))
+
+	return nil
+}
+
 func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Build, error) {
+	if c.Bool("external") && rack.ClientType() == "machine" {
+		return nil, fmt.Errorf("--external is not available on Cloud machines; run the command without it")
+	}
+
+	if err := checkPendingEnvDrop(rack, c, app(c)); err != nil {
+		return nil, err
+	}
+
 	var opts structs.BuildCreateOptions
 
 	if development {
@@ -137,7 +292,7 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 
 	c.OK()
 
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return nil, err
 	}
@@ -183,27 +338,41 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 		return nil, err
 	}
 
-	count, _ := io.Copy(c, r)
+	count, copyErr := io.Copy(c, r)
+	if copyErr != nil {
+		c.Writef("warning: build log stream interrupted: %s\n", copyErr)
+	}
 	defer finalizeBuildLogs(rack, c, b, count)
 
+	buildTimeout := time.After(60 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+
 	for {
-		b, err = rack.BuildGet(app(c), b.Id)
-		if err != nil {
-			return nil, err
-		}
+		select {
+		case <-buildTimeout:
+			return nil, fmt.Errorf("build %s timed out after 60 minutes (status: %s). Check: convox builds info %s", b.Id, b.Status, b.Id)
+		case <-tick.C:
+			b, err = rack.BuildGet(app(c), b.Id)
+			if err != nil {
+				return nil, err
+			}
 
-		if b.Status == "failed" {
-			return nil, fmt.Errorf("build failed")
+			switch b.Status {
+			case "created", "running":
+				// keep waiting
+			case "complete":
+				return b, nil
+			case "failed":
+				if b.Reason != "" {
+					return nil, fmt.Errorf("build failed: %s", b.Reason)
+				}
+				return nil, fmt.Errorf("build failed")
+			default:
+				return nil, fmt.Errorf("unexpected build status: %s", b.Status)
+			}
 		}
-
-		if b.Status != "running" {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
 	}
-
-	return b, nil
 }
 
 func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -221,13 +390,17 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 
 	manifest := common.DefaultString(opts.Manifest, "convox.yml")
 
-	data, err := ioutil.ReadFile(filepath.Join(dir, manifest))
+	data, err := os.ReadFile(filepath.Join(dir, manifest))
 	if err != nil {
 		return nil, err
 	}
 
 	if _, err := rack.BuildUpdate(app(c), b.Id, structs.BuildUpdateOptions{Manifest: options.String(string(data))}); err != nil {
 		return nil, err
+	}
+
+	if b.Repository == "" {
+		return nil, fmt.Errorf("external builds are not available on this rack")
 	}
 
 	u, err := url.Parse(b.Repository)
@@ -292,13 +465,21 @@ func buildExternal(rack sdk.Interface, c *stdcli.Context, opts structs.BuildCrea
 }
 
 func finalizeBuildLogs(rack structs.Provider, c *stdcli.Context, b *structs.Build, count int64) error {
-	r, err := rack.BuildLogs(b.App, b.Id, structs.LogsOptions{})
+	current, err := rack.BuildGet(b.App, b.Id)
+	if err != nil {
+		return err
+	}
+	if current.Status == "running" || current.Status == "created" {
+		return nil
+	}
+
+	r, err := rack.BuildLogs(current.App, current.Id, structs.LogsOptions{})
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	data, err := ioutil.ReadAll(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -332,6 +513,16 @@ func Builds(rack sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return t.Print()
+}
+
+func BuildsCancel(rack sdk.Interface, c *stdcli.Context) error {
+	c.Startf("Cancelling build <id>%s</id>", c.Arg(0))
+
+	if err := rack.BuildCancel(app(c), c.Arg(0)); err != nil {
+		return wrapVersionGateSince(err, "convox builds cancel", "3.25.7")
+	}
+
+	return c.OK()
 }
 
 func BuildsExport(rack sdk.Interface, c *stdcli.Context) error {
@@ -381,12 +572,12 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 		if c.Reader().IsTerminal() {
 			return fmt.Errorf("pipe a file into this command or specify --file")
 		}
-		r = ioutil.NopCloser(c.Reader())
+		r = io.NopCloser(c.Reader())
 	}
 
 	defer r.Close()
 
-	s, err := rack.SystemGet()
+	s, err := rackSystem(rack)
 	if err != nil {
 		return err
 	}
@@ -410,10 +601,120 @@ func BuildsImport(rack sdk.Interface, c *stdcli.Context) error {
 	c.OK(b.Release)
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, b.Release)
+		fmt.Fprintf(stdout, "%s", b.Release)
 	}
 
 	return nil
+}
+
+func BuildsImportImage(rack sdk.Interface, c *stdcli.Context) error {
+	source := c.Arg(0)
+
+	manifestPath := coalesce(c.String("manifest"), "convox.yml")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return fmt.Errorf("read manifest %s: %w", manifestPath, err)
+	}
+
+	c.Startf("Creating build")
+	b, err := rack.BuildCreate(app(c), "", structs.BuildCreateOptions{
+		External: options.Bool(true),
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, err := rack.BuildUpdate(app(c), b.Id, structs.BuildUpdateOptions{
+		Manifest: options.String(string(data)),
+	}); err != nil {
+		return err
+	}
+	if err := c.OK(b.Id); err != nil {
+		return err
+	}
+
+	var opts structs.BuildImportImageOptions
+	if u := c.String("src-creds-user"); u != "" {
+		opts.SrcCredsUser = options.String(u)
+	}
+	pass, err := resolveSrcCredsPass(c)
+	if err != nil {
+		return err
+	}
+	if pass != nil {
+		opts.SrcCredsPass = pass
+	}
+
+	c.Startf("Relaying image %s", source)
+	if err := rack.BuildImportImage(app(c), b.Id, source, opts); err != nil {
+		// A08 m-2 fix: wrap version-gate 404 with a friendly message
+		// pointing at the canonical rack-version requirement instead of
+		// leaking the raw "response status 404" to the user.
+		return wrapVersionGate(err, "convox builds import-image")
+	}
+	if err := c.OK(); err != nil {
+		return err
+	}
+
+	c.Startf("Waiting for import to complete")
+	// 2 hours covers a multi-service manifest where the rack's 30-min
+	// per-service skopeo timeout can legitimately stack (e.g. 3 services
+	// ⇒ 90 min worst case). Single-service wizard flows complete in minutes.
+	deadline := time.After(2 * time.Hour)
+	tick := time.NewTicker(2 * time.Second)
+	defer tick.Stop()
+
+	var consecutiveFails int
+	for {
+		select {
+		case <-deadline:
+			return fmt.Errorf("import %s timed out after 2 hours; check: convox builds info %s", b.Id, b.Id)
+		case <-tick.C:
+			cur, err := rack.BuildGet(app(c), b.Id)
+			if err != nil {
+				consecutiveFails++
+				if consecutiveFails > 5 {
+					return fmt.Errorf("build %s still running on rack; check: convox builds info %s (last poll error: %w)", b.Id, b.Id, err)
+				}
+				continue
+			}
+			consecutiveFails = 0
+			switch cur.Status {
+			case "created", "running":
+				continue
+			case "complete":
+				if err := c.OK(); err != nil {
+					return err
+				}
+				c.Startf("Creating release")
+				r, err := rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+					Build: options.String(cur.Id),
+				})
+				if err != nil {
+					return err
+				}
+				if _, err := rack.BuildUpdate(app(c), cur.Id, structs.BuildUpdateOptions{
+					Release: options.String(r.Id),
+				}); err != nil {
+					return err
+				}
+				if err := c.OK(r.Id); err != nil {
+					return err
+				}
+				if err := c.Writef("Build:   <build>%s</build>\n", cur.Id); err != nil {
+					return err
+				}
+				return c.Writef("Release: <release>%s</release>\n", r.Id)
+			case "failed":
+				if cur.Reason != "" {
+					return fmt.Errorf("import failed: %s", cur.Reason)
+				}
+				return fmt.Errorf("import failed")
+			default:
+				return fmt.Errorf("unexpected build status: %s", cur.Status)
+			}
+		}
+	}
 }
 
 func BuildsInfo(rack sdk.Interface, c *stdcli.Context) error {
@@ -426,6 +727,9 @@ func BuildsInfo(rack sdk.Interface, c *stdcli.Context) error {
 
 	i.Add("Id", b.Id)
 	i.Add("Status", b.Status)
+	if b.Reason != "" {
+		i.Add("Reason", b.Reason)
+	}
 	i.Add("Release", b.Release)
 	i.Add("Description", b.Description)
 	i.Add("Started", common.Ago(b.Started))
@@ -446,7 +750,9 @@ func BuildsLogs(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	io.Copy(c, r)
+	if _, err = io.Copy(c, r); err == nil {
+		return logStreamErr(r)
+	}
 
 	return nil
 }

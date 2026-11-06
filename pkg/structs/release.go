@@ -17,9 +17,18 @@ type Release struct {
 type Releases []Release
 
 type ReleaseCreateOptions struct {
-	Build       *string `param:"build"`
-	Description *string `param:"description"`
-	Env         *string `param:"env"`
+	Build         *string `param:"build"`
+	Description   *string `param:"description"`
+	Env           *string `param:"env"`
+	ParentRelease *string `param:"parent-release"`
+}
+
+type ReleaseCreateFromOptions struct {
+	BuildFrom             *string `flag:"build-from"`
+	EnvFrom               *string `flag:"env-from"`
+	UseActiveReleaseBuild *bool   `flag:"use-active-release-build"`
+	UseActiveReleaseEnv   *bool   `flag:"use-active-release-env"`
+	Promote               *bool   `flag:"promote"`
 }
 
 type ReleaseListOptions struct {
@@ -33,6 +42,28 @@ type ReleasePromoteOptions struct {
 	Min         *int  `param:"min"`
 	Max         *int  `param:"max"`
 	Timeout     *int  `param:"timeout"`
+}
+
+// ReleasePromoteWatchAnnotation is the namespace annotation key for rollout-watcher state persistence.
+const ReleasePromoteWatchAnnotation = "convox.com/release-promote-watch"
+
+// ReleasePromoteWatchState is the annotation payload for rollout-watcher cold-start recovery.
+type ReleasePromoteWatchState struct {
+	SchemaVersion int    `json:"schemaVersion"`
+	ReleaseID     string `json:"releaseId"`
+	// AtomVersion is the release-id at promote time; name pinned for rolling-upgrade back-compat.
+	AtomVersion string    `json:"atomVersion"`
+	StartedAt   time.Time `json:"startedAt"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	Actor       string    `json:"actor"`
+	// PriorRelease is the release the app was on before this promote, which the
+	// Atom restores into the app-release mirror when a rollout rolls back.
+	PriorRelease string `json:"priorRelease,omitempty"`
+	// ProgressDeadlines holds only services whose deadline is below the shipped
+	// default; its presence is what arms deadline detection.
+	ProgressDeadlines  map[string]int `json:"progressDeadlines,omitempty"`
+	CrashRestartLimits map[string]int `json:"crashRestartLimits,omitempty"`
+	BailedAt           time.Time      `json:"bailedAt"`
 }
 
 func NewRelease(app string) *Release {

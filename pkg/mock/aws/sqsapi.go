@@ -94,6 +94,84 @@ func (_m *SQSAPI) AddPermissionWithContext(_a0 context.Context, _a1 *sqs.AddPerm
 	return r0, r1
 }
 
+// CancelMessageMoveTask provides a mock function with given fields: _a0
+func (_m *SQSAPI) CancelMessageMoveTask(_a0 *sqs.CancelMessageMoveTaskInput) (*sqs.CancelMessageMoveTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *sqs.CancelMessageMoveTaskOutput
+	if rf, ok := ret.Get(0).(func(*sqs.CancelMessageMoveTaskInput) *sqs.CancelMessageMoveTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.CancelMessageMoveTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*sqs.CancelMessageMoveTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CancelMessageMoveTaskRequest provides a mock function with given fields: _a0
+func (_m *SQSAPI) CancelMessageMoveTaskRequest(_a0 *sqs.CancelMessageMoveTaskInput) (*request.Request, *sqs.CancelMessageMoveTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*sqs.CancelMessageMoveTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *sqs.CancelMessageMoveTaskOutput
+	if rf, ok := ret.Get(1).(func(*sqs.CancelMessageMoveTaskInput) *sqs.CancelMessageMoveTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*sqs.CancelMessageMoveTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// CancelMessageMoveTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *SQSAPI) CancelMessageMoveTaskWithContext(_a0 context.Context, _a1 *sqs.CancelMessageMoveTaskInput, _a2 ...request.Option) (*sqs.CancelMessageMoveTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *sqs.CancelMessageMoveTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *sqs.CancelMessageMoveTaskInput, ...request.Option) *sqs.CancelMessageMoveTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.CancelMessageMoveTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *sqs.CancelMessageMoveTaskInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ChangeMessageVisibility provides a mock function with given fields: _a0
 func (_m *SQSAPI) ChangeMessageVisibility(_a0 *sqs.ChangeMessageVisibilityInput) (*sqs.ChangeMessageVisibilityOutput, error) {
 	ret := _m.Called(_a0)
@@ -831,6 +909,84 @@ func (_m *SQSAPI) ListDeadLetterSourceQueuesWithContext(_a0 context.Context, _a1
 	return r0, r1
 }
 
+// ListMessageMoveTasks provides a mock function with given fields: _a0
+func (_m *SQSAPI) ListMessageMoveTasks(_a0 *sqs.ListMessageMoveTasksInput) (*sqs.ListMessageMoveTasksOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *sqs.ListMessageMoveTasksOutput
+	if rf, ok := ret.Get(0).(func(*sqs.ListMessageMoveTasksInput) *sqs.ListMessageMoveTasksOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.ListMessageMoveTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*sqs.ListMessageMoveTasksInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListMessageMoveTasksRequest provides a mock function with given fields: _a0
+func (_m *SQSAPI) ListMessageMoveTasksRequest(_a0 *sqs.ListMessageMoveTasksInput) (*request.Request, *sqs.ListMessageMoveTasksOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*sqs.ListMessageMoveTasksInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *sqs.ListMessageMoveTasksOutput
+	if rf, ok := ret.Get(1).(func(*sqs.ListMessageMoveTasksInput) *sqs.ListMessageMoveTasksOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*sqs.ListMessageMoveTasksOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// ListMessageMoveTasksWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *SQSAPI) ListMessageMoveTasksWithContext(_a0 context.Context, _a1 *sqs.ListMessageMoveTasksInput, _a2 ...request.Option) (*sqs.ListMessageMoveTasksOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *sqs.ListMessageMoveTasksOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *sqs.ListMessageMoveTasksInput, ...request.Option) *sqs.ListMessageMoveTasksOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.ListMessageMoveTasksOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *sqs.ListMessageMoveTasksInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListQueueTags provides a mock function with given fields: _a0
 func (_m *SQSAPI) ListQueueTags(_a0 *sqs.ListQueueTagsInput) (*sqs.ListQueueTagsOutput, error) {
 	ret := _m.Called(_a0)
@@ -1482,6 +1638,84 @@ func (_m *SQSAPI) SetQueueAttributesWithContext(_a0 context.Context, _a1 *sqs.Se
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *sqs.SetQueueAttributesInput, ...request.Option) error); ok {
+		r1 = rf(_a0, _a1, _a2...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartMessageMoveTask provides a mock function with given fields: _a0
+func (_m *SQSAPI) StartMessageMoveTask(_a0 *sqs.StartMessageMoveTaskInput) (*sqs.StartMessageMoveTaskOutput, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *sqs.StartMessageMoveTaskOutput
+	if rf, ok := ret.Get(0).(func(*sqs.StartMessageMoveTaskInput) *sqs.StartMessageMoveTaskOutput); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.StartMessageMoveTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(*sqs.StartMessageMoveTaskInput) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// StartMessageMoveTaskRequest provides a mock function with given fields: _a0
+func (_m *SQSAPI) StartMessageMoveTaskRequest(_a0 *sqs.StartMessageMoveTaskInput) (*request.Request, *sqs.StartMessageMoveTaskOutput) {
+	ret := _m.Called(_a0)
+
+	var r0 *request.Request
+	if rf, ok := ret.Get(0).(func(*sqs.StartMessageMoveTaskInput) *request.Request); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*request.Request)
+		}
+	}
+
+	var r1 *sqs.StartMessageMoveTaskOutput
+	if rf, ok := ret.Get(1).(func(*sqs.StartMessageMoveTaskInput) *sqs.StartMessageMoveTaskOutput); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*sqs.StartMessageMoveTaskOutput)
+		}
+	}
+
+	return r0, r1
+}
+
+// StartMessageMoveTaskWithContext provides a mock function with given fields: _a0, _a1, _a2
+func (_m *SQSAPI) StartMessageMoveTaskWithContext(_a0 context.Context, _a1 *sqs.StartMessageMoveTaskInput, _a2 ...request.Option) (*sqs.StartMessageMoveTaskOutput, error) {
+	_va := make([]interface{}, len(_a2))
+	for _i := range _a2 {
+		_va[_i] = _a2[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, _a0, _a1)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *sqs.StartMessageMoveTaskOutput
+	if rf, ok := ret.Get(0).(func(context.Context, *sqs.StartMessageMoveTaskInput, ...request.Option) *sqs.StartMessageMoveTaskOutput); ok {
+		r0 = rf(_a0, _a1, _a2...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*sqs.StartMessageMoveTaskOutput)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *sqs.StartMessageMoveTaskInput, ...request.Option) error); ok {
 		r1 = rf(_a0, _a1, _a2...)
 	} else {
 		r1 = ret.Error(1)

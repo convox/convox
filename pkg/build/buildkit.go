@@ -55,6 +55,12 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		return err
 	}
 
+	if os.Getenv("CONVOX_TID") != "" {
+		if err := m.ValidateTenantIngressAnnotations(); err != nil {
+			return err
+		}
+	}
+
 	type build struct {
 		Build manifest.ServiceBuild
 		Image string
@@ -76,15 +82,24 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		builds = append(builds, b)
 	}
 
+	prev := ""
+	if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" && bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
+		prev = bk.previousBuild(bb)
+	}
+
 	for ix, build := range builds {
 		if build.Image != "" {
 			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0600)
 
-			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, env); err != nil {
+			if err := bk.build(bb, dir, fmt.Sprintf("Dockerfile.%d", ix), build.Tag, prev, env); err != nil {
 				return err
 			}
 		} else {
-			if err := bk.build(bb, filepath.Join(dir, build.Build.Path), build.Build.Manifest, build.Tag, env); err != nil {
+			path := filepath.Join(dir, build.Build.Path)
+			if rel, err := filepath.Rel(dir, path); err != nil || !filepath.IsLocal(rel) {
+				return fmt.Errorf("build path is outside the source: %s", build.Build.Path)
+			}
+			if err := bk.build(bb, path, build.Build.Manifest, build.Tag, prev, env); err != nil {
 				return err
 			}
 		}
@@ -132,7 +147,7 @@ func (*BuildKit) Login(bb *Build) error {
 }
 
 func (*BuildKit) cacheProvider(provider string) bool {
-	return provider != "" && strings.Contains("do az", provider) // skipcq
+	return provider == "azure" || provider == "do" || provider == "gcp"
 }
 
 func (*BuildKit) imageManifestCacheProvider(provider string) bool {
@@ -141,6 +156,36 @@ func (*BuildKit) imageManifestCacheProvider(provider string) bool {
 		return false
 	}
 	return provider != "" && strings.Contains("aws", provider) // skipcq
+}
+
+func (*BuildKit) previousBuild(bb *Build) string {
+	bs, err := bb.Provider.BuildList(bb.App, structs.BuildListOptions{Limit: options.Int(50)})
+	if err != nil {
+		return ""
+	}
+
+	for i := range bs {
+		if bs[i].Status == "complete" {
+			return bs[i].Id
+		}
+	}
+
+	return ""
+}
+
+func (*BuildKit) cacheImportRef(bb *Build, reg, prev string) string {
+	refs := []string{reg}
+	if prev != "" {
+		refs = []string{fmt.Sprintf("%s.%s", reg, prev), reg}
+	}
+
+	for _, ref := range refs {
+		if _, err := bb.Exec.Execute("skopeo", "--command-timeout", "30s", "inspect", "--raw", fmt.Sprintf("docker://%s", ref)); err == nil {
+			return ref
+		}
+	}
+
+	return ""
 }
 
 func (*BuildKit) buildArgs(development bool, dockerfile string, env map[string]string) ([]string, error) {
@@ -202,27 +247,72 @@ func (*BuildKit) entrypoint(bb *Build, tag string) []string {
 }
 
 // skipcq
-func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[string]string) error {
+func (bk *BuildKit) build(bb *Build, path, dockerfile, tag, prev string, env map[string]string) error {
 	if path == "" {
 		return fmt.Errorf("must have path to build")
 	}
 
 	args := []string{"build"}
-	args = append(args, "--frontend", "dockerfile.v0")                                // skipcq
-	args = append(args, "--local", fmt.Sprintf("context=%s", path))                   // skipcq
-	args = append(args, "--local", fmt.Sprintf("dockerfile=%s", path))                // skipcq
-	args = append(args, "--opt", fmt.Sprintf("filename=%s", dockerfile))              // skipcq
-	args = append(args, "--output", fmt.Sprintf("type=image,name=%s,push=true", tag)) // skipcq
+	args = append(args,
+		"--frontend", "dockerfile.v0",
+		"--local", fmt.Sprintf("context=%s", path),
+		"--local", fmt.Sprintf("dockerfile=%s", path),
+		"--opt", fmt.Sprintf("filename=%s", dockerfile),
+	) // skipcq
+	outputOpt := fmt.Sprintf("type=image,name=%s,push=true", tag)
+	if os.Getenv("PROVIDER") == "local" {
+		outputOpt = fmt.Sprintf("type=image,name=%s,push=true,registry.insecure=true", tag)
+	}
+	args = append(args, "--output", outputOpt) // skipcq
+
+	archs := common.BuildArchs(os.Getenv("BUILD_ARCHS"))
+	platformed := len(archs) > 0 && (!bb.Development || len(archs) == 1)
+
+	if platformed {
+		platforms := make([]string, len(archs))
+		for i, a := range archs {
+			platforms[i] = "linux/" + a
+		}
+		args = append(args, "--opt", fmt.Sprintf("platform=%s", strings.Join(platforms, ","))) // skipcq
+	}
+
+	localCacheAdded := false
+
+	if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
+		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
+		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
+		localCacheAdded = true
+	}
 
 	if bk.cacheProvider(os.Getenv("PROVIDER")) {
-		reg := strings.Split(tag, ":")[0]
-		args = append(args, "--export-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg)) // skipcq
+		tagParts := strings.Split(tag, ":")
+		reg := tagParts[0]
+		if len(tagParts) > 1 && strings.LastIndex(tagParts[1], ".") > 0 {
+			// remove service build id(...<service>.<build-id>) and put buildcache
+			reg = fmt.Sprintf("%s.buildcache", tag[:strings.LastIndex(tag, ".")])
+		} else {
+			reg = fmt.Sprintf("%s:buildcache", reg)
+		}
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=%s", reg)) // skipcq
+		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s", reg))                                                                    // skipcq
 	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
-		reg := strings.Split(tag, ":")[0]
-		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s:buildcache", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s:buildcache", reg))                                                                                        // skipcq
-	} else {
+		tagParts := strings.Split(tag, ":")
+		reg := tagParts[0]
+		if len(tagParts) > 1 && strings.LastIndex(tagParts[1], ".") > 0 {
+			// remove service build id(...<service>.<build-id>) and put buildcache
+			reg = fmt.Sprintf("%s.buildcache", tag[:strings.LastIndex(tag, ".")])
+		} else {
+			reg = fmt.Sprintf("%s:buildcache", reg)
+		}
+		export, imp := reg, reg
+		if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" {
+			export, imp = fmt.Sprintf("%s.%s", reg, bb.Id), bk.cacheImportRef(bb, reg, prev)
+		}
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", export)) // skipcq
+		if imp != "" {
+			args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", imp)) // skipcq
+		}
+	} else if !localCacheAdded {
 		// keep a local cache for services using the same Dockerfile
 		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
 		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
@@ -247,6 +337,12 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag string, env map[strin
 		}
 	} else {
 		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
+			if platformed && strings.Contains(bb.logs.String(), "no match for platform") {
+				if len(archs) == 1 {
+					return fmt.Errorf("an image in this build is not published for the requested build architecture (%s): use an image published for %s or a multi-arch image", archs[0], archs[0])
+				}
+				return fmt.Errorf("an image in this build is not published for the requested build architectures (%s): set the BuildArch app parameter to an architecture the image supports (convox apps params set BuildArch=amd64 -a %s) or use multi-arch images", strings.Join(archs, ","), bb.App)
+			}
 			return err
 		}
 	}

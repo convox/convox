@@ -5,8 +5,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"log"
+	"math"
+	"os"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,16 +20,32 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner"
+	"github.com/convox/convox/provider/aws/provisioner/elasticache"
+	"github.com/convox/convox/provider/aws/provisioner/rds"
 	ca "github.com/convox/convox/provider/k8s/pkg/apis/convox/v1"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/pkg/errors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	v1 "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ktypes "k8s.io/apimachinery/pkg/types"
+)
+
+const (
+	APP_CONFIG_KEY = "app.json"
+
+	balancerTypeAnnotation = "service.beta.kubernetes.io/aws-load-balancer-type"
+	balancerTypeExternal   = "external"
+	balancerTypeNlb        = "nlb"
+	balancerTypeNlbIp      = "nlb-ip"
 )
 
 func (p *Provider) ReleaseCreate(app string, opts structs.ReleaseCreateOptions) (*structs.Release, error) {
-	r, err := p.releaseFork(app)
+	r, err := p.releaseFork(app, opts.ParentRelease)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -82,14 +104,16 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 		return nil, errors.WithStack(err)
 	}
 
-	rs, err := p.releaseList(app)
+	limit := common.DefaultInt(opts.Limit, 10)
+
+	rs, err := p.releaseList(app, limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	sort.Slice(rs, func(i, j int) bool { return rs[j].Created.Before(rs[i].Created) })
 
-	if limit := common.DefaultInt(opts.Limit, 10); len(rs) > limit {
+	if len(rs) > limit {
 		rs = rs[0:limit]
 	}
 
@@ -97,12 +121,19 @@ func (p *Provider) ReleaseList(app string, opts structs.ReleaseListOptions) (str
 }
 
 func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
-	a, err := p.AppGet(app)
+	if err := p.budgetCircuitBreakerTripped(app); err != nil {
+		return errors.WithStack(err)
+	}
+
+	a, err := p.appGetLive(app)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	priorRelease := a.Release
+
 	items := [][]byte{}
+	dependencies := []string{}
 
 	// app
 	data, err := p.releaseTemplateApp(a, opts)
@@ -122,14 +153,89 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		items = append(items, data)
 	}
 
+	var progressDeadlines, crashRestartLimits map[string]int
+	var maxProgressDeadline int
+
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
+		if err := validateReleaseIdentifiers(m); err != nil {
+			return errors.WithStack(err)
+		}
+
+		if err := p.validateBalancerOwnership(app, m.Balancers); err != nil {
+			return errors.WithStack(err)
+		}
+
+		if p.FeatureGates[options.FeatureGateTid] && id != a.Release {
+			if err := m.ValidateTenantIngressAnnotations(); err != nil {
+				return structs.ErrBadRequest("%s", err)
+			}
+		}
+
+		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
+
+		if a.Release != "" && a.Release != id {
+			current, _, err := common.ReleaseManifest(p, app, a.Release)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			for i := range m.Services {
+				previous, err := current.Service(m.Services[i].Name)
+				if err == nil && previous.Stateful != m.Services[i].Stateful {
+					return structs.ErrBadRequest("service %s: changing stateful on an existing service is not supported; create a new service and move the data", m.Services[i].Name)
+				}
+			}
+		}
+
+		// Reject manifest-tier budget enforcement when the rack-level
+		// cost accumulator is disabled. Mirrors the AppBudgetSet gate
+		// (provider/k8s/budget_accumulator.go) so a developer who adds
+		// a budget: block to convox.yml gets a loud, actionable error
+		// rather than a deploy that silently persists unenforced config.
+		//
+		// Note on persistence: the manifest budget block validates here
+		// but does NOT persist runtime state via AppBudgetSet. Per
+		// docs/reference/primitives/app/budget.md the AppBudget primitive
+		// is rack-managed and lives outside the per-app convox.yml on
+		// purpose — coupling cap values to deploy lifecycles would let
+		// every promote silently overwrite operator-set values, escalate
+		// non-admin write tokens into admin-tier cap changes, and emit
+		// noise webhook events on every redeploy. Set the budget via
+		// `convox budget set` or the Console budget tab; manifest
+		// runtime fields (NeverAutoShutdown, ShutdownOrder, RecoveryMode,
+		// ShutdownGracePeriod, NotifyBeforeMinutes) are read fresh from
+		// the manifest at simulate/tick time per
+		// provider/k8s/budget_shutdown.go, so they take effect without
+		// persistence.
+		if err := p.requireCostTrackingForManifestBudget(m); err != nil {
+			return errors.WithStack(err)
+		}
+
+		// AppUpdate re-promotes the current release to apply app params and lock
+		// changes, and must keep working when the manifest names a removed pool.
+		if id != a.Release && !common.DefaultBool(opts.Force, false) {
+			if err := p.validateManifestNodePools(m); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
 		e, err := structs.NewEnvironment([]byte(r.Env))
 		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		// docker hub auth secret (once per promote, before resource/service/timer loops)
+		if p.hasDockerHubAuth() {
+			if err := p.ensureDockerHubSecret(p.AppNamespace(app)); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
+		if err := p.ensureRegistryPullSecret(p.ctx, p.AppNamespace(app)); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -154,11 +260,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		}
 
 		// ingress internal
-		if rss := m.Services.Routable().InternalRouter(); len(rss) > 0 {
+		rssInternal := m.Services.Routable().InternalRouter()
+		if len(rssInternal) > 0 {
 			if p.DomainInternal == "" {
-				return errors.New("please enable the rack's internal router first: convox rack params set internal_router=true")
+				return structs.ErrBadRequest("please enable the rack's internal router first: convox rack params set internal_router=true")
 			}
-			data, err := p.releaseTemplateIngressInternal(a, rss, opts)
+			data, err := p.releaseTemplateIngressInternal(a, rssInternal, opts)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -168,12 +275,18 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		// resources
 		for _, r := range m.Resources {
-			data, err := p.releaseTemplateResource(a, e, r)
-			if err != nil {
-				return errors.WithStack(err)
+			if err := p.validateAwsProviderResource(r); err != nil {
+				return err
 			}
 
-			items = append(items, data)
+			if !r.IsCustomManagedResource() {
+				data, err := p.releaseTemplateResource(a, e, r)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			}
 		}
 
 		// services
@@ -199,24 +312,119 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			items = append(items, data)
 		}
 
-		// volumes
-		data, err = p.releaseTemplateVolumes(a, m.Services, m.Labels)
+		items = append(items, data)
+
+		// rds resources
+		rdsItems, rdsDeps, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
-		items = append(items, data)
+		items = append(items, rdsItems...)
+		if len(rdsDeps) > 0 {
+			dependencies = append(dependencies, rdsDeps...)
+		}
+
+		// elasticache resources
+		elasticacheItems, elastiDeps, err := p.releaseElasticacheResources(a, e, m)
+		if err != nil {
+			return err
+		}
+
+		items = append(items, elasticacheItems...)
+		if len(elastiDeps) > 0 {
+			dependencies = append(dependencies, elastiDeps...)
+		}
+
+		if err := p.releaseAppConfigs(a, m); err != nil {
+			return err
+		}
 	}
 
 	tdata := bytes.Join(items, []byte("---\n"))
 
-	timeout := int32(common.DefaultInt(opts.Timeout, 1800))
+	// Cover the longest per-service deadline so the Atom does not fail a rollout
+	// the Deployment was rendered to allow. An explicit caller timeout wins:
+	// AppUpdate passes 30 for what is only a metadata change.
+	promoteTimeout := common.DefaultInt(opts.Timeout, manifest.DefaultProgressDeadlineSeconds)
+	if opts.Timeout == nil && maxProgressDeadline > promoteTimeout {
+		promoteTimeout = maxProgressDeadline
+	}
+	if promoteTimeout > manifest.ProgressDeadlineCeiling {
+		promoteTimeout = manifest.ProgressDeadlineCeiling
+	}
+	timeout := int32(promoteTimeout)
 
-	if err := p.Apply(p.AppNamespace(app), "app", id, tdata, fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id), timeout); err != nil {
+	if err := p.Apply(p.AppNamespace(app), "app", PromoteApplyConfig{
+		Version:      id,
+		Data:         tdata,
+		Labels:       fmt.Sprintf("system=convox,provider=k8s,rack=%s,app=%s,release=%s", p.Name, app, id),
+		Timeout:      timeout,
+		Dependencies: dependencies,
+	}); err != nil {
 		return errors.WithStack(err)
 	}
 
-	p.EventSend("release:promote", structs.EventSendOptions{Data: map[string]string{"app": app, "id": id}, Status: options.String("start")})
+	// Capture context BEFORE the goroutine launch — the watcher outlives
+	// the request-scoped p.ctx, so it must NOT reference p.ContextActor()
+	// at later points. Mirrors build.go:600-608.
+	capturedActor := p.ContextActor()
+
+	// Read the release-id mirror that p.Apply just wrote, so the watcher
+	// can detect supersession by a NEWER promote. p.Atom.Status() returns
+	// (status, release-id, err); we use the release-id as the watcher's
+	// supersession discriminator and compare to `convox.com/app-release`
+	// (mirrored by the AtomController) on each tick. Fallback to the
+	// inbound `id` parameter if Atom.Status() fails — same value Apply
+	// just wrote, so the version-mismatch check still works correctly.
+	_, atomVer, _ := p.Atom.Status(p.AppNamespace(app), "app")
+	if atomVer == "" {
+		atomVer = id
+	}
+
+	// Persist watch state BEFORE emitting :start. If a fast-fail occurs
+	// between annotation-write and goroutine-launch, the cold-start GC
+	// scan at next api-pod startup recovers it (timeout path).
+	// Annotation-write failures are logged but do NOT block promote
+	// success — the rollout itself proceeded; the user just doesn't
+	// get a second event.
+	state := structs.ReleasePromoteWatchState{
+		SchemaVersion:      1,
+		ReleaseID:          id,
+		AtomVersion:        atomVer,
+		StartedAt:          time.Now().UTC(),
+		ExpiresAt:          time.Now().UTC().Add(time.Duration(timeout) * time.Second),
+		Actor:              capturedActor,
+		PriorRelease:       priorRelease,
+		ProgressDeadlines:  progressDeadlines,
+		CrashRestartLimits: crashRestartLimits,
+	}
+	// The annotation is the watcher's claim on the outcome event, so a failed
+	// write means no watcher: the GC could not adopt it either.
+	watchable := id != ""
+	if watchable {
+		if err := p.writeReleasePromoteWatchAnnotation(p.ctx, app, &state); err != nil {
+			fmt.Printf("ns=release_watcher at=warn kind=annotation_write app=%s err=%q\n", app, err)
+			watchable = false
+		}
+	}
+
+	// :start emit uses the captured actor (audit-trail consistency with
+	// the future app:promote:completed / app:promote:errored /
+	// app:promote:cancelled events the watcher will emit). The action
+	// name `release:promote` is preserved verbatim — existing prior art
+	// that webhook consumers / audit-log scrapers depend on. New event
+	// types use the canonical app:<resource>:<verb> form.
+	_ = p.EventSend("release:promote", structs.EventSendOptions{
+		Data:   map[string]string{"app": app, "id": id, "actor": capturedActor},
+		Status: options.String("start"),
+	})
+
+	p.FlushStateLog(p.ContextTID(), app)
+
+	if watchable {
+		p.launchReleasePromoteWatcher(app, &state)
+	}
 
 	return nil
 }
@@ -231,7 +439,7 @@ func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
 }
 
 func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
-	kr, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).Get(strings.ToLower(id), am.GetOptions{})
+	kr, err := p.GetReleaseFromInformer(strings.ToLower(id), p.AppNamespace(app))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -239,8 +447,20 @@ func (p *Provider) releaseGet(app, id string) (*structs.Release, error) {
 	return p.releaseUnmarshal(kr)
 }
 
-func (p *Provider) releaseFork(app string) (*structs.Release, error) {
+func (p *Provider) releaseFork(app string, parentRelease *string) (*structs.Release, error) {
 	r := structs.NewRelease(app)
+
+	if parentRelease != nil && *parentRelease != "" {
+		pr, err := p.releaseGet(app, *parentRelease)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		r.Build = pr.Build
+		r.Env = pr.Env
+
+		return r, nil
+	}
 
 	rs, err := p.ReleaseList(app, structs.ReleaseListOptions{Limit: options.Int(1)})
 	if err != nil {
@@ -255,8 +475,8 @@ func (p *Provider) releaseFork(app string) (*structs.Release, error) {
 	return r, nil
 }
 
-func (p *Provider) releaseList(app string) (structs.Releases, error) {
-	krs, err := p.Convox.ConvoxV1().Releases(p.AppNamespace(app)).List(am.ListOptions{})
+func (p *Provider) releaseList(app string, limit int) (structs.Releases, error) {
+	krs, err := p.ListReleasesFromInformer(p.AppNamespace(app), "", limit)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -297,17 +517,19 @@ func (p *Provider) releaseMarshal(r *structs.Release) *ca.Release {
 }
 
 func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromoteOptions) ([]byte, error) {
-	owner, err := p.Cluster.CoreV1().Namespaces().Get(context.TODO(), p.Namespace, am.GetOptions{})
+	owner, err := p.GetNamespaceFromInformer(p.Namespace)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	params := map[string]interface{}{
-		"Locked":     a.Locked,
-		"Name":       a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
-		"Owner":      owner,
-		"Parameters": a.Parameters,
+		"Locked":              a.Locked,
+		"Name":                a.Name,
+		"Namespace":           p.AppNamespace(a.Name),
+		"Owner":               owner,
+		"Parameters":          a.Parameters,
+		"PodSecurityStandard": p.PodSecurityStandard,
+		"PodSecurityMode":     p.PodSecurityMode,
 	}
 
 	data, err := p.RenderTemplate("app/app", params)
@@ -319,12 +541,31 @@ func (p *Provider) releaseTemplateApp(a *structs.App, opts structs.ReleasePromot
 }
 
 func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b manifest.Balancer, lbs manifest.Labels) ([]byte, error) {
+	if p.FeatureGates[options.FeatureGateBalancerDisable] {
+		return nil, structs.ErrBadRequest("balancer resource is disabled")
+	}
+	if b.AwsLoadBalancerController && p.Provider != "aws" {
+		return nil, structs.ErrBadRequest("balancer %s: awsLoadBalancerController is only supported on AWS racks", b.Name)
+	}
+
+	ports, tcpUdp := balancerRenderPorts(b.Ports)
+
+	if tcpUdp && !b.AwsLoadBalancerController {
+		return nil, structs.ErrBadRequest("balancer %s: protocol TCP_UDP requires awsLoadBalancerController: true, update convox.yml and build again", b.Name)
+	}
+
+	annotations := b.AnnotationsMap()
+
 	params := map[string]interface{}{
-		"Annotations": b.AnnotationsMap(),
-		"Balancer":    b,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Release":     r,
-		"Labels":      lbs,
+		"Annotations":     annotations,
+		"Balancer":        b,
+		"HealthCheckPort": balancerHealthCheckPort(b.Ports),
+		"Namespace":       p.AppNamespace(a.Name),
+		"Ports":           ports,
+		"Release":         r,
+		"Labels":          lbs,
+		"Scheme":          balancerScheme(annotations),
+		"TcpUdp":          tcpUdp,
 	}
 
 	data, err := p.RenderTemplate("app/balancer", params)
@@ -333,6 +574,173 @@ func (p *Provider) releaseTemplateBalancer(a *structs.App, r *structs.Release, b
 	}
 
 	return data, nil
+}
+
+func balancerHealthCheckPort(ports manifest.BalancerPorts) int {
+	target := 0
+	udp := false
+
+	for _, p := range ports {
+		if p.Protocol == "UDP" {
+			udp = true
+			continue
+		}
+
+		if target == 0 {
+			target = p.Target
+		}
+	}
+
+	if !udp {
+		return 0
+	}
+
+	return target
+}
+
+type balancerRenderPort struct {
+	Name     string
+	Source   int
+	Protocol string
+	Target   int
+}
+
+func balancerRenderPorts(ports manifest.BalancerPorts) ([]balancerRenderPort, bool) {
+	rps := []balancerRenderPort{}
+	tcpUdp := false
+
+	for _, p := range ports {
+		if p.Protocol == manifest.BalancerProtocolTcpUdp {
+			tcpUdp = true
+
+			rps = append(rps,
+				balancerRenderPort{Name: fmt.Sprintf("%d-tcp", p.Source), Source: p.Source, Protocol: manifest.BalancerProtocolTcp, Target: p.Target},
+				balancerRenderPort{Name: fmt.Sprintf("%d-udp", p.Source), Source: p.Source, Protocol: manifest.BalancerProtocolUdp, Target: p.Target},
+			)
+
+			continue
+		}
+
+		protocol := p.Protocol
+		if protocol == "" {
+			protocol = manifest.BalancerProtocolTcp
+		}
+
+		rps = append(rps, balancerRenderPort{Name: strconv.Itoa(p.Source), Source: p.Source, Protocol: protocol, Target: p.Target})
+	}
+
+	return rps, tcpUdp
+}
+
+func balancerScheme(annotations map[string]string) string {
+	if _, ok := annotations["service.beta.kubernetes.io/aws-load-balancer-internal"]; ok {
+		return ""
+	}
+
+	return "internet-facing"
+}
+
+var releaseIdentifier = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+func validateReleaseIdentifiers(m *manifest.Manifest) error {
+	type field struct{ name, value string }
+
+	fs := []field{}
+
+	volumes := func(vos []manifest.VolumeOption, cms manifest.ConfigMounts) {
+		for _, vo := range vos {
+			if vo.EmptyDir != nil {
+				fs = append(fs, field{"volume id", vo.EmptyDir.Id})
+			}
+			if vo.AwsEfs != nil {
+				fs = append(fs, field{"volume id", vo.AwsEfs.Id})
+			}
+			if vo.AzureFiles != nil {
+				fs = append(fs, field{"volume id", vo.AzureFiles.Id})
+			}
+			if vo.PersistentVolumeClaim != nil {
+				fs = append(fs, field{"volume id", vo.PersistentVolumeClaim.Id})
+			}
+		}
+		for _, cm := range cms {
+			fs = append(fs, field{"config mount id", cm.Id})
+		}
+	}
+
+	for i := range m.Services {
+		s := &m.Services[i]
+		fs = append(fs, field{"service name", s.Name})
+		volumes(s.VolumeOptions, s.ConfigMounts)
+		if s.InitContainer != nil {
+			volumes(s.InitContainer.VolumeOptions, s.InitContainer.ConfigMounts)
+		}
+	}
+
+	for i := range m.Timers {
+		fs = append(fs, field{"timer name", m.Timers[i].Name})
+	}
+
+	for i := range m.Balancers {
+		fs = append(fs, field{"balancer name", m.Balancers[i].Name})
+	}
+
+	for i := range m.Resources {
+		r := &m.Resources[i]
+		fs = append(fs, field{"resource name", r.Name})
+		if r.IsRds() || r.IsElastiCache() {
+			fs = append(fs, field{"resource type", r.Type})
+		}
+	}
+
+	for _, f := range fs {
+		if f.value != "" && !releaseIdentifier.MatchString(f.value) {
+			return structs.ErrBadRequest("invalid %s: %q", f.name, f.value)
+		}
+	}
+
+	return nil
+}
+
+func (p *Provider) validateBalancerOwnership(app string, bs manifest.Balancers) error {
+	if p.Provider != "aws" {
+		return nil
+	}
+
+	for _, b := range bs {
+		desired := balancerTypeNlb
+
+		if b.AwsLoadBalancerController {
+			desired = balancerTypeExternal
+		}
+
+		if t, ok := b.AnnotationsMap()[balancerTypeAnnotation]; ok {
+			desired = t
+		}
+
+		if !balancerControllerOwned(desired) {
+			continue
+		}
+
+		s, err := p.Cluster.CoreV1().Services(p.AppNamespace(app)).Get(context.TODO(), fmt.Sprintf("balancer-%s", b.Name), am.GetOptions{})
+		if kerr.IsNotFound(err) {
+			continue
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		if balancerControllerOwned(s.Annotations[balancerTypeAnnotation]) || len(s.Status.LoadBalancer.Ingress) == 0 {
+			continue
+		}
+
+		return structs.ErrBadRequest("balancer %s cannot be switched to the AWS Load Balancer Controller in place, because the existing load balancer would be left running in your AWS account. Add a new balancer with awsLoadBalancerController: true, move traffic to it, then remove this one", b.Name)
+	}
+
+	return nil
+}
+
+func balancerControllerOwned(t string) bool {
+	return t == balancerTypeExternal || t == balancerTypeNlbIp
 }
 
 func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, error) {
@@ -350,6 +758,10 @@ func (p *Provider) releaseTemplateCA(a *structs.App, ca *v1.Secret) ([]byte, err
 }
 
 func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	if p.RouterType == "contour" {
+		return p.releaseTemplateHTTPProxy(a, ss, opts)
+	}
+
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -362,6 +774,24 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
 		if err != nil {
 			return nil, errors.WithStack(err)
+		}
+
+		if s.Certificate.Id != "" {
+			keys := []string{}
+			for k := range ans {
+				keys = append(keys, k)
+			}
+			for _, k := range keys {
+				if strings.HasPrefix(k, "cert-manager.io") {
+					delete(ans, k)
+				}
+			}
+
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
 		}
 
 		customAns := s.IngressAnnotationsMap()
@@ -378,7 +808,7 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 			"App":                        a.Name,
 			"Class":                      p.Engine.IngressClass(),
 			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
-			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
 			"Namespace":                  p.AppNamespace(a.Name),
 			"Rack":                       p.Name,
@@ -397,6 +827,10 @@ func (p *Provider) releaseTemplateIngress(a *structs.App, ss manifest.Services, 
 }
 
 func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	if p.RouterType == "contour" {
+		return p.releaseTemplateHTTPProxyInternal(a, ss, opts)
+	}
+
 	idles, err := p.Engine.AppIdles(a.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -407,12 +841,44 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 	for i := range ss {
 		s := ss[i]
 
+		ans, err := p.Engine.IngressAnnotations(s.Certificate.Duration)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if s.Certificate.Id != "" {
+			keys := []string{}
+			for k := range ans {
+				keys = append(keys, k)
+			}
+			for _, k := range keys {
+				if strings.HasPrefix(k, "cert-manager.io") {
+					delete(ans, k)
+				}
+			}
+
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
+		customAns := s.IngressAnnotationsMap()
+		reservedAns := p.reservedNginxAnnotations()
+
+		for k, v := range customAns {
+			if !reservedAns[k] {
+				ans[k] = v
+			}
+		}
+
 		params := map[string]interface{}{
-			"Annotations":                map[string]string{},
+			"Annotations":                ans,
 			"App":                        a.Name,
 			"Class":                      p.Engine.IngressInternalClass(),
 			"ConvoxDomainTLSCertDisable": !p.ConvoxDomainTLSCertDisable,
-			"Host":                       p.Engine.ServiceHost(a.Name, s),
+			"Host":                       p.ServiceHost(a.Name, s),
 			"Idles":                      common.DefaultBool(opts.Idle, idles),
 			"Namespace":                  p.AppNamespace(a.Name),
 			"Rack":                       p.Name,
@@ -430,18 +896,240 @@ func (p *Provider) releaseTemplateIngressInternal(a *structs.App, ss manifest.Se
 	return bytes.Join(items, []byte("---\n")), nil
 }
 
+func (p *Provider) releaseTemplateHTTPProxy(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, p.ProxyProtocol, p.Engine.IngressClass(), false)
+}
+
+func (p *Provider) releaseTemplateHTTPProxyInternal(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions) ([]byte, error) {
+	for i := range ss {
+		if len(ss[i].Domains) > 0 {
+			log.Printf("WARNING: service %q has custom domains on the internal router; HTTP01 certificate challenges require the domain to be publicly reachable", ss[i].Name)
+		}
+	}
+	return p.releaseTemplateHTTPProxyCore(a, ss, opts, false, p.Engine.IngressInternalClass(), true)
+}
+
+func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Services, opts structs.ReleasePromoteOptions, proxyProtocol bool, ingressClassName string, internal bool) ([]byte, error) {
+	idles, err := p.Engine.AppIdles(a.Name)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	_, err = p.DiscoveryClient.ServerResourcesForGroupVersion("projectcontour.io/v1")
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil, fmt.Errorf("Contour is not yet installed. Wait for the rack update to complete before deploying.")
+		}
+		return nil, errors.WithStack(err)
+	}
+
+	items := [][]byte{}
+
+	for i := range ss {
+		s := ss[i]
+
+		if s.Certificate.Id != "" {
+			data, err := p.releaseTemplateCertSecret(a, s)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, data)
+		}
+
+		convoxDomainTLS := !p.ConvoxDomainTLSCertDisable && (!internal || p.ContourInternalTLS)
+
+		certIssuer := "letsencrypt"
+		if internal && p.ContourInternalTLS {
+			certIssuer = "self-signed"
+		}
+
+		if s.Certificate.Id == "" && convoxDomainTLS {
+			certParams := map[string]interface{}{
+				"App":          a.Name,
+				"CertDuration": s.Certificate.Duration,
+				"CertIssuer":   certIssuer,
+				"HasDomains":   len(s.Domains) > 0,
+				"Host":         p.ServiceHost(a.Name, s),
+				"Namespace":    p.AppNamespace(a.Name),
+				"Service":      s,
+			}
+			data, err := p.RenderTemplate("app/certificate", certParams)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			items = append(items, data)
+		}
+
+		customAns := s.IngressAnnotationsMap()
+		translation := translateNginxAnnotations(customAns, s.Name)
+
+		if len(translation.IncompatibleWarnings) > 0 {
+			log.Printf("WARNING: service %q has nginx-specific annotations with no Contour equivalent:\n%s",
+				s.Name, strings.Join(translation.IncompatibleWarnings, "\n"))
+		}
+
+		timeoutIdle := fmt.Sprintf("%ds", s.Timeout)
+		if translation.TimeoutIdle != "" {
+			annotationSecs, _ := strconv.Atoi(strings.TrimSuffix(translation.TimeoutIdle, "s"))
+			if annotationSecs > s.Timeout {
+				timeoutIdle = translation.TimeoutIdle
+			}
+		}
+
+		timeoutResponse := responseTimeout(translation.TimeoutResponse)
+
+		var whitelistCIDRs []string
+		if s.Whitelist != "" {
+			if internal {
+				log.Printf("WARNING: service %q sets a whitelist on the internal router; IP whitelists are not enforceable behind the internal NLB (client source addresses are not preserved) and will not be applied", s.Name)
+			} else {
+				whitelistCIDRs = parseWhitelistCIDRs(s.Whitelist)
+			}
+		}
+
+		params := map[string]interface{}{
+			"Annotations":      translation.Annotations,
+			"App":              a.Name,
+			"BackendProtocol":  contourBackendProtocol(s.Port.Scheme),
+			"ConvoxDomainTLS":  convoxDomainTLS,
+			"Host":             p.ServiceHost(a.Name, s),
+			"Idles":            common.DefaultBool(opts.Idle, idles),
+			"IngressClassName": ingressClassName,
+			"Namespace":        p.AppNamespace(a.Name),
+			"ProxyProtocol":    proxyProtocol,
+			"Rack":             p.Name,
+			"RateLimitRPS":     translation.RateLimitRPS,
+			"Service":          s,
+			"TimeoutResponse":  timeoutResponse,
+			"TimeoutIdle":      timeoutIdle,
+			"WhitelistCIDRs":   whitelistCIDRs,
+		}
+
+		data, err := p.RenderTemplate("app/httpproxy", params)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		items = append(items, data)
+	}
+
+	return bytes.Join(items, []byte("---\n")), nil
+}
+
+// responseTimeout returns the Contour route response timeout: an explicit read-timeout
+// annotation value, or "infinity" to leave streamed responses uncapped (Contour treats an
+// omitted response timeout as Envoy's 15s default rather than as unbounded).
+func responseTimeout(annotated string) string {
+	if annotated != "" {
+		return annotated
+	}
+
+	return "infinity"
+}
+
+func parseWhitelistCIDRs(whitelist string) []string {
+	var cidrs []string
+
+	for _, cidr := range strings.Split(whitelist, ",") {
+		if cidr = strings.TrimSpace(cidr); cidr != "" {
+			cidrs = append(cidrs, cidr)
+		}
+	}
+
+	return cidrs
+}
+
+func (p *Provider) releaseTemplateCertSecret(a *structs.App, s manifest.Service) ([]byte, error) {
+	certSecret, err := p.Cluster.CoreV1().Secrets(p.Namespace).Get(p.ctx, s.Certificate.Id, am.GetOptions{})
+	if p.FeatureGates[options.FeatureGateTid] && (kerr.IsNotFound(err) || (err == nil && !isConvoxCertificate(certSecret))) {
+		return nil, structs.ErrBadRequest("certificate %s not found", s.Certificate.Id)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := secretDataHash(certSecret)
+	if err != nil {
+		return nil, err
+	}
+
+	secretObj := &v1.Secret{
+		TypeMeta: am.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: am.ObjectMeta{
+			Name:      s.Certificate.Id,
+			Namespace: p.AppNamespace(a.Name),
+			Annotations: map[string]string{
+				AnnotationSecretDataHash: hash,
+			},
+		},
+		Data: certSecret.Data,
+	}
+
+	return SerializeK8sObjToYaml(secretObj)
+}
+
+func isConvoxCertificate(s *v1.Secret) bool {
+	if s.Type != v1.SecretTypeTLS || s.Labels["system"] != "convox" {
+		return false
+	}
+
+	return s.Labels["type"] == "certificate" || s.Labels["type"] == "letsencrypt-certificate"
+}
+
 func (p *Provider) releaseTemplateResource(a *structs.App, e structs.Environment, r manifest.Resource) ([]byte, error) {
 	if url := strings.TrimSpace(e[r.DefaultEnv()]); url != "" {
 		return p.releaseTemplateResourceMasked(a, r, url)
 	}
 
 	params := map[string]interface{}{
+		"App":           a.Name,
+		"Namespace":     p.AppNamespace(a.Name),
+		"Name":          r.Name,
+		"Parameters":    r.Options,
+		"Password":      fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
+		"Rack":          p.Name,
+		"Image":         r.Image,
+		"DockerHubAuth": p.hasDockerHubAuth(),
+	}
+
+	if r.Image == "" {
+		version, err := p.resourceVersion(a.Name, r)
+		if err != nil {
+			return nil, err
+		}
+
+		if img := resourceImage(p.EcrDockerHubCachePrefix, r.Type, version); img != "" {
+			params["Image"] = img
+		}
+	}
+
+	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateCustomResource(tid string, a *structs.App, e structs.Environment, r manifest.Resource, conn *provisioner.ConnectionInfo) ([]byte, error) {
+	ns := p.AppNamespace(a.Name)
+	if tid != "" {
+		ns = p.tidNamespace(tid, a.Name)
+	}
+
+	params := map[string]interface{}{
 		"App":        a.Name,
-		"Namespace":  p.AppNamespace(a.Name),
+		"Namespace":  ns,
 		"Name":       r.Name,
 		"Parameters": r.Options,
-		"Password":   fmt.Sprintf("%x", sha256.Sum256([]byte(p.Name)))[0:30],
 		"Rack":       p.Name,
+		"Host":       conn.Host,
+		"Port":       conn.Port,
+		"User":       conn.UserName,
+		"Password":   conn.Password,
+		"Database":   conn.Database,
 	}
 
 	data, err := p.RenderTemplate(fmt.Sprintf("resource/%s", r.Type), params)
@@ -483,7 +1171,59 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		sc[s.Name] = s.Count
 	}
 
+	// Populate per-service scale-override map from Service.ScaleOverrideActive
+	// already populated by ServiceList above. When the annotation is strict-
+	// literal "true", releaseTemplateServices preserves the runtime replica
+	// count and skips the yaml-declared scale.count.min on this promote.
+	// ServiceList's own populate path tolerates informer error (continue-safe);
+	// services missing from pss inherit overrideActive[name]=false (the safe
+	// default). The override path must NEVER cause a promote to fail outright.
+	overrideActive := map[string]bool{}
+	for i := range pss {
+		if pss[i].ScaleOverrideActive != nil && *pss[i].ScaleOverrideActive {
+			overrideActive[pss[i].Name] = true
+		}
+	}
+
+	// Per-service Console-driven triggers-override state. When set, the
+	// release loop must skip materialization of the manifest-declared
+	// autoscaler so the user's Console-set HPA/SO survives the deploy.
+	// Read directly off Deployment annotations: ServiceList projection
+	// adds a TriggersOverrideActive field, but we read here as well so
+	// the deploy controller behaves correctly on pre-projection paths
+	// (e.g. when the rack was rolled without a fresh ServiceList sync).
+	triggersOverride := map[string]bool{}
+	triggersOverrideCRD := map[string]string{}
+	for i := range pss {
+		dep, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(a.Name)).Get(context.TODO(), pss[i].Name, am.GetOptions{})
+		if err != nil {
+			continue
+		}
+		if dep.Annotations[ServiceTriggersOverrideAnnotation] == ServiceTriggersOverrideValueOn {
+			triggersOverride[pss[i].Name] = true
+			triggersOverrideCRD[pss[i].Name] = dep.Annotations[ServiceTriggersOverrideCRDAnnotation]
+		}
+	}
+
 	for i := range ss {
+		// efs
+		vdata, err := p.releaseTemplateEfs(a, ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if vdata != nil {
+			items = append(items, vdata)
+		}
+
+		// azure files
+		afdata, err := p.releaseTemplateAzureFiles(a, &ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if afdata != nil {
+			items = append(items, afdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -496,30 +1236,151 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			max = *opts.Max
 		}
 
-		replicas := common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
+		var replicas int
+		if overrideActive[s.Name] {
+			// Annotation honored: preserve the runtime replica count
+			// regardless of yaml scale.count.min. If
+			// sc[s.Name] is 0 (rare: user scaled to 0 with
+			// override active), preserve 0 — explicit user choice,
+			// not yaml fallback. Distinct from the CoalesceInt default
+			// where 0 falls through to yaml min.
+			replicas = sc[s.Name]
+			// Audit-trail emit so users see in their event stream
+			// that yaml scale was deliberately skipped on this promote.
+			// Event-name format app:<resource>:<verb> — matches
+			// app:budget:set / :cap / :threshold precedent. Service
+			// identity carried in data.service, NOT embedded in the
+			// event name (preserves grep/filter patterns keyed on the
+			// 3-part colon scheme). actor="system" matches the
+			// release:autoscale-disabled and release:manifest-advisory
+			// system-emit convention. Cardinality bounded by service
+			// count which is operator-controlled.
+			_ = p.EventSend("app:scale-override:honored", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":           "system",
+					"app":             a.Name,
+					"service":         s.Name,
+					"release":         r.Id,
+					"preserved_count": strconv.Itoa(sc[s.Name]),
+					"yaml_count_min":  strconv.Itoa(s.Scale.Count.Min),
+				},
+			})
+		} else {
+			// Existing default — runtime count wins when non-zero,
+			// else yaml min.
+			replicas = common.CoalesceInt(sc[s.Name], s.Scale.Count.Min)
+		}
 
 		env, err := p.environment(a, r, s, e)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
+		wantsAutoscale := s.Scale.Autoscale.IsEnabled() || s.Scale.IsKedaEnabled()
+		// Triggers-override services keep their Console-driven autoscaler
+		// across deploys. Skip manifest-driven autoscale materialization
+		// for them so the rack does not fight a user's Console setup.
+		// The template-side gate further down (TriggersOverrideActive
+		// passed into params) ensures the HPA template branch is also
+		// suppressed.
+		if triggersOverride[s.Name] {
+			wantsAutoscale = false
+			p.stripAtomLabelFromOverrideCRD(a.Name, s.Name, triggersOverrideCRD[s.Name])
+		}
+		// Agent services render as DaemonSets; KEDA ScaledObject only targets
+		// Deployments, so skip the autoscale path entirely. The
+		// pkg/manifest validator emits a stderr WARNING for this combo
+		// rather than a hard-fail; emit a matching release-time audit
+		// event so the user's webhook stream reflects the runtime
+		// ignore decision (parallel to release:autoscale-disabled and
+		// release:prometheus-skipped). actor=system because no caller
+		// identity is in scope at the release path.
+		if s.Agent.Enabled && wantsAutoscale {
+			wantsAutoscale = false
+			_ = p.EventSend("release:agent-autoscale-ignored", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"release": r.Id,
+				},
+			})
+		}
+		if !p.IsKedaEnabled && wantsAutoscale {
+			_ = p.EventSend("release:autoscale-disabled", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  "rack has keda_enable=false; autoscale ignored, using Count.Min static replicas",
+				},
+			})
+			wantsAutoscale = false
+		}
+
+		if (s.Agent.Enabled || s.Stateful) && s.Deployment.ProgressDeadline > 0 {
+			kind := "agent services run as DaemonSets"
+			if s.Stateful {
+				kind = "stateful services run as StatefulSets"
+			}
+			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  fmt.Sprintf("deployment.progressDeadline has no effect because %s, which have no progress deadline; use deployment.crashRestartLimit to fail this service fast", kind),
+				},
+			})
+		}
+
+		if !s.Agent.Enabled && s.Scale.Min != nil && *s.Scale.Min == 0 && !s.Scale.Autoscale.IsEnabled() && !s.Scale.IsKedaEnabled() {
+			_ = p.EventSend("release:manifest-advisory", structs.EventSendOptions{
+				Data: map[string]string{
+					"actor":   "system",
+					"app":     a.Name,
+					"service": s.Name,
+					"reason":  "scale.min=0 without autoscale fields will keep the service at zero replicas permanently; set scale.autoscale.cpu.threshold or equivalent to enable scale-up",
+				},
+			})
+		}
+
+		ipsBlocks, ipsNames, err := renderImagePullSecrets(a.Name, p.AppNamespace(a.Name), &s, func(k string) (string, bool) {
+			v, ok := env[k]
+			return v, ok
+		})
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		items = append(items, ipsBlocks...)
+
 		params := map[string]interface{}{
-			"Annotations":    s.AnnotationsMap(),
-			"App":            a,
-			"Environment":    env,
-			"MaxSurge":       max - 100,
-			"MaxUnavailable": 100 - min,
-			"Namespace":      p.AppNamespace(a.Name),
-			"Password":       p.Password,
-			"Rack":           p.Name,
-			"Release":        r,
-			"Replicas":       replicas,
-			"Resources":      s.ResourceMap(),
-			"Service":        s,
+			"Annotations":            s.AnnotationsMap(),
+			"App":                    a,
+			"Environment":            env,
+			"MaxSurge":               max - 100,
+			"MaxUnavailable":         100 - min,
+			"ProgressDeadline":       clampProgressDeadline(effectiveProgressDeadline(&s, p.DeployProgressDeadline)),
+			"Namespace":              p.AppNamespace(a.Name),
+			"Password":               p.Password,
+			"Rack":                   p.Name,
+			"Release":                r,
+			"Replicas":               replicas,
+			"Resources":              s.ResourceMap(),
+			"Service":                s,
+			"KedaIsEnabled":          s.Scale.IsKedaEnabled() && !s.Agent.Enabled,
+			"AutoscaleIsEnabled":     s.Scale.Autoscale.IsEnabled() && !s.Agent.Enabled,
+			"TriggersOverrideActive": triggersOverride[s.Name],
+			"DockerHubAuth":          p.hasDockerHubAuth(),
+			"ImagePullSecretNames":   ipsNames,
+			"RegistryAuth":           p.hasRegistryPullCredentials(),
 		}
 
 		if ip, err := p.Engine.ResolverHost(); err == nil {
 			params["Resolver"] = ip
+		}
+
+		if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+			params["DisableDnsSearches"] = true
 		}
 
 		data, err := p.RenderTemplate("app/service", params)
@@ -528,6 +1389,110 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 		}
 
 		items = append(items, data)
+
+		if wantsAutoscale && p.IsKedaEnabled && s.Scale.Count.Max > s.Scale.Count.Min {
+			promURL := os.Getenv("PROMETHEUS_URL")
+			if promURL == "" && s.Scale.Autoscale.NeedsPrometheus() {
+				// Service requires Prometheus (gpu-utilization or queue-depth
+				// autoscale without an explicit per-trigger prometheusUrl) but
+				// PROMETHEUS_URL is empty. Skip the ScaledObject build for this
+				// service and emit an audit-trail event. Non-Prometheus triggers
+				// (cpu, memory, manual scale.keda.triggers) take the else branch
+				// below and render normally. VPA rendering further down also
+				// continues unconditionally for this service — the skip is scoped
+				// to the ScaledObject only, not the entire iteration.
+				skippedStatus := "skipped"
+				_ = p.EventSend("release:prometheus-skipped", structs.EventSendOptions{
+					Data: map[string]string{
+						"actor":   "system",
+						"app":     a.Name,
+						"service": s.Name,
+						"reason":  "PROMETHEUS_URL not set; skipping KEDA prometheus trigger creation",
+					},
+					Status: &skippedStatus,
+				})
+			} else {
+				var triggers []kedav1alpha1.ScaleTriggers
+				if s.Scale.Autoscale.IsEnabled() {
+					triggers = append(triggers, s.Scale.Autoscale.BuildTriggers(a.Name, s.Name, promURL)...)
+				}
+				if s.Scale.IsKedaEnabled() {
+					triggers = append(triggers, s.Scale.Keda.Triggers...)
+				}
+
+				// MinCount / MaxCount are int in the manifest type but int32 in
+				// KEDA's ScaledObject spec (mirrors upstream `*int32`). Clamp
+				// rather than silently truncating: replica counts above
+				// MaxInt32 are operationally nonsensical (Kubernetes nodes
+				// would be exhausted long before), and silent truncation via
+				// two's-complement could flip large values to small or
+				// negative. Surface intent by clamping to the int32 range.
+				clampReplica := func(n int) int32 {
+					if n < 0 {
+						return 0
+					}
+					if n > math.MaxInt32 {
+						return math.MaxInt32
+					}
+					return int32(n)
+				}
+				scaledObj := s.KedaScaledObject(manifest.KedaScaledObjectParameters{
+					ServiceName: s.Name,
+					Namespace:   p.AppNamespace(a.Name),
+					MinCount:    clampReplica(s.Scale.Count.Min),
+					MaxCount:    clampReplica(s.Scale.Count.Max),
+					Triggers:    triggers,
+				})
+				if scaledObj != nil {
+					if p.applyAnnotationsToHPA(a.Name, s.Name, map[string]string{
+						"validations.keda.sh/hpa-ownership": "false",
+					}) != nil {
+						return nil, fmt.Errorf("failed to apply annotations to HPA for service %s", s.Name)
+					}
+
+					scaledObj.Labels = map[string]string{
+						"system":  "convox",
+						"rack":    p.Name,
+						"app":     a.Name,
+						"service": s.Name,
+					}
+					soData, err := SerializeK8sObjToYaml(scaledObj)
+					if err != nil {
+						return nil, errors.WithStack(err)
+					}
+
+					if defaultAuth := s.DefaultTriggerAuthentionIfAws(p.AppNamespace(a.Name)); defaultAuth != nil {
+						authData, err := SerializeK8sObjToYaml(defaultAuth)
+						if err != nil {
+							return nil, errors.WithStack(err)
+						}
+						items = append(items, authData)
+					}
+
+					items = append(items, soData)
+				}
+			}
+		}
+
+		if s.Scale.IsVpaEnabled() {
+			if !p.IsVpaEnabled {
+				return nil, structs.ErrBadRequest("vpa is not enabled on the rack")
+			}
+			vpaObj, err := s.Scale.VPA.VpaObject(s.Name, p.AppNamespace(a.Name), map[string]string{
+				"system":  "convox",
+				"rack":    p.Name,
+				"app":     a.Name,
+				"service": s.Name,
+			})
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			vpaData, err := SerializeK8sObjToYaml(vpaObj)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			items = append(items, vpaData)
+		}
 	}
 
 	return bytes.Join(items, []byte("---\n")), nil
@@ -540,18 +1505,25 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	}
 
 	params := map[string]interface{}{
-		"Annotations": t.AnnotationsMap(),
-		"App":         a,
-		"Namespace":   p.AppNamespace(a.Name),
-		"Rack":        p.Name,
-		"Release":     r,
-		"Resources":   s.ResourceMap(),
-		"Service":     s,
-		"Timer":       t,
+		"Annotations":          t.AnnotationsMap(),
+		"App":                  a,
+		"Namespace":            p.AppNamespace(a.Name),
+		"Rack":                 p.Name,
+		"Release":              r,
+		"Resources":            s.ResourceMap(),
+		"Service":              s,
+		"Timer":                t,
+		"DockerHubAuth":        p.hasDockerHubAuth(),
+		"ImagePullSecretNames": imagePullSecretNames(a.Name, s.Name, s.ImagePullSecrets),
+		"RegistryAuth":         p.hasRegistryPullCredentials(),
 	}
 
 	if ip, err := p.Engine.ResolverHost(); err == nil {
 		params["Resolver"] = ip
+	}
+
+	if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+		params["DisableDnsSearches"] = true
 	}
 
 	data, err := p.RenderTemplate("app/timer", params)
@@ -562,33 +1534,60 @@ func (p *Provider) releaseTemplateTimer(a *structs.App, e structs.Environment, r
 	return data, nil
 }
 
-func (p *Provider) releaseTemplateVolumes(a *structs.App, ss manifest.Services, lbs manifest.Labels) ([]byte, error) {
-	vsh := map[string]bool{}
-
-	for i := range ss {
-		s := ss[i]
-		for _, v := range p.volumeSources(a.Name, s.Name, s.Volumes) {
-			if !systemVolume(v) {
-				vsh[v] = true
-			}
+func (p *Provider) releaseTemplateEfs(a *structs.App, s manifest.Service) ([]byte, error) {
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AwsEfs != nil && len(p.EfsFileSystemId) <= 2 {
+			return nil, structs.ErrBadRequest("efs csi driver is not enabled but efs volume is specified")
+		}
+		if s.VolumeOptions[i].AwsEfs != nil && s.VolumeOptions[i].AwsEfs.VolumeHandle != "" {
+			s.VolumeOptions[i].AwsEfs.ProcessTemplate(p.EfsFileSystemId, a.Name, s.Name)
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
 		}
 	}
 
-	vs := []string{}
+	params := map[string]interface{}{
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Service":   s,
+	}
 
-	for s := range vsh {
-		vs = append(vs, s)
+	data, err := p.RenderTemplate("app/efs", params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s *manifest.Service) ([]byte, error) {
+	hasAzureFiles := false
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].AzureFiles != nil {
+			hasAzureFiles = true
+			if p.AzureFilesEnabled != "true" {
+				return nil, structs.ErrBadRequest("azure files is not enabled but azureFiles volume is specified")
+			}
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
+		}
+	}
+
+	if !hasAzureFiles {
+		return nil, nil
 	}
 
 	params := map[string]interface{}{
-		"App":       a.Name,
+		"App":       a,
 		"Namespace": p.AppNamespace(a.Name),
 		"Rack":      p.Name,
-		"Volumes":   vs,
-		"Labels":    lbs,
+		"Service":   s,
 	}
 
-	data, err := p.RenderTemplate("app/volumes", params)
+	data, err := p.RenderTemplate("app/azurefiles", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -629,6 +1628,195 @@ func (p *Provider) releaseUnmarshal(kr *ca.Release) (*structs.Release, error) {
 	return r, nil
 }
 
+func (p *Provider) releaseElasticacheResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
+	items := [][]byte{}
+	dependencies := []string{}
+
+	tid := p.ContextTID()
+
+	stateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsElastiCache() {
+			if p.FeatureGates[options.FeatureGateElasticacheDisable] {
+				return nil, nil, structs.ErrBadRequest("elasticache resource is disabled")
+			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "elasticache-") {
+				return nil, nil, structs.ErrBadRequest("resource %s must not be named with the elasticache- prefix", r.Name)
+			}
+
+			if err := r.ElastiCacheNameValidate(); err != nil {
+				return nil, nil, err
+			}
+
+			id, err := p.CreateAwsResourceStateId(tid, app.Name, r.Name)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			stateMap[id] = struct{}{}
+
+			err = p.ElasticacheProvisioner.Provision(id, p.MapToElasticacheParameter(r.Type, app.Name, r.Options), elasticache.ProvisionExtraOpts{
+				Tags: p.AwsResourceTags(tid, app.Name, r.Name),
+				Meta: p.awsResourceMeta(tid, app.Name, r, nil),
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+
+			isAvailable, err := p.ElasticacheProvisioner.IsElastiCacheAvailable(id)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			r.Type = awsResourceType("elasticache-", r.Type)
+
+			if isAvailable {
+				conn, err := p.ElasticacheProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				data, err := p.releaseTemplateCustomResource(tid, app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(&resourceSubstitution{
+					App:     app.Name,
+					RType:   r.Type,
+					RName:   r.Name,
+					StateId: id,
+					Tid:     tid,
+				})
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
+			}
+		}
+	}
+
+	existingStateIds, err := p.ListElasticacheStateForApp(app.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get elasticache state list: %s", err)
+	}
+
+	for _, eId := range existingStateIds {
+		if _, has := stateMap[eId]; !has {
+			// delete the state, elasticache clean up job will delete the elasticache
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, eId, am.DeleteOptions{})
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to delete elasticache state: %s", err)
+			}
+			p.SendStateLog(eId, "elasticache deletion is triggered")
+		}
+	}
+	return items, dependencies, nil
+}
+
+func (p *Provider) releaseRdsResources(app *structs.App, envs structs.Environment, m *manifest.Manifest) ([][]byte, []string, error) {
+	items := [][]byte{}
+	dependencies := []string{}
+
+	tid := p.ContextTID()
+
+	rdsStateMap := map[string]struct{}{}
+	for _, r := range m.Resources {
+		if r.IsRds() {
+			if p.FeatureGates[options.FeatureGateRdsDisable] {
+				return nil, nil, structs.ErrBadRequest("rds resource is disabled")
+			}
+
+			if p.FeatureGates[options.FeatureGatePrefixBasedAwsResourceDisable] && strings.HasPrefix(r.Name, "rds-") {
+				return nil, nil, structs.ErrBadRequest("resource %s must not be named with the rds- prefix", r.Name)
+			}
+
+			if err := r.RdsNameValidate(); err != nil {
+				return nil, nil, err
+			}
+
+			var rdsParams, rdsMeta map[string]string
+			var err error
+
+			if p.FeatureGates[options.FeatureGateRDSTemplateConfig] {
+				rdsParams, rdsMeta, err = p.MapToRdsParameterAndMeta(tid, r.Type, app.Name, r)
+				if err != nil {
+					return nil, nil, err
+				}
+			} else {
+				rdsParams = p.MapToRdsParameter(r.Type, app.Name, r.Options)
+				rdsMeta = p.awsResourceMeta(tid, app.Name, r, nil)
+			}
+
+			rdsMeta[MetaRdsTypeKey] = strings.TrimPrefix(r.Type, "rds-")
+
+			id, err := p.CreateAwsResourceStateId(tid, app.Name, r.Name)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			rdsStateMap[id] = struct{}{}
+
+			err = p.RdsProvisioner.Provision(id, rdsParams, rds.ProvisionExtraOpts{
+				Tags: p.AwsResourceTags(tid, app.Name, r.Name),
+				Meta: rdsMeta,
+			})
+			if err != nil {
+				return nil, nil, err
+			}
+
+			isAvailable, err := p.RdsProvisioner.IsDbAvailable(id)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			r.Type = awsResourceType("rds-", r.Type)
+
+			if isAvailable {
+				conn, err := p.RdsProvisioner.GetConnectionInfo(id)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				data, err := p.releaseTemplateCustomResource(tid, app, envs, r, conn)
+				if err != nil {
+					return nil, nil, errors.WithStack(err)
+				}
+
+				items = append(items, data)
+			} else {
+				substitutionId := resourceSubstitutionId(&resourceSubstitution{
+					App:     app.Name,
+					RType:   r.Type,
+					RName:   r.Name,
+					StateId: id,
+					Tid:     tid,
+				})
+				dependencies = append(dependencies, substitutionId)
+				items = append(items, []byte(substitutionId))
+			}
+		}
+	}
+
+	existingStateIds, err := p.ListRdsStateForApp(app.Name)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get rds state list: %s", err)
+	}
+
+	for _, rdsId := range existingStateIds {
+		if _, has := rdsStateMap[rdsId]; !has {
+			// delete the state, rds clean up job will delete the rds
+			err = p.Cluster.CoreV1().Secrets(p.AppNamespace(app.Name)).Delete(p.ctx, rdsId, am.DeleteOptions{})
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to delete rds state: %s", err)
+			}
+			p.SendStateLog(rdsId, "db instance deletion is triggered")
+		}
+	}
+	return items, dependencies, nil
+}
+
 func (p *Provider) reservedNginxAnnotations() map[string]bool {
 	return map[string]bool{
 		"alb.ingress.kubernetes.io/scheme":                   true,
@@ -644,4 +1832,291 @@ func (p *Provider) reservedNginxAnnotations() map[string]bool {
 		"nginx.ingress.kubernetes.io/ssl-redirect":           true,
 		"nginx.ingress.kubernetes.io/whitelist-source-range": true,
 	}
+}
+
+func contourBackendProtocol(scheme string) string {
+	switch strings.ToUpper(scheme) {
+	case "HTTPS":
+		return "tls"
+	case "GRPC":
+		return "h2c"
+	case "GRPCS":
+		return "h2"
+	default:
+		return ""
+	}
+}
+
+type httpProxyTranslation struct {
+	Annotations          map[string]string
+	TimeoutResponse      string
+	TimeoutIdle          string
+	RateLimitRPS         int
+	IncompatibleWarnings []string
+}
+
+var nginxToContourTranslatable = map[string]bool{
+	"nginx.ingress.kubernetes.io/proxy-read-timeout":    true,
+	"nginx.ingress.kubernetes.io/proxy-send-timeout":    true,
+	"nginx.ingress.kubernetes.io/proxy-connect-timeout": true,
+	"nginx.ingress.kubernetes.io/limit-rps":             true,
+}
+
+var nginxUntranslatable = map[string]string{
+	"nginx.ingress.kubernetes.io/server-snippet":        "raw nginx config has no Contour equivalent",
+	"nginx.ingress.kubernetes.io/configuration-snippet": "raw nginx config has no Contour equivalent",
+	"nginx.ingress.kubernetes.io/proxy-body-size":       "Envoy body size is a global setting, not per-route",
+	"nginx.ingress.kubernetes.io/proxy-buffering":       "Envoy buffering is a listener setting, not per-route",
+	"nginx.ingress.kubernetes.io/rewrite-target":        "Contour only supports prefix rewrite, not regex",
+}
+
+func translateNginxAnnotations(annotations map[string]string, serviceName string) httpProxyTranslation {
+	result := httpProxyTranslation{
+		Annotations: map[string]string{},
+	}
+
+	for k, v := range annotations {
+		if strings.HasPrefix(k, "contour.heptio.com/") {
+			continue
+		}
+
+		if !strings.HasPrefix(k, "nginx.ingress.kubernetes.io/") {
+			result.Annotations[k] = v
+			continue
+		}
+
+		if reason, blocked := nginxUntranslatable[k]; blocked {
+			result.IncompatibleWarnings = append(result.IncompatibleWarnings,
+				fmt.Sprintf("  - %s (%s)", k, reason))
+			continue
+		}
+
+		switch k {
+		case "nginx.ingress.kubernetes.io/proxy-read-timeout":
+			v = strings.TrimSuffix(v, "s")
+			if _, err := strconv.Atoi(v); err == nil {
+				result.TimeoutResponse = v + "s"
+			}
+		case "nginx.ingress.kubernetes.io/proxy-send-timeout",
+			"nginx.ingress.kubernetes.io/proxy-connect-timeout":
+			v = strings.TrimSuffix(v, "s")
+			if n, err := strconv.Atoi(v); err == nil {
+				if result.TimeoutIdle == "" {
+					result.TimeoutIdle = v + "s"
+				} else {
+					prev, _ := strconv.Atoi(strings.TrimSuffix(result.TimeoutIdle, "s"))
+					if n > prev {
+						result.TimeoutIdle = v + "s"
+					}
+				}
+			}
+		case "nginx.ingress.kubernetes.io/limit-rps":
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				result.RateLimitRPS = n
+			}
+		default:
+			if nginxToContourTranslatable[k] {
+				continue
+			}
+			result.IncompatibleWarnings = append(result.IncompatibleWarnings,
+				fmt.Sprintf("  - %s (no known Contour equivalent)", k))
+		}
+	}
+
+	sort.Strings(result.IncompatibleWarnings)
+	return result
+}
+
+func (p *Provider) releaseAppConfigs(app *structs.App, m *manifest.Manifest) error {
+	if len(m.Configs) == 0 {
+		return nil
+	}
+
+	for i := range m.Configs {
+		name := common.CoalesceString(m.Configs[i].Name, p.GenConfigName(m.Configs[i].Id))
+		_, err := p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+			Name:      name,
+			Namespace: p.AppNamespace(app.Name),
+			Labels: map[string]string{
+				"system": "convox",
+				"type":   "config",
+				"app":    app.Name,
+			},
+		}, func(s *v1.Secret) *v1.Secret {
+			if m.Configs[i].Value != nil {
+				s.Data = map[string][]byte{
+					APP_CONFIG_KEY: []byte(*m.Configs[i].Value),
+				}
+			} else if _, has := s.Data[APP_CONFIG_KEY]; !has {
+				s.Data = map[string][]byte{
+					APP_CONFIG_KEY: []byte(""),
+				}
+			}
+
+			if s.Labels == nil {
+				s.Labels = map[string]string{}
+			}
+
+			s.Labels["app"] = app.Name
+			s.Labels["system"] = "convox"
+			s.Labels["type"] = "config"
+			return s
+		}, am.PatchOptions{
+			FieldManager: "convox",
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create/update config: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func (p *Provider) applyAnnotationsToHPA(app string, service string, annotations map[string]string) error {
+	// Prepare patch payload for metadata.annotations
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": annotations,
+		},
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	_, err = p.Cluster.AutoscalingV2().HorizontalPodAutoscalers(p.AppNamespace(app)).Patch(
+		p.ctx,
+		service,
+		ktypes.MergePatchType,
+		patchBytes,
+		am.PatchOptions{},
+	)
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// resourceDefaultImages maps resource types to their default Docker Hub image references.
+// Library images use just the name (e.g. "redis"), non-library images include the org (e.g. "postgis/postgis").
+var resourceDefaultImages = map[string]struct {
+	image          string
+	defaultVersion string
+	isLibrary      bool
+	hasData        bool
+}{
+	"redis":     {image: "redis", defaultVersion: "8", isLibrary: true},
+	"postgres":  {image: "postgres", defaultVersion: "16-trixie", isLibrary: true, hasData: true},
+	"mysql":     {image: "mysql", defaultVersion: "8.4", isLibrary: true, hasData: true},
+	"mariadb":   {image: "mariadb", defaultVersion: "11.4", isLibrary: true, hasData: true},
+	"memcached": {image: "memcached", defaultVersion: "1.6", isLibrary: true},
+	"postgis":   {image: "postgis/postgis", defaultVersion: "16-3.6", hasData: true},
+}
+
+// resourceImage returns a resource's Docker Hub image, through the ECR pull-through cache when prefix is set.
+// Returns empty string if the resource type is not recognized.
+func resourceImage(prefix, resourceType, version string) string {
+	info, ok := resourceDefaultImages[resourceType]
+	if !ok {
+		return ""
+	}
+
+	if prefix == "" {
+		return fmt.Sprintf("%s:%s", info.image, version)
+	}
+
+	imagePath := info.image
+	if info.isLibrary {
+		imagePath = "library/" + imagePath
+	}
+
+	return fmt.Sprintf("%s/%s:%s", strings.TrimRight(prefix, "/"), imagePath, version)
+}
+
+func resourceVersionFromImage(resourceType, image string) string {
+	info, ok := resourceDefaultImages[resourceType]
+	if !ok {
+		return ""
+	}
+
+	image, _, _ = strings.Cut(image, "@")
+
+	i := strings.LastIndex(image, ":")
+	if i < 0 || i < strings.LastIndex(image, "/") {
+		return ""
+	}
+
+	if repo := image[:i]; repo != info.image && !strings.HasSuffix(repo, "/"+info.image) {
+		return ""
+	}
+
+	return image[i+1:]
+}
+
+func (p *Provider) resourceVersion(app string, r manifest.Resource) (string, error) {
+	info, ok := resourceDefaultImages[r.Type]
+	if !ok {
+		return "", nil
+	}
+
+	if v := r.Options["version"]; v != "" {
+		return v, nil
+	}
+
+	ns := p.AppNamespace(app)
+	name := fmt.Sprintf("resource-%s", nameFilter(r.Name))
+
+	d, err := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{})
+	switch {
+	case kerr.IsNotFound(err):
+	case err != nil:
+		return "", errors.WithStack(err)
+	case len(d.Spec.Template.Spec.Containers) > 0:
+		if v := resourceVersionFromImage(r.Type, d.Spec.Template.Spec.Containers[0].Image); v != "" {
+			return v, nil
+		}
+	}
+
+	if !info.hasData {
+		return info.defaultVersion, nil
+	}
+
+	// a newer default would start on the existing data, and mariadb upgrades it in place
+	if _, err := p.Cluster.CoreV1().PersistentVolumeClaims(ns).Get(context.TODO(), name, am.GetOptions{}); err == nil {
+		return "", structs.ErrBadRequest("resource %s has existing data but its running version is unknown, set options.version in convox.yml", r.Name)
+	} else if !kerr.IsNotFound(err) {
+		return "", errors.WithStack(err)
+	}
+
+	return info.defaultVersion, nil
+}
+
+// requireCostTrackingForManifestBudget rejects a manifest budget block whose
+// enforcement-bearing fields (MonthlyCapUsd, AlertThresholdPercent,
+// AtCapAction) are set when the rack-level cost accumulator is disabled.
+// Mirrors AppBudgetSet's gate. PricingAdjustment alone does not trigger —
+// it modifies the pricing-model output but does not depend on the
+// accumulator running.
+func (p *Provider) requireCostTrackingForManifestBudget(m *manifest.Manifest) error {
+	if m == nil {
+		return nil
+	}
+	enforcement := m.Budget.MonthlyCapUsd > 0 ||
+		m.Budget.AlertThresholdPercent > 0 ||
+		m.Budget.AtCapAction != ""
+	if !enforcement {
+		return nil
+	}
+	if !p.costTrackingEnabled() {
+		return structs.ErrUnprocessable(
+			"convox.yml budget: block requires cost_tracking_enable=true on the rack.\n" +
+				"  Set on the rack first:\n" +
+				"    convox rack params set cost_tracking_enable=true\n" +
+				"  Wait ~3 min for the apply to complete, then redeploy.",
+		)
+	}
+	return nil
 }

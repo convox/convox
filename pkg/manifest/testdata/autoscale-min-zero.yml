@@ -1,0 +1,6 @@
+services:
+  idle:
+    build: .
+    port: 3000
+    scale:
+      min: 0

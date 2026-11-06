@@ -1,0 +1,6404 @@
+# app
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    convox.com/lock: "false"
+    convox.com/params: '{"Bar":"x\"y","Foo":"a\u0026b"}'
+  labels:
+    name: myapp
+    pod-security.kubernetes.io/enforce: baseline
+    type: app
+  name: rack-myapp
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Namespace
+    name: rack
+    uid: uid1
+# ca
+apiVersion: v1
+binaryData:
+  ca.crt: Y2E=
+kind: ConfigMap
+metadata:
+  name: ca
+  namespace: rack-myapp
+# balancer edgebal
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    true: "yes"
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Team=platform,Env=prod
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    x.example.com/amp: a&b&amp;c
+    x.example.com/json: '{"a": "b", "c": [1, 2]}'
+    x.example.com/quoted: a "quoted" value
+  labels:
+    true: x
+    balancer: edgebal
+    enabled: "true"
+    service: web
+    team: platform
+    type: balancer
+    version: "1.0"
+  name: balancer-edgebal
+  namespace: rack-myapp
+spec:
+  externalTrafficPolicy: Cluster
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8
+  - 192.168.0.0/16
+  ports:
+  - name: "3000"
+    port: 3000
+    protocol: TCP
+    targetPort: 3000
+  - name: "5000"
+    port: 5000
+    protocol: UDP
+    targetPort: 5000
+  selector:
+    service: web
+    type: service
+  type: LoadBalancer
+# app/ingress web
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    true: "1"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-A: b";
+      more_set_headers "X-C: d";
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 120s;
+      client_body_timeout 120s;
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.0.0/16
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: a.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: '*.example.com'
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - a.example.com
+    - '*.example.com'
+    secretName: cert-web-domains
+# app/ingress-internal web
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    true: "1"
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-A: b";
+      more_set_headers "X-C: d";
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 120s;
+      client_body_timeout 120s;
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.0.0/16
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: a.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: '*.example.com'
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - a.example.com
+    - '*.example.com'
+    secretName: cert-web-domains
+# httpproxy web
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    true: "1"
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: web.myapp.example.org
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  labels:
+    app: myapp
+    service: web
+    system: convox
+    type: service
+  name: web-domain-0
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: a.example.com
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  labels:
+    app: myapp
+    service: web
+    system: convox
+    type: service
+  name: web-domain-1
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: '*.example.com'
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+# certificate web
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    service: web
+    system: convox
+    type: service
+  name: cert-web
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - web.myapp.example.org
+  duration: 2160h0m0s
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-web
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    service: web
+    system: convox
+    type: service
+  name: cert-web-domains
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - a.example.com
+  - '*.example.com'
+  duration: 2160h0m0s
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-web-domains
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+# efs web
+null
+# azurefiles web
+null
+# service web
+apiVersion: v1
+data:
+  true: eWVz
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+  SVC_ONLY: MQ==
+kind: Secret
+metadata:
+  labels:
+    true: "off"
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    team: platform
+    tier: "1"
+    type: env
+    version: "1.0"
+  name: env-web
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    "~": tilde
+    "0x1F": hex
+    "1": one
+    "1.5": float
+    bs: C:\path\to
+    colon.key: 'a: b'
+    empty: ""
+    foo bar: space key
+    hashval: 'a #b'
+    json: '{"k": "v"}'
+    keep: |+
+      line one
+      line two
+
+    'key ': ' value'
+    key1: value1
+    lead: '  x'
+    ls: 'a       b'
+    "n": "no"
+    nel: "a\Nb"
+    nl: |2+
+
+    "null": nothing
+    spaces: '  padded  '
+    tab: "a\tb"
+    "true": "on"
+    unicode: héllo wörld
+    "yes": "1"
+  labels:
+    true: "off"
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    team: platform
+    tier: "1"
+    type: serviceaccount
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: web
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        "~": tilde
+        "0x1F": hex
+        "1": one
+        "1.5": float
+        bs: C:\path\to
+        colon.key: 'a: b'
+        empty: ""
+        foo bar: space key
+        hashval: 'a #b'
+        json: '{"k": "v"}'
+        keep: |+
+          line one
+          line two
+
+        'key ': ' value'
+        key1: value1
+        lead: '  x'
+        ls: 'a           b'
+        "n": "no"
+        nel: "a\Nb"
+        nl: |2+
+
+        "null": nothing
+        spaces: '  padded  '
+        tab: "a\tb"
+        "true": "on"
+        unicode: héllo wörld
+        "yes": "1"
+      labels:
+        true: "off"
+        app: myapp
+        app.kubernetes.io/name: web
+        enabled: "true"
+        flag: "yes"
+        name: web
+        rack: rack
+        release: RABCDEF
+        service: web
+        system: convox
+        team: platform
+        tier: "1"
+        type: service
+        version: "1.0"
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - m5.large
+            weight: 10
+          - preference:
+              matchExpressions:
+              - key: example.com/bool
+                operator: In
+                values:
+                - true
+            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: convox.io/label
+                operator: In
+                values:
+                - true
+              - key: example.com/block
+                operator: In
+                values:
+                - gpu
+              - key: example.com/booln
+                operator: In
+                values:
+                - true
+              - key: example.com/hash
+                operator: In
+                values:
+                - x#y
+              - key: example.com/null
+                operator: In
+                values:
+                - null
+              - key: example.com/num
+                operator: In
+                values:
+                - 123
+              - key: example.com/pct
+                operator: In
+                values:
+                - 100%
+              - key: example.com/space
+                operator: In
+                values:
+                - a b
+              - key: example.com/uni
+                operator: In
+                values:
+                - é
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+      containers:
+      - args:
+        - sh
+        - -c
+        - echo a && echo b | grep -v c; curl 'http://x/?a=1¶=2&b=<c'
+        env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-db
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-db
+        - name: DB_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-db
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-db
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-db
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-db
+        - name: CACHE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-cache
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: repo1:web.BABC
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - echo
+              - ¶
+              - '&'
+          preStop:
+            exec:
+              command:
+              - sleep
+              - "5"
+              - '&&'
+              - echo
+              - bye
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /live?a=b&c=d
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: myapp
+        ports:
+        - containerPort: 3000
+          name: main
+        - containerPort: 5000
+          name: port-5000
+          protocol: UDP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health?x=1&y=2
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+        - mountPath: /etc/my app/app config.json
+          name: cfg-cfg1
+          subPath: app config.json
+        - mountPath: /etc/app/settings.yml
+          name: cfg-cfg2
+          subPath: settings.yml
+        - mountPath: /var/cache dir
+          name: ed-cache
+        - mountPath: /tmp/a#b
+          name: ed-tmp2
+        - mountPath: /scratch
+          name: ed-scratch
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      initContainers:
+      - args:
+        - sh
+        - -c
+        - echo init && touch /var/cache\ dir/x
+        env:
+        - name: INIT_CONTAINER
+          value: "true"
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-db
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-db
+        - name: DB_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-db
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-db
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-db
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-db
+        - name: CACHE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-cache
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: busybox@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        name: init
+        volumeMounts:
+        - mountPath: /var/cache dir
+          name: ed-cache
+        - mountPath: /etc/my app/app config.json
+          name: cfg-cfg1
+          subPath: app config.json
+      serviceAccountName: web
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: dedicated-node
+        operator: Equal
+        value: "true"
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+        name: ed-cache
+      - emptyDir: {}
+        name: ed-tmp2
+      - emptyDir: {}
+        name: ed-scratch
+      - name: cfg-cfg1
+        secret:
+          items:
+          - key: app.json
+            path: app config.json
+          secretName: cfg-cfg1
+      - name: cfg-cfg2
+        secret:
+          items:
+          - key: app.json
+            path: settings.yml
+          secretName: cfg-cfg2
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    true: "off"
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    service: web
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 50
+        type: Utilization
+    type: Resource
+  - external:
+      metric:
+        name: sqs.queue/messages
+        selector:
+          matchLabels:
+            true: true
+            queue: my queue
+      target:
+        averageValue: 30
+        type: AverageValue
+    type: External
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: web.myapp.rack.local
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    rack: rack
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 3000
+    protocol: TCP
+    targetPort: main
+  - name: port-5000
+    port: 5000
+    protocol: UDP
+    targetPort: 5000
+  selector:
+    service: web
+    type: service
+  type: ClusterIP
+# app/ingress db
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: db.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: db
+            port:
+              number: 5432
+        pathType: ImplementationSpecific
+  tls: null
+# app/ingress-internal db
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: db.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: db
+            port:
+              number: 5432
+        pathType: ImplementationSpecific
+  tls: null
+# httpproxy db
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: db
+      port: 5432
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: db.myapp.example.org
+    tls:
+      secretName: my-cert
+# certificate db
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    service: db
+    system: convox
+    type: service
+  name: cert-db
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - db.myapp.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-db
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+# efs db
+null
+# azurefiles db
+null
+# service db
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    enabled: "true"
+    service: db
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-db
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    enabled: "true"
+    service: db
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    atom.conditions: Ready=True
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: db
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: db
+      system: convox
+  serviceName: db-headless
+  template:
+    metadata:
+      annotations: null
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: db
+        rack: rack
+        release: RABCDEF
+        service: db
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-db
+        image: repo1:db.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 5432
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 5432
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+        - mountPath: /var/lib/data dir
+          name: pvc-data
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: db
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      name: pvc-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp3
+      volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    rack: rack
+    service: db
+    system: convox
+    team: platform
+    version: "1.0"
+  name: db-headless
+  namespace: rack-myapp
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    service: db
+    type: service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: db.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    rack: rack
+    service: db
+    system: convox
+    team: platform
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 5432
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: db
+    type: service
+  type: ClusterIP
+# app/ingress agent
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: ""
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agent.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: agent
+            port:
+              number: 0
+        pathType: ImplementationSpecific
+  tls: null
+# app/ingress-internal agent
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: ""
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agent.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: agent
+            port:
+              number: 0
+        pathType: ImplementationSpecific
+  tls: null
+# httpproxy agent
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: agent
+      port: 0
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: agent.myapp.example.org
+    tls:
+      secretName: my-cert
+# certificate agent
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    service: agent
+    system: convox
+    type: service
+  name: cert-agent
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - agent.myapp.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-agent
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+# efs agent
+null
+# azurefiles agent
+null
+# service agent
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    enabled: "true"
+    service: agent
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-agent
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    enabled: "true"
+    service: agent
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations: null
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: agent
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: agent
+      system: convox
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: agent
+        rack: rack
+        release: RABCDEF
+        service: agent
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-agent
+        image: repo1:agent.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 8125
+          hostPort: 8125
+          name: port-8125
+          protocol: UDP
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: agent
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: agent.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    rack: rack
+    service: agent
+    system: convox
+    team: platform
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: port-8125
+    port: 8125
+    protocol: UDP
+    targetPort: 8125
+  selector:
+    service: agent
+    type: service
+  type: ClusterIP
+# app/ingress single
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: https
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: single.myapp.internal.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: single
+            port:
+              number: 4000
+        pathType: ImplementationSpecific
+  tls: null
+# app/ingress-internal single
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: https
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: single.myapp.internal.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: single
+            port:
+              number: 4000
+        pathType: ImplementationSpecific
+  tls: null
+# httpproxy single
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: single
+      port: 4000
+      protocol: tls
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: single.myapp.internal.example.org
+    tls:
+      secretName: my-cert
+# certificate single
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    service: single
+    system: convox
+    type: service
+  name: cert-single
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - single.myapp.internal.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-single
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+# efs single
+null
+# azurefiles single
+null
+# service single
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    enabled: "true"
+    service: single
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-single
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    enabled: "true"
+    service: single
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    service: single
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: single
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations: null
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: single
+        rack: rack
+        release: RABCDEF
+        service: single
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-single
+        image: repo1:single.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 4000
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /h
+            port: 4000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: single
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: single.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    rack: rack
+    service: single
+    system: convox
+    team: platform
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 4000
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: single
+    type: service
+  type: ClusterIP
+# timer cleanup
+null
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    convox.com/type: timer
+    keep: |+
+      a
+
+    'key ': ' value'
+    nl: |2+
+
+    "null": x
+    "true": "on"
+  labels:
+    timer: cleanup
+    type: serviceaccount
+  name: timer-cleanup
+  namespace: rack-myapp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: timer-cleanup
+  namespace: rack-myapp
+spec:
+  concurrencyPolicy: forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          annotations:
+            convox.com/type: timer
+            keep: |+
+              a
+
+            'key ': ' value'
+            nl: |2+
+
+            "null": x
+            "true": "on"
+          labels:
+            true: "off"
+            app: myapp
+            app.kubernetes.io/name: web
+            enabled: "true"
+            flag: "yes"
+            name: cleanup
+            rack: rack
+            release: RABCDEF
+            service: web
+            system: convox
+            team: platform
+            tier: "1"
+            type: timer
+            version: "1.0"
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - m5.large
+                weight: 10
+              - preference:
+                  matchExpressions:
+                  - key: example.com/bool
+                    operator: In
+                    values:
+                    - true
+                weight: 1
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: convox.io/label
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/block
+                    operator: In
+                    values:
+                    - gpu
+                  - key: example.com/booln
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/hash
+                    operator: In
+                    values:
+                    - x#y
+                  - key: example.com/null
+                    operator: In
+                    values:
+                    - null
+                  - key: example.com/num
+                    operator: In
+                    values:
+                    - 123
+                  - key: example.com/pct
+                    operator: In
+                    values:
+                    - 100%
+                  - key: example.com/space
+                    operator: In
+                    values:
+                    - a b
+                  - key: example.com/uni
+                    operator: In
+                    values:
+                    - é
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64
+          containers:
+          - args:
+            - bin/cleanup
+            - --since
+            - 1 day
+            - '&&'
+            - echo
+            - '&'
+            env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-db
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-db
+            - name: DB_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-db
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-db
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-db
+            - name: CACHE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-cache
+            envFrom:
+            - secretRef:
+                name: env-web
+            image: repo1:web.BABC
+            imagePullPolicy: IfNotPresent
+            name: myapp
+            resources:
+              limits:
+                memory: 512Mi
+              requests:
+                cpu: 256m
+                memory: 512Mi
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - mountPath: /etc/convox
+              name: ca
+            - mountPath: /etc/my app/app config.json
+              name: cfg-cfg1
+              subPath: app config.json
+            - mountPath: /etc/app/settings.yml
+              name: cfg-cfg2
+              subPath: settings.yml
+            - mountPath: /var/cache dir
+              name: ed-cache
+            - mountPath: /tmp/a#b
+              name: ed-tmp2
+            - mountPath: /scratch
+              name: ed-scratch
+          dnsConfig:
+            nameservers:
+            - 10.0.0.10
+            searches:
+            - myapp.rack.local
+            - rack-myapp.svc.cluster.local
+            - rack.local
+            - svc.cluster.local
+            - cluster.local
+          dnsPolicy: None
+          imagePullSecrets:
+          - name: docker-hub-authentication
+          - name: x
+          restartPolicy: Never
+          serviceAccountName: timer-cleanup
+          shareProcessNamespace: true
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            key: dedicated-node
+            operator: Equal
+            value: "true"
+          volumes:
+          - configMap:
+              name: ca
+              optional: true
+            name: ca
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 1Gi
+            name: ed-cache
+          - emptyDir: {}
+            name: ed-tmp2
+          - emptyDir: {}
+            name: ed-scratch
+          - name: cfg-cfg1
+            secret:
+              items:
+              - key: app.json
+                path: app config.json
+              secretName: cfg-cfg1
+          - name: cfg-cfg2
+            secret:
+              items:
+              - key: app.json
+                path: settings.yml
+              secretName: cfg-cfg2
+  schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 1
+# timer daily
+null
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    convox.com/type: timer
+  labels:
+    timer: daily
+    type: serviceaccount
+  name: timer-daily
+  namespace: rack-myapp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: timer-daily
+  namespace: rack-myapp
+spec:
+  concurrencyPolicy: null
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          annotations:
+            convox.com/type: timer
+          labels:
+            true: "off"
+            app: myapp
+            app.kubernetes.io/name: web
+            enabled: "true"
+            flag: "yes"
+            name: daily
+            rack: rack
+            release: RABCDEF
+            service: web
+            system: convox
+            team: platform
+            tier: "1"
+            type: timer
+            version: "1.0"
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - m5.large
+                weight: 10
+              - preference:
+                  matchExpressions:
+                  - key: example.com/bool
+                    operator: In
+                    values:
+                    - true
+                weight: 1
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: convox.io/label
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/block
+                    operator: In
+                    values:
+                    - gpu
+                  - key: example.com/booln
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/hash
+                    operator: In
+                    values:
+                    - x#y
+                  - key: example.com/null
+                    operator: In
+                    values:
+                    - null
+                  - key: example.com/num
+                    operator: In
+                    values:
+                    - 123
+                  - key: example.com/pct
+                    operator: In
+                    values:
+                    - 100%
+                  - key: example.com/space
+                    operator: In
+                    values:
+                    - a b
+                  - key: example.com/uni
+                    operator: In
+                    values:
+                    - é
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64
+          containers:
+          - args:
+            - bin/daily
+            env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-db
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-db
+            - name: DB_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-db
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-db
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-db
+            - name: CACHE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-cache
+            envFrom:
+            - secretRef:
+                name: env-web
+            image: repo1:web.BABC
+            imagePullPolicy: IfNotPresent
+            name: myapp
+            resources:
+              limits:
+                memory: 512Mi
+              requests:
+                cpu: 256m
+                memory: 512Mi
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - mountPath: /etc/convox
+              name: ca
+            - mountPath: /etc/my app/app config.json
+              name: cfg-cfg1
+              subPath: app config.json
+            - mountPath: /etc/app/settings.yml
+              name: cfg-cfg2
+              subPath: settings.yml
+            - mountPath: /var/cache dir
+              name: ed-cache
+            - mountPath: /tmp/a#b
+              name: ed-tmp2
+            - mountPath: /scratch
+              name: ed-scratch
+          dnsConfig:
+            nameservers:
+            - 10.0.0.10
+            searches:
+            - myapp.rack.local
+            - rack-myapp.svc.cluster.local
+            - rack.local
+            - svc.cluster.local
+            - cluster.local
+          dnsPolicy: None
+          imagePullSecrets:
+          - name: docker-hub-authentication
+          - name: x
+          restartPolicy: Never
+          serviceAccountName: timer-daily
+          shareProcessNamespace: true
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            key: dedicated-node
+            operator: Equal
+            value: "true"
+          volumes:
+          - configMap:
+              name: ca
+              optional: true
+            name: ca
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 1Gi
+            name: ed-cache
+          - emptyDir: {}
+            name: ed-tmp2
+          - emptyDir: {}
+            name: ed-scratch
+          - name: cfg-cfg1
+            secret:
+              items:
+              - key: app.json
+                path: app config.json
+              secretName: cfg-cfg1
+          - name: cfg-cfg2
+            secret:
+              items:
+              - key: app.json
+                path: settings.yml
+              secretName: cfg-cfg2
+  schedule: 0 3 * * *
+  successfulJobsHistoryLimit: 1
+# resource db
+apiVersion: v1
+data:
+  HOST: resource-db.rack-myapp.svc.cluster.local
+  NAME: app
+  PASS: abc123
+  PORT: "5432"
+  URL: postgres://app:abc123@resource-db.rack-myapp.svc.cluster.local:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: postgres
+    name: db
+    rack: rack
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: db
+      system: convox
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: db
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: app
+        - name: POSTGRES_USER
+          value: app
+        - name: POSTGRES_PASSWORD
+          value: abc123
+        - name: PGDATA
+          value: /var/lib/postgresql/data/data
+        image: postgres:13.4
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-db.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+  type: NodePort
+# masked db
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+# rds-postgres db
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-postgres
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# rds-mysql db
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-mysql
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# rds-mariadb db
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-mariadb
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# elasticache-redis db
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: db
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# elasticache-memcached db
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: db
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# resource cache
+apiVersion: v1
+data:
+  HOST: resource-cache.rack-myapp.svc.cluster.local
+  NAME: ""
+  PASS: ""
+  PORT: "6379"
+  URL: redis://resource-cache.rack-myapp.svc.cluster.local:6379
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: redis
+    rack: rack
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: cache
+      system: convox
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: cache
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - image: redis@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        imagePullPolicy: IfNotPresent
+        name: redis
+        ports:
+        - containerPort: 6379
+        resources:
+          limits: null
+          requests: null
+      imagePullSecrets:
+      - name: docker-hub-authentication
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-cache.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    rack: rack
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: myapp
+    rack: rack
+    resource: cache
+    system: convox
+  type: NodePort
+# masked cache
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+# rds-postgres cache
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: cache
+    system: convox
+    type: rds-postgres
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+# rds-mysql cache
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: cache
+    system: convox
+    type: rds-mysql
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+# rds-mariadb cache
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: cache
+    system: convox
+    type: rds-mariadb
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+# elasticache-redis cache
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: cache
+    system: convox
+    type: elasticache-memcached
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+# elasticache-memcached cache
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: cache
+    system: convox
+    type: elasticache-memcached
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+# resource db2
+apiVersion: v1
+data:
+  HOST: resource-db.rack-myapp.svc.cluster.local
+  NAME: app
+  PASS: abc123
+  PORT: "3306"
+  URL: mysql://root:abc123@resource-db.rack-myapp.svc.cluster.local:3306/app
+  USER: root
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: mysql
+    rack: rack
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: db2
+      system: convox
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: db2
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          value: app
+        - name: MYSQL_ROOT_PASSWORD
+          value: abc123
+        image: mysql:8.4
+        imagePullPolicy: IfNotPresent
+        name: mysql
+        ports:
+        - containerPort: 3306
+        resources:
+          limits: null
+          requests: null
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: mysql
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-db.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+  type: NodePort
+# masked db2
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+# rds-postgres db2
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-postgres
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# rds-mysql db2
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-mysql
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# rds-mariadb db2
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: rds
+    rack: rack
+    resource: db
+    system: convox
+    type: rds-mariadb
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# elasticache-redis db2
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: db2
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# elasticache-memcached db2
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provisioner: elasticache
+    rack: rack
+    resource: db2
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+# applylabels
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    convox.com/lock: "false"
+    convox.com/params: '{"Bar":"x\"y","Foo":"a\u0026b"}'
+  labels:
+    app: myapp
+    name: myapp
+    pod-security.kubernetes.io/enforce: baseline
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+    type: app
+  name: rack-myapp
+  ownerReferences:
+  - apiVersion: v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: Namespace
+    name: rack
+    uid: uid1
+---
+apiVersion: v1
+binaryData:
+  ca.crt: Y2E=
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+  name: ca
+  namespace: rack-myapp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    true: "yes"
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: Team=platform,Env=prod
+    service.beta.kubernetes.io/aws-load-balancer-attributes: load_balancing.cross_zone.enabled=true
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    x.example.com/amp: a&b&amp;c
+    x.example.com/json: '{"a": "b", "c": [1, 2]}'
+    x.example.com/quoted: a "quoted" value
+  labels:
+    true: x
+    app: myapp
+    balancer: edgebal
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    type: balancer
+    version: "1.0"
+  name: balancer-edgebal
+  namespace: rack-myapp
+spec:
+  externalTrafficPolicy: Cluster
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8
+  - 192.168.0.0/16
+  ports:
+  - name: "3000"
+    port: 3000
+    protocol: TCP
+    targetPort: 3000
+  - name: "5000"
+    port: 5000
+    protocol: UDP
+    targetPort: 5000
+  selector:
+    service: web
+    type: service
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    true: "1"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-A: b";
+      more_set_headers "X-C: d";
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 120s;
+      client_body_timeout 120s;
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.0.0/16
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: a.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: '*.example.com'
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - a.example.com
+    - '*.example.com'
+    secretName: cert-web-domains
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    true: "1"
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-A: b";
+      more_set_headers "X-C: d";
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 120s;
+      client_body_timeout 120s;
+    nginx.ingress.kubernetes.io/session-cookie-name: CONVOXSESSION
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/whitelist-source-range: 10.0.0.0/8,192.168.0.0/16
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: web.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: a.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  - host: '*.example.com'
+    http:
+      paths:
+      - backend:
+          service:
+            name: web
+            port:
+              number: 3000
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - a.example.com
+    - '*.example.com'
+    secretName: cert-web-domains
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    true: "1"
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    key: ' value'
+    x.example.com/amp: a&b
+    x.example.com/att: AT&T
+    x.example.com/bs: a\b
+    x.example.com/copy: ©
+    x.example.com/ent: '&'
+    x.example.com/para: ?a=1¶=2
+    x.example.com/quote: say "hi"
+    x.example.com/region: ?a=1®ion=us
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: web.myapp.example.org
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    type: service
+  name: web-domain-0
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: a.example.com
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    type: service
+  name: web-domain-1
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    loadBalancerPolicy:
+      strategy: Cookie
+    services:
+    - name: web
+      port: 3000
+    timeoutPolicy:
+      idle: 120s
+      response: infinity
+  virtualhost:
+    fqdn: '*.example.com'
+    ipAllowPolicy:
+    - cidr: 10.0.0.0/8
+      source: Remote
+    - cidr: 192.168.0.0/16
+      source: Remote
+    tls:
+      secretName: my-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    type: service
+  name: cert-web
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - web.myapp.example.org
+  duration: 2160h0m0s
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-web
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    type: service
+  name: cert-web-domains
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - a.example.com
+  - '*.example.com'
+  duration: 2160h0m0s
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-web-domains
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+null
+---
+null
+---
+apiVersion: v1
+data:
+  true: eWVz
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+  SVC_ONLY: MQ==
+kind: Secret
+metadata:
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: env
+    version: "1.0"
+  name: env-web
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    "~": tilde
+    "0x1F": hex
+    "1": one
+    "1.5": float
+    bs: C:\path\to
+    colon.key: 'a: b'
+    empty: ""
+    foo bar: space key
+    hashval: 'a #b'
+    json: '{"k": "v"}'
+    keep: |+
+      line one
+      line two
+
+    'key ': ' value'
+    key1: value1
+    lead: '  x'
+    ls: 'a       b'
+    "n": "no"
+    nel: "a\Nb"
+    nl: |2+
+
+    "null": nothing
+    spaces: '  padded  '
+    tab: "a\tb"
+    "true": "on"
+    unicode: héllo wörld
+    "yes": "1"
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: serviceaccount
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    type: service
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: web
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        "~": tilde
+        "0x1F": hex
+        "1": one
+        "1.5": float
+        bs: C:\path\to
+        colon.key: 'a: b'
+        empty: ""
+        foo bar: space key
+        hashval: 'a #b'
+        json: '{"k": "v"}'
+        keep: |+
+          line one
+          line two
+
+        'key ': ' value'
+        key1: value1
+        lead: '  x'
+        ls: 'a           b'
+        "n": "no"
+        nel: "a\Nb"
+        nl: |2+
+
+        "null": nothing
+        spaces: '  padded  '
+        tab: "a\tb"
+        "true": "on"
+        unicode: héllo wörld
+        "yes": "1"
+      labels:
+        true: "off"
+        app: myapp
+        app.kubernetes.io/name: web
+        enabled: "true"
+        flag: "yes"
+        name: web
+        rack: rack
+        release: RABCDEF
+        service: web
+        system: convox
+        team: platform
+        tier: "1"
+        type: service
+        version: "1.0"
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - m5.large
+            weight: 10
+          - preference:
+              matchExpressions:
+              - key: example.com/bool
+                operator: In
+                values:
+                - true
+            weight: 1
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: convox.io/label
+                operator: In
+                values:
+                - true
+              - key: example.com/block
+                operator: In
+                values:
+                - gpu
+              - key: example.com/booln
+                operator: In
+                values:
+                - true
+              - key: example.com/hash
+                operator: In
+                values:
+                - x#y
+              - key: example.com/null
+                operator: In
+                values:
+                - null
+              - key: example.com/num
+                operator: In
+                values:
+                - 123
+              - key: example.com/pct
+                operator: In
+                values:
+                - 100%
+              - key: example.com/space
+                operator: In
+                values:
+                - a b
+              - key: example.com/uni
+                operator: In
+                values:
+                - é
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+      containers:
+      - args:
+        - sh
+        - -c
+        - echo a && echo b | grep -v c; curl 'http://x/?a=1¶=2&b=<c'
+        env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-db
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-db
+        - name: DB_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-db
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-db
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-db
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-db
+        - name: CACHE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-cache
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: repo1:web.BABC
+        imagePullPolicy: IfNotPresent
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - echo
+              - ¶
+              - '&'
+          preStop:
+            exec:
+              command:
+              - sleep
+              - "5"
+              - '&&'
+              - echo
+              - bye
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /live?a=b&c=d
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: myapp
+        ports:
+        - containerPort: 3000
+          name: main
+        - containerPort: 5000
+          name: port-5000
+          protocol: UDP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health?x=1&y=2
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 256m
+            memory: 512Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            drop:
+            - ALL
+          seccompProfile:
+            type: RuntimeDefault
+        startupProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          successThreshold: 1
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+        - mountPath: /etc/my app/app config.json
+          name: cfg-cfg1
+          subPath: app config.json
+        - mountPath: /etc/app/settings.yml
+          name: cfg-cfg2
+          subPath: settings.yml
+        - mountPath: /var/cache dir
+          name: ed-cache
+        - mountPath: /tmp/a#b
+          name: ed-tmp2
+        - mountPath: /scratch
+          name: ed-scratch
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      initContainers:
+      - args:
+        - sh
+        - -c
+        - echo init && touch /var/cache\ dir/x
+        env:
+        - name: INIT_CONTAINER
+          value: "true"
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-db
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              key: USER
+              name: resource-db
+        - name: DB_PASS
+          valueFrom:
+            configMapKeyRef:
+              key: PASS
+              name: resource-db
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              key: HOST
+              name: resource-db
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: resource-db
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              key: NAME
+              name: resource-db
+        - name: CACHE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: URL
+              name: resource-cache
+        envFrom:
+        - secretRef:
+            name: env-web
+        image: busybox@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        name: init
+        volumeMounts:
+        - mountPath: /var/cache dir
+          name: ed-cache
+        - mountPath: /etc/my app/app config.json
+          name: cfg-cfg1
+          subPath: app config.json
+      serviceAccountName: web
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: dedicated-node
+        operator: Equal
+        value: "true"
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 1Gi
+        name: ed-cache
+      - emptyDir: {}
+        name: ed-tmp2
+      - emptyDir: {}
+        name: ed-scratch
+      - name: cfg-cfg1
+        secret:
+          items:
+          - key: app.json
+            path: app config.json
+          secretName: cfg-cfg1
+      - name: cfg-cfg2
+        secret:
+          items:
+          - key: app.json
+            path: settings.yml
+          secretName: cfg-cfg2
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  maxReplicas: 3
+  metrics:
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: 50
+        type: Utilization
+    type: Resource
+  - external:
+      metric:
+        name: sqs.queue/messages
+        selector:
+          matchLabels:
+            true: true
+            queue: my queue
+      target:
+        averageValue: 30
+        type: AverageValue
+    type: External
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: web.myapp.rack.local
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: web
+    system: convox
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: web
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 3000
+    protocol: TCP
+    targetPort: main
+  - name: port-5000
+    port: 5000
+    protocol: UDP
+    targetPort: 5000
+  selector:
+    service: web
+    type: service
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: db.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: db
+            port:
+              number: 5432
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: http
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: db.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: db
+            port:
+              number: 5432
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: http
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: db
+      port: 5432
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: db.myapp.example.org
+    tls:
+      secretName: my-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    type: service
+  name: cert-db
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - db.myapp.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-db
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+null
+---
+null
+---
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-db
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    atom.conditions: Ready=True
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: db
+      system: convox
+  serviceName: db-headless
+  template:
+    metadata:
+      annotations: null
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: db
+        rack: rack
+        release: RABCDEF
+        service: db
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-db
+        image: repo1:db.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 5432
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 5432
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+        - mountPath: /var/lib/data dir
+          name: pvc-data
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: db
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      name: pvc-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: gp3
+      volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    version: "1.0"
+  name: db-headless
+  namespace: rack-myapp
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    service: db
+    type: service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: db.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: db
+    system: convox
+    team: platform
+    version: "1.0"
+  name: db
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 5432
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: db
+    type: service
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: ""
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agent.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: agent
+            port:
+              number: 0
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: ""
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agent.myapp.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: agent
+            port:
+              number: 0
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: ""
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: agent
+      port: 0
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: agent.myapp.example.org
+    tls:
+      secretName: my-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    type: service
+  name: cert-agent
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - agent.myapp.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-agent
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+null
+---
+null
+---
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-agent
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations: null
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: agent
+      system: convox
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: agent
+        rack: rack
+        release: RABCDEF
+        service: agent
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-agent
+        image: repo1:agent.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 8125
+          hostPort: 8125
+          name: port-8125
+          protocol: UDP
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: agent
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: agent.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: agent
+    system: convox
+    team: platform
+    version: "1.0"
+  name: agent
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: port-8125
+    port: 8125
+    protocol: UDP
+    targetPort: 8125
+  selector:
+    service: agent
+    type: service
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: https
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: single.myapp.internal.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: single
+            port:
+              number: 4000
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    cert-manager.io/cluster-issuer: letsencrypt
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+    nginx.ingress.kubernetes.io/backend-protocol: https
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      keepalive_timeout 60s;
+      client_body_timeout 60s;
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single-internal
+  namespace: rack-myapp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: single.myapp.internal.example.org
+    http:
+      paths:
+      - backend:
+          service:
+            name: single
+            port:
+              number: 4000
+        pathType: ImplementationSpecific
+  tls: null
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  annotations:
+    convox.com/backend-protocol: https
+    convox.com/idles: "false"
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ingressClassName: contour
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    services:
+    - name: single
+      port: 4000
+      protocol: tls
+    timeoutPolicy:
+      idle: 60s
+      response: infinity
+  virtualhost:
+    fqdn: single.myapp.internal.example.org
+    tls:
+      secretName: my-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    type: service
+  name: cert-single
+  namespace: rack-myapp
+spec:
+  dnsNames:
+  - single.myapp.internal.example.org
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Never
+  secretName: cert-single
+  secretTemplate:
+    labels:
+      system: convox
+      type: letsencrypt-certificate
+  usages:
+  - digital signature
+  - key encipherment
+---
+null
+---
+null
+---
+apiVersion: v1
+data:
+  true: MQ==
+  DB_URL: cG9zdGdyZXM6Ly91OnBAaDo1NDMyL2RiP3NzbG1vZGU9cmVxdWlyZSZyZWdpb249dXMtZWFzdC0xJnBhcmE9MiZhbXA7eD0x
+  FOO_BAR: eA==
+  PORT: MzAwMA==
+kind: Secret
+metadata:
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: env
+    version: "1.0"
+  name: env-single
+  namespace: rack-myapp
+type: Opaque
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations: null
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: serviceaccount
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    type: service
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  minReadySeconds: 1
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      service: single
+      system: convox
+  strategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations: null
+      labels:
+        true: x
+        app: myapp
+        enabled: "true"
+        name: single
+        rack: rack
+        release: RABCDEF
+        service: single
+        system: convox
+        team: platform
+        type: service
+        version: "1.0"
+    spec:
+      containers:
+      - env:
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        envFrom:
+        - secretRef:
+            name: env-single
+        image: repo1:single.BABC
+        imagePullPolicy: IfNotPresent
+        name: myapp
+        ports:
+        - containerPort: 4000
+          name: main
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /h
+            port: 4000
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 4
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/convox
+          name: ca
+      dnsConfig:
+        nameservers:
+        - 10.0.0.10
+        searches:
+        - myapp.rack.local
+        - rack-myapp.svc.cluster.local
+        - rack.local
+        - svc.cluster.local
+        - cluster.local
+      dnsPolicy: None
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      - name: convox-x-y-pull-a
+      - name: convox-registry-authentication
+      serviceAccountName: single
+      shareProcessNamespace: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ca
+          optional: true
+        name: ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: single.myapp.rack.local
+  labels:
+    true: x
+    app: myapp
+    enabled: "true"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    service: single
+    system: convox
+    team: platform
+    version: "1.0"
+  name: single
+  namespace: rack-myapp
+spec:
+  ports:
+  - name: main
+    port: 4000
+    protocol: TCP
+    targetPort: main
+  selector:
+    service: single
+    type: service
+  type: ClusterIP
+---
+null
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    convox.com/type: timer
+    keep: |+
+      a
+
+    'key ': ' value'
+    nl: |2+
+
+    "null": x
+    "true": "on"
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+    timer: cleanup
+    type: serviceaccount
+  name: timer-cleanup
+  namespace: rack-myapp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+  name: timer-cleanup
+  namespace: rack-myapp
+spec:
+  concurrencyPolicy: forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          annotations:
+            convox.com/type: timer
+            keep: |+
+              a
+
+            'key ': ' value'
+            nl: |2+
+
+            "null": x
+            "true": "on"
+          labels:
+            true: "off"
+            app: myapp
+            app.kubernetes.io/name: web
+            enabled: "true"
+            flag: "yes"
+            name: cleanup
+            rack: rack
+            release: RABCDEF
+            service: web
+            system: convox
+            team: platform
+            tier: "1"
+            type: timer
+            version: "1.0"
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - m5.large
+                weight: 10
+              - preference:
+                  matchExpressions:
+                  - key: example.com/bool
+                    operator: In
+                    values:
+                    - true
+                weight: 1
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: convox.io/label
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/block
+                    operator: In
+                    values:
+                    - gpu
+                  - key: example.com/booln
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/hash
+                    operator: In
+                    values:
+                    - x#y
+                  - key: example.com/null
+                    operator: In
+                    values:
+                    - null
+                  - key: example.com/num
+                    operator: In
+                    values:
+                    - 123
+                  - key: example.com/pct
+                    operator: In
+                    values:
+                    - 100%
+                  - key: example.com/space
+                    operator: In
+                    values:
+                    - a b
+                  - key: example.com/uni
+                    operator: In
+                    values:
+                    - é
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64
+          containers:
+          - args:
+            - bin/cleanup
+            - --since
+            - 1 day
+            - '&&'
+            - echo
+            - '&'
+            env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-db
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-db
+            - name: DB_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-db
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-db
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-db
+            - name: CACHE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-cache
+            envFrom:
+            - secretRef:
+                name: env-web
+            image: repo1:web.BABC
+            imagePullPolicy: IfNotPresent
+            name: myapp
+            resources:
+              limits:
+                memory: 512Mi
+              requests:
+                cpu: 256m
+                memory: 512Mi
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - mountPath: /etc/convox
+              name: ca
+            - mountPath: /etc/my app/app config.json
+              name: cfg-cfg1
+              subPath: app config.json
+            - mountPath: /etc/app/settings.yml
+              name: cfg-cfg2
+              subPath: settings.yml
+            - mountPath: /var/cache dir
+              name: ed-cache
+            - mountPath: /tmp/a#b
+              name: ed-tmp2
+            - mountPath: /scratch
+              name: ed-scratch
+          dnsConfig:
+            nameservers:
+            - 10.0.0.10
+            searches:
+            - myapp.rack.local
+            - rack-myapp.svc.cluster.local
+            - rack.local
+            - svc.cluster.local
+            - cluster.local
+          dnsPolicy: None
+          imagePullSecrets:
+          - name: docker-hub-authentication
+          - name: x
+          restartPolicy: Never
+          serviceAccountName: timer-cleanup
+          shareProcessNamespace: true
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            key: dedicated-node
+            operator: Equal
+            value: "true"
+          volumes:
+          - configMap:
+              name: ca
+              optional: true
+            name: ca
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 1Gi
+            name: ed-cache
+          - emptyDir: {}
+            name: ed-tmp2
+          - emptyDir: {}
+            name: ed-scratch
+          - name: cfg-cfg1
+            secret:
+              items:
+              - key: app.json
+                path: app config.json
+              secretName: cfg-cfg1
+          - name: cfg-cfg2
+            secret:
+              items:
+              - key: app.json
+                path: settings.yml
+              secretName: cfg-cfg2
+  schedule: '*/5 * * * *'
+  successfulJobsHistoryLimit: 1
+---
+null
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    convox.com/type: timer
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+    timer: daily
+    type: serviceaccount
+  name: timer-daily
+  namespace: rack-myapp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+  name: timer-daily
+  namespace: rack-myapp
+spec:
+  concurrencyPolicy: null
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          annotations:
+            convox.com/type: timer
+          labels:
+            true: "off"
+            app: myapp
+            app.kubernetes.io/name: web
+            enabled: "true"
+            flag: "yes"
+            name: daily
+            rack: rack
+            release: RABCDEF
+            service: web
+            system: convox
+            team: platform
+            tier: "1"
+            type: timer
+            version: "1.0"
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+              - preference:
+                  matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                    - m5.large
+                weight: 10
+              - preference:
+                  matchExpressions:
+                  - key: example.com/bool
+                    operator: In
+                    values:
+                    - true
+                weight: 1
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: convox.io/label
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/block
+                    operator: In
+                    values:
+                    - gpu
+                  - key: example.com/booln
+                    operator: In
+                    values:
+                    - true
+                  - key: example.com/hash
+                    operator: In
+                    values:
+                    - x#y
+                  - key: example.com/null
+                    operator: In
+                    values:
+                    - null
+                  - key: example.com/num
+                    operator: In
+                    values:
+                    - 123
+                  - key: example.com/pct
+                    operator: In
+                    values:
+                    - 100%
+                  - key: example.com/space
+                    operator: In
+                    values:
+                    - a b
+                  - key: example.com/uni
+                    operator: In
+                    values:
+                    - é
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                    - arm64
+          containers:
+          - args:
+            - bin/daily
+            env:
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-db
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  key: USER
+                  name: resource-db
+            - name: DB_PASS
+              valueFrom:
+                configMapKeyRef:
+                  key: PASS
+                  name: resource-db
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: HOST
+                  name: resource-db
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: PORT
+                  name: resource-db
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: NAME
+                  name: resource-db
+            - name: CACHE_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: URL
+                  name: resource-cache
+            envFrom:
+            - secretRef:
+                name: env-web
+            image: repo1:web.BABC
+            imagePullPolicy: IfNotPresent
+            name: myapp
+            resources:
+              limits:
+                memory: 512Mi
+              requests:
+                cpu: 256m
+                memory: 512Mi
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                drop:
+                - ALL
+              seccompProfile:
+                type: RuntimeDefault
+            volumeMounts:
+            - mountPath: /etc/convox
+              name: ca
+            - mountPath: /etc/my app/app config.json
+              name: cfg-cfg1
+              subPath: app config.json
+            - mountPath: /etc/app/settings.yml
+              name: cfg-cfg2
+              subPath: settings.yml
+            - mountPath: /var/cache dir
+              name: ed-cache
+            - mountPath: /tmp/a#b
+              name: ed-tmp2
+            - mountPath: /scratch
+              name: ed-scratch
+          dnsConfig:
+            nameservers:
+            - 10.0.0.10
+            searches:
+            - myapp.rack.local
+            - rack-myapp.svc.cluster.local
+            - rack.local
+            - svc.cluster.local
+            - cluster.local
+          dnsPolicy: None
+          imagePullSecrets:
+          - name: docker-hub-authentication
+          - name: x
+          restartPolicy: Never
+          serviceAccountName: timer-daily
+          shareProcessNamespace: true
+          terminationGracePeriodSeconds: 30
+          tolerations:
+          - effect: NoSchedule
+            key: dedicated-node
+            operator: Equal
+            value: "true"
+          volumes:
+          - configMap:
+              name: ca
+              optional: true
+            name: ca
+          - emptyDir:
+              medium: Memory
+              sizeLimit: 1Gi
+            name: ed-cache
+          - emptyDir: {}
+            name: ed-tmp2
+          - emptyDir: {}
+            name: ed-scratch
+          - name: cfg-cfg1
+            secret:
+              items:
+              - key: app.json
+                path: app config.json
+              secretName: cfg-cfg1
+          - name: cfg-cfg2
+            secret:
+              items:
+              - key: app.json
+                path: settings.yml
+              secretName: cfg-cfg2
+  schedule: 0 3 * * *
+  successfulJobsHistoryLimit: 1
+---
+apiVersion: v1
+data:
+  HOST: resource-db.rack-myapp.svc.cluster.local
+  NAME: app
+  PASS: abc123
+  PORT: "5432"
+  URL: postgres://app:abc123@resource-db.rack-myapp.svc.cluster.local:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: postgres
+    name: db
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: db
+      system: convox
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: db
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: POSTGRES_DB
+          value: app
+        - name: POSTGRES_USER
+          value: app
+        - name: POSTGRES_PASSWORD
+          value: abc123
+        - name: PGDATA
+          value: /var/lib/postgresql/data/data
+        image: postgres:13.4
+        imagePullPolicy: IfNotPresent
+        name: postgres
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: data
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-db.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: myapp
+    rack: rack
+    resource: db
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-postgres
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-mysql
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-mariadb
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: resource-cache.rack-myapp.svc.cluster.local
+  NAME: ""
+  PASS: ""
+  PORT: "6379"
+  URL: redis://resource-cache.rack-myapp.svc.cluster.local:6379
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: redis
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: cache
+      system: convox
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: cache
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - image: redis@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        imagePullPolicy: IfNotPresent
+        name: redis
+        ports:
+        - containerPort: 6379
+        resources:
+          limits: null
+          requests: null
+      imagePullSecrets:
+      - name: docker-hub-authentication
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-cache.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: myapp
+    rack: rack
+    resource: cache
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: resource
+  name: resource-cache
+  namespace: rack-myapp
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: rds-postgres
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: rds-mysql
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: rds-mariadb
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: elasticache-memcached
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: cache
+    system: convox
+    type: elasticache-memcached
+  name: resource-cache
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: resource-db.rack-myapp.svc.cluster.local
+  NAME: app
+  PASS: abc123
+  PORT: "3306"
+  URL: mysql://root:abc123@resource-db.rack-myapp.svc.cluster.local:3306/app
+  USER: root
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    atom.conditions: Available=True,Progressing=True/NewReplicaSetAvailable
+  labels:
+    app: myapp
+    kind: mysql
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myapp
+      rack: rack
+      resource: db2
+      system: convox
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: myapp
+        rack: rack
+        resource: db2
+        system: convox
+        type: resource
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          value: app
+        - name: MYSQL_ROOT_PASSWORD
+          value: abc123
+        image: mysql:8.4
+        imagePullPolicy: IfNotPresent
+        name: mysql
+        ports:
+        - containerPort: 3306
+        resources:
+          limits: null
+          requests: null
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+          subPath: mysql
+      imagePullSecrets:
+      - name: docker-hub-authentication
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: resource-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    convox.com/alias: resource-db.rack-myapp.svc.cluster.local
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: myapp
+    rack: rack
+    resource: db2
+    system: convox
+  type: NodePort
+---
+apiVersion: v1
+data:
+  HOST: ""
+  NAME: ""
+  PASS: ""
+  PORT: ""
+  URL: postgres://h/db?a=1®ion=us¶=2&x
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: resource
+  name: resource-db
+  namespace: rack-myapp
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: postgres://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app?sslmode=disable
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-postgres
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-mysql
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: app
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: mysql://app:p@ss&w:rd/x@h.rds.amazonaws.com:5432/app
+  USER: app
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: rds
+    rack: rack
+    release: RABCDEF
+    resource: db
+    system: convox
+    type: rds-mariadb
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: p@ss&w:rd/x
+  PORT: "5432"
+  URL: rediss://p@ss&w:rd/x@h.rds.amazonaws.com:5432/0
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+apiVersion: v1
+data:
+  HOST: h.rds.amazonaws.com
+  NAME: ""
+  PASS: ""
+  PORT: "5432"
+  URL: memcached://h.rds.amazonaws.com:5432
+  USER: ""
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    provisioner: elasticache
+    rack: rack
+    release: RABCDEF
+    resource: db2
+    system: convox
+    type: elasticache-memcached
+  name: resource-db
+  namespace: rack-myapp
+---
+null
+---
+##|app:myapp|type:rds-postgres|resource:db|stateId:x|tid:|##---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: myapp
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+  name: last
+---
+##|app:myapp|type:elasticache-redis|resource:c|stateId:y|tid:t1|##

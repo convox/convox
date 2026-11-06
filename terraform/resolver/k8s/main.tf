@@ -4,7 +4,7 @@ resource "kubernetes_cluster_role" "resolver" {
   }
 
   rule {
-    api_groups = ["extensions"]
+    api_groups = ["extensions", "networking.k8s.io"]
     resources  = ["ingresses"]
     verbs      = ["get", "list", "watch"]
   }
@@ -12,6 +12,12 @@ resource "kubernetes_cluster_role" "resolver" {
   rule {
     api_groups = [""]
     resources  = ["services"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["projectcontour.io"]
+    resources  = ["httpproxies"]
     verbs      = ["get", "list", "watch"]
   }
 }
@@ -86,7 +92,9 @@ resource "kubernetes_deployment" "resolver" {
 
     template {
       metadata {
-        annotations = var.annotations
+        annotations = merge(var.annotations, {
+          "convox.com/internal-router" = tostring(var.internal_router)
+        })
 
         labels = {
           app     = "system"
@@ -102,6 +110,26 @@ resource "kubernetes_deployment" "resolver" {
         automount_service_account_token = true
         service_account_name            = "resolver"
         priority_class_name             = var.set_priority_class ? "system-cluster-critical" : null
+        node_selector                   = var.karpenter_enabled ? { "convox.io/system-node" = "true" } : {}
+
+        dynamic "toleration" {
+          for_each = var.karpenter_enabled ? [1] : []
+          content {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          }
+        }
+
+        dynamic "security_context" {
+          for_each = var.seccomp_default_enabled ? [1] : []
+          content {
+            seccomp_profile {
+              type = "RuntimeDefault"
+            }
+          }
+        }
 
         affinity {
           pod_anti_affinity {
@@ -127,10 +155,17 @@ resource "kubernetes_deployment" "resolver" {
           }
         }
         container {
-          name               = "system"
-          args               = ["resolver"]
-          image              = "${var.image}:${var.release}"
-          image_pull_policy  = "IfNotPresent"
+          name              = "system"
+          args              = ["resolver"]
+          image             = "${var.image}:${var.release}"
+          image_pull_policy = "IfNotPresent"
+
+          dynamic "security_context" {
+            for_each = var.system_readonly_rootfs_enabled ? [1] : []
+            content {
+              read_only_root_filesystem = true
+            }
+          }
 
           env {
             name = "NAMESPACE"

@@ -2,9 +2,13 @@ package common
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 )
+
+// ErrWaitTimeout lets callers replace the bare "timeout" with something that
+// names the app and the commands that help.
+var ErrWaitTimeout = errors.New("timeout")
 
 func Wait(interval time.Duration, timeout time.Duration, times int, fn func() (bool, error)) error {
 	return WaitContext(context.Background(), interval, timeout, times, fn)
@@ -12,7 +16,7 @@ func Wait(interval time.Duration, timeout time.Duration, times int, fn func() (b
 
 func WaitContext(ctx context.Context, interval time.Duration, timeout time.Duration, times int, fn func() (bool, error)) error {
 	successes := 0
-	errors := 0
+	failures := 0
 	start := time.Now().UTC()
 
 	tick := time.NewTicker(interval)
@@ -24,17 +28,17 @@ func WaitContext(ctx context.Context, interval time.Duration, timeout time.Durat
 			return nil
 		case <-tick.C:
 			if start.Add(timeout).Before(time.Now().UTC()) {
-				return fmt.Errorf("timeout")
+				return ErrWaitTimeout
 			}
 
 			success, err := fn()
 			if err != nil {
-				errors += 1
+				failures += 1
 			} else {
-				errors = 0
+				failures = 0
 			}
 
-			if errors >= times {
+			if failures >= times {
 				return err
 			}
 

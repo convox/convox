@@ -3,16 +3,17 @@ package aws
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/structs"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,7 +31,7 @@ func (p *Provider) appRegistry(app string) (string, error) {
 
 	registry := common.CoalesceString(as["convox.com/registry"], as["convox.registry"])
 	if registry == "" {
-		return "", fmt.Errorf("no registry for app: %s", app)
+		return "", structs.ErrNotFound("no registry for app: %s", app)
 	}
 
 	return registry, nil
@@ -38,13 +39,14 @@ func (p *Provider) appRegistry(app string) (string, error) {
 
 func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) {
 	if !ecrHostMatcher.MatchString(host) {
-		return "", "", fmt.Errorf("invalid ecr registry: %s", host)
+		return "", "", structs.ErrBadRequest("invalid ecr registry: %s", host)
 	}
 
 	m := ecrHostMatcher.FindStringSubmatch(host)
 
 	c := &aws.Config{
-		Region: aws.String(m[2]),
+		Region:              aws.String(m[2]),
+		STSRegionalEndpoint: endpoints.RegionalSTSEndpoint,
 	}
 
 	if access != "" {
@@ -61,10 +63,10 @@ func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) 
 		RegistryIds: []*string{aws.String(m[1])},
 	})
 	if err != nil {
-		return "", "", fmt.Errorf("unable to authenticate with ecr registry: %s", host)
+		return "", "", structs.ErrBadRequest("unable to authenticate with ecr registry: %s", host)
 	}
 	if len(res.AuthorizationData) != 1 {
-		return "", "", fmt.Errorf("invalid authorization data from ecr registry: %s", host)
+		return "", "", structs.ErrBadRequest("invalid authorization data from ecr registry: %s", host)
 	}
 
 	token, err := base64.StdEncoding.DecodeString(*res.AuthorizationData[0].AuthorizationToken)
@@ -74,7 +76,7 @@ func (p *Provider) ecrAuth(host, access, secret string) (string, string, error) 
 
 	parts := strings.SplitN(string(token), ":", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid authorization token from ecr registry: %s", host)
+		return "", "", structs.ErrBadRequest("invalid authorization token from ecr registry: %s", host)
 	}
 
 	return parts[0], parts[1], nil

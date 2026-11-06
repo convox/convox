@@ -1,0 +1,7 @@
+services:
+  web:
+    image: example/web:latest
+
+budget:
+  atCapAction: auto-shutdown
+  atCapWebhookUrl: https://hooks.example.com/budget

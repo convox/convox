@@ -1,9 +1,12 @@
 .env
 .terraform
+.claude/
 coverage.txt
 terraform.tfvars
 terraform/platform/convox.platform
+.claude/
 .DS_Store
 .vscode/
 cmd/convox/convox
 examples/httpd/*.tgz
+personal/

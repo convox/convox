@@ -2,6 +2,7 @@ package local
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/convox/convox/pkg/structs"
@@ -34,6 +35,14 @@ func FromEnv() (*Provider, error) {
 
 func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	opts.IgnorePriorityClass = true
+
+	// Ensure a self-signed CA secret exists before the parent initializes
+	// cert-manager. The k8s provider's installCertManagerConfig goroutine
+	// will find this secret and create the self-signed ClusterIssuer from it.
+	if err := p.EnsureSelfSignedCA(); err != nil {
+		fmt.Printf("warning: could not ensure self-signed CA: %s\n", err)
+	}
+
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}

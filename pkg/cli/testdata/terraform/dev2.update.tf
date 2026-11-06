@@ -7,7 +7,8 @@
 		}
 
 		output "api" {
-			value = module.system.api
+			value     = module.system.api
+			sensitive = true
 		}
 
 		output "provider" {

@@ -15,6 +15,9 @@ import (
 
 func TestDeploy(t *testing.T) {
 	testClientWait(t, 100*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -22,6 +25,7 @@ func TestDeploy(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
 		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{
@@ -52,6 +56,9 @@ func TestDeploy(t *testing.T) {
 
 func TestDeployError(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		// i.On("ClientType").Return("standard")
+		i.On("AppGet", "app1").Return(fxApp(), nil).Once()
+		i.On("ReleaseList", "app1", structs.ReleaseListOptions{Limit: options.Int(1)}).Return(structs.Releases{*fxRelease()}, nil).Once()
 		i.On("SystemGet").Return(fxSystem(), nil)
 		i.On("ObjectStore", "app1", mock.AnythingOfType("string"), mock.Anything, structs.ObjectStoreOptions{}).Return(&fxObject, nil).Run(func(args mock.Arguments) {
 			require.Regexp(t, `tmp/[0-9a-f]{30}\.tgz`, args.Get(1).(string))
@@ -59,6 +66,7 @@ func TestDeployError(t *testing.T) {
 		i.On("BuildCreate", "app1", "object://test", structs.BuildCreateOptions{Description: options.String("foo")}).Return(fxBuild(), nil)
 		i.On("BuildLogs", "app1", "build1", structs.LogsOptions{}).Return(testLogs(fxLogs()), nil)
 		i.On("BuildGet", "app1", "build1").Return(fxBuildRunning(), nil).Once()
+		i.On("BuildGet", "app1", "build1").Return(fxBuild(), nil)
 		i.On("BuildGet", "app1", "build4").Return(fxBuild(), nil)
 		i.On("AppGet", "app1").Return(fxApp(), nil)
 		i.On("ReleasePromote", "app1", "release1", structs.ReleasePromoteOptions{

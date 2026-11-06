@@ -1,19 +1,2 @@
 {{ range .Volumes }}
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  namespace: {{$.Namespace}}
-  name: {{ volumeName $.App . }}
-  labels:
-    system: convox
-    {{ range keyValue $.Labels }}
-    {{.Key}}: "{{.Value}}"
-    {{ end }}
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
 {{ end }}

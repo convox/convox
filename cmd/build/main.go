@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/convox/convox/pkg/build"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
 	"github.com/convox/convox/sdk"
 )
 
@@ -44,8 +46,20 @@ var (
 )
 
 func main() {
+
+	if os.Args[1] == "build-and-release-sync" {
+		if err := RunBuildAndReleaseSync(); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if err := execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		var printed build.PrintedError
+		if !errors.As(err, &printed) {
+			fmt.Fprintf(os.Stderr, "ERROR: %s\n", err)
+		}
 		os.Exit(1)
 	}
 }
@@ -106,6 +120,8 @@ func execute() error {
 		flagUrl = v
 	}
 
+	// BUILD_GIT_SHA is exposed as env as well
+
 	opts := build.Options{
 		App:         flagApp,
 		Auth:        flagAuth,
@@ -125,6 +141,17 @@ func execute() error {
 		return err
 	}
 
+	// Preserve any headers `sdk.New()` already populated (e.g., the
+	// X-Convox-Actor header sourced from the CONVOX_ACTOR env var
+	// injected by the rack provider when the build pod was launched).
+	// Replacing the map outright would silently drop the actor
+	// attribution, leaving every build:create / release:create event
+	// emitted by the build pod stamped with the rack-password literal.
+	if rack.ExtraHeaders == nil {
+		rack.ExtraHeaders = map[string]string{}
+	}
+	rack.ExtraHeaders["X-Convox-TID"] = os.Getenv("CONVOX_TID")
+
 	var engine build.Engine = &build.BuildKit{}
 	b, err := build.New(rack, opts, engine)
 	if err != nil {
@@ -135,5 +162,20 @@ func execute() error {
 		return err
 	}
 
+	return nil
+}
+
+func RunBuildAndReleaseSync() error {
+	p, err := k8s.FromEnv()
+	if err != nil {
+		return fmt.Errorf("failed to create provider: %w", err)
+	}
+
+	atomCtrl, err := k8s.NewAtomController(p)
+	if err != nil {
+		return fmt.Errorf("failed to create atom controller: %w", err)
+	}
+
+	atomCtrl.SyncMarker()
 	return nil
 }

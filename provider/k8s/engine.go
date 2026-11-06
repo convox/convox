@@ -9,6 +9,7 @@ import (
 type Engine interface {
 	AppIdles(app string) (bool, error)
 	AppParameters() map[string]string
+	GPUIntanceList(instanceTypes []string) ([]string, error)
 	Heartbeat() (map[string]interface{}, error)
 	IngressAnnotations(certDuration string) (map[string]string, error)
 	IngressClass() string
@@ -20,7 +21,12 @@ type Engine interface {
 	RepositoryHost(app string) (string, bool, error)
 	RepositoryPrefix() string
 	ResolverHost() (string, error)
+	RepositoryImagesBatchDelete(app string, tags []string) error
 	ServiceHost(app string, s manifest.Service) string
 	SystemHost() string
 	SystemStatus() (string, error)
+}
+
+type RegistryPullEngine interface {
+	RegistryPullCredentials() (server, username, password string)
 }

@@ -4,24 +4,123 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
+	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func (p *Provider) RenderTemplate(name string, params map[string]interface{}) ([]byte, error) {
-	data, err := p.templater.Render(fmt.Sprintf("%s.yml.tmpl", name), params)
+	data, err := p.templater.Render(fmt.Sprintf("%s.yml.tmpl", name), params, p.templateHelpers())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return common.FormatYAML(data)
+	out, err := common.FormatYAML(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if strings.HasPrefix(name, "app/") || strings.HasPrefix(name, "resource/") {
+		if err := checkRenderedKinds(name, out, params); err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
+}
+
+var yamlPlain = regexp.MustCompile(`^[ \t]*([A-Za-z0-9._/:+~=-][A-Za-z0-9._/:@+~=-]*)?[ \t]*$`)
+
+func yamlHTML(s string) template.HTML {
+	return template.HTML(s) //nolint:gosec // YAML output; callers pass only a quoted scalar or a value matching yamlPlain
+}
+
+func yamlQuote(s string) template.HTML {
+	return yamlHTML(strings.ReplaceAll(strconv.Quote(s), "&", `\x26`))
+}
+
+// yamlScalar leaves plain values bare so YAML reads them as before, and quotes the rest after trimming what a plain scalar drops.
+func yamlScalar(s string) template.HTML {
+	if yamlPlain.MatchString(s) {
+		return yamlHTML(s)
+	}
+
+	v := strings.TrimRight(strings.TrimLeft(s, " \t"), " \t\r\n\u0085\u2028\u2029")
+	if yamlPlain.MatchString(v) {
+		return yamlHTML(v)
+	}
+
+	return yamlQuote(v)
+}
+
+var renderedKinds = map[string][]string{
+	"app/app":              {"Namespace"},
+	"app/azurefiles":       {"PersistentVolumeClaim"},
+	"app/balancer":         {"Service"},
+	"app/ca":               {"ConfigMap"},
+	"app/certificate":      {"Certificate"},
+	"app/efs":              {"PersistentVolume", "PersistentVolumeClaim"},
+	"app/httpproxy":        {"HTTPProxy"},
+	"app/ingress":          {"Ingress"},
+	"app/ingress-internal": {"Ingress"},
+	"app/service":          {"Secret", "ServiceAccount", "Deployment", "StatefulSet", "DaemonSet", "HorizontalPodAutoscaler", "Service"},
+	"app/timer":            {"ServiceAccount", "CronJob"},
+}
+
+func checkRenderedKinds(name string, data []byte, params map[string]interface{}) error {
+	kinds := renderedKinds[name]
+	if strings.HasPrefix(name, "resource/") {
+		kinds = []string{"ConfigMap", "PersistentVolumeClaim", "Deployment", "Service"}
+	}
+
+	ns, _ := params["Namespace"].(string)
+
+	for _, d := range atom.SplitDocuments(data) {
+		var raw interface{}
+		if err := yaml.Unmarshal(d, &raw); err != nil {
+			return errors.WithStack(err)
+		}
+		if raw == nil {
+			continue
+		}
+
+		var o struct {
+			Kind     string
+			Metadata struct {
+				Name      string
+				Namespace string
+			}
+		}
+		if err := yaml.Unmarshal(d, &o); err != nil {
+			return errors.WithStack(err)
+		}
+
+		if !slices.Contains(kinds, o.Kind) {
+			return errors.Errorf("template %s rendered kind %q", name, o.Kind)
+		}
+		if o.Metadata.Namespace != "" && o.Metadata.Namespace != ns {
+			return errors.Errorf("template %s rendered %s in namespace %q", name, o.Kind, o.Metadata.Namespace)
+		}
+		if name == "app/app" && o.Metadata.Name != ns {
+			return errors.Errorf("template %s rendered namespace %q", name, o.Metadata.Name)
+		}
+	}
+
+	return nil
 }
 
 type kvItem struct {
@@ -37,15 +136,27 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"coalesce": func(ss ...string) string {
 			return common.CoalesceString(ss...)
 		},
+		"deref": func(b *bool) bool {
+			if b == nil {
+				return false
+			}
+			return *b
+		},
 		"domains": func(app string, s manifest.Service) []string {
 			ds := []string{
-				p.Engine.ServiceHost(app, s),
+				p.ServiceHost(app, s),
 				// fmt.Sprintf("%s.%s.%s.local", s.Name, app, p.Name),
 			}
 			for _, d := range s.Domains {
 				ds = append(ds, d)
 			}
 			return ds
+		},
+		"gpuResourceKey": func(vendor string) string {
+			return gpuResourceKey(vendor)
+		},
+		"hasSuffix": func(s, suffix string) bool {
+			return strings.HasSuffix(s, suffix)
 		},
 		"keyValue": func(inputItems ...map[string]string) []kvItem {
 			kv := map[string]string{}
@@ -65,12 +176,26 @@ func (p *Provider) templateHelpers() template.FuncMap {
 			}
 			return sorted
 		},
+		"internalResourceDotDomainSuffix": func() string {
+			if options.GetFeatureGateValue(options.FeatureGateResourceInternalDomainSuffix) != "" {
+				return options.GetFeatureGateValue(options.FeatureGateResourceInternalDomainSuffix)
+			}
+			return "svc.cluster.local"
+		},
 		"image": func(a *structs.App, s manifest.Service, r *structs.Release) (string, error) {
 			repo, _, err := p.Engine.RepositoryHost(a.Name)
 			if err != nil {
 				return "", errors.WithStack(err)
 			}
 			return fmt.Sprintf("%s:%s.%s", repo, s.Name, r.Build), nil
+		},
+		"indent": func(spaces int, v string) string {
+			pad := strings.Repeat(" ", spaces)
+			return pad + strings.Replace(v, "\n", "\n"+pad, -1)
+		},
+		"nindent": func(spaces int, v string) string {
+			pad := strings.Repeat(" ", spaces)
+			return "\n" + pad + strings.Replace(v, "\n", "\n"+pad, -1)
 		},
 		"json": func(v interface{}) (string, error) {
 			data, err := json.Marshal(v)
@@ -82,14 +207,18 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		"k8sname": func(s string) string {
 			return nameFilter(s)
 		},
+		"k8snamev2": func(s string) string {
+			return nameFilterV2(s)
+		},
 		"lower": func(s string) string {
 			return strings.ToLower(s)
 		},
+		"pathJoin": filepath.Join,
 		"quoteEscape": func(s string) string {
 			return strings.ReplaceAll(s, "\"", "\\\"")
 		},
 		"safe": func(s string) template.HTML {
-			return template.HTML(fmt.Sprintf("%q", s))
+			return yamlQuote(html.UnescapeString(s))
 		},
 		"shellsplit": func(s string) ([]string, error) {
 			return shellquote.Split(s)
@@ -122,6 +251,15 @@ func (p *Provider) templateHelpers() template.FuncMap {
 		},
 		"volumeTo": func(v string) (string, error) {
 			return volumeTo(v)
+		},
+		"yamlQuote":  yamlQuote,
+		"yamlScalar": yamlScalar,
+		"yamlMarshal": func(v interface{}) (string, error) {
+			d, err := yaml.Marshal(v)
+			if err != nil {
+				return "", fmt.Errorf("yamlMarshal: %s", err)
+			}
+			return string(d), nil
 		},
 	}
 }

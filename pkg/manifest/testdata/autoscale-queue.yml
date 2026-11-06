@@ -1,0 +1,10 @@
+services:
+  worker:
+    build: .
+    scale:
+      min: 0
+      max: 5
+      autoscale:
+        queueDepth:
+          threshold: 5
+          metricName: vllm:num_requests_waiting

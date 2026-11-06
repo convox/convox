@@ -41,8 +41,10 @@ type AtomConditionMatch struct {
 type AtomSpec struct {
 	Conditions              []AtomCondition `json:"conditions"`
 	CurrentVersion          string          `json:"currentVersion"`
+	ReleaseCache            string          `json:"releaseCache"`
 	PreviousVersion         string          `json:"previousVersion"`
 	ProgressDeadlineSeconds int32           `json:"progressDeadlineSeconds"`
+	Dependencies            []string        `json:"dependencies"`
 }
 
 type AtomStatus string

@@ -2,10 +2,10 @@ package cli_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -43,6 +43,42 @@ func TestRacksLocal(t *testing.T) {
 	})
 }
 
+func TestRacksLocalSymlink(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testLocalRackSymlink(t, e, "dev1", "local", "https://host1")
+
+		res, err := testExecute(e, "racks", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"NAME  PROVIDER  STATUS",
+			"dev1  local     running",
+		})
+	})
+}
+
+// Entries in the racks directory that aren't racks, like the .DS_Store file Finder creates (#434) or a dangling
+// symlink, must not stop the racks from being listed.
+func TestRacksLocalIgnoresOtherEntries(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
+
+		racks := filepath.Join(e.Settings, "racks")
+		require.NoError(t, os.WriteFile(filepath.Join(racks, ".DS_Store"), []byte("\x00\x00\x00\x01Bud1\x00\x00\x10\x00"), 0600))
+		require.NoError(t, os.Symlink(filepath.Join(racks, "missing"), filepath.Join(racks, "dangling-link")))
+
+		res, err := testExecute(e, "racks", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{
+			"NAME  PROVIDER  STATUS",
+			"dev1  local     running",
+		})
+	})
+}
+
 func TestRacksRemote(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
 		r := mux.NewRouter()
@@ -59,7 +95,7 @@ func TestRacksRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0600)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
@@ -92,7 +128,7 @@ func TestRacksLocalAndRemote(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0600)
 		require.NoError(t, err)
 
 		res, err := testExecute(e, "racks", nil)
@@ -122,7 +158,7 @@ func TestRacksError(t *testing.T) {
 		tsu, err := url.Parse(ts.URL)
 		require.NoError(t, err)
 
-		err = ioutil.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0644)
+		err = os.WriteFile(filepath.Join(e.Settings, "host"), []byte(tsu.Host), 0600)
 		require.NoError(t, err)
 
 		me := &mockstdcli.Executor{}

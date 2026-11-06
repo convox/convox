@@ -10,6 +10,16 @@ variable "domain" {
   default = ""
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
 variable "image" {
   type = string
 }
@@ -31,7 +41,22 @@ variable "release" {
   type = string
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
+  default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
+}
+
+variable "webhook_signing_key" {
+  type    = string
   default = ""
 }
 

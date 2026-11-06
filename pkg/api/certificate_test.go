@@ -8,6 +8,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdsdk"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,7 +101,7 @@ func TestCertificateGenerate(t *testing.T) {
 				"domains": "domain1,domain2",
 			},
 		}
-		p.On("CertificateGenerate", []string{"domain1", "domain2"}).Return(&c1, nil)
+		p.On("CertificateGenerate", []string{"domain1", "domain2"}, mock.Anything).Return(&c1, nil)
 		err := c.Post("/certificates/generate", ro, &c2)
 		require.NoError(t, err)
 		require.Equal(t, c1, c2)
@@ -115,7 +116,7 @@ func TestCertificateGenerateError(t *testing.T) {
 				"domains": "domain1,domain2",
 			},
 		}
-		p.On("CertificateGenerate", []string{"domain1", "domain2"}).Return(nil, fmt.Errorf("err1"))
+		p.On("CertificateGenerate", []string{"domain1", "domain2"}, mock.Anything).Return(nil, fmt.Errorf("err1"))
 		err := c.Post("/certificates/generate", ro, c1)
 		require.EqualError(t, err, "err1")
 		require.Nil(t, c1)
@@ -126,7 +127,7 @@ func TestCertificateList(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		c1 := structs.Certificates{fxCertificate, fxCertificate}
 		c2 := structs.Certificates{}
-		p.On("CertificateList").Return(c1, nil)
+		p.On("CertificateList", mock.Anything).Return(c1, nil)
 		err := c.Get("/certificates", stdsdk.RequestOptions{}, &c2)
 		require.NoError(t, err)
 		require.Equal(t, c1, c2)
@@ -136,7 +137,7 @@ func TestCertificateList(t *testing.T) {
 func TestCertificateListError(t *testing.T) {
 	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
 		var c1 structs.Certificates
-		p.On("CertificateList").Return(nil, fmt.Errorf("err1"))
+		p.On("CertificateList", mock.Anything).Return(nil, fmt.Errorf("err1"))
 		err := c.Get("/certificates", stdsdk.RequestOptions{}, &c1)
 		require.EqualError(t, err, "err1")
 		require.Nil(t, c1)

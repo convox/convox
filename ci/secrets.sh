@@ -1,7 +1,11 @@
 #!/bin/bash
 
 export_secret() {
-  echo "${2:-$1}=$(echo $SECRETS | jq -r ".${1}")" >> $GITHUB_ENV
+  if [ -z "${!1}" ]; then
+    echo "missing secret: $1" >&2
+    exit 1
+  fi
+  echo "${2:-$1}=${!1}" >> "$GITHUB_ENV"
 }
 
 case "$PROVIDER" in

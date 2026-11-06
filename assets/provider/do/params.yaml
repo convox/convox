@@ -1,0 +1,91 @@
+Groups:
+  - name: Immutable
+    order: 1
+    params:
+      - name: high_availability
+        default: "true"
+        type: boolean
+        description: Setting this to false will create a cluster with fewer redundant
+          resources for cost optimization
+      - name: region
+        default: nyc3
+        type: string
+        regex: ^[a-z]{3}\d$
+        description: DigitalOcean region slug where the rack will be deployed. See
+          (DigitalOcean regions)[https://docs.digitalocean.com/platform/regional-availability/]
+          for available options.
+  - name: Security & Compliance
+    order: 2
+    params:
+      - name: cert_duration
+        default: 2160h
+        type: string
+        regex: ^\d+h$
+        description: Certificate renewal period. The default is 90 days (2160h).
+      - name: docker_hub_username
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub username for authenticated image pulls. Must be paired
+          with &i docker_hub_password &i to avoid Docker Hub rate limits.
+      - name: docker_hub_password
+        default: "null"
+        sideNote: Not set by default
+        optional: true
+        type: string
+        description: Docker Hub access token for authenticated image pulls. Must be
+          paired with &i docker_hub_username &i. Use a read-only access token rather
+          than your account password.
+  - name: Performance & Scaling
+    order: 4
+    params:
+      - name: node_type
+        default: s-2vcpu-4gb
+        type: string
+        regex: ^[a-z][a-z0-9_]*-[a-z0-9-]+$
+        description: DigitalOcean (Droplet size)[https://slugs.do-api.dev/] slug used
+          for cluster nodes.
+      - name: registry_disk
+        default: 50Gi
+        type: string
+        regex: ^\d+Gi$
+        description: Size of the internal registry disk in Kubernetes volume format
+          &l &i e.g. &i - 50Gi, 100Gi &l
+  - name: Logging & Monitoring
+    order: 5
+    params:
+      - name: syslog
+        default: "null"
+        sideNote: Not forwarded by default
+        type: string
+        regex: ^(tcp|udp|tcp\+tls)://[a-zA-Z\d._-]+(:\d+)?$
+        description: Forward logs to a syslog endpoint  &l &i e.g. &i - tcp+tls://example.org:1234 &l
+        optional: true
+      - name: syslog_tls_verify
+        default: "true"
+        type: boolean
+        description: "Checks the certificate of a tcp+tls syslog endpoint against the public certificate authorities trusted by the log forwarder. Turn it off for an endpoint with a self-signed or private certificate."
+        sideNote: "Only applies to tcp+tls syslog endpoints."
+      - name: router_log_redact_params
+        default: "null"
+        sideNote: Router logs are not masked if not set
+        optional: true
+        type: string
+        regex: ^(all|[A-Za-z0-9_.-]+(,[A-Za-z0-9_.-]+)*)$
+        description: "Masks query parameter values in router access and error logs before the logs are stored or forwarded. &l &l Set &b all &b to mask every value, or a comma-separated list of parameter names, such as &i reset_password_token,token,api_key &i, to mask only those. Names match in any case. A masked value reads FILTERED; the parameter name is kept. &l"
+      - name: fluentd_memory
+        default: 200Mi
+        type: string
+        regex: ^[1-9][0-9]*(Mi|Gi)$
+        description: Memory request and limit for the Fluentd DaemonSet. Increase
+          if Fluentd pods are experiencing OOMKills. From 3.25.11 Fluentd also sizes
+          its buffers from this value, so a larger value holds more logs while
+          Elasticsearch is slow or unreachable.
+      - name: elasticsearch_disk
+        default: 5Gi
+        type: string
+        regex: ^([5-9]|[1-9][0-9]+)Gi$
+        description: Size of each Elasticsearch log volume in Kubernetes volume format, at
+          least 5Gi &l &i e.g. &i - 5Gi, 20Gi &l The volumes can grow but not shrink. When a
+          volume passes 80% full, the oldest logs are deleted.

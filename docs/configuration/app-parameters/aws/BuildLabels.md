@@ -1,0 +1,98 @@
+---
+title: "BuildLabels"
+description: "The BuildLabels app parameter sets Kubernetes node selector labels for build pods, directing build processes to specific node groups."
+slug: buildlabels
+url: /configuration/app-parameters/aws/BuildLabels
+---
+
+# BuildLabels
+
+## What BuildLabels Controls
+The `BuildLabels` app parameter allows you to specify Kubernetes node selector labels for build pods. This parameter enables you to direct build processes to specific node groups within your cluster, providing control over where builds are executed.
+
+When used in conjunction with [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config) or [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) rack parameters, this feature enables fine-grained control over build workload placement.
+
+## Default Value
+By default, no build labels are set, and build pods are scheduled according to standard Kubernetes scheduling rules.
+
+## Use Cases
+- **Build Isolation**: Direct build pods to dedicated nodes to prevent resource contention with production services.
+- **Resource Optimization**: Target build processes to nodes with higher CPU or memory capacities to speed up build times.
+- **Cost Management**: Route builds to spot instance node groups for cost savings on non-critical, interruptible build workloads.
+- **Specialized Hardware**: Direct builds to nodes with specific hardware profiles (e.g., faster disk I/O) for improved build performance.
+
+## Setting the Parameter
+To set build node selector labels for an application:
+
+```bash
+$ convox apps params set BuildLabels=convox.io/label=app-build -a <app-name>
+Updating parameters... OK
+```
+
+This configuration directs build pods for the specified application to nodes with the label `convox.io/label: app-build`.
+
+### Using Multiple Labels
+You can specify multiple labels using a comma-separated list:
+
+```bash
+$ convox apps params set BuildLabels=convox.io/label=app-build,build-type=large -a <app>
+Updating parameters... OK
+```
+
+## Viewing Current Configuration
+To view the current build labels for an application:
+
+```bash
+$ convox apps params -a <app>
+BuildLabels  convox.io/label=app-build
+```
+
+## Removing Build Labels
+To remove build labels, set an empty value:
+
+```bash
+$ convox apps params set BuildLabels= -a <app>
+Updating parameters... OK
+```
+
+## Related Parameters
+
+### BuildCpu
+Sets the CPU request for build pods in millicores:
+
+```bash
+$ convox apps params set BuildCpu=500 -a <app>
+Updating parameters... OK
+```
+
+This allocates 500 millicores (0.5 vCPU) to build pods.
+
+### BuildMem
+Sets the memory request for build pods in megabytes:
+
+```bash
+$ convox apps params set BuildMem=2048 -a <app>
+Updating parameters... OK
+```
+
+This allocates 2048MB (2GB) of memory to build pods.
+
+## How Node Selection Works
+The `BuildLabels` parameter works by adding node selector constraints to Kubernetes build pods. This ensures that pods are only scheduled on nodes with matching labels.
+
+For this to be effective, you need to:
+
+1. Configure node groups with appropriate labels using rack parameters like [`additional_build_groups_config`](/configuration/rack-parameters/aws/additional_build_groups_config).
+2. Set `BuildLabels` to match those node labels.
+
+A `BuildLabels` value that matches no node in the cluster does not fail the Build. The build pod stays `Pending` and the Build stays `running` until it is cancelled, because nothing on the Rack moves a Build out of that state. Clear it with [`convox builds cancel <build>`](/reference/cli/builds#builds-cancel), which requires Rack version `3.25.7` or later, and set `BuildLabels` to labels your nodes carry before the next Build.
+
+### Dedicated Node Groups and Build Nodes
+
+| Rack configuration | Behavior |
+|--------------------|----------|
+| Target is an [`additional_node_groups_config`](/configuration/rack-parameters/aws/additional_node_groups_config) entry with `dedicated: true` | The build pod tolerates the group's taint and runs there, on Rack version `3.25.12` or later. On earlier Racks it stays `Pending` |
+| AWS with [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled) | Build pods also require the `convox-build=true` label that only build nodes carry, so `BuildLabels` chooses among build nodes. A value that names an additional node group leaves the build pod `Pending` |
+| GCP, target is an Arm node pool | The value must also include `kubernetes.io/arch=arm64`, or the build pod stays `Pending`. See [Arm Node Pools](/configuration/rack-parameters/gcp/additional_node_groups_config#arm-node-pools) |
+
+For more information on node selection and workload placement strategies, see the [Workload Placement](/configuration/scaling/workload-placement) guide.

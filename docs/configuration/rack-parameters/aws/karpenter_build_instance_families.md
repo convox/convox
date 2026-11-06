@@ -1,0 +1,34 @@
+---
+title: "karpenter_build_instance_families"
+description: "The karpenter_build_instance_families rack parameter sets which EC2 instance families Karpenter uses for build nodes, falling back to the workload list when empty."
+slug: karpenter_build_instance_families
+url: /configuration/rack-parameters/aws/karpenter_build_instance_families
+---
+
+# karpenter_build_instance_families
+
+## Description
+
+The `karpenter_build_instance_families` parameter specifies which EC2 instance families [Karpenter](/configuration/scaling/karpenter) can use when provisioning build nodes.
+
+## Default Value
+
+The default value is empty (falls back to [`karpenter_instance_families`](/configuration/rack-parameters/aws/karpenter_instance_families)).
+
+## Setting the Parameter
+
+```bash
+$ convox rack params set karpenter_build_instance_families=c5,c6i -r rackName
+Updating parameters... OK
+```
+
+## Additional Information
+
+- **Validation:** Comma-separated lowercase alphanumeric values. On a Rack with `karpenter_enabled=true`, `convox rack params set` at `3.25.3` or newer also rejects a list in which no family matches the build architecture, which comes from [`build_node_type`](/configuration/rack-parameters/aws/build_node_type) and falls back to [`node_type`](/configuration/rack-parameters/aws/node_type). Setting `karpenter_build_instance_families=c7g` while `build_node_type` is an x86 type fails with `karpenter_build_instance_families (c7g) has no family matching the build_node_type architecture (amd64); Karpenter could not provision any matching node`.
+- The build NodePool is only created when [`build_node_enabled=true`](/configuration/rack-parameters/aws/build_node_enabled).
+
+## See Also
+
+- [Karpenter](/configuration/scaling/karpenter) for the full Karpenter configuration reference
+- [karpenter_instance_families](/configuration/rack-parameters/aws/karpenter_instance_families)
+- [karpenter_build_instance_sizes](/configuration/rack-parameters/aws/karpenter_build_instance_sizes)

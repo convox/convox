@@ -70,8 +70,7 @@ func (c *WebhookController) Add(obj interface{}) error {
 		return errors.WithStack(err)
 	}
 
-	c.Provider.webhooks = webhookConfigMapURLs(cm)
-
+	c.setWebhooks(webhookConfigMapURLs(cm))
 	return nil
 }
 
@@ -81,8 +80,7 @@ func (c *WebhookController) Delete(obj interface{}) error {
 		return errors.WithStack(err)
 	}
 
-	c.Provider.webhooks = webhookConfigMapURLs(cm)
-
+	c.setWebhooks(webhookConfigMapURLs(cm))
 	return nil
 }
 
@@ -101,9 +99,23 @@ func (c *WebhookController) Update(prev, cur interface{}) error {
 		return nil
 	}
 
-	c.Provider.webhooks = webhookConfigMapURLs(ccm)
-
+	c.setWebhooks(webhookConfigMapURLs(ccm))
 	return nil
+}
+
+// setWebhooks publishes the latest URL list under the shared lock and
+// flips populated=true so EventSend stops falling through to the
+// synchronous configmap read. Per Provider.webhookState's no-copy
+// contract the receiver dereferences the same *webhookState as every
+// other Provider clone built from the same singleton via WithContext.
+func (c *WebhookController) setWebhooks(urls []string) {
+	if c.Provider.webhookState == nil {
+		return
+	}
+	c.Provider.webhookState.mu.Lock()
+	c.Provider.webhookState.urls = urls
+	c.Provider.webhookState.populated = true
+	c.Provider.webhookState.mu.Unlock()
 }
 
 func assertConfigMap(v interface{}) (*ac.ConfigMap, error) {

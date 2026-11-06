@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/structs"
@@ -47,6 +48,53 @@ func (c *Client) AppDelete(name string) error {
 	err = c.Delete(fmt.Sprintf("/apps/%s", name), ro, nil)
 
 	return err
+}
+
+func (c *Client) AppConfigGet(app, name string) (*structs.AppConfig, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v *structs.AppConfig
+
+	err = c.Get(fmt.Sprintf("/apps/%s/configs/%s", app, name), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) AppConfigList(app string) ([]structs.AppConfig, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v []structs.AppConfig
+
+	err = c.Get(fmt.Sprintf("/apps/%s/configs", app), ro, &v)
+
+	return v, err
+}
+
+func (c *Client) AppConfigSet(app, name, valueBase64 string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	ro.Params["value"] = valueBase64
+
+	return c.Put(fmt.Sprintf("/apps/%s/configs/%s", app, name), ro, nil)
+}
+
+func (c *Client) AppDiagnose(app string, opts structs.AppDiagnoseOptions) (*structs.AppDiagnosticReport, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v *structs.AppDiagnosticReport
+
+	err = c.Get(fmt.Sprintf("/apps/%s/diagnose", app), ro, &v)
+
+	return v, err
 }
 
 func (c *Client) AppGet(name string) (*structs.App, error) {
@@ -93,6 +141,36 @@ func (c *Client) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, 
 	return v, err
 }
 
+func (c *Client) ServiceLogs(app, name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	var err error
+
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v io.ReadCloser
+
+	r, err := c.Websocket(fmt.Sprintf("/apps/%s/services/%s/logs", app, name), ro)
+	if err != nil {
+		return nil, err
+	}
+
+	v = r
+
+	return v, err
+}
+
+func (c *Client) AppManifestService(app, service string) (*structs.ManifestService, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.ManifestService
+	if err := c.Get(fmt.Sprintf("/apps/%s/manifest/services/%s", app, service), ro, &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
 func (c *Client) AppMetrics(name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 
@@ -121,6 +199,107 @@ func (c *Client) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 	return err
 }
 
+type appBudgetResponse struct {
+	Config *structs.AppBudget      `json:"config"`
+	State  *structs.AppBudgetState `json:"state"`
+}
+
+func (c *Client) AppBudgetGet(app string) (*structs.AppBudget, *structs.AppBudgetState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v appBudgetResponse
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget", app), ro, &v); err != nil {
+		return nil, nil, err
+	}
+	return v.Config, v.State, nil
+}
+
+func (c *Client) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy string) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+	ro.Params["ack_by"] = ackBy
+	return c.Post(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetClear(app string, ackBy string) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	return c.Delete(fmt.Sprintf("/apps/%s/budget", app), ro, nil)
+}
+
+func (c *Client) AppBudgetReset(app string, ackBy string) error {
+	return c.AppBudgetResetWithOptions(app, ackBy, structs.AppBudgetResetOptions{})
+}
+
+// AppBudgetResetWithOptions extends AppBudgetReset with force-clear-cooldown support.
+func (c *Client) AppBudgetResetWithOptions(app string, ackBy string, opts structs.AppBudgetResetOptions) error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	if opts.ForceClearCooldown {
+		ro.Params["force_clear_cooldown"] = "true"
+	}
+	if opts.ResetPeriod {
+		ro.Params["reset_period"] = "true"
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/budget/reset", app), ro, nil)
+}
+
+// AppBudgetSimulate runs a dry-run shutdown simulation (no mutations).
+func (c *Client) AppBudgetSimulate(app string) (*structs.AppBudgetSimulationResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetSimulationResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/simulate-shutdown", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetShutdownStateGet returns the shutdown-state annotation for an app.
+func (c *Client) AppBudgetShutdownStateGet(app string) (*structs.AppBudgetShutdownState, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	var v *structs.AppBudgetShutdownState
+	if err := c.Get(fmt.Sprintf("/apps/%s/budget/shutdown-state", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// AppBudgetDismissRecovery dismisses the sticky recovery banner (idempotent).
+func (c *Client) AppBudgetDismissRecovery(app string, ackBy string) error {
+	_, err := c.AppBudgetDismissRecoveryWithResult(app, ackBy)
+	return err
+}
+
+// AppBudgetDismissRecoveryWithResult returns dismissed/already-dismissed/no-banner status.
+func (c *Client) AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*structs.AppBudgetDismissRecoveryResult, error) {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro.Params["ack_by"] = ackBy
+	var v *structs.AppBudgetDismissRecoveryResult
+	if err := c.Post(fmt.Sprintf("/apps/%s/budget/dismiss-recovery", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (c *Client) AppCost(app string) (*structs.AppCost, error) {
+	return c.AppCostWithOptions(app, structs.AppCostOptions{})
+}
+
+func (c *Client) AppCostWithOptions(app string, opts structs.AppCostOptions) (*structs.AppCost, error) {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var v *structs.AppCost
+	if err := c.Get(fmt.Sprintf("/apps/%s/cost", app), ro, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
 func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	var err error
 
@@ -131,6 +310,16 @@ func (c *Client) BalancerList(app string) (structs.Balancers, error) {
 	err = c.Get(fmt.Sprintf("/apps/%s/balancers", app), ro, &v)
 
 	return v, err
+}
+
+func (c *Client) BuildCancel(app, id string) error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	err = c.Post(fmt.Sprintf("/apps/%s/builds/%s/cancel", app, id), ro, nil)
+
+	return err
 }
 
 func (c *Client) BuildCreate(app, url string, opts structs.BuildCreateOptions) (*structs.Build, error) {
@@ -193,6 +382,17 @@ func (c *Client) BuildImport(app string, r io.Reader) (*structs.Build, error) {
 	err = c.Post(fmt.Sprintf("/apps/%s/builds/import", app), ro, &v)
 
 	return v, err
+}
+
+func (c *Client) BuildImportImage(app, id, image string, opts structs.BuildImportImageOptions) error {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
+
+	ro.Params["image"] = image
+
+	return c.Post(fmt.Sprintf("/apps/%s/builds/%s/image", app, id), ro, nil)
 }
 
 func (c *Client) BuildList(app string, opts structs.BuildListOptions) (structs.Builds, error) {
@@ -297,10 +497,13 @@ func (c *Client) CertificateDelete(id string) error {
 	return err
 }
 
-func (c *Client) CertificateGenerate(domains []string) (*structs.Certificate, error) {
+func (c *Client) CertificateGenerate(domains []string, opts structs.CertificateGenerateOptions) (*structs.Certificate, error) {
 	var err error
 
-	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
 
 	ro.Params["domains"] = strings.Join(domains, ",")
 
@@ -321,10 +524,13 @@ func (c *Client) CertificateRenew(id string) error {
 	return err
 }
 
-func (c *Client) CertificateList() (structs.Certificates, error) {
+func (c *Client) CertificateList(opts structs.CertificateListOptions) (structs.Certificates, error) {
 	var err error
 
-	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
 
 	var v structs.Certificates
 
@@ -379,10 +585,13 @@ func (c *Client) FilesDownload(app, pid, file string) (io.Reader, error) {
 	return v, err
 }
 
-func (c *Client) FilesUpload(app, pid string, r io.Reader) error {
+func (c *Client) FilesUpload(app, pid string, r io.Reader, opts structs.FileTransterOptions) error {
 	var err error
 
-	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return err
+	}
 
 	ro.Body = r
 
@@ -555,9 +764,10 @@ func (c *Client) ObjectStore(app, key string, r io.Reader, opts structs.ObjectSt
 	return v, err
 }
 
+// NOTE: this file is generated, but ProcessExec is hand-maintained to relay the
+// v2 ECS Exec session protocol via execStream (in sdk.go). Preserve it if you
+// regenerate sdk/methods.go.
 func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts structs.ProcessExecOptions) (int, error) {
-	var err error
-
 	ro, err := stdsdk.MarshalOptions(opts)
 	if err != nil {
 		return 0, err
@@ -566,14 +776,13 @@ func (c *Client) ProcessExec(app, pid, command string, rw io.ReadWriter, opts st
 	ro.Headers["command"] = command
 	ro.Body = rw
 
-	var v int
-
-	v, err = c.WebsocketExit(fmt.Sprintf("/apps/%s/processes/%s/exec", app, pid), ro, rw)
+	ws, err := c.Websocket(fmt.Sprintf("/apps/%s/processes/%s/exec", app, pid), ro)
 	if err != nil {
 		return 0, err
 	}
+	defer ws.Close()
 
-	return v, err
+	return execStream(ws, rw)
 }
 
 func (c *Client) ProcessGet(app, pid string) (*structs.Process, error) {
@@ -920,6 +1129,23 @@ func (c *Client) ServiceList(app string) (structs.Services, error) {
 	return v, err
 }
 
+// MetricsByService is the batched companion to ServiceMetrics (one call per app). New in 3.24.6.
+func (c *Client) MetricsByService(app string, services []string, opts structs.MetricsOptions) ([]structs.ServiceMetricsRow, error) {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	if ro.Query == nil {
+		ro.Query = stdsdk.Query{}
+	}
+	if len(services) > 0 {
+		ro.Query["services"] = strings.Join(services, ",")
+	}
+	var v []structs.ServiceMetricsRow
+	err = c.Get(fmt.Sprintf("/apps/%s/metrics-by-service", app), ro, &v)
+	return v, err
+}
+
 func (c *Client) ServiceMetrics(app, name string, opts structs.MetricsOptions) (structs.Metrics, error) {
 	var err error
 
@@ -943,6 +1169,67 @@ func (c *Client) ServiceRestart(app, name string) error {
 	err = c.Post(fmt.Sprintf("/apps/%s/services/%s/restart", app, name), ro, nil)
 
 	return err
+}
+
+// ServiceScaleOverrideSet toggles the per-service scale-override annotation. New in 3.24.6.
+func (c *Client) ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params: stdsdk.Params{
+			"active": strconv.FormatBool(active),
+		},
+		Query: stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/scale-override", app, service), ro, nil)
+}
+
+// ServiceTriggersEnable creates a Console-driven autoscale override on the named service. New in 3.24.6.
+func (c *Client) ServiceTriggersEnable(app, service string, opts structs.ServiceTriggersOptions, ackBy string) error {
+	body, err := json.Marshal(opts)
+	if err != nil {
+		return err
+	}
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params:  stdsdk.Params{"opts": string(body)},
+		Query:   stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/enable", app, service), ro, nil)
+}
+
+// ServiceTriggersDisable removes the Console-driven autoscale override (idempotent). New in 3.24.6.
+func (c *Client) ServiceTriggersDisable(app, service, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params:  stdsdk.Params{},
+		Query:   stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/disable", app, service), ro, nil)
+}
+
+// ServiceTriggersThresholdSet updates a trigger threshold on a service with an active override. New in 3.24.6.
+func (c *Client) ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error {
+	ro := stdsdk.RequestOptions{
+		Headers: stdsdk.Headers{},
+		Params: stdsdk.Params{
+			"type":      triggerType,
+			"threshold": strconv.FormatFloat(threshold, 'g', -1, 64),
+		},
+		Query: stdsdk.Query{},
+	}
+	if strings.TrimSpace(ackBy) != "" {
+		ro.Params["ack_by"] = ackBy
+	}
+	return c.Post(fmt.Sprintf("/apps/%s/services/%s/triggers/threshold", app, service), ro, nil)
 }
 
 func (c *Client) ServiceUpdate(app, name string, opts structs.ServiceUpdateOptions) error {
@@ -1191,8 +1478,33 @@ func (c *Client) SystemUpdate(opts structs.SystemUpdateOptions) error {
 	return err
 }
 
+func (c *Client) KarpenterCleanup() error {
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	return c.Post("/system/karpenter/cleanup", ro, nil)
+}
+
 // skipcq
 func (*Client) Workers() error {
 	err := fmt.Errorf("not available via api")
 	return err
+}
+
+func (c *Client) MachineList() (structs.Machines, error) {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	var v structs.Machines
+
+	err = c.Get("/machines", ro, &v)
+
+	return v, err
+}
+
+func (c *Client) ClientType() string {
+	if c.MachineID != "" {
+		return "machine"
+	}
+	return "standard"
 }

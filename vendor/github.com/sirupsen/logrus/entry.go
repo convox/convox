@@ -34,13 +34,15 @@ func init() {
 	minimumCallerDepth = 1
 }
 
-// Defines the key when adding errors using WithError.
+// ErrorKey defines the key when adding errors using [WithError], [Logger.WithError].
 var ErrorKey = "error"
 
-// An entry is the final or intermediate Logrus logging entry. It contains all
+// Entry is the final or intermediate Logrus logging entry. It contains all
 // the fields passed with WithField{,s}. It's finally logged when Trace, Debug,
 // Info, Warn, Error, Fatal or Panic is called on it. These objects can be
 // reused and passed around as much as you wish to avoid field duplication.
+//
+//nolint:recvcheck // the methods of "Entry" use pointer receiver and non-pointer receiver.
 type Entry struct {
 	Logger *Logger
 
@@ -86,12 +88,12 @@ func (entry *Entry) Dup() *Entry {
 	return &Entry{Logger: entry.Logger, Data: data, Time: entry.Time, Context: entry.Context, err: entry.err}
 }
 
-// Returns the bytes representation of this entry from the formatter.
+// Bytes returns the bytes representation of this entry from the formatter.
 func (entry *Entry) Bytes() ([]byte, error) {
 	return entry.Logger.Formatter.Format(entry)
 }
 
-// Returns the string representation from the reader and ultimately the
+// String returns the string representation from the reader and ultimately the
 // formatter.
 func (entry *Entry) String() (string, error) {
 	serialized, err := entry.Bytes()
@@ -102,12 +104,13 @@ func (entry *Entry) String() (string, error) {
 	return str, nil
 }
 
-// Add an error as single field (using the key defined in ErrorKey) to the Entry.
+// WithError adds an error as single field (using the key defined in [ErrorKey])
+// to the Entry.
 func (entry *Entry) WithError(err error) *Entry {
 	return entry.WithField(ErrorKey, err)
 }
 
-// Add a context to the Entry.
+// WithContext adds a context to the Entry.
 func (entry *Entry) WithContext(ctx context.Context) *Entry {
 	dataCopy := make(Fields, len(entry.Data))
 	for k, v := range entry.Data {
@@ -116,12 +119,12 @@ func (entry *Entry) WithContext(ctx context.Context) *Entry {
 	return &Entry{Logger: entry.Logger, Data: dataCopy, Time: entry.Time, err: entry.err, Context: ctx}
 }
 
-// Add a single field to the Entry.
+// WithField adds a single field to the Entry.
 func (entry *Entry) WithField(key string, value interface{}) *Entry {
 	return entry.WithFields(Fields{key: value})
 }
 
-// Add a map of fields to the Entry.
+// WithFields adds a map of fields to the Entry.
 func (entry *Entry) WithFields(fields Fields) *Entry {
 	data := make(Fields, len(entry.Data)+len(fields))
 	for k, v := range entry.Data {
@@ -150,7 +153,7 @@ func (entry *Entry) WithFields(fields Fields) *Entry {
 	return &Entry{Logger: entry.Logger, Data: data, Time: entry.Time, err: fieldErr, Context: entry.Context}
 }
 
-// Overrides the time of the Entry.
+// WithTime overrides the time of the Entry.
 func (entry *Entry) WithTime(t time.Time) *Entry {
 	dataCopy := make(Fields, len(entry.Data))
 	for k, v := range entry.Data {
@@ -204,7 +207,7 @@ func getCaller() *runtime.Frame {
 
 		// If the caller isn't part of this package, we're done
 		if pkg != logrusPackage {
-			return &f //nolint:scopelint
+			return &f
 		}
 	}
 
@@ -232,6 +235,7 @@ func (entry *Entry) log(level Level, msg string) {
 
 	newEntry.Logger.mu.Lock()
 	reportCaller := newEntry.Logger.ReportCaller
+	bufPool := newEntry.getBufferPool()
 	newEntry.Logger.mu.Unlock()
 
 	if reportCaller {
@@ -239,11 +243,11 @@ func (entry *Entry) log(level Level, msg string) {
 	}
 
 	newEntry.fireHooks()
-
-	buffer = getBuffer()
+	buffer = bufPool.Get()
 	defer func() {
 		newEntry.Buffer = nil
-		putBuffer(buffer)
+		buffer.Reset()
+		bufPool.Put(buffer)
 	}()
 	buffer.Reset()
 	newEntry.Buffer = buffer
@@ -258,6 +262,13 @@ func (entry *Entry) log(level Level, msg string) {
 	if level <= PanicLevel {
 		panic(newEntry)
 	}
+}
+
+func (entry *Entry) getBufferPool() (pool BufferPool) {
+	if entry.Logger.BufferPool != nil {
+		return entry.Logger.BufferPool
+	}
+	return bufferPool
 }
 
 func (entry *Entry) fireHooks() {
@@ -276,18 +287,21 @@ func (entry *Entry) fireHooks() {
 }
 
 func (entry *Entry) write() {
+	entry.Logger.mu.Lock()
+	defer entry.Logger.mu.Unlock()
 	serialized, err := entry.Logger.Formatter.Format(entry)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to obtain reader, %v\n", err)
 		return
 	}
-	entry.Logger.mu.Lock()
-	defer entry.Logger.mu.Unlock()
 	if _, err := entry.Logger.Out.Write(serialized); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write to log, %v\n", err)
 	}
 }
 
+// Log will log a message at the level given as parameter.
+// Warning: using Log at Panic or Fatal level will not respectively Panic nor Exit.
+// For this behaviour Entry.Panic or Entry.Fatal should be used instead.
 func (entry *Entry) Log(level Level, args ...interface{}) {
 	if entry.Logger.IsLevelEnabled(level) {
 		entry.log(level, fmt.Sprint(args...))
@@ -421,7 +435,7 @@ func (entry *Entry) Panicln(args ...interface{}) {
 	entry.Logln(PanicLevel, args...)
 }
 
-// Sprintlnn => Sprint no newline. This is to get the behavior of how
+// sprintlnn => Sprint no newline. This is to get the behavior of how
 // fmt.Sprintln where spaces are always added between operands, regardless of
 // their type. Instead of vendoring the Sprintln implementation to spare a
 // string allocation, we do the simplest thing.

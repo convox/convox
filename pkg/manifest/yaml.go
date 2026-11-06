@@ -2,11 +2,13 @@ package manifest
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
 
 	yaml "gopkg.in/yaml.v2"
+	kyaml "sigs.k8s.io/yaml"
 )
 
 type DefaultsSetter interface {
@@ -67,7 +69,7 @@ func (v *BalancerPort) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err := remarshal(w, &bp); err != nil {
 			return err
 		}
-		v.Protocol = bp.Protocol
+		v.Protocol = strings.ToUpper(bp.Protocol)
 		v.Target = bp.Target
 	case int:
 		v.Protocol = "TCP"
@@ -155,6 +157,54 @@ func (v *Services) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 func (v *Service) SetName(name string) error {
 	v.Name = name
+	return nil
+}
+
+func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawAnnotations []interface{}
+	if err := unmarshal(&rawAnnotations); err != nil {
+		return fmt.Errorf("failed to unmarshal annotations: %w", err)
+	}
+
+	var annotations []Annotation
+
+	for _, raw := range rawAnnotations {
+		switch item := raw.(type) {
+		case string:
+			parts := strings.SplitN(item, "=", 2)
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid annotation format: %s", item)
+			}
+			annotations = append(annotations, Annotation{Key: parts[0], Value: parts[1]})
+
+		case map[interface{}]interface{}:
+			for k, v := range item {
+				keyStr, ok := k.(string)
+				if !ok {
+					return fmt.Errorf("annotation key is not a string: %v", k)
+				}
+				vStr, ok := v.(string)
+				if !ok {
+					return fmt.Errorf("annotation value is not a string: %v", k)
+				}
+				annotations = append(annotations, Annotation{Key: keyStr, Value: vStr})
+			}
+
+		case map[string]interface{}:
+			for k, v := range item {
+				vStr, ok := v.(string)
+				if !ok {
+					return fmt.Errorf("annotation value is not a string: %v", k)
+				}
+				annotations = append(annotations, Annotation{Key: k, Value: vStr})
+			}
+
+		default:
+			return fmt.Errorf("unsupported annotation type: %T", item)
+		}
+	}
+
+	*a = annotations
 	return nil
 }
 
@@ -266,6 +316,14 @@ func (v *ServiceHealth) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 		if w, ok := t["disable"].(bool); ok {
 			v.Disable = w
+		}
+		if w, ok := t["grpcService"].(string); ok {
+			v.GrpcService = w
+		}
+		if p, ok := t["port"]; ok && p != nil {
+			if err := remarshal(p, &v.Port); err != nil {
+				return err
+			}
 		}
 	case string:
 		v.Path = t
@@ -417,6 +475,36 @@ func (v *ServiceScale) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				return err
 			}
 			v.Targets = t
+		}
+		if w, ok := t["keda"].(interface{}); ok {
+			var k ServiceScaleKeda
+			if err := remarshalUsingKyaml(w, &k); err != nil {
+				return err
+			}
+			v.Keda = &k
+		}
+		if w, ok := scaleBoundInt(t["min"]); ok {
+			v.Min = &w
+		}
+		if w, ok := scaleBoundInt(t["max"]); ok {
+			v.Max = &w
+		}
+		if w, ok := t["autoscale"]; ok {
+			var a ServiceAutoscale
+			if err := remarshalUsingKyaml(w, &a); err != nil {
+				return err
+			}
+			v.Autoscale = &a
+		}
+		if w, ok := t["vpa"].(interface{}); ok {
+			var k VPA
+			if err := remarshal(w, &k); err != nil {
+				return err
+			}
+			v.VPA = &k
+			if v.VPA.UpdateMode == "false" {
+				v.VPA.UpdateMode = "Off"
+			}
 		}
 		if w, ok := t["limit"].(interface{}); ok {
 			var lmt ServiceResourceLimit
@@ -578,6 +666,15 @@ func remarshal(in, out interface{}) error {
 	return yaml.Unmarshal(data, out)
 }
 
+func remarshalUsingKyaml(in, out interface{}) error {
+	data, err := yaml.Marshal(in)
+	if err != nil {
+		return err
+	}
+
+	return kyaml.Unmarshal(data, out)
+}
+
 func marshalMapSlice(in interface{}) (interface{}, error) {
 	ms := yaml.MapSlice{}
 
@@ -689,4 +786,22 @@ func yamlAttributes(data []byte) (map[string]bool, error) {
 	}
 
 	return attrs, nil
+}
+
+func scaleBoundInt(v interface{}) (int, bool) {
+	switch t := v.(type) {
+	case int:
+		return t, true
+	case int64:
+		return int(t), true
+	case float64:
+		if math.IsNaN(t) || math.IsInf(t, 0) {
+			return 0, false
+		}
+		if t != math.Trunc(t) {
+			return 0, false
+		}
+		return int(t), true
+	}
+	return 0, false
 }

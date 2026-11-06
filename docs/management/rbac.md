@@ -1,0 +1,195 @@
+---
+title: "Console RBAC"
+description: "Role-based access control assigns granular roles and permission policies to users across the Console and CLI under a zero-trust model."
+slug: rbac
+url: /management/rbac
+---
+
+# Role-Based Access Control (RBAC)
+
+The RBAC feature allows you to define granular access control by assigning specific roles and permission policies to users in your organization.
+
+Users who have not been assigned a custom role retain a **Legacy Role** that preserves their original Console permissions. Organizations can create, test, and assign new roles at their own pace.
+
+> Custom RBAC roles require a Pro or Plus plan. On other plans, every user in the organization is an Administrator with full access.
+
+> RBAC roles apply to both the Console and the CLI, ensuring unified permission management across interfaces.
+
+> Restrict write access to the **Roles** resource. If a user has write access to roles, they could potentially modify or escalate their own permissions, undermining the security of the RBAC configuration. Follow the principle of least privilege to mitigate this risk.
+
+## Creating Roles
+
+Roles can be created or cloned using the **Roles** tab found on the **Users** page of the Console. To create a new role:
+
+1. Go to the **Users** page.
+2. Select the **Roles** tab.
+3. Click **Create Role** to define a new role or **Clone** to create a role based on an existing template.
+
+## Assigning Roles to Users
+
+To assign a custom role to a user:
+
+1. Navigate to the **Active Users** tab.
+2. Select the custom role you've created from the dropdown.
+3. Assign it to the selected user.
+
+## Pre-Created Roles
+
+To make role assignment easier, Convox provides a set of **pre-created roles**. These roles come with pre-configured permissions and are managed by Convox to cover common use cases and best practices for platform access. The managed roles apply to both the Console and CLI, ensuring consistent permissions across interfaces. These roles are cumulative, with each level adding more permissions than the last. They are listed below from least to most privileged.
+
+### DeveloperV2
+
+The **DeveloperV2** role is focused on application development and deployment. This role grants control over applications while providing read-only visibility into certain organizational resources.
+
+A DeveloperV2 can:
+- **Write Applications**: Full control over application deployment and management.
+- **Read Dashboard**: View-only access to the organization dashboard.
+- **Read Jobs**: View-only access to job statuses and logs.
+- **Read Racks**: View-only access to rack details.
+
+### OperatorV2
+
+The **OperatorV2** role builds on the **DeveloperV2** role by adding permissions to manage infrastructure and organizational workflows. Operators can perform day-to-day management of key systems and settings without having full control over sensitive areas like billing or user management.
+
+An OperatorV2 can:
+- **Write Applications**: Full control over application deployment and management.
+- **Write Racks**: Full control over infrastructure and rack configurations.
+- **Write Integrations**: Full control over external integrations.
+- **Write Workflows**: Full control over workflows.
+- **Read Audit Logs**: View-only access to audit logs for monitoring and compliance.
+- **Read Dashboard**: View-only access to the organization dashboard.
+- **Read Jobs**: View-only access to job statuses and logs.
+
+### Administrator
+
+The **Administrator** role builds on the **OperatorV2** role and provides full access across all resources and permissions within the platform.
+
+An Administrator can:
+- **Write All Resources**: Full control over all platform resources, including:
+  - Billing
+  - Users
+  - Audit Logs
+
+## Defining Role Permissions
+
+Each role can have multiple permission policies. Every policy consists of:
+- **Resource Type**: The type of resource the permission applies to.
+- **Resource Name**: The specific name of the resource (when applicable).
+- **Action**: Defines whether the permission grants `Read` or `Write` access.
+
+> Not all resource types require a resource name. For example, the **Billing** page only provides `Read` or `Write` access without the need to specify a resource name.
+
+### Resource Types
+
+Here are the available resource types that can be selected when defining permissions:
+
+- All Resources
+- Application
+- Audit Logs
+- Billing
+- Integrations
+- Jobs
+- Kubectl Access
+- Organization Settings
+- Racks
+- Roles
+- Support
+- Users
+- Workflows
+
+### Relation Between Rack and App Permissions
+
+**Rack** permissions and **App** permissions are related. A user must have access to the **Rack** to make use of **App** permissions. If a user is granted app-level permissions but lacks permissions for the associated rack, the app permissions will not grant access. Rack permissions act as a foundational requirement for app-related actions.
+
+### Resource Name Options
+
+For resources requiring a name, you can specify the target resource using one of the following options:
+
+- **Name (string)**: Manually input the name of the app or rack.
+- **List**: Select from a dropdown list of available resources.
+- **Regex**: Apply a regular expression filter to match resource names.
+- **Allow-All**: Grants access to all resource names under the selected resource type.
+- **Deny-All**: Denies access to all resource names under the selected resource type.
+
+### Actions
+
+Each permission can either grant `Read` or `Write` access. If access is not explicitly defined, it defaults to denial, following a zero-trust approach.
+
+### Zero Trust Model
+
+RBAC operates under a zero-trust model. This means if no permission is granted, the user has no access to the resource. This ensures that only explicitly allowed actions and resource accesses are permitted.
+
+### All Resources Type
+
+Permissions set for the **All Resources** type are evaluated last. This allows you to use **All Resources** as a base template (e.g., read access) and then override it with more specific policies like `deny-all` for certain resources, making access management easier and more flexible.
+
+## Common Role Patterns
+
+Below are common patterns for role creation using RBAC, addressing specific use cases within an organization.
+
+### 1. Non-Billing Administrator
+
+This role provides administrative-level write access to all resources except for the **Billing** page, where the user is denied access. Additionally, the role has read-only access to the **Users** and **Roles** resources, which is helpful for auditing and oversight without the ability to modify roles.
+
+![Non-Billing Administrator](/images/documentation/management/rbac/example1.png)
+
+### 2. Engineer with Limited Write Access
+
+This role gives an engineer write access to manage deployments and jobs across multiple applications but does not allow modifications to **Racks** or **Organization Settings**. This is useful for teams that need to deploy code and manage app-specific jobs but should not alter infrastructure-level settings.
+
+![Engineer with Limited Write Access](/images/documentation/management/rbac/example2.png)
+
+### 3. Read-Only Auditor
+
+This role is designed for compliance or auditing purposes. The user is granted read access to all resources, ensuring they can review configurations, logs, and settings but cannot make any modifications. This is ideal for security audits or compliance checks where full visibility is required without the ability to change anything.
+
+![Read-Only Auditor](/images/documentation/management/rbac/example3.png)
+
+These examples showcase the flexibility of RBAC in managing user access based on common organizational roles and responsibilities.
+
+## Admin-Only Operations
+
+A small set of sensitive operations require an **admin** role, which sits above the standard `Read`/`Write` actions. These checks are enforced by the rack itself, not just the Console UI, so they apply equally to Console users, CLI users authenticating with the rack password, and direct API callers using a JWT.
+
+Only the **Administrator** role satisfies these checks. The pre-created **OperatorV2** and **DeveloperV2** roles do not, and a custom role does not satisfy them even if it grants `Write` access on the **All Resources** type. Administrator is the top-level role for sensitive operations such as billing, budget cap changes, and webhook signing key rotation; `Write` permissions cover day-to-day resource work without granting these.
+
+Admin-only operations include:
+
+- **Budget cap mutations** such as setting a monthly cap, the at-cap action, or a pricing adjustment, and clearing a budget or clearing the auto-restore cooldown. An under-privileged caller receives a `403` response, for example:
+
+  ```
+  403 AppBudgetSet: admin role required to set budget cap
+  403 AppBudgetClear: admin role required to remove budget config
+  ```
+
+  For the full list of which budget operations require admin versus read/write access, see [Budget Caps → Authorization](/management/budget-caps#authorization).
+
+- **Revealing the webhook signing key** in Console under Rack > Settings. Non-admin users see a masked value only. See [Rack Roles](/console/rack-roles) for details.
+
+When a user authenticates with the rack password instead of a Console identity, the request is treated as an admin request. Scripted flows that use the rack password can therefore perform admin-only operations even when the person running them has a narrower RBAC role. If this is a concern, use JWT-based access for scripted flows and keep the rack password tightly scoped.
+
+## Deploy Keys and RBAC
+
+With the RBAC update, you can assign custom roles to [Deploy Keys](/management/deploy-keys), allowing deploy keys to have more flexible permissions. Deploy keys are API keys designed for use in CI environments or other remote systems.
+
+> Deploy keys will only utilize permissions related to **Racks** and **Applications**. Permissions such as **Users** or **Billing** will not apply to deploy keys.
+
+By assigning a custom role to a deploy key, you can extend its default capabilities to include additional commands beyond the predefined set. This lets you configure deploy keys with specific permissions tailored to your organizational needs.
+
+For more information on how to create and use deploy keys, visit the [Deploy Keys documentation](/management/deploy-keys).
+
+## Summary
+
+With RBAC, you can now:
+- Create custom roles with fine-grained permissions.
+- Assign roles to users from the **Active Users** tab.
+- Define permissions for different resource types, including applications, billing, and Kubernetes access.
+- Use the zero-trust model to ensure that only allowed actions are permitted.
+- Extend Deploy Key functionality by assigning custom roles for more flexible use cases.
+
+By setting up permissions correctly, your organization can achieve tighter security controls and more flexible user access management.
+
+## See Also
+
+- [Password Security](/management/password-security) for configuring password policies and authentication security
+- [Rack Roles](/console/rack-roles) for the organization-administrator gate that controls sensitive rack-tier operations (e.g. the `webhook_signing_key` reveal in Console)

@@ -1,0 +1,118 @@
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: {{.Service.Name}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.App}}
+    service: {{.Service.Name}}
+    system: convox
+    type: service
+    {{- range keyValue .Service.Labels}}
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
+    {{- end}}
+  annotations:
+    convox.com/idles: "{{.Idles}}"
+    convox.com/backend-protocol: {{ yamlQuote .Service.Port.Scheme }}
+    {{- range $k, $v := .Annotations}}
+    {{ yamlScalar $k }}: {{ safe $v }}
+    {{- end}}
+spec:
+  ingressClassName: {{.IngressClassName}}
+  virtualhost:
+    fqdn: {{ safe .Host }}
+    {{- if or .Service.Certificate.Id .ConvoxDomainTLS}}
+    tls:
+      secretName: {{if .Service.Certificate.Id}}{{ yamlScalar .Service.Certificate.Id }}{{else}}cert-{{.Service.Name}}{{end}}
+    {{- end}}
+    {{- if .WhitelistCIDRs}}
+    ipAllowPolicy:
+    {{- range .WhitelistCIDRs}}
+    - cidr: {{ safe . }}
+      source: {{if $.ProxyProtocol}}Remote{{else}}Peer{{end}}
+    {{- end}}
+    {{- end}}
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    {{- if not .Service.Tls.Redirect}}
+    permitInsecure: true
+    {{- end}}
+    services:
+    - name: {{.Service.Name}}
+      port: {{.Service.Port.Port}}
+      {{- if .BackendProtocol}}
+      protocol: {{.BackendProtocol}}
+      {{- end}}
+    {{- if .Service.Timeout}}
+    timeoutPolicy:
+      response: "{{.TimeoutResponse}}"
+      idle: "{{.TimeoutIdle}}"
+    {{- end}}
+    {{- if .RateLimitRPS}}
+    rateLimitPolicy:
+      local:
+        requests: {{.RateLimitRPS}}
+        unit: second
+    {{- end}}
+    {{- if .Service.Sticky}}
+    loadBalancerPolicy:
+      strategy: Cookie
+    {{- end}}
+{{- range $i, $d := .Service.Domains}}
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: {{$.Service.Name}}-domain-{{$i}}
+  namespace: {{$.Namespace}}
+  labels:
+    app: {{$.App}}
+    service: {{$.Service.Name}}
+    system: convox
+    type: service
+spec:
+  ingressClassName: {{$.IngressClassName}}
+  virtualhost:
+    fqdn: {{ safe $d }}
+    {{- if or $.Service.Certificate.Id $.ConvoxDomainTLS}}
+    tls:
+      secretName: {{if $.Service.Certificate.Id}}{{ yamlScalar $.Service.Certificate.Id }}{{else}}cert-{{$.Service.Name}}-domains{{end}}
+    {{- end}}
+    {{- if $.WhitelistCIDRs}}
+    ipAllowPolicy:
+    {{- range $.WhitelistCIDRs}}
+    - cidr: {{ safe . }}
+      source: {{if $.ProxyProtocol}}Remote{{else}}Peer{{end}}
+    {{- end}}
+    {{- end}}
+  routes:
+  - conditions:
+    - prefix: /
+    enableWebsockets: true
+    {{- if not $.Service.Tls.Redirect}}
+    permitInsecure: true
+    {{- end}}
+    services:
+    - name: {{$.Service.Name}}
+      port: {{$.Service.Port.Port}}
+      {{- if $.BackendProtocol}}
+      protocol: {{$.BackendProtocol}}
+      {{- end}}
+    {{- if $.Service.Timeout}}
+    timeoutPolicy:
+      response: "{{$.TimeoutResponse}}"
+      idle: "{{$.TimeoutIdle}}"
+    {{- end}}
+    {{- if $.RateLimitRPS}}
+    rateLimitPolicy:
+      local:
+        requests: {{$.RateLimitRPS}}
+        unit: second
+    {{- end}}
+    {{- if $.Service.Sticky}}
+    loadBalancerPolicy:
+      strategy: Cookie
+    {{- end}}
+{{- end}}

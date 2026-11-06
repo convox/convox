@@ -21,7 +21,7 @@ func init() {
 			stdcli.StringFlag("manifest", "m", "manifest file"),
 			stdcli.StringFlag("generation", "g", "generation"),
 			stdcli.BoolFlag("no-build", "", "skip build"),
-			stdcli.BoolFlag("no-cache", "", "build withoit layer cache"),
+			stdcli.BoolFlag("no-cache", "", "build without layer cache"),
 			stdcli.BoolFlag("no-sync", "", "do not sync local changes into the running containers"),
 			stdcli.IntFlag("shift", "s", "shift local port numbers (generation 1 only)"),
 		},

@@ -32,6 +32,14 @@ func String(value string) *string {
 	return &v
 }
 
+func StringOrNil(value string) *string {
+	if value == "" {
+		return nil
+	}
+	v := value
+	return &v
+}
+
 func Time(value time.Time) *time.Time {
 	v := value
 	return &v
@@ -42,4 +50,12 @@ func StringValueSafe(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func StringPtrArray(arr []string) []*string {
+	v := []*string{}
+	for i := range arr {
+		v = append(v, &arr[i])
+	}
+	return v
 }

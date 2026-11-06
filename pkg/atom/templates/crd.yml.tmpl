@@ -53,8 +53,15 @@ spec:
                   type: string
                 previousVersion:
                   type: string
+                releaseCache:
+                  type: string
                 progressDeadlineSeconds:
                   type: integer
+                dependencies:
+                  type: array
+                  nullable: true
+                  items:
+                    type: string
   scope: Namespaced
   names:
     plural: atoms

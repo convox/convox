@@ -2,9 +2,12 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -13,6 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/aws/aws-sdk-go/service/ecr/ecriface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -28,11 +35,20 @@ type Provider struct {
 	EncryptionKey string
 	Region        string
 
+	EcrScanOnPushEnable       bool
+	EcrImmutableTagsEnabled   bool
+	CloudwatchDisable         bool
+	AppCloudwatchDisable      bool
+	CloudwatchRetentionInDays int
+	CloudwatchRetentionNever  bool
+
 	Ec2 *ec2.EC2
 
 	CloudFormation cloudformationiface.CloudFormationAPI
 	CloudWatchLogs cloudwatchlogsiface.CloudWatchLogsAPI
 	ECR            ecriface.ECRAPI
+	EKS            eksiface.EKSAPI
+	IAM            iamiface.IAMAPI
 	S3             s3iface.S3API
 	SQS            sqsiface.SQSAPI
 }
@@ -43,11 +59,30 @@ func FromEnv() (*Provider, error) {
 		return nil, err
 	}
 
+	ecrScanOnPushEnable, err := strconv.ParseBool(os.Getenv("ECR_SCAN_ON_PUSH_ENABLE"))
+	if err != nil {
+		return nil, err
+	}
+
+	ecrImmutableTagsEnabled, err := strconv.ParseBool(os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED"))
+	if err != nil {
+		return nil, err
+	}
+
+	retentionDays, retentionNever := normalizeRetention(os.Getenv("CLOUDWATCH_RETENTION_IN_DAYS"))
+
 	p := &Provider{
-		Provider:      k,
-		Bucket:        os.Getenv("BUCKET"),
-		EncryptionKey: os.Getenv("ENCRYPTION_KEY"),
-		Region:        os.Getenv("AWS_REGION"),
+		Provider:                k,
+		Bucket:                  os.Getenv("BUCKET"),
+		EncryptionKey:           os.Getenv("ENCRYPTION_KEY"),
+		Region:                  os.Getenv("AWS_REGION"),
+		EcrScanOnPushEnable:     ecrScanOnPushEnable,
+		EcrImmutableTagsEnabled: ecrImmutableTagsEnabled,
+		CloudwatchDisable:       os.Getenv("CLOUDWATCH_DISABLE") == "true",
+		AppCloudwatchDisable:    os.Getenv("APP_CLOUDWATCH_DISABLE") == "true",
+
+		CloudwatchRetentionInDays: retentionDays,
+		CloudwatchRetentionNever:  retentionNever,
 	}
 
 	k.Engine = p
@@ -60,9 +95,17 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 		return err
 	}
 
+	if p.Provider.RouterType == "contour" && p.Provider.ContourInternalTLS {
+		if err := p.Provider.EnsureSelfSignedCA(); err != nil {
+			fmt.Printf("warning: could not ensure self-signed CA: %s\n", err)
+		}
+	}
+
 	if err := p.Provider.Initialize(opts); err != nil {
 		return err
 	}
+
+	go p.runLogRetentionReconciler(p.Context())
 
 	return nil
 }
@@ -70,11 +113,14 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	pp := *p
 	pp.Provider = pp.Provider.WithContext(ctx).(*k8s.Provider)
+	pp.Provider.Engine = &pp
 	return &pp
 }
 
 func (p *Provider) initializeAwsServices() error {
-	s, err := session.NewSession()
+	s, err := session.NewSession(aws.NewConfig().
+		WithSTSRegionalEndpoint(endpoints.RegionalSTSEndpoint),
+	)
 	if err != nil {
 		return err
 	}
@@ -84,6 +130,8 @@ func (p *Provider) initializeAwsServices() error {
 	p.CloudFormation = cloudformation.New(s)
 	p.CloudWatchLogs = cloudwatchlogs.New(s)
 	p.ECR = ecr.New(s)
+	p.IAM = iam.New(s)
+	p.EKS = eks.New(s)
 	p.S3 = s3.New(s)
 	p.SQS = sqs.New(s)
 

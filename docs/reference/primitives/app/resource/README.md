@@ -1,47 +1,66 @@
 ---
 title: "Resource"
-draft: false
-slug: Resource
+description: "A Resource is a network-accessible backing service such as a database or cache, available containerized, as an AWS managed service, or on Convox Cloud."
+slug: resource
 url: /reference/primitives/app/resource
 ---
 # Resource
 
-A Resource is a network-accessible external service.
+A Resource is a network-accessible external service such as a database or cache. Convox supports three resource deployment models:
 
-## Definition
+- **Containerized**: Runs the resource inside your Rack cluster. Fast to set up, low cost, ideal for development and staging.
+- **AWS Managed (RDS/ElastiCache)**: Provisions a fully managed AWS service. Use for production workloads requiring durability, backups, and high availability.
+- **Convox Cloud Databases**: Managed databases available on [Convox Cloud](/cloud/databases) with simplified configuration and pricing.
+
+## Resource Definition
 
 A Resource is defined in [`convox.yml`](/configuration/convox-yml) and linked to one or more [Services](/reference/primitives/app/service).
-```html
+
+```yaml
+resources:
+  main:
+    type: postgres
+services:
+  web:
     resources:
-      main:
-        type: postgres
-    services:
-      web:
-        resources:
-          - main
+      - main
 ```
-### Types
 
-The following Resource types are currently available:
+## Types
 
-* `mariadb`
-* `memcached`
-* `mysql`
-* `postgis`
-* `postgres`
-* `redis`
+### Containerized
+
+- `mariadb`
+- `memcached`
+- `mysql`
+- [`postgis`](/reference/primitives/app/resource/postgis)
+- `postgres`
+- `redis`
+
+> Containerized Resource images are pulled as-is from upstream and carry no architecture selection. Three of the current default images have no arm64 variant: `memcached:1.4.34`, `mysql:5.7.23`, and `postgis/postgis:10-3.2`. If your Rack has workload nodes that can be arm64, set an explicit `version` or `image` on those Resources so the container has an image it can run.
+
+### AWS Managed (RDS/ElastiCache)
+
+- `rds-mariadb`
+- `rds-mysql`
+- `rds-postgres`
+- `elasticache-redis`
+- `elasticache-memcached`
+
+See [AWS RDS Managed Database Resources](#aws-rds-managed-database-resources) and [AWS ElastiCache Redis and Memcached Resources](#aws-elasticache-redis-and-memcached-resources) below for configuration details.
+
+A deploy that adds an AWS managed Resource waits for the instance to become available before it updates the App's Services, which commonly takes 10 to 15 minutes, and the App shows `updating` throughout. An existing Resource that is not available at promote time holds the deploy only for a short lookup. From Rack version `3.25.10`, [`convox apps cancel`](/reference/cli/apps#apps-cancel) works during the wait.
 
 ## Linking
 
-Linking a Resource to a [Service](/reference/primitives/app/service) causes an environment variable to be injected into [Processes](/reference/primitives/app/process)
-of that [Service](/reference/primitives/app/service) based on the name of the Resource.
+Linking a Resource to a [Service](/reference/primitives/app/service) causes an environment variable to be injected into [Processes](/reference/primitives/app/process) of that [Service](/reference/primitives/app/service) based on the name of the Resource.
 
-The credential details will be stored in the environment variables, you can use the FQDN (URL) or each credential separately.
+The credential details will be stored in the environment variables, and you can use the FQDN (URL) or each credential separately.
 
-For example, a `postgres` resource named `main` (as in the example above) would injected like this:
+For example, a `postgres` resource named `main` (as in the example above) would be injected like this:
 
-```html
-MAIN_URL=postgres://username:password@host.name:port/database`
+```text
+MAIN_URL=postgres://username:password@host.name:port/database
 MAIN_USER=username
 MAIN_PASS=password
 MAIN_HOST=host.name
@@ -49,79 +68,327 @@ MAIN_PORT=port
 MAIN_NAME=database
 ```
 
+### Linking to a Custom Environment Variable Name
+
+Each entry in a service's `resources:` list accepts two forms:
+
+| Form | Result |
+|------|--------|
+| `- main` | Injects all six credential variables (`MAIN_URL`, `MAIN_USER`, `MAIN_PASS`, `MAIN_HOST`, `MAIN_PORT`, `MAIN_NAME`) |
+| `- main:MY_ENV_NAME` | Injects a single variable named `MY_ENV_NAME` containing one credential of `main` |
+
+Use the aliased form when your application expects a credential under a specific name, such as `DATABASE_URL` or `SPRING_DATASOURCE_URL`. The credential placed in the variable is selected by the last `_`-separated segment of the name you choose:
+
+| Name ends in | Credential injected |
+|--------------|---------------------|
+| `_URL` | Connection URL |
+| `_USER` | Username |
+| `_PASS` | Password |
+| `_HOST` | Host |
+| `_PORT` | Port |
+| `_NAME` | Database name |
+| anything else | Connection URL |
+
+The suffix match is case-sensitive and matches the entire last segment, so `DB_PASSWORD` does not match `_PASS` and receives the connection URL.
+
+```yaml
+services:
+  web:
+    resources:
+      - main:DATABASE_URL        # ends in _URL, gets the URL
+      - main:DB_HOST             # ends in _HOST, gets only the host
+      - main:POSTGRES_DSN        # _DSN is not a credential suffix, gets the URL
+```
+
+The variable is created entirely by the resource link. Do not also list it under `environment:`.
+
+> Write the entry with no space after the colon. `- main:DATABASE_URL` is a YAML string and parses correctly; `- main: DATABASE_URL` is a YAML map and fails to load with `cannot unmarshal !!map into string`.
+
+Both linking forms behave identically for every resource type, including the `rds-*` and `elasticache-*` types, and apply to [Timer](/reference/primitives/app/timer) pods and `convox run` processes as well as Service processes.
+
+Resource credentials are injected into the container at runtime. They do not appear in `convox env` output, and they are not visible to `${}` interpolation in `convox.yml`. See [Environment Variables: Interpolation](/configuration/environment#interpolation).
+
+## Custom Images
+
+You can also pass a compatible custom image for all resource types.
+
+To use a custom image, include the `image` field in your resource configuration:
+
+```yaml
+resources:
+  main:
+    type: postgres
+    image: pgvector/pgvector:pg16
+services:
+  web:
+    resources:
+      - main
+```
+
+Note:
+
+1. Always include the image tag when specifying a custom image. If no tag is provided, the `latest` tag will be used. Ensure that the specified image has a `latest` tag or provide a specific tag to avoid errors.
+2. The image field takes precedence over the version field. If both are specified, the version field will be ignored.
+
+Example:
+
+```yaml
+resources:
+  my-redis:
+    type: redis
+    image: custom-redis-image:6.2
+    options:
+      version: "6.0"
+```
+
+In this example, a custom Redis image named `custom-redis-image` with tag `6.2` will be used.
+
 ## Overlays
 
-By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](/reference/primitives/rack).  This allows you to get up and running as quickly as possible and also provides a low cost solution and more effective usage of your Rack.
+By default, any Resources you define will be satisfied by starting a containerized version on your [Rack](/reference/primitives/rack). This allows you to get up and running as quickly as possible and provides a low-cost solution and more effective usage of your Rack.
 
-In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability.  For instance, on AWS you may wish to utilise RDS to provide you with a Database, or on GCP you may wish to use Memorystore in place of a containerized Redis instance.
+In your production environment, or for particular usage requirements, you may wish to replace the containerized Resources with a managed cloud service for durability. For instance, on AWS you may wish to utilize RDS to provide you with a Database, or replace a containerized Redis instance with an ElastiCache-managed resource.
 
-Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, whilst easily switching them out for the cloud-provider managed services on those environments that require them.
+Resource Overlays provide you with a simple and effective way to maintain the cheaper and efficient containerized Resources on the environments you wish, while switching them out for the cloud-provider managed services on those environments that require them.
 
-If you wish to replace any of those containerized Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable is on your [App](/reference/primitives/app).  The corresponding Resource will then not be started by Convox on that Rack.
+### Example: Development vs Production Resources
 
-```sh
-$ convox env set MAIN_URL=postgres://username:password@postgres–instance1.123456789012.us-east-1.rds.amazonaws.com:5432/database -r production-rack
+In development, you might use a containerized Postgres resource:
+
+```yaml
+resources:
+  database:
+    type: postgres
+services:
+  web:
+    resources:
+      - database
+```
+
+For production, you can overlay this with an AWS RDS managed database without changing your application code:
+
+```yaml
+resources:
+  database:
+    type: rds-postgres
+    options:
+      class: db.m5.large
+      storage: 100
+      encrypted: true
+      durable: true
+services:
+  web:
+    resources:
+      - database
+```
+
+The environment variable injected into your service (e.g., `DATABASE_URL`) uses the same format in both cases, so your application connects to either resource transparently.
+
+If you wish to replace any of those containerized Resources on a Rack, to stop them being initiated, you can manually set a matching environment variable on your [App](/reference/primitives/app). The corresponding Resource will then not be started by Convox on that Rack.
+
+```bash
+$ convox env set MAIN_URL=postgres://username:password@postgres-instance1.123456789012.us-east-1.rds.amazonaws.com:5432/database -r production-rack
 Setting MAIN_URL... OK
 Release: RABCDEFGHI
 ```
 
-By doing this, a containerized `main` resource will now no longer be started on the `production-rack` for this app.  The service will instead communicate with the managed database instead.
+By doing this, a containerized `main` resource will now no longer be started on the `production-rack` for this app. The service will instead communicate with the managed database.
 
-### Specifying the environment variable
+## AWS RDS Managed Database Resources
 
-You can also specify the environment variable that should be used for linking in the `resources` attribute:
-```html
+In addition to containerized resources, Convox allows the creation of database resources (mariadb, mysql, and postgres) via AWS RDS. This integration provides enhanced durability and managed service benefits. Below are the basic configurations required for using AWS RDS resources.
+
+### Defining AWS RDS Resources
+
+AWS RDS resources are specified with a `rds-` prefix followed by the database type (e.g., `rds-mariadb`, `rds-mysql`, `rds-postgres`). Here is a general example of how to define AWS RDS resources:
+
+```yaml
+resources:
+  database:
+    type: rds-postgres
+    options:
+      storage: 100
+      class: db.t3.large
+      version: "16"
+services:
+  web:
     resources:
-      main:
-        type: postgres
-    services:
-      web:
-        resources:
-          - main:DIFFERENT_URL
+      - database
 ```
-This example would cause database URL to be injected as `DIFFERENT_URL`. This behavior disables the credential details, only the FQDN will be available.
+
+For detailed configuration options and defaults for each type of AWS RDS resource, refer to the specific resource documentation pages:
+
+- [MariaDB](/reference/primitives/app/resource/mariadb)
+- [MySQL](/reference/primitives/app/resource/mysql)
+- [PostgreSQL](/reference/primitives/app/resource/postgres)
+
+### Advisory
+
+If an application is deleted, it will delete its created RDS databases. We advise enabling `deletionProtection` for any production or critical databases to avoid any accidental removal. If a database is imported, the database will not be removed if the application is deleted and it will need to be manually deleted.
+
+## RDS Features
+
+### Read Replicas
+
+Read replicas allow you to create read-only copies of your database to improve read scalability and reliability.
+
+To configure a read replica, use the `readSourceDB` option to point to another database using the name you've chosen in the `convox.yml`:
+
+```yaml
+resources:
+  mydb:
+    type: rds-postgres
+    options:
+      storage: 100
+      class: db.t3.large
+      version: "16"
+  dbrr:
+    type: rds-postgres
+    options:
+      readSourceDB: "#convox.resources.mydb"
+services:
+  web:
+    resources:
+      - mydb
+      - dbrr
+```
+
+**Immutable Attributes for Read Replicas**:
+- Engine version
+- Storage type
+- Storage encryption
+- Storage volume
+
+To promote a read replica to an active primary DB, remove the `readSourceDB` option from the `convox.yml` and redeploy.
+
+Resource linking works the same with read replicas, meaning environment variables for both primary and read replica databases will be created based on their respective YAML names.
+
+### Database Import
+
+Database import allows you to integrate any RDS managed database or Elasticache into Convox, whether it was initially created by Convox or not.
+
+```yaml
+resources:
+  mydb-import:
+    type: rds-postgres
+    options:
+      import: mydb-rtest-rc6-7924r-postgres-rds-check
+      masterUserPassword: ${MYDBPASS}
+services:
+  web:
+    resources:
+      - mydb-import
+```
+
+**Usage**:
+- Set the `import` option with the `masterUserPassword` before deploying.
+- As long as the `import` option is set, the database will act as a passive linked access database.
+- Remove the `import` option and redeploy to manage the database through Convox.
+- While `import` is set, no other configured options will be considered. If `import` is removed, the application will have management control over the RDS database, and the `masterUserPassword` no longer needs to be configured.
+
+You can set the master user password using `convox env set` before deploying:
+
+```bash
+$ convox env set MYDBPASS=my_secure_password -a myapp
+Setting MYDBPASS... OK
+Release: RABCDEFGHI
+```
+
+## AWS ElastiCache Redis and Memcached Resources
+
+Convox supports native AWS ElastiCache Redis and Memcached instances for high-performance caching solutions. These managed cache instances can be defined and linked to services similarly to other managed resources.
+
+### Defining AWS ElastiCache Resources
+
+AWS ElastiCache resources are specified with an `elasticache-` prefix followed by the cache type (`redis` or `memcached`). Below are examples of defining both Redis and Memcached resources:
+
+**Redis Example**:
+```yaml
+resources:
+  cache:
+    type: elasticache-redis
+    options:
+      class: cache.t3.micro
+      version: "6.2"
+services:
+  web:
+    resources:
+      - cache
+```
+
+**Memcached Example** (the `nodes` parameter must be set):
+```yaml
+resources:
+  cache:
+    type: elasticache-memcached
+    options:
+      version: "1.6.6"
+      class: cache.t4g.micro
+      nodes: 1
+services:
+  web:
+    resources:
+      - cache
+```
+
+> **Note:** The `nodes` option is required for Memcached and must be set to the desired number of nodes for the Memcached cluster.
+
+For detailed configuration options and examples for each type of AWS Elasticache resource, refer to the specific resource documentation pages:
+
+- [Redis](/reference/primitives/app/resource/redis)
+- [Memcached](/reference/primitives/app/resource/memcached)
 
 ## Command Line Interface
 
 ### Listing Resources
-```html
-    $ convox resources -a myapp
-    NAME  TYPE      URL
-    main  postgres  postgres://username:password@host.name:port/database
+```bash
+$ convox resources -a myapp
+NAME  TYPE      URL
+main  postgres  postgres://username:password@host.name:port/database
 ```
+
 ### Getting Information about a Resource
-```html
-    $ convox resources info main -a myapp
-    Name  main
-    Type  postgres
-    URL   postgres://username:password@host.name:port/database
+```bash
+$ convox resources info main -a myapp
+Name  main
+Type  postgres
+URL   postgres://username:password@host.name:port/database
 ```
+
 ### Getting the URL for a Resource
-```html
-    $ convox resources url main -a myapp
-    postgres://username:password@host.name:port/database
+```bash
+$ convox resources url main -a myapp
+postgres://username:password@host.name:port/database
 ```
+
 ### Launching a Console
-```html
-    $ convox resources console main -a myapp
-    psql (11.5 (Debian 11.5-1+deb10u1), server 10.5 (Debian 10.5-2.pgdg90+1))
-    Type "help" for help.
-    database=#
+```bash
+$ convox resources console main -a myapp
+psql (11.5 (Debian 11.5-1+deb10u1), server 10.5 (Debian 10.5-2.pgdg90+1))
+Type "help" for help.
+database=#
 ```
+
 ### Starting a Proxy to a Resource
-```html
-    $ convox resources proxy main -a myapp
-    Proxying localhost:5432 to host.name:port
+```bash
+$ convox resources proxy main -a myapp
+Proxying localhost:5432 to host.name:port
 ```
 > Proxying allows you to connect tools on your local machine to Resources running inside the Rack.
 
 ### Exporting Data from a Resource
-```html
-    $ convox resources export main -f /tmp/db.sql
-    Exporting data from main... OK
+```bash
+$ convox resources export main -f /tmp/db.sql
+Exporting resource data... OK
 ```
+
 ### Importing Data to a Resource
-```html
-    $ convox resources import main -f /tmp/db.sql
-    Importing data to main... OK
+```bash
+$ convox resources import main -f /tmp/db.sql
+Importing resource data... OK
 ```
+
+## See Also
+
+- [Convox Cloud Databases](/cloud/databases) for managed databases with simplified pricing on Convox Cloud
+- [Environment Variables](/configuration/environment) for configuring resource connection strings

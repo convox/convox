@@ -63,6 +63,16 @@ func (p *Provider) Initialize(opts structs.ProviderOptions) error {
 	return nil
 }
 
+func (p *Provider) Start() error {
+	if err := p.Provider.Start(); err != nil {
+		return err
+	}
+
+	p.RunElasticsearchMaintenance(p.elastic)
+
+	return nil
+}
+
 func (p *Provider) WithContext(ctx context.Context) structs.Provider {
 	pp := *p
 	pp.Provider = pp.Provider.WithContext(ctx).(*k8s.Provider)

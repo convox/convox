@@ -10,6 +10,11 @@ variable "domain" {
   default = ""
 }
 
+variable "elasticsearch_disk" {
+  type    = string
+  default = "5Gi"
+}
+
 variable "image" {
   default = "convox/convox"
 }
@@ -31,8 +36,29 @@ variable "release" {
   default = ""
 }
 
+variable "router_log_redact_params" {
+  type    = string
+  default = ""
+}
+
 variable "syslog" {
   default = ""
+}
+
+variable "syslog_tls_verify" {
+  type    = bool
+  default = true
+}
+
+variable "fluentd_memory" {
+  type    = string
+  default = "200Mi"
+}
+
+variable "webhook_signing_key" {
+  type        = string
+  default     = ""
+  description = "Optional HMAC-SHA256 key(s) for signing outbound webhook payloads. Hex-encoded; comma-separated for rotation (max 2). When set, emits Convox-Signature header. Empty preserves 3.24.5 behavior (unsigned)."
 }
 
 variable "whitelist" {

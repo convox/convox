@@ -3,28 +3,38 @@
 
 locals {
   telemetry_map = {
-    docker_hub_password = var.docker_hub_password
-    docker_hub_username = var.docker_hub_username
-    domain = var.domain
-    image = var.image
-    name = var.name
-    rack_name = var.rack_name
-    registry_disk = var.registry_disk
-    release = var.release
-    syslog = var.syslog
-    whitelist = var.whitelist
-    }
+    docker_hub_password      = var.docker_hub_password
+    docker_hub_username      = var.docker_hub_username
+    domain                   = var.domain
+    elasticsearch_disk       = var.elasticsearch_disk
+    fluentd_memory           = var.fluentd_memory
+    image                    = var.image
+    name                     = var.name
+    rack_name                = var.rack_name
+    registry_disk            = var.registry_disk
+    release                  = var.release
+    router_log_redact_params = var.router_log_redact_params
+    syslog                   = var.syslog
+    syslog_tls_verify        = var.syslog_tls_verify
+    webhook_signing_key      = var.webhook_signing_key
+    whitelist                = var.whitelist
+  }
 
   telemetry_default_map = {
-    docker_hub_password = ""
-    docker_hub_username = ""
-    domain = ""
-    image = "convox/convox"
-    name = ""
-    rack_name = ""
-    registry_disk = "50Gi"
-    release = ""
-    syslog = ""
-    whitelist = "0.0.0.0/0"
-    }
+    docker_hub_password      = ""
+    docker_hub_username      = ""
+    domain                   = ""
+    elasticsearch_disk       = "5Gi"
+    fluentd_memory           = "200Mi"
+    image                    = "convox/convox"
+    name                     = ""
+    rack_name                = ""
+    registry_disk            = "50Gi"
+    release                  = ""
+    router_log_redact_params = ""
+    syslog                   = ""
+    syslog_tls_verify        = "true"
+    webhook_signing_key      = ""
+    whitelist                = "0.0.0.0/0"
+  }
 }

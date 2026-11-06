@@ -8,15 +8,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/convox/convox/pkg/structs"
 	"github.com/pkg/errors"
 )
 
 func (p *Provider) ObjectDelete(app, key string) error {
-	err := os.Remove(p.objectFilename(app, key))
+	fn, err := p.objectFilename(app, key)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	err = os.Remove(fn)
 	if os.IsNotExist(err) {
-		return errors.WithStack(fmt.Errorf("object not found: %s", key))
+		return errors.WithStack(structs.ErrNotFound("object not found: %s", key))
 	}
 	if err != nil {
 		return errors.WithStack(err)
@@ -26,7 +32,12 @@ func (p *Provider) ObjectDelete(app, key string) error {
 }
 
 func (p *Provider) ObjectExists(app, key string) (bool, error) {
-	_, err := os.Stat(p.objectFilename(app, key))
+	fn, err := p.objectFilename(app, key)
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+
+	_, err = os.Stat(fn)
 	if os.IsNotExist(err) {
 		return false, nil
 	}
@@ -38,9 +49,14 @@ func (p *Provider) ObjectExists(app, key string) (bool, error) {
 }
 
 func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
-	fd, err := os.Open(p.objectFilename(app, key))
+	fn, err := p.objectFilename(app, key)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	fd, err := os.Open(fn)
 	if os.IsNotExist(err) {
-		return nil, errors.WithStack(fmt.Errorf("object not found: %s", key))
+		return nil, errors.WithStack(structs.ErrNotFound("object not found: %s", key))
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -50,7 +66,7 @@ func (p *Provider) ObjectFetch(app, key string) (io.ReadCloser, error) {
 }
 
 func (p *Provider) ObjectList(app, prefix string) ([]string, error) {
-	return nil, errors.WithStack(fmt.Errorf("unimplemented"))
+	return nil, errors.WithStack(structs.ErrNotImplemented("unimplemented"))
 }
 
 func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.ObjectStoreOptions) (*structs.Object, error) {
@@ -62,7 +78,10 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 		key = k
 	}
 
-	fn := p.objectFilename(app, key)
+	fn, err := p.objectFilename(app, key)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	if err := os.MkdirAll(filepath.Dir(fn), 0700); err != nil {
 		return nil, errors.WithStack(err)
@@ -84,8 +103,13 @@ func (p *Provider) ObjectStore(app, key string, r io.Reader, opts structs.Object
 	return o, nil
 }
 
-func (p *Provider) objectFilename(app, key string) string {
-	return filepath.Join(p.Storage, "objects", app, key)
+func (p *Provider) objectFilename(app, key string) (string, error) {
+	base := filepath.Join(p.Storage, "objects")
+	fn := filepath.Join(base, app, key)
+	if !strings.HasPrefix(fn, base+string(filepath.Separator)) {
+		return "", structs.ErrBadRequest("invalid object key: %s", key)
+	}
+	return fn, nil
 }
 
 func generateTempKey() (string, error) {

@@ -1,6 +1,6 @@
 ---
 title: "deploy"
-draft: false
+description: "The convox deploy command creates a build and promotes it in one step, with flags for build args, external builds, alternate manifests, and forced deploys."
 slug: deploy
 url: /reference/cli/deploy
 ---
@@ -11,52 +11,120 @@ url: /reference/cli/deploy
 Create and promote a build
 
 ### Usage
-```html
+```bash
     convox deploy [dir]
 ```
+
+### Flags
+
+| Flag | Short | Type | Description |
+|------|-------|------|-------------|
+| `--build-args` | | string | Build arguments (repeatable). Requires rack version 3.22.0+ |
+| `--description` | `-d` | string | Description for the build |
+| `--development` | | bool | Build in development mode |
+| `--external` | | bool | Use external build |
+| `--force` | | bool | Promote without waiting for the app to be ready; also reduces the environment drop guard message to a one-line notice and bypasses the guard when `CONVOX_ENV_DROP_GUARD=strict` |
+| `--id` | | bool | Print only the Release ID on stdout; progress goes to stderr |
+| `--manifest` | `-m` | string | Path to an alternate manifest file |
+| `--no-cache` | | bool | Build without the layer cache. Requires rack version 3.25.11+; earlier racks build with the cache. With `--external` it applies to the local build on any rack version. See [Building Without the Cache](/reference/cli/build#building-without-the-cache) |
+| `--wildcard-domain` | | bool | Use wildcard domain for the build |
+
 ### Examples
-```html
+```bash
     $ convox deploy
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
 
 ### Pass build time env vars
 
-You can pass env vars that will only exists on the build time. (Supported from version: >= 3.7.2)
+You can pass env vars that will only exist at build time.
 
-```html
+> Build arguments require rack version 3.22.0 or later.
+
+```bash
     $ convox deploy --build-args "BUILD_ENV1=val1" --build-args "BUILD_ENV2=val2"
     Packaging source... OK
     Uploading source... OK
     Starting build... OK
-    Authenticating https://index.docker.io/v1/: Login Succeeded
-    Authenticating 1234567890.dkr.ecr.us-east-1.amazonaws.com: Login Succeeded
-    Building: .
+    #1 [internal] load build definition from Dockerfile
+    #1 transferring dockerfile: 133B done
+    #1 DONE 0.2s
     ...
-    ...
-    Running: docker tag convox/myapp:web.BABCDEFGHI 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
-    Running: docker push 1234567890.dkr.ecr.us-east-1.amazonaws.com/test-regis-1mjiluel3aiv3:web.BABCDEFGHI
     Promoting RABCDEFGHI...
     ...
     ...
-    2020-01-31T15:41:16Z system/cloudformation aws/cfm test-myapp-ServiceApp-ZNV5T8E1R2XQ DELETE_COMPLETE ExecutionRole
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp DELETE_COMPLETE ServiceApp
-    2020-01-31T15:41:27Z system/cloudformation aws/cfm test-myapp UPDATE_COMPLETE test-myapp
+    2026-03-18T15:41:16Z system/k8s/atom/app Status: Running => Pending
+    2026-03-18T15:41:18Z system/k8s/atom/app Status: Pending => Updating
+    2026-03-18T15:41:27Z system/k8s/atom/app Status: Updating => Running
     OK
 ```
+
+### Environment Drop Guard
+
+Because `convox deploy` creates a build, it runs the same [environment drop guard](/reference/cli/build#environment-drop-guard) as `convox build` (requires CLI version 3.25.1+). If variables set in the running release would be dropped by the new build, the CLI prints a warning to stderr with an explanation and an example `convox env set KEY=... --promote` command to keep them, and the deploy continues. Set `CONVOX_ENV_DROP_GUARD=strict` to make the guard blocking instead. Passing `--force` reduces the warning to a one-line notice and bypasses the guard in strict mode, in addition to its existing meaning of promoting without waiting for readiness.
+
+### External Builds
+
+The `--external` flag runs the Docker build locally instead of uploading the source to the rack. `convox deploy --external` uses the same flow as `convox build --external` and additionally promotes the resulting Release.
+
+```bash
+    $ convox deploy --external -a myapp
+```
+
+On GCP, external builds require Rack version 3.25.12 or later; the CLI version does not matter. See [build: External Builds](/reference/cli/build#external-builds) for the flow, requirements, and example output.
+
+### Failure Messages
+
+When a rollout fails, `convox deploy` names the App and the command to run next:
+
+```text
+    ERROR: rollout failed for myapp, the previous release was restored
+      convox deploy-debug -a myapp
+```
+
+If another deploy or promote of the same App replaces this Release before the command finishes waiting, the command names the Release the App is running instead:
+
+```text
+    ERROR: release RABCDEFGHI for myapp was superseded by RBCDEFGHIJ
+      convox releases info RBCDEFGHIJ -a myapp
+```
+
+A concurrent deploy or promote won, and the App is running the named Release. The superseded Release did not necessarily fail: it may have been live for a few seconds before it was replaced.
+
+If the command was at `Waiting for app to be ready` behind another rollout and that rollout failed, its own Release never started rolling out:
+
+```text
+    ERROR: release RABCDEFGHI for myapp was not promoted, another rollout failed while it waited
+      convox deploy-debug -a myapp
+```
+
+Both exit non-zero, so a CI job still fails, and the command exits `0` only when the App is running the Release it promoted. Deploys are not queued: without `--force` a deploy waits for an in-flight rollout to finish before it promotes. These two messages require CLI version `3.25.9` or later; an earlier CLI prints the rollout-failed message in both cases. `convox releases promote`, `convox releases create-from --promote`, and `convox env set`, `convox env unset` and `convox env edit` with `--promote` print the same messages. `convox releases rollback` does not wait behind another rollout, so it can print only the superseded message.
+
+If the command reaches its own 35-minute ceiling while the Rack is still rolling out, it reports that instead. The Rack continues past the CLI ceiling, so the Release still finishes or still rolls back without the command watching.
+
+```text
+    ERROR: myapp did not reach a running state within 35m, the rack may still be rolling out
+      convox deploy-debug -a myapp
+      convox apps cancel -a myapp
+```
+
+See [Rolling Updates: Failure Detection](/deployment/rolling-updates#failure-detection) for the settings that make a broken rollout fail in minutes instead of after the 50-minute default.
+
+## See Also
+
+- [Deploying Changes](/deployment/deploying-changes) for deployment workflow
+- [Rolling Updates](/deployment/rolling-updates) for deployment strategies
+- [deploy-debug](/reference/cli/deploy-debug) for diagnosing failed deployments

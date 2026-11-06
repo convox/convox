@@ -5,6 +5,29 @@ balancers:
     ports:
       3000: 3001
     service: nosuch
+  charlie:
+    annotations:
+      - noequalssign
+    ports:
+      3000:
+        protocol: sctp
+        port: 3001
+    service: serviceF
+  delta:
+    awsLoadBalancerController: true
+    ports:
+      6000:
+        protocol: udp
+        port: 6001
+    service: serviceF
+  echo:
+    awsLoadBalancerController: true
+    ports:
+      53: 5300
+      53:
+        protocol: UDP
+        port: 5300
+    service: serviceF
 resources:
   1resource:
     type: postgres
@@ -13,10 +36,13 @@ services:
     deployment:
       minimum: -1
       maximum: 99
+      progressDeadline: 29
+      crashRestartLimit: -2
   deployment-invalid-high:
     deployment:
       minimum: 101
       maximum: 201
+      progressDeadline: 21601
   internal-router-invalid:
     internal: true
     internalRouter: true
@@ -24,6 +50,18 @@ services:
     build: .
     resources:
       - foo
+  grpc-path-invalid:
+    build: .
+    port: grpc:50051
+    grpcHealthEnabled: true
+    health:
+      grpcService: /ready
+  grpc-liveness-path-invalid:
+    build: .
+    port: grpc:50052
+    grpcHealthEnabled: true
+    liveness:
+      grpcService: "  /ready"
 timers:
   timer_1:
     service: someservice

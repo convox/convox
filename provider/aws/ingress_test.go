@@ -9,9 +9,41 @@ import (
 )
 
 func TestIngressClass(t *testing.T) {
-	testProvider(t, func(p *aws.Provider) {
-		assert.Equal(t, "nginx", p.IngressClass())
-	})
+	cases := []struct {
+		routerType string
+		expected   string
+	}{
+		{"", "nginx"},
+		{"nginx", "nginx"},
+		{"contour", "contour"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.routerType, func(t *testing.T) {
+			testProvider(t, func(p *aws.Provider) {
+				p.Provider.RouterType = tc.routerType
+				require.Equal(t, tc.expected, p.IngressClass())
+			})
+		})
+	}
+}
+
+func TestIngressInternalClass(t *testing.T) {
+	cases := []struct {
+		routerType string
+		expected   string
+	}{
+		{"", "nginx-internal"},
+		{"nginx", "nginx-internal"},
+		{"contour", "contour-internal"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.routerType, func(t *testing.T) {
+			testProvider(t, func(p *aws.Provider) {
+				p.Provider.RouterType = tc.routerType
+				require.Equal(t, tc.expected, p.IngressInternalClass())
+			})
+		})
+	}
 }
 
 func TestIngressAnnotations(t *testing.T) {
@@ -21,16 +53,20 @@ func TestIngressAnnotations(t *testing.T) {
 		Annotations map[string]string
 	}{
 		{
-			Name:        "Not passing duration",
-			Duration:    "",
-			Annotations: map[string]string{"cert-manager.io/cluster-issuer": "letsencrypt"},
+			Name:     "Not passing duration",
+			Duration: "",
+			Annotations: map[string]string{
+				"cert-manager.io/cluster-issuer":              "letsencrypt",
+				"cert-manager.io/private-key-rotation-policy": "Never",
+			},
 		},
 		{
 			Name:     "Passing duration",
 			Duration: "720h",
 			Annotations: map[string]string{
-				"cert-manager.io/cluster-issuer": "letsencrypt",
-				"cert-manager.io/duration":       "720h",
+				"cert-manager.io/cluster-issuer":              "letsencrypt",
+				"cert-manager.io/duration":                    "720h",
+				"cert-manager.io/private-key-rotation-policy": "Never",
 			},
 		},
 	}

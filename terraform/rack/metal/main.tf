@@ -9,11 +9,14 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_username = var.docker_hub_username
-  docker_hub_password = var.docker_hub_password
-  domain              = module.router.endpoint
-  name                = var.name
-  release             = var.release
+  docker_hub_username   = var.docker_hub_username
+  docker_hub_password   = var.docker_hub_password
+  domain                = module.router.endpoint
+  name                  = var.name
+  release               = var.release
+  telemetry_default_map = null
+  telemetry             = false
+  telemetry_map         = null
 }
 
 module "api" {
@@ -25,6 +28,8 @@ module "api" {
 
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = local.endpoint
+  elasticsearch_disk        = var.elasticsearch_disk
+  fluentd_memory            = var.fluentd_memory
   image                     = var.image
   name                      = var.name
   rack_name                 = var.rack_name
@@ -32,8 +37,11 @@ module "api" {
   release                   = var.release
   resolver                  = module.resolver.endpoint
   router                    = module.router.endpoint
+  router_log_redact_params  = var.router_log_redact_params
   secret                    = random_string.secret.result
   syslog                    = var.syslog
+  syslog_tls_verify         = var.syslog_tls_verify
+  webhook_signing_key       = var.webhook_signing_key
 }
 
 module "resolver" {
@@ -57,8 +65,9 @@ module "router" {
     kubernetes = kubernetes
   }
 
-  name      = var.name
-  namespace = module.k8s.namespace
-  release   = var.release
-  whitelist = var.whitelist
+  docker_hub_authentication = module.k8s.docker_hub_authentication
+  name                      = var.name
+  namespace                 = module.k8s.namespace
+  release                   = var.release
+  whitelist                 = var.whitelist
 }

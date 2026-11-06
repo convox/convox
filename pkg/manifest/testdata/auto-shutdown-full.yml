@@ -1,0 +1,20 @@
+services:
+  api:
+    image: example/api:latest
+  worker:
+    image: example/worker:latest
+    scale: { count: 2 }
+  ml-batch:
+    image: example/ml-batch:latest
+
+budget:
+  monthlyCapUsd: 500
+  alertThresholdPercent: 80
+  atCapAction: auto-shutdown
+  atCapWebhookUrl: https://hooks.example.com/budget
+  neverAutoShutdown:
+    - api
+  shutdownOrder: largest-cost
+  notifyBeforeMinutes: 30
+  shutdownGracePeriod: 5m
+  recoveryMode: auto-on-reset

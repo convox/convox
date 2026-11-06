@@ -1,0 +1,35 @@
+---
+title: "karpenter_instance_families"
+description: "The karpenter_instance_families rack parameter sets which EC2 instance families Karpenter uses for workload nodes, allowing all general-purpose families by default."
+slug: karpenter_instance_families
+url: /configuration/rack-parameters/aws/karpenter_instance_families
+---
+
+# karpenter_instance_families
+
+## Description
+
+The `karpenter_instance_families` parameter specifies which EC2 instance families [Karpenter](/configuration/scaling/karpenter) can use when provisioning workload nodes. Karpenter selects the optimal instance type from the allowed families based on pending pod requirements.
+
+## Default Value
+
+The default value is empty (all general-purpose instance families are allowed).
+
+## Setting the Parameter
+
+```bash
+$ convox rack params set karpenter_instance_families=c5,m6i,r5 -r rackName
+Updating parameters... OK
+```
+
+## Additional Information
+
+- **Validation:** Comma-separated lowercase alphanumeric values (e.g., `c5,m6i,r5`). On a Rack with `karpenter_enabled=true`, `convox rack params set` at `3.25.3` or newer also rejects a list in which no family matches the workload architecture, which comes from [`karpenter_arch`](/configuration/rack-parameters/aws/karpenter_arch) or, when that is unset, from the architecture of [`node_type`](/configuration/rack-parameters/aws/node_type). Setting `karpenter_instance_families=c5,m5` on an arm64 Rack fails with `karpenter_instance_families (c5,m5) has no family matching the karpenter_arch architecture (arm64); Karpenter could not provision any matching node`.
+- Combine with [`karpenter_instance_sizes`](/configuration/rack-parameters/aws/karpenter_instance_sizes) to further constrain instance selection.
+- Build nodes use [`karpenter_build_instance_families`](/configuration/rack-parameters/aws/karpenter_build_instance_families), which falls back to this value if unset.
+
+## See Also
+
+- [Karpenter](/configuration/scaling/karpenter) for the full Karpenter configuration reference
+- [karpenter_instance_sizes](/configuration/rack-parameters/aws/karpenter_instance_sizes)
+- [karpenter_build_instance_families](/configuration/rack-parameters/aws/karpenter_build_instance_families)

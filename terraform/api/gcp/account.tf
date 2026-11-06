@@ -18,6 +18,12 @@ resource "google_project_iam_member" "api-storage" {
   project = var.project_id
 }
 
+resource "google_project_iam_member" "api-artifactregistry" {
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${google_service_account.api.email}"
+  project = var.project_id
+}
+
 resource "google_service_account_iam_binding" "api-binding" {
   service_account_id = google_service_account.api.name
   role               = "roles/iam.serviceAccountTokenCreator"

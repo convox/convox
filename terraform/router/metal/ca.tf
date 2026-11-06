@@ -3,7 +3,6 @@ resource "tls_private_key" "ca-private" {
 }
 
 resource "tls_self_signed_cert" "ca" {
-  key_algorithm   = tls_private_key.ca-private.algorithm
   private_key_pem = tls_private_key.ca-private.private_key_pem
 
   dns_names             = ["ca.${var.name}"]

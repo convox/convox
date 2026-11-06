@@ -16,13 +16,14 @@ func init() {
 		Flags: []stdcli.Flag{
 			flagApp,
 			flagRack,
+			flagForce,
 			stdcli.StringFlag("description", "d", "description"),
 			stdcli.StringFlag("release", "", "use existing release to run tests"),
 			stdcli.IntFlag("timeout", "t", "timeout"),
 		},
 		Usage:    "[dir]",
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 }
 
 func Test(rack sdk.Interface, c *stdcli.Context) error {
@@ -86,7 +87,7 @@ func Test(rack sdk.Interface, c *stdcli.Context) error {
 
 		code, err := rack.ProcessExec(app(c), ps.Id, s.Test, c, eopts)
 		if err != nil {
-			return err
+			return execExitError(err, "This test's process has been stopped.")
 		}
 
 		if code != 0 {

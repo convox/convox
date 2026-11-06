@@ -1,34 +1,945 @@
 package cli
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/pkg/validator"
 	"github.com/convox/convox/provider"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+var providerKnownParams = map[string]map[string]bool{
+	"aws":   awsKnownParams,
+	"gcp":   gcpKnownParams,
+	"azure": azureKnownParams,
+	"do":    doKnownParams,
+	"metal": metalKnownParams,
+	"local": localKnownParams,
+}
+
+var awsKnownParams = map[string]bool{
+	"access_log_retention_in_days": true, "additional_build_groups_config": true,
+	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
+	"api_feature_gates": true, "app_cloudwatch_disable": true, "availability_zones": true,
+	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
+	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
+	"build_node_type": true, "buildkit_host_path_cache_enable": true,
+	"cert_duration": true, "cidr": true, "cloudwatch_disable": true,
+	"cloudwatch_retention_in_days":   true,
+	"convox_domain_tls_cert_disable": true, "convox_rack_domain": true,
+	"coredns_version": true, "cost_tracking_enable": true, "cost_tracking_history_days": true, "custom_provided_bucket": true,
+	"deploy_crash_restart_limit": true, "deploy_extra_nlb": true,
+	"deploy_progress_deadline": true, "disable_convox_resolver": true,
+	"disable_image_manifest_cache": true, "disable_public_access": true,
+	"dcgm_scrape_interval": true,
+	"docker_hub_password":  true, "docker_hub_username": true,
+	"ebs_volume_encryption_enabled": true, "ecr_additional_policy_arn": true, "ecr_docker_hub_cache": true, "ecr_full_access": true, "ecr_immutable_tags_enabled": true, "ecr_scan_on_push_enable": true,
+	"efs_csi_driver_enable": true, "efs_csi_driver_version": true,
+	"fast_image_pull_enable":              true,
+	"eks_access_entries":                  true,
+	"eks_api_server_private_access_cidrs": true,
+	"eks_api_server_public_access_cidrs":  true,
+	"eks_control_plane_private_subnets":   true,
+	"eks_log_types":                       true,
+	"enable_private_access":               true,
+	"contour_cpu_request":                 true, "contour_memory_request": true,
+	"envoy_cpu_request": true, "envoy_memory_request": true,
+	"fluentd_disable": true, "fluentd_memory": true,
+	"gpu_metrics_max_concurrent": true, "gpu_metrics_max_pods": true,
+	"gpu_observability_chart_version": true, "gpu_observability_enable": true,
+	"gpu_tag_enable":            true,
+	"grafana_dashboard_var_app": true, "grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_rack": true, "grafana_dashboard_var_service": true,
+	"grafana_url":       true,
+	"high_availability": true,
+	"idle_timeout":      true, "image": true,
+	"imds_http_hop_limit": true, "imds_http_tokens": true,
+	"pod_security_standard": true, "pod_security_mode": true,
+	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
+	"pod_imds_block_enabled": true, "network_policy_enable": true,
+	"internet_gateway_id": true, "k8s_version": true,
+	"karpenter_ami_alias": true, "karpenter_arch": true, "karpenter_auth_mode": true,
+	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
+	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
+	"karpenter_build_disruption_budget_nodes": true,
+	"karpenter_build_instance_sizes":          true, "karpenter_build_memory_limit_gb": true,
+	"karpenter_build_imds_tokens": true, "karpenter_build_imds_hop_limit": true,
+	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
+	"karpenter_config": true, "karpenter_consolidate_after": true,
+	"karpenter_consolidation_enabled": true, "karpenter_cpu_limit": true,
+	"karpenter_disruption_block_duration": true, "karpenter_disruption_block_schedule": true,
+	"karpenter_disruption_budget_nodes": true, "karpenter_enabled": true,
+	"karpenter_system_node_min_count_per_az": true,
+	"karpenter_instance_families":            true, "karpenter_instance_sizes": true,
+	"karpenter_memory_limit_gb": true, "karpenter_node_disk": true,
+	"karpenter_node_expiry": true, "karpenter_node_labels": true,
+	"karpenter_node_os": true, "karpenter_node_overlays_config": true,
+	"karpenter_node_taints": true, "karpenter_node_volume_type": true,
+	"karpenter_node_volume_iops": true, "karpenter_node_volume_throughput": true,
+	"keda_enable": true, "key_pair_name": true,
+	"kube_proxy_version": true, "kubelet_registry_burst": true,
+	"kubelet_registry_pull_qps": true, "max_on_demand_count": true,
+	"min_on_demand_count":     true,
+	"name":                    true,
+	"nginx_additional_config": true, "nginx_image": true,
+	"nlb_security_group": true, "node_capacity_type": true,
+	"node_disk": true, "node_max_unavailable_percentage": true,
+	"node_volume_iops": true, "node_volume_throughput": true,
+	"node_type": true, "nvidia_device_plugin_enable": true,
+	"nvidia_device_time_slicing_replicas": true, "pdb_default_min_available_percentage": true,
+	"pod_identity_agent_enable": true, "pod_identity_agent_version": true,
+	"private": true, "private_eks_host": true,
+	"private_eks_pass": true, "private_eks_user": true,
+	"private_subnets_ids": true, "prometheus_gpu_metrics_chart_version": true,
+	"prometheus_gpu_metrics_retention": true, "prometheus_url": true,
+	"proxy_protocol":     true,
+	"public_subnets_ids": true, "rack_name": true, "router_log_redact_params": true, "router_type": true,
+	"region": true, "release": true,
+	"release_watcher_gc_interval":     true,
+	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
+	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
+	"seccomp_default_enabled": true,
+	"settings":                true, "ssl_ciphers": true,
+	"ssl_protocols": true, "sync_tf_now": true,
+	"syslog": true, "syslog_access_logs": true, "syslog_tls_verify": true, "system_readonly_rootfs_enabled": true, "tags": true,
+	"telemetry": true, "terraform_update_timeout": true,
+	"user_data": true, "user_data_url": true,
+	"vpa_enable": true, "vpc_cni_version": true,
+	"vpc_id": true, "webhook_signing_key": true,
+	"whitelist": true,
+}
+
+var gcpKnownParams = map[string]bool{
+	"additional_node_groups_config": true,
+	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
+	"dcgm_scrape_interval": true, "docker_hub_password": true,
+	"docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
+	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
+	"k8s_version": true, "name": true, "nginx_additional_config": true,
+	"node_disk": true, "node_type": true, "preemptible": true,
+	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true, "settings": true,
+	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
+	"terraform_update_timeout": true, "webhook_signing_key": true,
+	"whitelist": true,
+}
+
+var azureKnownParams = map[string]bool{
+	"additional_build_groups_config": true, "additional_node_groups_config": true,
+	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
+	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true,
+	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
+	"image": true, "k8s_version": true, "max_on_demand_count": true,
+	"min_on_demand_count": true, "name": true, "nginx_additional_config": true,
+	"nginx_image": true, "node_disk": true, "node_type": true,
+	"nvidia_device_plugin_enable": true, "nvidia_device_time_slicing_replicas": true,
+	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
+	"release": true, "router_log_redact_params": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
+	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "tags": true, "telemetry": true,
+	"terraform_update_timeout": true, "webhook_signing_key": true,
+	"whitelist": true,
+}
+
+var doKnownParams = map[string]bool{
+	"access_id": true, "buildkit_enabled": true, "cert_duration": true,
+	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
+	"high_availability": true, "image": true, "k8s_version": true,
+	"name": true, "node_type": true, "rack_name": true, "region": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "secret_key": true,
+	"settings": true, "sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
+	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
+	"whitelist": true,
+}
+
+var metalKnownParams = map[string]bool{
+	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
+	"elasticsearch_disk": true, "fluentd_memory": true, "image": true, "name": true, "rack_name": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "sync_tf_now": true,
+	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
+}
+
+var localKnownParams = map[string]bool{
+	"docker_hub_password": true, "docker_hub_username": true, "image": true,
+	"name": true, "os": true, "rack_name": true, "release": true,
+	"settings": true, "sync_tf_now": true, "telemetry": true,
+	"webhook_signing_key": true,
+}
+
+var managedParams = map[string]bool{
+	"image": true, "name": true, "rack_name": true, "release": true, "settings": true,
+	"nginx_image": true, "k8s_version": true, "aws_ebs_csi_driver_version": true,
+	"coredns_version": true, "efs_csi_driver_version": true, "kube_proxy_version": true,
+	"pod_identity_agent_version": true, "vpc_cni_version": true,
+	"disable_public_access": true, "enable_private_access": true,
+	"eks_api_server_public_access_cidrs": true,
+}
+
+// boolParams lists type=bool TF variables that require ParseBool validation.
+// Maintain in sync with terraform/{system,rack}/<provider>/variables.tf.
+var boolParams = map[string]bool{
+	"app_cloudwatch_disable":            true,
+	"azure_files_enable":                true,
+	"build_disable_convox_resolver":     true,
+	"build_node_enabled":                true,
+	"build_node_minimal_role_enabled":   true,
+	"buildkit_host_path_cache_enable":   true,
+	"cloudwatch_disable":                true,
+	"convox_domain_tls_cert_disable":    true,
+	"cost_tracking_enable":              true,
+	"deploy_extra_nlb":                  true,
+	"disable_convox_resolver":           true,
+	"disable_image_manifest_cache":      true,
+	"disable_public_access":             true,
+	"ebs_volume_encryption_enabled":     true,
+	"ecr_docker_hub_cache":              true,
+	"ecr_full_access":                   true,
+	"ecr_immutable_tags_enabled":        true,
+	"ecr_scan_on_push_enable":           true,
+	"efs_csi_driver_enable":             true,
+	"eks_control_plane_private_subnets": true,
+	"enable_private_access":             true,
+	"fast_image_pull_enable":            true,
+	"fluentd_disable":                   true,
+	"gpu_observability_enable":          true,
+	"gpu_tag_enable":                    true,
+	"imds_tags_enable":                  true,
+	"pod_imds_block_enabled":            true,
+	"network_policy_enable":             true,
+	"internal_router":                   true,
+	"contour_internal_tls":              true,
+	"karpenter_consolidation_enabled":   true,
+	"keda_enable":                       true,
+	"pod_identity_agent_enable":         true,
+	"seccomp_default_enabled":           true,
+	"syslog_access_logs":                true,
+	"syslog_tls_verify":                 true,
+	"system_readonly_rootfs_enabled":    true,
+	"telemetry":                         true,
+	"vpa_enable":                        true,
+}
+
+// sensitiveParams enumerates rack params whose values are rendered as
+// "**********" on a TTY when --reveal is not passed. Pipe output and
+// --reveal bypass masking.
+//
+// Lineage: always-mask introduced in 3.24.4 (docker_hub_password,
+// secret_key, token); list extended and TTY-gating + --reveal added
+// alongside this var's package-level promotion in 3.24.5 (access_id,
+// private_eks_host, private_eks_user, private_eks_pass). Password and
+// HttpProxy are v2-rack PascalCase keys included so v3 CLI against a
+// v2 rack masks the same values v2 CLI post-PR-3795 does; they never
+// appear in v3 rack Parameters responses (v3 uses snake_case).
+// webhook_signing_key added in 3.24.6.
+var sensitiveParams = map[string]bool{
+	"docker_hub_password": true,
+	"secret_key":          true,
+	"token":               true,
+	"access_id":           true,
+	"private_eks_host":    true,
+	"private_eks_user":    true,
+	"private_eks_pass":    true,
+	"webhook_signing_key": true,
+	"Password":            true,
+	"HttpProxy":           true,
+}
+
+// paramGroups categorizes rack params into curated logical groups for the
+// `convox rack params -g <group>` filter. A param may belong to multiple
+// groups. Params not listed here are shown in the default view but not
+// surfaced by any group filter.
+var paramGroups = map[string]map[string]bool{
+	"cost": {
+		"cost_tracking_enable":            true,
+		"cost_tracking_history_days":      true,
+		"karpenter_capacity_types":        true, // dual-listed in karpenter
+		"karpenter_consolidate_after":     true, // dual-listed in karpenter
+		"karpenter_consolidation_enabled": true, // dual-listed in karpenter
+		"node_capacity_type":              true, // dual-listed in nodes
+		"tags":                            true,
+	},
+	"karpenter": {
+		"additional_karpenter_nodepools_config":   true,
+		"karpenter_ami_alias":                     true,
+		"karpenter_arch":                          true,
+		"karpenter_auth_mode":                     true,
+		"karpenter_build_capacity_types":          true,
+		"karpenter_build_consolidate_after":       true,
+		"karpenter_build_cpu_limit":               true,
+		"karpenter_build_disruption_budget_nodes": true,
+		"karpenter_build_instance_families":       true,
+		"karpenter_build_instance_sizes":          true,
+		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_node_labels":             true,
+		"karpenter_capacity_types":                true,
+		"karpenter_config":                        true,
+		"karpenter_consolidate_after":             true,
+		"karpenter_consolidation_enabled":         true,
+		"karpenter_cpu_limit":                     true,
+		"karpenter_disruption_block_duration":     true,
+		"karpenter_disruption_block_schedule":     true,
+		"karpenter_disruption_budget_nodes":       true,
+		"karpenter_enabled":                       true,
+		"karpenter_instance_families":             true,
+		"karpenter_instance_sizes":                true,
+		"karpenter_memory_limit_gb":               true,
+		"karpenter_node_disk":                     true,
+		"karpenter_node_expiry":                   true,
+		"karpenter_node_labels":                   true,
+		"karpenter_node_os":                       true,
+		"karpenter_node_overlays_config":          true,
+		"karpenter_node_taints":                   true,
+		"karpenter_node_volume_iops":              true,
+		"karpenter_node_volume_throughput":        true,
+		"karpenter_node_volume_type":              true,
+		"karpenter_system_node_min_count_per_az":  true,
+		"keda_enable":                             true,
+	},
+	"gpu": {
+		"additional_karpenter_nodepools_config": true, // dual-listed in karpenter
+		"additional_node_groups_config":         true, // dual-listed in nodes
+		"dcgm_scrape_interval":                  true,
+		"gpu_metrics_max_concurrent":            true,
+		"gpu_metrics_max_pods":                  true,
+		"gpu_observability_chart_version":       true,
+		"gpu_observability_enable":              true,
+		"gpu_tag_enable":                        true,
+		"nvidia_device_plugin_enable":           true,
+		"nvidia_device_time_slicing_replicas":   true,
+		"prometheus_gpu_metrics_chart_version":  true,
+		"prometheus_gpu_metrics_retention":      true,
+		"prometheus_url":                        true,
+	},
+	"network": {
+		// v3 native (snake_case)
+		"availability_zones":                  true,
+		"cidr":                                true,
+		"deploy_extra_nlb":                    true,
+		"disable_convox_resolver":             true,
+		"disable_public_access":               true,
+		"eks_api_server_private_access_cidrs": true,
+		"eks_api_server_public_access_cidrs":  true,
+		"eks_control_plane_private_subnets":   true,
+		"enable_private_access":               true,
+		"internal_router":                     true,
+		"internet_gateway_id":                 true,
+		"nlb_security_group":                  true,
+		"private_eks_host":                    true,
+		"private_subnets_ids":                 true,
+		"proxy_protocol":                      true,
+		"public_subnets_ids":                  true,
+		"router_type":                         true,
+		"vpc_id":                              true,
+		"whitelist":                           true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"AvailabilityZones":    true,
+		"ExistingVpc":          true,
+		"HttpProxy":            true, // dual-listed in security
+		"Internal":             true,
+		"InternalOnly":         true,
+		"InternetGateway":      true,
+		"MaxAvailabilityZones": true,
+		"PlaceLambdaInVpc":     true,
+		"Private":              true,
+		"Subnet0CIDR":          true,
+		"Subnet1CIDR":          true,
+		"Subnet2CIDR":          true,
+		"SubnetPrivate0CIDR":   true,
+		"SubnetPrivate1CIDR":   true,
+		"SubnetPrivate2CIDR":   true,
+		"VPCCIDR":              true,
+	},
+	"security": {
+		// v3 native (snake_case)
+		"access_id":                           true,
+		"build_node_minimal_role_enabled":     true, // dual-listed in build
+		"disable_public_access":               true,
+		"docker_hub_password":                 true,
+		"ebs_volume_encryption_enabled":       true,
+		"ecr_additional_policy_arn":           true,
+		"ecr_full_access":                     true,
+		"ecr_immutable_tags_enabled":          true,
+		"ecr_scan_on_push_enable":             true,
+		"eks_access_entries":                  true,
+		"eks_api_server_private_access_cidrs": true,
+		"eks_api_server_public_access_cidrs":  true,
+		"eks_control_plane_private_subnets":   true,
+		"eks_log_types":                       true,
+		"enable_private_access":               true,
+		"high_availability":                   true,
+		"imds_http_hop_limit":                 true,
+		"imds_http_tokens":                    true,
+		"imds_tags_enable":                    true,
+		"pod_imds_block_enabled":              true,
+		"network_policy_enable":               true,
+		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
+		"karpenter_build_imds_tokens":         true, // dual-listed in build
+		"pod_security_standard":               true,
+		"pod_security_mode":                   true,
+		"key_pair_name":                       true,
+		"nlb_security_group":                  true,
+		"pod_identity_agent_enable":           true,
+		"private_eks_host":                    true,
+		"private_eks_pass":                    true,
+		"private_eks_user":                    true,
+		"seccomp_default_enabled":             true,
+		"secret_key":                          true,
+		"ssl_ciphers":                         true,
+		"ssl_protocols":                       true,
+		"system_readonly_rootfs_enabled":      true,
+		"tags":                                true, // dual-listed in cost
+		"token":                               true,
+		"webhook_signing_key":                 true,
+		"whitelist":                           true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"BuildInstancePolicy":                   true, // dual-listed in build
+		"BuildInstanceSecurityGroup":            true,
+		"EnableContainerReadonlyRootFilesystem": true,
+		"EnableSharedEFSVolumeEncryption":       true, // dual-listed in storage
+		"EncryptEbs":                            true, // dual-listed in storage
+		"Encryption":                            true,
+		"HttpProxy":                             true, // dual-listed in network
+		"IMDSHttpPutResponseHopLimit":           true,
+		"IMDSHttpTokens":                        true,
+		"InstancePolicy":                        true, // dual-listed in nodes
+		"InstanceSecurityGroup":                 true,
+		"InstancesIpToIncludInWhiteListing":     true,
+		"Key":                                   true,
+		"Password":                              true,
+		"PrivateApiSecurityGroup":               true,
+		"RouterInternalSecurityGroup":           true,
+		"RouterSecurityGroup":                   true,
+		"SslPolicy":                             true,
+		"WhiteList":                             true,
+	},
+	"scaling": {
+		// v3 native (snake_case)
+		"build_node_min_count":                    true,
+		"deploy_crash_restart_limit":              true,
+		"deploy_progress_deadline":                true,
+		"high_availability":                       true,
+		"karpenter_build_disruption_budget_nodes": true, // dual-listed in build
+		"karpenter_disruption_block_duration":     true, // dual-listed in karpenter
+		"karpenter_disruption_block_schedule":     true, // dual-listed in karpenter
+		"karpenter_disruption_budget_nodes":       true,
+		"karpenter_enabled":                       true,
+		"karpenter_system_node_min_count_per_az":  true,
+		"keda_enable":                             true,
+		"max_on_demand_count":                     true,
+		"min_on_demand_count":                     true,
+		"node_max_unavailable_percentage":         true,
+		"pdb_default_min_available_percentage":    true,
+		"schedule_rack_scale_down":                true,
+		"schedule_rack_scale_up":                  true,
+		"terraform_update_timeout":                true,
+		"vpa_enable":                              true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"Autoscale":                      true,
+		"AutoscaleExtra":                 true,
+		"HighAvailability":               true,
+		"InstanceCount":                  true,
+		"InstanceUpdateBatchSize":        true,
+		"NoHAAutoscaleExtra":             true,
+		"NoHaInstanceCount":              true,
+		"OnDemandMinCount":               true,
+		"ScheduleRackScaleDown":          true,
+		"ScheduleRackScaleUp":            true,
+		"SpotFleetAllocationStrategy":    true,
+		"SpotFleetAllowedInstanceTypes":  true,
+		"SpotFleetExcludedInstanceTypes": true,
+		"SpotFleetMaxPrice":              true,
+		"SpotFleetMinMemoryMiB":          true,
+		"SpotFleetMinOnDemandCount":      true,
+		"SpotFleetMinVcpuCount":          true,
+		"SpotFleetTargetType":            true,
+		"SpotInstanceBid":                true,
+	},
+	"nodes": {
+		// v3 native (snake_case)
+		"additional_node_groups_config":        true,
+		"dcgm_scrape_interval":                 true,
+		"fast_image_pull_enable":               true,
+		"gpu_metrics_max_concurrent":           true,
+		"gpu_metrics_max_pods":                 true,
+		"gpu_observability_chart_version":      true,
+		"gpu_observability_enable":             true,
+		"gpu_tag_enable":                       true,
+		"karpenter_node_labels":                true, // dual-listed in karpenter
+		"karpenter_node_taints":                true, // dual-listed in karpenter
+		"key_pair_name":                        true,
+		"kubelet_registry_burst":               true,
+		"kubelet_registry_pull_qps":            true,
+		"node_capacity_type":                   true,
+		"node_disk":                            true,
+		"node_max_unavailable_percentage":      true,
+		"node_type":                            true,
+		"node_volume_iops":                     true,
+		"node_volume_throughput":               true,
+		"nvidia_device_plugin_enable":          true,
+		"nvidia_device_time_slicing_replicas":  true,
+		"os":                                   true,
+		"preemptible":                          true,
+		"prometheus_gpu_metrics_chart_version": true,
+		"prometheus_gpu_metrics_retention":     true,
+		"prometheus_url":                       true,
+		"grafana_dashboard_var_app":            true,
+		"grafana_dashboard_var_namespace":      true,
+		"grafana_dashboard_var_rack":           true,
+		"grafana_dashboard_var_service":        true,
+		"grafana_url":                          true,
+		"user_data":                            true,
+		"user_data_url":                        true,
+		// v2 PascalCase (no-op on v3 racks; v2 "instances" group content)
+		"Ami":                 true,
+		"CpuCredits":          true,
+		"DefaultAmi":          true,
+		"DefaultAmiArm":       true,
+		"InstanceBootCommand": true,
+		"InstancePolicy":      true, // dual-listed in security
+		"InstanceRunCommand":  true,
+		"InstanceType":        true,
+		"SwapSize":            true,
+		"Tenancy":             true,
+		"VolumeSize":          true,
+	},
+	"build": {
+		// v3 native (snake_case)
+		"additional_build_groups_config":          true,
+		"build_disable_convox_resolver":           true,
+		"build_node_enabled":                      true,
+		"build_node_min_count":                    true,
+		"build_node_minimal_role_enabled":         true, // dual-listed in security
+		"build_node_type":                         true,
+		"buildkit_enabled":                        true,
+		"buildkit_host_path_cache_enable":         true,
+		"karpenter_build_capacity_types":          true,
+		"karpenter_build_consolidate_after":       true,
+		"karpenter_build_cpu_limit":               true,
+		"karpenter_build_disruption_budget_nodes": true, // dual-listed in scaling
+		"karpenter_build_imds_hop_limit":          true, // dual-listed in security
+		"karpenter_build_imds_tokens":             true, // dual-listed in security
+		"karpenter_build_instance_families":       true,
+		"karpenter_build_instance_sizes":          true,
+		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_node_labels":             true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"BuildCpu":                    true,
+		"BuildImage":                  true,
+		"BuildInstance":               true,
+		"BuildInstancePolicy":         true, // dual-listed in security
+		"BuildMemory":                 true,
+		"BuildMethod":                 true,
+		"BuildVolumeSize":             true,
+		"FargateBuildCpu":             true,
+		"FargateBuildMemory":          true,
+		"PrivateBuild":                true,
+		"PruneOlderImagesCronRunFreq": true,
+		"PruneOlderImagesInHour":      true,
+	},
+	// docker_hub_password is dual-listed in "security" (above) because it is
+	// a masked credential; docker_hub_username stays registry-only as a
+	// public identifier (matches existing non-masked convention).
+	"registry": {
+		"custom_provided_bucket":       true,
+		"disable_image_manifest_cache": true,
+		"docker_hub_password":          true,
+		"docker_hub_username":          true,
+		"ecr_additional_policy_arn":    true,
+		"ecr_docker_hub_cache":         true,
+		"ecr_full_access":              true,
+		"ecr_immutable_tags_enabled":   true,
+		"ecr_scan_on_push_enable":      true,
+	},
+	"logging": {
+		// v3 native (snake_case)
+		"access_log_retention_in_days":    true,
+		"app_cloudwatch_disable":          true,
+		"cloudwatch_disable":              true,
+		"cloudwatch_retention_in_days":    true,
+		"cost_tracking_enable":            true,
+		"eks_log_types":                   true,
+		"fluentd_disable":                 true,
+		"fluentd_memory":                  true,
+		"grafana_dashboard_var_app":       true,
+		"grafana_dashboard_var_namespace": true,
+		"grafana_dashboard_var_rack":      true,
+		"grafana_dashboard_var_service":   true,
+		"grafana_url":                     true,
+		"prometheus_url":                  true,
+		"router_log_redact_params":        true,
+		"syslog":                          true,
+		"syslog_access_logs":              true,
+		"syslog_tls_verify":               true,
+		"telemetry":                       true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"LogBucket":         true,
+		"LogDriver":         true,
+		"LogRetention":      true,
+		"SyslogDestination": true,
+		"SyslogFormat":      true,
+	},
+	"ingress": {
+		"cert_duration":           true,
+		"contour_cpu_request":     true,
+		"contour_memory_request":  true,
+		"envoy_cpu_request":       true,
+		"envoy_memory_request":    true,
+		"idle_timeout":            true,
+		"internal_router":         true,
+		"contour_internal_tls":    true,
+		"nginx_additional_config": true,
+		"nginx_image":             true,
+		"proxy_protocol":          true,
+		"router_type":             true,
+		"ssl_ciphers":             true,
+		"ssl_protocols":           true,
+	},
+	"domain": {
+		"convox_domain_tls_cert_disable": true,
+		"convox_rack_domain":             true,
+		"domain":                         true,
+	},
+	"storage": {
+		// v3 native (snake_case)
+		"aws_ebs_csi_driver_version":       true,
+		"azure_files_enable":               true,
+		"ebs_volume_encryption_enabled":    true,
+		"efs_csi_driver_enable":            true,
+		"efs_csi_driver_version":           true,
+		"elasticsearch_disk":               true,
+		"karpenter_node_disk":              true, // dual-listed in karpenter
+		"karpenter_node_volume_iops":       true, // dual-listed in karpenter
+		"karpenter_node_volume_throughput": true, // dual-listed in karpenter
+		"karpenter_node_volume_type":       true, // dual-listed in karpenter
+		"node_disk":                        true, // dual-listed in nodes
+		"node_volume_iops":                 true, // dual-listed in nodes
+		"node_volume_throughput":           true, // dual-listed in nodes
+		"registry_disk":                    true,
+		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
+		"DynamoDbTableDeletionProtectionEnabled":  true,
+		"DynamoDbTablePointInTimeRecoveryEnabled": true,
+		"EnableS3Versioning":                      true,
+		"EnableSharedEFSVolumeEncryption":         true, // dual-listed in security
+		"EncryptEbs":                              true, // dual-listed in security
+	},
+	"retention": {
+		"access_log_retention_in_days":              true,
+		"release_watcher_gc_interval":               true,
+		"releases_to_retain_after_active":           true,
+		"releases_to_retain_task_run_interval_hour": true,
+	},
+	"versions": {
+		"aws_ebs_csi_driver_version":           true,
+		"coredns_version":                      true,
+		"efs_csi_driver_version":               true,
+		"gpu_observability_chart_version":      true,
+		"k8s_version":                          true,
+		"kube_proxy_version":                   true,
+		"nginx_image":                          true,
+		"pod_identity_agent_version":           true,
+		"prometheus_gpu_metrics_chart_version": true,
+		"vpc_cni_version":                      true,
+	},
+	// nlb is v2-only content (v3 has no CloudFormation NLB config params; v3's
+	// NLB-adjacent keys — nlb_security_group, deploy_extra_nlb — live in the
+	// network group above). The group exists so v2 rack users running `convox
+	// rack params -g nlb` through v3 CLI get the same filter surface they have
+	// in v2 CLI. On a v3 rack the groupFilter matches zero keys and the
+	// "no params in group 'nlb' for this rack" NOTICE fires.
+	"nlb": {
+		"NLB":                           true,
+		"NLBAllowCIDR":                  true,
+		"NLBCrossZone":                  true,
+		"NLBDeletionProtection":         true,
+		"NLBInternal":                   true,
+		"NLBInternalAllowCIDR":          true,
+		"NLBInternalCrossZone":          true,
+		"NLBInternalDeletionProtection": true,
+		"NLBInternalPreserveClientIP":   true,
+		"NLBPreserveClientIP":           true,
+	},
+}
+
+// groupDescriptions provides the one-line label shown next to each group
+// name in error output (e.g., unknown-group and ambiguous-prefix errors).
+// Keep in sync with paramGroups keys.
+var groupDescriptions = map[string]string{
+	"gpu":       "GPU/NVIDIA device plugin, DCGM exporter, observability, Prometheus metrics",
+	"karpenter": "Karpenter autoscaling configuration",
+	"network":   "VPC, subnets, CIDR, routing, NLB, DNS resolver",
+	"nlb":       "NLB config: listeners, cross-zone, allow-CIDR, preserve-client-IP, deletion protection (v2 racks)",
+	"security":  "access controls, whitelist, IAM, encryption, private EKS, IMDS, TLS, credentials",
+	"scaling":   "capacity counts, HA, HPA/VPA/KEDA, schedules, PDB, disruption budgets",
+	"nodes":     "default node-group config, user-data, GPU, kubelet tuning",
+	"build":     "build node config, buildkit, additional build groups",
+	"registry":  "Docker Hub, ECR, image caching, storage buckets",
+	"logging":   "syslog, telemetry, fluentd, EKS audit logs, Grafana, Prometheus",
+	"ingress":   "router type (NGINX/Contour), idle timeout, TLS cert duration, Envoy resources",
+	"domain":    "rack domain and TLS toggle",
+	"storage":   "CSI drivers, EBS/EFS/Azure Files, registry and Elasticsearch disks",
+	"retention": "release retention policy",
+	"versions":  "K8s and managed component versions",
+	"cost":      "cost tracking and allocation tags",
+}
+
+// clearableParams lists params that accept empty strings to clear their value.
+// Keep in sync with preserveEmpty in pkg/rack/terraform.go (TestClearableMatchesPreserveEmpty asserts).
+// cloudwatchRetentionDays is the set CloudWatch accepts. Keep in sync with
+// roundUpToNearestAllowedRetention in provider/aws/log.go and with the regex in
+// assets/provider/aws/params.yaml.
+var cloudwatchRetentionDays = []string{
+	"1", "3", "5", "7", "14", "30", "60", "90", "120", "150", "180",
+	"365", "400", "545", "731", "1096", "1827", "2192", "2557", "2922", "3288", "3653",
+}
+
+var cloudwatchRetentionValues = func() map[string]bool {
+	m := map[string]bool{"Never": true}
+	for _, d := range cloudwatchRetentionDays {
+		m[d] = true
+	}
+	return m
+}()
+
+var fluentdMemoryRe = regexp.MustCompile(`^[1-9][0-9]*(Mi|Gi)$`)
+
+var elasticsearchDiskRe = regexp.MustCompile(`^([5-9]|[1-9][0-9]+)Gi$`)
+
+var syslogURLRe = regexp.MustCompile(`^(tcp|udp|tcp\+tls)://[a-zA-Z\d._-]+(:\d+)?$`)
+
+var clearableParams = map[string]bool{
+	// Labels/taints — clear means "remove all"
+	"karpenter_node_labels":       true,
+	"karpenter_node_taints":       true,
+	"karpenter_build_node_labels": true,
+	// Instance restrictions — clear means "no restriction"
+	"karpenter_instance_families":       true,
+	"karpenter_instance_sizes":          true,
+	"karpenter_build_instance_families": true,
+	"karpenter_build_instance_sizes":    true,
+	// Schedule — clear means "disable schedule" (must be paired)
+	"schedule_rack_scale_down": true,
+	"schedule_rack_scale_up":   true,
+	// Karpenter disruption window, clear means "no window" (must be paired)
+	"karpenter_disruption_block_schedule": true,
+	"karpenter_disruption_block_duration": true,
+	// Tags — clear means "remove all custom tags"
+	"tags": true,
+	// SSL — clear means "use defaults"
+	"ssl_ciphers":   true,
+	"ssl_protocols": true,
+	// Router security group — clear means "use the rack-managed group"
+	"nlb_security_group": true,
+	// Log retention — clear means "Convox stops managing retention"
+	"cloudwatch_retention_in_days": true,
+	// Optional overrides — clear means "use auto/default"
+	"karpenter_ami_alias":         true,
+	"build_node_type":             true,
+	"key_pair_name":               true,
+	"nginx_additional_config":     true,
+	"karpenter_build_imds_tokens": true,
+	"nginx_image":                 true,
+	// Credentials — clear means "remove auth"
+	"docker_hub_username": true,
+	"docker_hub_password": true,
+	// Logging — clear means "stop shipping" / "disable"
+	"syslog":                   true,
+	"eks_log_types":            true,
+	"router_log_redact_params": true,
+	// Private API access — clear means "remove all private CIDR rules"
+	"eks_api_server_private_access_cidrs": true,
+	// Ingress resources: clear means "use Helm chart defaults"
+	"contour_cpu_request": true, "contour_memory_request": true, "envoy_cpu_request": true, "envoy_memory_request": true,
+	// Domain — clear means "use auto-managed"
+	"convox_rack_domain": true,
+	// Custom launch scripts — clear means "remove"
+	"user_data":     true,
+	"user_data_url": true,
+	// ECR — clear means "detach custom policy"
+	"ecr_additional_policy_arn": true,
+	// PSA standard: clear removes the namespace label
+	"pod_security_standard": true,
+	// Feature gates — clear means "disable all"
+	"api_feature_gates": true,
+	// Private EKS — cleared by console during mode changes
+	"private_eks_host": true,
+	"private_eks_user": true,
+	"private_eks_pass": true,
+	// JSON config — normalized to base64 later in validateAndMutateParams
+	"additional_node_groups_config":         true,
+	"additional_build_groups_config":        true,
+	"additional_karpenter_nodepools_config": true,
+	"karpenter_config":                      true,
+	"karpenter_node_overlays_config":        true,
+	// External Prometheus URL — must be set explicitly post-3.24.6 (no rack-side auto-resolution)
+	"prometheus_url": true,
+	// External Grafana URL — clear means "Open in your Grafana" deep-link button
+	// is hidden in the Console GPU views. Optional; only relevant for users
+	// running their own Grafana instance.
+	"grafana_url": true,
+	// Free-chart Helm version override — empty falls back to Convox Console worker
+	// default (`27.9.0`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
+	"prometheus_gpu_metrics_chart_version": true,
+	// Free-chart Prometheus retention override — empty falls back to Convox Console worker
+	// default (`24h`) on next Disable→Enable cycle. No rack TF consumer post-3.24.6 final.
+	"prometheus_gpu_metrics_retention": true,
+	// DCGM exporter Helm version override — empty falls back to TF default
+	// ("4.8.4") via coalesce() guard in cluster/aws/dcgm.tf.
+	"gpu_observability_chart_version": true,
+	// DCGM scrape interval — empty falls back to TF default (`15s`). Range 15s-300s.
+	// Process-config: read by Console3 monitoring worker which writes to Prometheus
+	// scrape job values; no rack TF resource directly consumes the variable.
+	"dcgm_scrape_interval": true,
+	// Time-range GPU metrics handler caps — empty falls back to handler defaults
+	// (100 pods, 10 concurrent). Process-config: handler reads at request time.
+	"gpu_metrics_max_pods":       true,
+	"gpu_metrics_max_concurrent": true,
+	// Release-watcher GC sweep interval — empty falls back to package default (`5m`).
+	// Range 60s-1h. Process-config: provider reads RELEASE_WATCHER_GC_INTERVAL env
+	// once at Initialize and writes the var-level interval used by the watcher.
+	"release_watcher_gc_interval": true,
+	// Grafana deep-link template variable name overrides — empty falls back to
+	// canonical defaults (`rack`, `namespace`, `service`, `app`). Process-config:
+	// console reads from rack-params response and substitutes into Grafana URLs.
+	"grafana_dashboard_var_rack":      true,
+	"grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_service":   true,
+	"grafana_dashboard_var_app":       true,
+}
+
+// removedIn3_24_6 maps removed params to user-friendly rejection messages.
+var removedIn3_24_6 = map[string]string{
+	"monitoring_metrics_provisioned": "removed in 3.24.6; monitoring is now Convox-Console-driven (Convox Console → Rack Settings → Dashboard Settings → Enable Metrics Agent)",
+}
+
+// resolveGroup resolves a possibly-partial group name to an exact group key.
+// Priority: exact match > unique prefix match. Case-insensitive. Whitespace
+// is trimmed. Returns an error listing candidates or all groups on
+// ambiguous / unknown input.
+func resolveGroup(input string) (string, error) {
+	input = strings.ToLower(strings.TrimSpace(input))
+	if input == "" {
+		return "", fmt.Errorf("group name required\n  %s", formatGroupList())
+	}
+
+	if _, ok := paramGroups[input]; ok {
+		return input, nil
+	}
+
+	var matches []string
+	for g := range paramGroups {
+		if strings.HasPrefix(g, input) {
+			matches = append(matches, g)
+		}
+	}
+	sort.Strings(matches)
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("group '%s' not found\n  %s", input, formatGroupList())
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("group '%s' matches multiple groups: %s %s\n  %s",
+			input, strings.Join(matches, ", "), formatAmbiguousHint(matches), formatGroupList())
+	}
+}
+
+// formatGroupList returns a sorted, padded two-column listing of all
+// available groups for inclusion in error output.
+func formatGroupList() string {
+	names := make([]string, 0, len(groupDescriptions))
+	maxLen := 0
+	for g := range groupDescriptions {
+		names = append(names, g)
+		if len(g) > maxLen {
+			maxLen = len(g)
+		}
+	}
+	sort.Strings(names)
+
+	var b strings.Builder
+	b.WriteString("available groups:\n")
+	for _, g := range names {
+		b.WriteString(fmt.Sprintf("  %-*s    %s\n", maxLen, g, groupDescriptions[g]))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// formatAmbiguousHint returns a parenthesized hint showing a short-but-
+// readable disambiguating prefix for each ambiguous candidate, e.g.,
+// "(use 'net' or 'nod')" for candidates ["network", "nodes"].
+func formatAmbiguousHint(candidates []string) string {
+	if len(candidates) == 0 {
+		return ""
+	}
+	hints := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		hints = append(hints, "'"+disambiguatingPrefix(c)+"'")
+	}
+	switch len(hints) {
+	case 1:
+		return "(use " + hints[0] + ")"
+	case 2:
+		return "(use " + hints[0] + " or " + hints[1] + ")"
+	default:
+		return "(use " + strings.Join(hints[:len(hints)-1], ", ") + ", or " + hints[len(hints)-1] + ")"
+	}
+}
+
+// disambiguatingPrefix returns a short-but-readable prefix of `group` that
+// resolves uniquely against all paramGroups keys. Uses a 3-character
+// minimum for human readability — a technically-unique 1- or 2-char
+// prefix like "no" for "nodes" reads like negation and is avoided.
+func disambiguatingPrefix(group string) string {
+	const minLen = 3
+	if len(group) <= minLen {
+		return group
+	}
+	for n := minLen; n <= len(group); n++ {
+		prefix := group[:n]
+		hits := 0
+		for g := range paramGroups {
+			if strings.HasPrefix(g, prefix) {
+				hits++
+				if hits > 1 {
+					break
+				}
+			}
+		}
+		if hits == 1 {
+			return prefix
+		}
+	}
+	return group
+}
+
 func init() {
-	register("rack", "get information about the rack", Rack, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+	register("rack", "get information about the rack", watch(Rack), stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack, flagWatchInterval},
 		Validate: stdcli.Args(0),
 	})
 
 	register("rack access", "get rack access credential", RackAccess, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			stdcli.StringFlag("role", "", "access role: read or write"),
+			stdcli.StringFlag("role", "", "access role: read, write, or admin"),
 			stdcli.IntFlag("duration-in-hours", "", "duration in hours"),
 		},
 		Validate: stdcli.Args(0),
@@ -43,9 +954,16 @@ func init() {
 		Flags: []stdcli.Flag{
 			stdcli.BoolFlag("prepare", "", "prepare the install but don't run it"),
 			stdcli.StringFlag("version", "v", "rack version"),
+			stdcli.StringFlag("runtime", "r", "runtime id"),
 		},
 		Usage:    "<provider> <name> [option=value]...",
 		Validate: stdcli.ArgsMin(2),
+	})
+
+	register("rack karpenter cleanup", "clean up orphaned Karpenter nodes after disabling Karpenter", RackKarpenterCleanup, stdcli.CommandOptions{
+		Flags:    []stdcli.Flag{flagRack},
+		Usage:    "",
+		Validate: stdcli.Args(0),
 	})
 
 	registerWithoutProvider("rack kubeconfig", "generate kubeconfig for rack", RackKubeconfig, stdcli.CommandOptions{
@@ -64,12 +982,16 @@ func init() {
 	})
 
 	registerWithoutProvider("rack params", "display rack parameters", RackParams, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags: []stdcli.Flag{
+			flagRack,
+			stdcli.StringFlag("group", "g", "filter to a param group (invalid name lists all)"),
+			stdcli.BoolFlag("reveal", "", "show unmasked param values"),
+		},
 		Validate: stdcli.Args(0),
 	})
 
 	registerWithoutProvider("rack params set", "set rack parameters", RackParamsSet, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagRack},
+		Flags:    []stdcli.Flag{flagRack, flagForceParams},
 		Usage:    "<Key=Value> [Key=Value]...",
 		Validate: stdcli.ArgsMin(1),
 	})
@@ -120,24 +1042,2273 @@ func init() {
 	})
 }
 
-func validateParams(params map[string]string) error {
-	if params["high_availability"] != "" {
-		return errors.New("the high_availability parameter is only supported during rack installation")
+type NodeGroupConfigParam struct {
+	Id           *int    `json:"id"`
+	Type         string  `json:"type"`
+	Disk         *int    `json:"disk,omitempty"`
+	DiskType     *string `json:"disk_type,omitempty"`
+	CapacityType *string `json:"capacity_type,omitempty"`
+	MinSize      *int    `json:"min_size,omitempty"`
+	MaxSize      *int    `json:"max_size,omitempty"`
+	Label        *string `json:"label,omitempty"`
+	AmiID        *string `json:"ami_id,omitempty"`
+	Dedicated    *bool   `json:"dedicated,omitempty"`
+	Tags         *string `json:"tags,omitempty"`
+	Zones        *string `json:"zones,omitempty"`
+	GpuType      *string `json:"gpu_type,omitempty"`
+	GpuCount     *int    `json:"gpu_count,omitempty"`
+	TpuTopology  *string `json:"tpu_topology,omitempty"`
+}
+
+var tpuTopologyPattern = regexp.MustCompile(`^[1-9][0-9]*x[1-9][0-9]*(x[1-9][0-9]*)?$`)
+
+func (n *NodeGroupConfigParam) Validate(provider string) error {
+	if n.Type == "" {
+		return fmt.Errorf("node type is required: '%s'", n.Type)
+	}
+	if n.Disk != nil && *n.Disk < 20 {
+		return fmt.Errorf("node disk is less than 20: '%d'", *n.Disk)
+	}
+	if n.MinSize != nil && *n.MinSize < 0 {
+		return fmt.Errorf("invalid min size: '%d'", *n.MinSize)
+	}
+	if n.MaxSize != nil && *n.MaxSize < 0 {
+		return fmt.Errorf("invalid max size: '%d'", *n.MaxSize)
+	}
+	if n.MinSize != nil && n.MaxSize != nil && *n.MinSize > *n.MaxSize {
+		return fmt.Errorf("invalid min size: '%d' must be less or equal to max size", *n.MinSize)
+	}
+	if n.CapacityType != nil {
+		var allowed []string
+		switch provider {
+		case "aws":
+			allowed = []string{"ON_DEMAND", "SPOT"}
+		case "azure":
+			allowed = []string{"ON_DEMAND", "SPOT", "Regular", "Spot"}
+		default:
+			allowed = []string{"ON_DEMAND", "SPOT", "Regular", "Spot"}
+		}
+		if !common.ContainsInStringSlice(allowed, *n.CapacityType) {
+			return fmt.Errorf("allowed capacity type for %s: %s, found: '%s'", provider, strings.Join(allowed, ", "), *n.CapacityType)
+		}
+	}
+	if n.Label != nil && !manifest.NameValidator.MatchString(*n.Label) {
+		return fmt.Errorf("label value '%s' invalid, %s", *n.Label, manifest.ValidNameDescription)
 	}
 
-	srdown, srup := params["ScheduleRackScaleDown"], params["ScheduleRackScaleUp"]
+	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
+		return fmt.Errorf("label is required when dedicated option is set")
+	}
+
+	if n.GpuCount != nil && *n.GpuCount < 1 {
+		return fmt.Errorf("invalid gpu_count: '%d'", *n.GpuCount)
+	}
+
+	if n.GpuCount != nil && n.GpuType == nil {
+		return fmt.Errorf("gpu_type is required when gpu_count is set")
+	}
+
+	if n.TpuTopology != nil {
+		if !tpuTopologyPattern.MatchString(*n.TpuTopology) {
+			return fmt.Errorf("invalid tpu_topology '%s', expected NxM or NxMxP (e.g. 2x4 or 2x2x2)", *n.TpuTopology)
+		}
+		if n.GpuType != nil {
+			return fmt.Errorf("gpu_type and tpu_topology cannot be combined on one node group")
+		}
+		if !strings.HasPrefix(n.Type, "ct") && !strings.HasPrefix(n.Type, "tpu") {
+			return fmt.Errorf("tpu_topology requires a TPU machine type (e.g. ct5lp-*, ct6e-*, tpu7x-*), found: '%s'", n.Type)
+		}
+	}
+
+	if provider == "gcp" && (n.DiskType == nil || *n.DiskType != "hyperdisk-balanced") {
+		for _, prefix := range []string{"c4a-", "n4a-", "a4x-"} {
+			if strings.HasPrefix(n.Type, prefix) {
+				return fmt.Errorf("node type '%s' boots only from Hyperdisk; set disk_type to hyperdisk-balanced", n.Type)
+			}
+		}
+	}
+
+	if n.Tags != nil {
+		reserved := []string{"name", "rack"}
+		for _, part := range strings.Split(*n.Tags, ",") {
+			if len(strings.SplitN(part, "=", 2)) != 2 {
+				return fmt.Errorf("invalid 'tags', use format: k1=v1,k2=v2")
+			}
+
+			k := strings.SplitN(part, "=", 2)[0]
+			if common.ContainsInStringSlice(reserved, strings.ToLower(k)) {
+				return fmt.Errorf("reserved tag key '%s' is not allowed", k)
+			}
+		}
+	}
+
+	return nil
+}
+
+type KarpenterNodePoolConfigParam struct {
+	Name                  string  `json:"name"`
+	InstanceFamilies      *string `json:"instance_families,omitempty"`
+	InstanceSizes         *string `json:"instance_sizes,omitempty"`
+	CapacityTypes         *string `json:"capacity_types,omitempty"`
+	Arch                  *string `json:"arch,omitempty"`
+	CpuLimit              *int    `json:"cpu_limit,omitempty"`
+	MemoryLimitGb         *int    `json:"memory_limit_gb,omitempty"`
+	ConsolidationPolicy   *string `json:"consolidation_policy,omitempty"`
+	ConsolidateAfter      *string `json:"consolidate_after,omitempty"`
+	NodeExpiry            *string `json:"node_expiry,omitempty"`
+	DisruptionBudgetNodes *string `json:"disruption_budget_nodes,omitempty"`
+	Disk                  *int    `json:"disk,omitempty"`
+	VolumeType            *string `json:"volume_type,omitempty"`
+	VolumeIops            *int    `json:"volume_iops,omitempty"`
+	VolumeThroughput      *int    `json:"volume_throughput,omitempty"`
+	Labels                *string `json:"labels,omitempty"`
+	Taints                *string `json:"taints,omitempty"`
+	Dedicated             *bool   `json:"dedicated,omitempty"`
+	Weight                *int    `json:"weight,omitempty"`
+	AmiID                 *string `json:"ami_id,omitempty"`
+}
+
+var karpenterNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
+
+var karpenterAmiRe = regexp.MustCompile(`^ami-([0-9a-f]{8}|[0-9a-f]{17})$`)
+
+var karpenterAmiFamilies = map[string]bool{
+	"AL2": true, "AL2023": true, "Bottlerocket": true, "Custom": true,
+	"Windows2019": true, "Windows2022": true, "Windows2025": true,
+}
+
+func (np *KarpenterNodePoolConfigParam) Validate() error {
+	if np.Name == "" {
+		return fmt.Errorf("karpenter nodepool name is required")
+	}
+	if !karpenterNameRe.MatchString(np.Name) {
+		return fmt.Errorf("karpenter nodepool name '%s' must be lowercase alphanumeric with dashes, max 63 chars", np.Name)
+	}
+	reserved := map[string]bool{"workload": true, "build": true, "default": true, "system": true}
+	if reserved[np.Name] {
+		return fmt.Errorf("karpenter nodepool name '%s' is reserved", np.Name)
+	}
+
+	if np.CapacityTypes != nil {
+		for _, ct := range strings.Split(*np.CapacityTypes, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid capacity type '%s' (must be on-demand or spot)", np.Name, ct)
+			}
+		}
+	}
+
+	if np.Arch != nil {
+		for _, a := range strings.Split(*np.Arch, ",") {
+			a = strings.TrimSpace(a)
+			if a != "amd64" && a != "arm64" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid arch '%s' (must be amd64 or arm64)", np.Name, a)
+			}
+		}
+	}
+
+	if np.CpuLimit != nil && *np.CpuLimit <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': cpu_limit must be positive", np.Name)
+	}
+	if np.MemoryLimitGb != nil && *np.MemoryLimitGb <= 0 {
+		return fmt.Errorf("karpenter nodepool '%s': memory_limit_gb must be positive", np.Name)
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	if np.ConsolidateAfter != nil && !durationRe.MatchString(*np.ConsolidateAfter) {
+		return fmt.Errorf("karpenter nodepool '%s': consolidate_after must be a duration like 30s, 5m, or 1h", np.Name)
+	}
+
+	if np.NodeExpiry != nil {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if *np.NodeExpiry != "Never" && !expiryRe.MatchString(*np.NodeExpiry) {
+			return fmt.Errorf("karpenter nodepool '%s': node_expiry must be a duration like 720h or Never", np.Name)
+		}
+	}
+
+	if np.DisruptionBudgetNodes != nil {
+		budgetRe := regexp.MustCompile(`^((100|[0-9]{1,2})%|[0-9]+)$`)
+		if !budgetRe.MatchString(*np.DisruptionBudgetNodes) {
+			return fmt.Errorf("karpenter nodepool '%s': disruption_budget_nodes must be a node count or a percentage from 0%% to 100%%", np.Name)
+		}
+	}
+
+	if np.ConsolidationPolicy != nil {
+		if *np.ConsolidationPolicy != "WhenEmpty" && *np.ConsolidationPolicy != "WhenEmptyOrUnderutilized" {
+			return fmt.Errorf("karpenter nodepool '%s': consolidation_policy must be WhenEmpty or WhenEmptyOrUnderutilized", np.Name)
+		}
+	}
+
+	if np.VolumeType != nil {
+		validVols := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
+		if !validVols[*np.VolumeType] {
+			return fmt.Errorf("karpenter nodepool '%s': volume_type must be gp2, gp3, io1, or io2", np.Name)
+		}
+	}
+
+	if np.Disk != nil && *np.Disk < 0 {
+		return fmt.Errorf("karpenter nodepool '%s': disk must be non-negative", np.Name)
+	}
+
+	volumeType := "gp3"
+	if np.VolumeType != nil {
+		volumeType = *np.VolumeType
+	}
+	for _, vp := range []struct {
+		key   string
+		value *int
+	}{
+		{"volume_iops", np.VolumeIops},
+		{"volume_throughput", np.VolumeThroughput},
+	} {
+		if vp.value == nil {
+			continue
+		}
+		if issue := nodeVolumeRangeIssue(vp.key, *vp.value); issue != "" {
+			return fmt.Errorf("karpenter nodepool '%s': %s %s", np.Name, vp.key, issue)
+		}
+		if *vp.value != 0 && volumeType != "gp3" {
+			return fmt.Errorf("karpenter nodepool '%s': %s requires volume_type gp3 (currently %s)", np.Name, vp.key, volumeType)
+		}
+	}
+
+	if np.Weight != nil && (*np.Weight < 0 || *np.Weight > 100) {
+		return fmt.Errorf("karpenter nodepool '%s': weight must be 0-100", np.Name)
+	}
+
+	if np.Labels != nil && *np.Labels != "" {
+		if strings.Contains(*np.Labels, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': label keys and values must not contain double quotes", np.Name)
+		}
+		reservedPoolLabels := map[string]bool{"convox.io/nodepool": true}
+		for _, pair := range strings.Split(*np.Labels, ",") {
+			parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid label '%s', use format key=value", np.Name, pair)
+			}
+			if reservedPoolLabels[parts[0]] {
+				return fmt.Errorf("karpenter nodepool '%s': '%s' is a Convox-reserved label key and cannot be overridden", np.Name, parts[0])
+			}
+		}
+	}
+
+	if np.Taints != nil && *np.Taints != "" {
+		if strings.Contains(*np.Taints, `"`) {
+			return fmt.Errorf("karpenter nodepool '%s': taint keys and values must not contain double quotes", np.Name)
+		}
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(*np.Taints, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint '%s', use format key=value:Effect or key:Effect", np.Name, t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("karpenter nodepool '%s': invalid taint effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", np.Name, colonParts[1])
+			}
+		}
+	}
+
+	if np.AmiID != nil && !karpenterAmiRe.MatchString(*np.AmiID) {
+		return fmt.Errorf("karpenter nodepool '%s': invalid ami_id '%s' (must look like ami-0123456789abcdef0)", np.Name, *np.AmiID)
+	}
+
+	return nil
+}
+
+type KarpenterNodePools []KarpenterNodePoolConfigParam
+
+func (knp KarpenterNodePools) Validate() error {
+	nameMap := map[string]bool{}
+	for i := range knp {
+		if err := knp[i].Validate(); err != nil {
+			return err
+		}
+		if nameMap[knp[i].Name] {
+			return fmt.Errorf("duplicate karpenter nodepool name: %s", knp[i].Name)
+		}
+		nameMap[knp[i].Name] = true
+	}
+	return nil
+}
+
+type KarpenterNodeOverlayRequirement struct {
+	Key      string   `json:"key"`
+	Operator string   `json:"operator"`
+	Values   []string `json:"values,omitempty"`
+}
+
+type KarpenterNodeOverlay struct {
+	Name            string                            `json:"name"`
+	Requirements    []KarpenterNodeOverlayRequirement `json:"requirements"`
+	Capacity        map[string]string                 `json:"capacity,omitempty"`
+	Price           *string                           `json:"price,omitempty"`
+	PriceAdjustment *string                           `json:"priceAdjustment,omitempty"`
+	Weight          *int                              `json:"weight,omitempty"`
+}
+
+var karpenterPriceAdjustmentRe = regexp.MustCompile(`^(([+-]{1}(\d*\.?\d+))|(\+{1}\d*\.?\d+%)|(-\d{1,2}(\.\d+)?%)|(-100%))$`)
+
+func (o *KarpenterNodeOverlay) Validate() error {
+	if o.Name == "" {
+		return fmt.Errorf("karpenter node overlay name is required")
+	}
+	if !karpenterNameRe.MatchString(o.Name) {
+		return fmt.Errorf("karpenter node overlay name '%s' must be lowercase alphanumeric with dashes, max 63 chars", o.Name)
+	}
+
+	if len(o.Requirements) == 0 {
+		return fmt.Errorf("karpenter node overlay '%s': requirements must not be empty", o.Name)
+	}
+	validOps := map[string]bool{"In": true, "NotIn": true, "Exists": true, "DoesNotExist": true, "Gt": true, "Lt": true}
+	for _, r := range o.Requirements {
+		if r.Key == "" {
+			return fmt.Errorf("karpenter node overlay '%s': each requirement must set a key", o.Name)
+		}
+		if !validOps[r.Operator] {
+			return fmt.Errorf("karpenter node overlay '%s': invalid requirement operator '%s' (must be In, NotIn, Exists, DoesNotExist, Gt, or Lt)", o.Name, r.Operator)
+		}
+		switch r.Operator {
+		case "Exists", "DoesNotExist":
+		case "Gt", "Lt":
+			if len(r.Values) != 1 {
+				return fmt.Errorf("karpenter node overlay '%s': requirement operator %s requires exactly one value", o.Name, r.Operator)
+			}
+		default:
+			if len(r.Values) == 0 {
+				return fmt.Errorf("karpenter node overlay '%s': requirement operator %s requires at least one value", o.Name, r.Operator)
+			}
+		}
+	}
+
+	blockedCapacity := map[string]bool{"cpu": true, "memory": true, "ephemeral-storage": true, "pods": true}
+	for k, v := range o.Capacity {
+		if blockedCapacity[k] {
+			return fmt.Errorf("karpenter node overlay '%s': capacity key '%s' is a standard resource rejected by Karpenter; use an extended resource such as nvidia.com/gpu", o.Name, k)
+		}
+		if v == "" {
+			return fmt.Errorf("karpenter node overlay '%s': capacity value for '%s' must not be empty", o.Name, k)
+		}
+	}
+
+	if o.Price != nil && o.PriceAdjustment != nil {
+		return fmt.Errorf("karpenter node overlay '%s': price and priceAdjustment are mutually exclusive", o.Name)
+	}
+	if o.Price != nil && *o.Price == "" {
+		return fmt.Errorf("karpenter node overlay '%s': price must not be empty", o.Name)
+	}
+	if o.PriceAdjustment != nil && !karpenterPriceAdjustmentRe.MatchString(*o.PriceAdjustment) {
+		return fmt.Errorf("karpenter node overlay '%s': priceAdjustment '%s' must be a signed number or percentage, e.g. +5, -30%%, or -100%%", o.Name, *o.PriceAdjustment)
+	}
+
+	if o.Weight != nil && (*o.Weight < 1 || *o.Weight > 10000) {
+		return fmt.Errorf("karpenter node overlay '%s': weight must be 1-10000", o.Name)
+	}
+
+	if len(o.Capacity) == 0 && o.Price == nil && o.PriceAdjustment == nil {
+		return fmt.Errorf("karpenter node overlay '%s': at least one of capacity, price, or priceAdjustment must be set", o.Name)
+	}
+
+	return nil
+}
+
+type KarpenterNodeOverlays []KarpenterNodeOverlay
+
+func (ko KarpenterNodeOverlays) Validate() error {
+	nameMap := map[string]bool{}
+	for i := range ko {
+		if err := ko[i].Validate(); err != nil {
+			return err
+		}
+		if nameMap[ko[i].Name] {
+			return fmt.Errorf("duplicate karpenter node overlay name: %s", ko[i].Name)
+		}
+		nameMap[ko[i].Name] = true
+	}
+	return nil
+}
+
+type AdditionalNodeGroups []NodeGroupConfigParam
+
+func (an AdditionalNodeGroups) Validate(provider string) error {
+	idCnt := 0
+	idMap := map[int]bool{}
+	for i := range an {
+		if err := an[i].Validate(provider); err != nil {
+			return err
+		}
+		if an[i].Id != nil {
+			idCnt++
+			if idMap[*an[i].Id] {
+				return fmt.Errorf("duplicate node group id is found: %d", *an[i].Id)
+			}
+			idMap[*an[i].Id] = true
+		}
+	}
+
+	if idCnt > 0 && idCnt != len(an) {
+		return fmt.Errorf("some node groups missing id property")
+	}
+
+	if idCnt == 0 {
+		for i := range an {
+			an[i].Id = options.Int(i)
+		}
+	}
+	return nil
+}
+
+func levenshtein(a, b string) int {
+	la, lb := len(a), len(b)
+	if la == 0 {
+		return lb
+	}
+	if lb == 0 {
+		return la
+	}
+	prev := make([]int, lb+1)
+	for j := 0; j <= lb; j++ {
+		prev[j] = j
+	}
+	for i := 1; i <= la; i++ {
+		curr := make([]int, lb+1)
+		curr[0] = i
+		for j := 1; j <= lb; j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			ins := curr[j-1] + 1
+			del := prev[j] + 1
+			sub := prev[j-1] + cost
+			curr[j] = ins
+			if del < curr[j] {
+				curr[j] = del
+			}
+			if sub < curr[j] {
+				curr[j] = sub
+			}
+		}
+		prev = curr
+	}
+	return prev[lb]
+}
+
+func suggestParam(key string, known map[string]bool) string {
+	best, bestDist := "", 4
+	for k := range known {
+		if d := levenshtein(key, k); d < bestDist {
+			best, bestDist = k, d
+		}
+	}
+	return best
+}
+
+var instanceFamilyRe = regexp.MustCompile(`^([a-z]+)([0-9]+)([a-z]*)$`)
+
+// familyArch classifies an EC2 instance family as amd64, arm64, or "" when
+// the naming convention cannot determine it (Graviton families carry a "g"
+// after the generation digit, e.g. c6g, t4g, im4gn, g5g).
+func familyArch(family string) string {
+	family = strings.ToLower(strings.TrimSpace(family))
+	if family == "a1" {
+		return "arm64"
+	}
+	m := instanceFamilyRe.FindStringSubmatch(family)
+	if m == nil {
+		return ""
+	}
+	if strings.Contains(m[3], "g") {
+		return "arm64"
+	}
+	return "amd64"
+}
+
+func instanceArch(instanceType string) string {
+	if instanceType == "" {
+		return ""
+	}
+	first := strings.Split(instanceType, ",")[0]
+	return familyArch(strings.Split(first, ".")[0])
+}
+
+// Azure marks Arm sizes with a "p" feature letter after the vCPU count, e.g. Standard_D4ps_v5.
+var azureArmSizeRe = regexp.MustCompile(`^standard_[a-z]+\d+(-\d+)?[a-z]*p[a-z]*_v\d+$`)
+
+func armMachineType(provider, machineType string) bool {
+	machineType = strings.ToLower(strings.TrimSpace(machineType))
+	switch provider {
+	case "gcp":
+		for _, prefix := range []string{"t2a-", "c4a-", "n4a-", "a4x-"} {
+			if strings.HasPrefix(machineType, prefix) {
+				return true
+			}
+		}
+	case "azure":
+		return azureArmSizeRe.MatchString(machineType)
+	}
+	return false
+}
+
+func validateInstanceTypeList(param, value string) error {
+	types := []string{}
+	for _, t := range strings.Split(value, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			types = append(types, t)
+		}
+	}
+	if len(types) < 2 {
+		return nil
+	}
+
+	arch, archOf := "", ""
+	for _, t := range types {
+		a := instanceArch(t)
+		if a == "" {
+			continue
+		}
+		if arch == "" {
+			arch, archOf = a, t
+			continue
+		}
+		if a != arch {
+			return fmt.Errorf("%s mixes CPU architectures: %s is %s, %s is %s; all entries must share one architecture, since the node AMI is selected from the first entry", param, archOf, arch, t, a)
+		}
+	}
+
+	isGPU := func(t string) bool { return strings.HasPrefix(t, "g") || strings.HasPrefix(t, "p") }
+	gpu := isGPU(types[0])
+	for _, t := range types[1:] {
+		if isGPU(t) != gpu {
+			return fmt.Errorf("%s mixes GPU and non-GPU instance types: %s, %s; all entries must match, since the node AMI is selected from the first entry", param, types[0], t)
+		}
+	}
+
+	return nil
+}
+
+func checkArchFamilies(param, families string, archs []string, archSource string) error {
+	if families == "" || len(archs) == 0 {
+		return nil
+	}
+	for _, f := range strings.Split(families, ",") {
+		cls := familyArch(f)
+		if cls == "" {
+			return nil
+		}
+		for _, a := range archs {
+			if a == cls {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("%s (%s) has no family matching the %s architecture (%s); Karpenter could not provision any matching node", param, families, archSource, strings.Join(archs, ","))
+}
+
+// validateKarpenterArchFamilies rejects arch/instance-family combinations that
+// make a Karpenter node pool unsatisfiable. Values not in the call fall back
+// to currentParams so stale combinations are caught when karpenter is enabled.
+func validateKarpenterArchFamilies(params, currentParams map[string]string) error {
+	effective := func(key string) string {
+		if v, ok := params[key]; ok {
+			return v
+		}
+		return currentParams[key]
+	}
+
+	relevant := false
+	for _, k := range []string{"karpenter_enabled", "karpenter_arch", "karpenter_instance_families", "karpenter_build_instance_families", "node_type", "build_node_type"} {
+		if _, ok := params[k]; ok {
+			relevant = true
+			break
+		}
+	}
+	if !relevant || effective("karpenter_enabled") != "true" {
+		return nil
+	}
+
+	workloadArchs := []string{}
+	if v := effective("karpenter_arch"); v != "" {
+		for _, a := range strings.Split(v, ",") {
+			workloadArchs = append(workloadArchs, strings.TrimSpace(a))
+		}
+	} else if a := instanceArch(effective("node_type")); a != "" {
+		workloadArchs = append(workloadArchs, a)
+	}
+	if err := checkArchFamilies("karpenter_instance_families", effective("karpenter_instance_families"), workloadArchs, "karpenter_arch"); err != nil {
+		return err
+	}
+
+	buildType := effective("build_node_type")
+	if buildType == "" {
+		buildType = effective("node_type")
+	}
+	buildArchs := []string{}
+	if a := instanceArch(buildType); a != "" {
+		buildArchs = append(buildArchs, a)
+	}
+	return checkArchFamilies("karpenter_build_instance_families", effective("karpenter_build_instance_families"), buildArchs, "build_node_type")
+}
+
+var (
+	karpenterBlockScheduleRe = regexp.MustCompile(`^(@(hourly|daily|midnight|weekly)|[0-5]?[0-9] +([01]?[0-9]|2[0-3]) +\* +\* +[0-9A-Za-z*,/-]+)$`)
+	karpenterBlockDurationRe = regexp.MustCompile(`^([0-9]+h([0-9]+m)?|[0-9]+m)$`)
+)
+
+// karpenterBlockMaxHours is the smallest gap between two firings of schedule.
+// A window that reaches the next firing never lifts.
+func karpenterBlockMaxHours(schedule string) int {
+	switch schedule {
+	case "@hourly":
+		return 1
+	case "@daily", "@midnight":
+		return 24
+	case "@weekly":
+		return 168
+	}
+	if f := strings.Fields(schedule); len(f) == 5 && !strings.ContainsAny(f[4], "*,-/") {
+		return 168
+	}
+	return 24
+}
+
+func karpenterConfigHasBudgets(raw string) bool {
+	cfg := map[string]interface{}{}
+	if !decodeConfigParam(raw, &cfg) {
+		return false
+	}
+	np, ok := cfg["nodePool"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	disruption, ok := np["disruption"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	_, ok = disruption["budgets"]
+	return ok
+}
+
+func validateKarpenterDisruptionWindow(params, currentParams map[string]string) error {
+	effective := func(key string) string {
+		if v, ok := params[key]; ok {
+			return v
+		}
+		return currentParams[key]
+	}
+
+	_, setsSchedule := params["karpenter_disruption_block_schedule"]
+	_, setsDuration := params["karpenter_disruption_block_duration"]
+	_, setsConfig := params["karpenter_config"]
+	if !setsSchedule && !setsDuration && !setsConfig {
+		return nil
+	}
+
+	if setsSchedule || setsDuration {
+		if v := params["karpenter_disruption_block_schedule"]; v != "" && !karpenterBlockScheduleRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_block_schedule must be a five-field cron that fires at most once a day:\n  a single minute and hour, '*' for day-of-month and month. For example '0 9 * * MON-FRI'.\n  @hourly, @daily, @midnight and @weekly are also accepted")
+		}
+		if v := params["karpenter_disruption_block_duration"]; v != "" && !karpenterBlockDurationRe.MatchString(v) {
+			return fmt.Errorf("karpenter_disruption_block_duration must be a duration in hours and minutes, for example 8h, 90m or 8h30m")
+		}
+
+		schedule, duration := effective("karpenter_disruption_block_schedule"), effective("karpenter_disruption_block_duration")
+		if (schedule == "") != (duration == "") {
+			return errors.New("karpenter_disruption_block_schedule and karpenter_disruption_block_duration must be set together, and cleared together")
+		}
+		if schedule != "" {
+			d, err := time.ParseDuration(duration)
+			if err != nil || d <= 0 {
+				return fmt.Errorf("karpenter_disruption_block_duration must be a positive duration, for example 8h, 90m or 8h30m")
+			}
+			if max := karpenterBlockMaxHours(schedule); d >= time.Duration(max)*time.Hour {
+				return fmt.Errorf("karpenter_disruption_block_duration must be shorter than %dh for schedule '%s'.\n  A window that reaches the next firing never lifts, and Karpenter stops replacing nodes entirely", max, schedule)
+			}
+		}
+	}
+
+	if effective("karpenter_disruption_block_schedule") != "" && effective("karpenter_disruption_block_duration") != "" &&
+		karpenterConfigHasBudgets(effective("karpenter_config")) {
+		return errors.New("karpenter_disruption_block_schedule cannot be combined with karpenter_config.nodePool.disruption.budgets.\n  Those budgets replace the generated list, window entry included.\n  Put the window entry in karpenter_config instead, or remove budgets from it")
+	}
+
+	for _, k := range []string{"karpenter_disruption_block_schedule", "karpenter_disruption_block_duration"} {
+		if v, ok := params[k]; !ok || v == "" {
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: the disruption window paces drift and consolidation, not node expiry. A node reaching karpenter_node_expiry is deleted inside the window, with no budget and no replacement waiting.\n")
+		fmt.Fprintf(os.Stderr, "Existing nodes keep the expiry they were created with, so karpenter_node_expiry=Never reaches a node only when that node is replaced.\n")
+		fmt.Fprintf(os.Stderr, "Set karpenter_node_expiry=Never and let the fleet roll before arming the window.\n")
+		break
+	}
+
+	return nil
+}
+
+func decodeConfigParam(raw string, out interface{}) bool {
+	if strings.TrimSpace(raw) == "" {
+		return false
+	}
+
+	data := []byte(raw)
+	if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+		data = decoded
+	}
+
+	return json.Unmarshal(data, out) == nil
+}
+
+func nodePoolNames(raw string) ([]string, bool) {
+	cfgs := KarpenterNodePools{}
+	if !decodeConfigParam(raw, &cfgs) {
+		return nil, false
+	}
+
+	names := []string{}
+	for i := range cfgs {
+		if cfgs[i].Name != "" {
+			names = append(names, cfgs[i].Name)
+		}
+	}
+
+	return names, true
+}
+
+// nodeGroupLabels skips unlabelled groups: their Terraform fallback is shared across groups and varies by provider.
+func nodeGroupLabels(raw string) ([]string, bool) {
+	cfgs := AdditionalNodeGroups{}
+	if !decodeConfigParam(raw, &cfgs) {
+		return nil, false
+	}
+
+	labels := []string{}
+	for i := range cfgs {
+		if cfgs[i].Label != nil && *cfgs[i].Label != "" {
+			labels = append(labels, *cfgs[i].Label)
+		}
+	}
+
+	return labels, true
+}
+
+func droppedFrom(old, next []string) []string {
+	kept := map[string]bool{}
+	for _, n := range next {
+		kept[n] = true
+	}
+
+	dropped := []string{}
+
+	for _, o := range old {
+		if kept[o] {
+			continue
+		}
+
+		kept[o] = true
+		dropped = append(dropped, o)
+	}
+
+	sort.Strings(dropped)
+
+	return dropped
+}
+
+// gp3 provisions 3,000 to 80,000 IOPS; the launch template provider validates throughput
+// at 125 to 1,000, not AWS's 2,000.
+var nodeVolumeRanges = map[string]struct {
+	min, max int
+	unit     string
+}{
+	"volume_iops":       {3000, 80000, "IOPS"},
+	"volume_throughput": {125, 1000, "MiB/s"},
+}
+
+var nodeVolumeParams = map[string]string{
+	"node_volume_iops":                 "volume_iops",
+	"node_volume_throughput":           "volume_throughput",
+	"karpenter_node_volume_iops":       "volume_iops",
+	"karpenter_node_volume_throughput": "volume_throughput",
+}
+
+func nodeVolumeRangeIssue(field string, value int) string {
+	r := nodeVolumeRanges[field]
+	if value == 0 || (value >= r.min && value <= r.max) {
+		return ""
+	}
+	return fmt.Sprintf("must be 0 or between %d and %d %s", r.min, r.max, r.unit)
+}
+
+func validateNodeVolumeParams(params, currentParams map[string]string) error {
+	values := map[string]int{}
+
+	for key, field := range nodeVolumeParams {
+		v, ok := params[key]
+		if !ok || v == "" {
+			continue
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("param '%s' must be a non-negative integer", key)
+		}
+		if issue := nodeVolumeRangeIssue(field, n); issue != "" {
+			return fmt.Errorf("param '%s' %s", key, issue)
+		}
+		values[key] = n
+	}
+
+	volumeType := effectiveParam(params, currentParams, "karpenter_node_volume_type", "gp3")
+	if volumeType == "gp3" {
+		return nil
+	}
+
+	for _, key := range []string{"karpenter_node_volume_iops", "karpenter_node_volume_throughput"} {
+		if values[key] > 0 {
+			return fmt.Errorf("param '%s' requires karpenter_node_volume_type=gp3 (currently %s).\n"+
+				"  AWS takes these fields on gp3 only, so Convox does not render them on any other type.\n"+
+				"  To raise one custom nodepool that does run gp3, set its volume_iops or volume_throughput\n"+
+				"  in additional_karpenter_nodepools_config instead", key, volumeType)
+		}
+		if _, moved := params["karpenter_node_volume_type"]; moved && effectiveParamInt(params, currentParams, key) > 0 {
+			fmt.Fprintf(os.Stderr, "WARNING: %s no longer applies to the Karpenter workload and build pools now that karpenter_node_volume_type is %s. Custom nodepools that set volume_type gp3 still receive it.\n", key, volumeType)
+		}
+	}
+
+	return nil
+}
+
+// nodeadm documents this as the floor for the gate; below it AWS warns pulls get slower.
+const fastImagePullMinThroughput = 600
+
+// Mirrors the Terraform clamp: the gp3 default is 125 and throughput caps at a quarter of IOPS.
+func effectiveVolumeThroughput(iops, throughput int) int {
+	if throughput <= 0 {
+		return 125
+	}
+	if iops < 3000 {
+		iops = 3000
+	}
+	ceiling := iops / 4
+	if ceiling > 1000 {
+		ceiling = 1000
+	}
+	if throughput > ceiling {
+		throughput = ceiling
+	}
+	if throughput < 125 {
+		throughput = 125
+	}
+	return throughput
+}
+
+func validateFastImagePull(params, currentParams map[string]string, force bool) error {
+	if !strings.EqualFold(effectiveParam(params, currentParams, "fast_image_pull_enable", "false"), "true") {
+		return nil
+	}
+
+	touched := false
+	for key := range nodeVolumeParams {
+		if _, ok := params[key]; ok {
+			touched = true
+		}
+	}
+	for _, key := range []string{"fast_image_pull_enable", "additional_karpenter_nodepools_config"} {
+		if _, ok := params[key]; ok {
+			touched = true
+		}
+	}
+	if !touched {
+		return nil
+	}
+
+	nodeIops := effectiveParamInt(params, currentParams, "node_volume_iops")
+	nodeThroughput := effectiveVolumeThroughput(nodeIops, effectiveParamInt(params, currentParams, "node_volume_throughput"))
+
+	below := []string{}
+	raise := []string{}
+	if nodeThroughput < fastImagePullMinThroughput {
+		below = append(below, fmt.Sprintf("node_volume_throughput=%d", nodeThroughput))
+		raise = append(raise, "node_volume_throughput")
+	}
+
+	if strings.EqualFold(effectiveParam(params, currentParams, "karpenter_enabled", "false"), "true") {
+		karpenterIops := effectiveParamInt(params, currentParams, "karpenter_node_volume_iops")
+		if karpenterIops == 0 {
+			karpenterIops = nodeIops
+		}
+		karpenterThroughput := effectiveParamInt(params, currentParams, "karpenter_node_volume_throughput")
+		if karpenterThroughput == 0 {
+			karpenterThroughput = effectiveParamInt(params, currentParams, "node_volume_throughput")
+		}
+		karpenterType := effectiveParam(params, currentParams, "karpenter_node_volume_type", "gp3")
+
+		if karpenterType != "gp3" {
+			fmt.Fprintf(os.Stderr, "WARNING: karpenter_node_volume_type=%s takes no provisioned throughput, so Karpenter nodes stay at that type's own rate with fast_image_pull_enable on.\n", karpenterType)
+		} else if t := effectiveVolumeThroughput(karpenterIops, karpenterThroughput); t < fastImagePullMinThroughput {
+			below = append(below, fmt.Sprintf("karpenter_node_volume_throughput=%d", t))
+			if effectiveParamInt(params, currentParams, "karpenter_node_volume_throughput") > 0 {
+				raise = append(raise, "karpenter_node_volume_throughput")
+			}
+		}
+
+		// A stored value that will not decode leaves nothing to check; the in-call value was validated above.
+		pools, _ := decodeKarpenterNodePools(effectiveParam(params, currentParams, "additional_karpenter_nodepools_config", ""))
+		for i := range pools {
+			np := &pools[i]
+			if np.VolumeType != nil && *np.VolumeType != "gp3" {
+				continue
+			}
+			iops, throughput := karpenterIops, karpenterThroughput
+			if np.VolumeIops != nil && *np.VolumeIops > 0 {
+				iops = *np.VolumeIops
+			}
+			if np.VolumeThroughput != nil && *np.VolumeThroughput > 0 {
+				throughput = *np.VolumeThroughput
+			}
+			if t := effectiveVolumeThroughput(iops, throughput); t < fastImagePullMinThroughput {
+				below = append(below, fmt.Sprintf("nodepool %s volume_throughput=%d", np.Name, t))
+				if np.VolumeThroughput != nil && *np.VolumeThroughput > 0 {
+					raise = append(raise, fmt.Sprintf("volume_throughput on nodepool %s", np.Name))
+				}
+			}
+		}
+	}
+
+	if len(below) == 0 {
+		return nil
+	}
+
+	msg := fmt.Sprintf("fast_image_pull_enable requires at least %d MiB/s of node volume throughput.\n"+
+		"  AWS documents image pulls getting SLOWER below that with this feature on.\n"+
+		"  Currently: %s", fastImagePullMinThroughput, strings.Join(below, ", "))
+
+	if force {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", msg)
+		return nil
+	}
+
+	if len(raise) == 0 {
+		raise = append(raise, "node_volume_throughput")
+	}
+
+	return fmt.Errorf("%s\n  Raise %s to %d or higher in the same call, or re-run with --force to proceed",
+		msg, strings.Join(raise, " and "), fastImagePullMinThroughput)
+}
+
+func validateControlPlanePrivateSubnets(params, currentParams map[string]string, force bool) error {
+	if force || params["eks_control_plane_private_subnets"] != "true" {
+		return nil
+	}
+
+	count := func(key string) int {
+		n := 0
+		for _, id := range strings.Split(effectiveParam(params, currentParams, key, ""), ",") {
+			if id != "" {
+				n++
+			}
+		}
+		return n
+	}
+
+	private := count("private_subnets_ids")
+	if private >= 2 {
+		return nil
+	}
+	if private > 0 || count("public_subnets_ids") > 0 {
+		return fmt.Errorf("eks_control_plane_private_subnets requires at least 2 private subnets in different availability zones, and private_subnets_ids has %d", private)
+	}
+	if b, err := strconv.ParseBool(effectiveParam(params, currentParams, "private", "true")); err == nil && !b {
+		return errors.New("eks_control_plane_private_subnets requires private subnets, and this rack was installed with private=false")
+	}
+	return nil
+}
+
+func decodeKarpenterNodePools(v string) (KarpenterNodePools, error) {
+	if v == "" {
+		return nil, nil
+	}
+	data := []byte(v)
+	if !strings.HasPrefix(v, "[") {
+		decoded, err := base64.StdEncoding.DecodeString(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid karpenter nodepools config: %s", err)
+		}
+		data = decoded
+	}
+	pools := KarpenterNodePools{}
+	if err := json.Unmarshal(data, &pools); err != nil {
+		return nil, fmt.Errorf("invalid karpenter nodepools config: %s", err)
+	}
+	return pools, nil
+}
+
+// effectiveParam is the value the rack holds after this call. Cleared params store "null".
+func effectiveParam(params, currentParams map[string]string, key, fallback string) string {
+	v, ok := params[key]
+	if !ok {
+		v = currentParams[key]
+	}
+	if v == "" || v == "null" {
+		return fallback
+	}
+	return v
+}
+
+func effectiveParamInt(params, currentParams map[string]string, key string) int {
+	n, err := strconv.Atoi(effectiveParam(params, currentParams, key, "0"))
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+func validateNodePoolRemoval(params, currentParams map[string]string, force bool) error {
+	if force {
+		return nil
+	}
+
+	for _, c := range []struct {
+		key      string
+		label    string
+		noun     string
+		affected string
+		extract  func(string) ([]string, bool)
+	}{
+		{"additional_karpenter_nodepools_config", "convox.io/nodepool", "node pools", "Services pinned to", nodePoolNames},
+		{"additional_node_groups_config", "convox.io/label", "node groups", "Services pinned to", nodeGroupLabels},
+		{"additional_build_groups_config", "convox.io/label", "build groups", "Builds pinned by BuildLabels to", nodeGroupLabels},
+	} {
+		if _, ok := params[c.key]; !ok {
+			continue
+		}
+
+		old, ok := c.extract(currentParams[c.key])
+		if !ok {
+			continue
+		}
+
+		next, ok := c.extract(params[c.key])
+		if !ok {
+			continue
+		}
+
+		dropped := droppedFrom(old, next)
+		if len(dropped) == 0 {
+			continue
+		}
+
+		pinned := make([]string, len(dropped))
+		for i, d := range dropped {
+			pinned[i] = fmt.Sprintf("%s=%s", c.label, d)
+		}
+
+		return fmt.Errorf("destructive change, removes %s from the rack: %s\n"+
+			"  Their nodes are drained and deleted. %s %s become unschedulable.\n"+
+			"  Re-run with --force to proceed",
+			c.noun, strings.Join(dropped, ", "), c.affected, strings.Join(pinned, " or "))
+	}
+
+	return nil
+}
+
+func validateWhitelist(params map[string]string, force bool) error {
+	v, ok := params["whitelist"]
+	if !ok {
+		return nil
+	}
+
+	var entries []string
+	open := false
+
+	for _, e := range strings.Split(v, ",") {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+
+		_, n, err := net.ParseCIDR(e)
+		if err != nil {
+			return fmt.Errorf("param 'whitelist' entry %q is not a valid cidr range", e)
+		}
+
+		if n.IP.To4() == nil {
+			return fmt.Errorf("param 'whitelist' entry %q is not an ipv4 cidr range, the rack router is ipv4 only", e)
+		}
+
+		if n.String() == "0.0.0.0/0" {
+			open = true
+		}
+
+		// AWS canonicalizes a security group CIDR on write and the controller compares
+		// the raw string, so a non-canonical entry never matches on the next reconcile.
+		entries = append(entries, n.String())
+	}
+
+	if len(entries) == 0 {
+		return fmt.Errorf("param 'whitelist' requires at least one cidr range")
+	}
+
+	params["whitelist"] = strings.Join(entries, ",")
+
+	if open {
+		return nil
+	}
+
+	if !force {
+		return fmt.Errorf("param 'whitelist' does not include 0.0.0.0/0\n" +
+			"  The rack router serves the rack API, so this blocks every client outside\n" +
+			"  these ranges, including Convox Console. A Console-managed rack that blocks\n" +
+			"  Console cannot be updated through Convox again without editing the load\n" +
+			"  balancer rules in your cloud provider.\n" +
+			"  Re-run with --force to proceed")
+	}
+
+	fmt.Fprintf(os.Stderr, "WARNING: whitelist does not include 0.0.0.0/0. Clients outside these ranges, including Convox Console, can no longer reach this rack.\n")
+
+	return nil
+}
+
+func validateAndMutateParams(params map[string]string, provider string, currentParams map[string]string, force bool) error {
+	// Install-only params — these define infrastructure that cannot be changed
+	// after rack creation without catastrophic consequences (network recreation,
+	// subnet destruction, cluster replacement). Block ANY post-install modification.
+	//
+	// MAINTENANCE: Keep in sync with immutableRackParams in console3
+	// api/controller/cli.go. Add any new TF variable here if changing it
+	// post-install would destroy or recreate core infrastructure.
+	installOnlyParams := map[string]bool{
+		"high_availability":   true,
+		"private":             true,
+		"cidr":                true,
+		"vpc_id":              true,
+		"internet_gateway_id": true,
+		"private_subnets_ids": true,
+		"public_subnets_ids":  true,
+		"availability_zones":  true,
+		"region":              true,
+		"access_id":           true,
+		"secret_key":          true,
+		"token":               true,
+	}
+
+	for k := range params {
+		if installOnlyParams[k] {
+			return fmt.Errorf("param '%s' can only be set during rack installation", k)
+		}
+	}
+
+	for k := range params {
+		if k == "" {
+			return fmt.Errorf("parameter name cannot be empty")
+		}
+	}
+
+	for k := range params {
+		if reason, ok := removedIn3_24_6[k]; ok {
+			return fmt.Errorf("param '%s' was %s", k, reason)
+		}
+	}
+
+	// V2 racks use PascalCase params (e.g. "HighAvailability", "BuildMemory").
+	// V3 racks use snake_case (e.g. "high_availability", "build_node_type").
+	// Detect V2 by checking if any currentParam key starts with an uppercase letter.
+	// Only check when provider is a known V3 provider — unknown providers (e.g. test
+	// fixtures) skip the known-key check via known==nil but should still run
+	// other validation (empty-value, terraform_update_timeout, etc.).
+	isV3Rack := true
+	if providerKnownParams[provider] != nil {
+		for k := range currentParams {
+			if len(k) > 0 && k[0] >= 'A' && k[0] <= 'Z' {
+				isV3Rack = false
+				break
+			}
+		}
+	}
+
+	if !isV3Rack {
+		return nil
+	}
+
+	known := providerKnownParams[provider]
+
+	// webhook_signing_key: CLI has no admin gate (intentional — Console gates via GraphQL admin check).
+	if !force {
+		// Managed params are set automatically by `convox rack update` (image, release,
+		// k8s_version, etc.). Block direct modification unless --force is used.
+		for k := range params {
+			if managedParams[k] && (known == nil || known[k]) {
+				return fmt.Errorf("param '%s' is managed internally — to update it use 'convox rack update'. Use --force to override", k)
+			}
+		}
+
+		// Spellcheck: reject unknown keys with a suggestion when close to a known param.
+		if known != nil {
+			for k := range params {
+				// Karpenter params on non-AWS providers are caught later with a
+				// provider-specific error — don't shadow that with "unknown parameter".
+				if provider != "aws" && (strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config") {
+					continue
+				}
+				if !known[k] {
+					msg := fmt.Sprintf("unknown parameter '%s' for %s provider", k, provider)
+					if suggestion := suggestParam(k, known); suggestion != "" {
+						msg += fmt.Sprintf("\n       Did you mean '%s'?", suggestion)
+					}
+					msg += "\n       Run 'sudo convox update' to get the latest parameter support, or use --force to override."
+					return fmt.Errorf("%s", msg)
+				}
+			}
+		}
+	} else {
+		// --force bypasses managed and unknown-key guards, but still warn about managed params.
+		for k := range params {
+			if managedParams[k] && (known == nil || known[k]) {
+				fmt.Fprintf(os.Stderr, "WARNING: '%s' is a managed parameter — setting it directly may break your rack.\n", k)
+			}
+		}
+	}
+
+	for k, v := range params {
+		if strings.TrimSpace(v) == "" && !clearableParams[k] {
+			return fmt.Errorf("param '%s' requires an explicit value (omit to keep current)", k)
+		}
+	}
+
+	// Normalize whitespace-only to empty for clearable params so TF coalesce guards work.
+	for k, v := range params {
+		if clearableParams[k] && strings.TrimSpace(v) == "" && v != "" {
+			params[k] = ""
+		}
+	}
+
+	srdown, srup := params["schedule_rack_scale_down"], params["schedule_rack_scale_up"]
 	if (srdown == "" || srup == "") && (srdown != "" || srup != "") {
-		return errors.New("to schedule your rack to turn on/off you need both ScheduleRackScaleDown and ScheduleRackScaleUp parameters")
+		return errors.New("to schedule your rack to turn on/off you need both schedule_rack_scale_down and schedule_rack_scale_up parameters")
 	}
 
-	// format: "key1=val1,key2=val2"
-	if tags, has := params["tags"]; has {
+	// format: "key1=val1,key2=val2" — empty string clears all tags
+	if tags, has := params["tags"]; has && tags != "" {
 		tList := strings.Split(tags, ",")
 		for _, p := range tList {
-			if len(strings.Split(p, "=")) != 2 {
+			if len(strings.SplitN(p, "=", 2)) != 2 {
 				return errors.New("invalid value for tags param")
 			}
 		}
+	}
+
+	if v, has := params["terraform_update_timeout"]; has {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("invalid value for terraform_update_timeout: must be a valid duration (e.g., '2h', '90m', '2h30m'): %s", err)
+		}
+		if d <= 0 {
+			return errors.New("invalid value for terraform_update_timeout: must be a positive duration")
+		}
+	}
+
+	if v, has := params["imds_http_tokens"]; has && v != "" {
+		if v != "optional" && v != "required" {
+			return fmt.Errorf("param 'imds_http_tokens' must be 'optional' or 'required'")
+		}
+	}
+
+	if v, has := params["pod_security_standard"]; has && v != "" && v != "baseline" && v != "restricted" {
+		return fmt.Errorf("param 'pod_security_standard' must be 'baseline' or 'restricted'")
+	}
+
+	if v, has := params["pod_security_mode"]; has && v != "warn" && v != "audit" && v != "enforce" {
+		return fmt.Errorf("param 'pod_security_mode' must be 'warn', 'audit', or 'enforce'")
+	}
+
+	if v, has := params["node_capacity_type"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "on_demand" && lower != "spot" && lower != "mixed" {
+			return fmt.Errorf("param 'node_capacity_type' must be 'on_demand', 'spot', or 'mixed'")
+		}
+	}
+
+	k8sResourceParams := map[string]bool{
+		"contour_cpu_request": true, "contour_memory_request": true, "envoy_cpu_request": true,
+		"envoy_memory_request": true,
+	}
+	k8sResourceRe := regexp.MustCompile(`^\d+(\.\d+)?(m|Ki|Mi|Gi|Ti|Pi|Ei)?$`)
+	for k, v := range params {
+		if k8sResourceParams[k] && v != "" {
+			if !k8sResourceRe.MatchString(v) {
+				return fmt.Errorf("param '%s' must be a Kubernetes resource quantity (e.g., '100m', '256Mi', '1Gi')", k)
+			}
+		}
+	}
+
+	if v, has := params["fluentd_memory"]; has && !fluentdMemoryRe.MatchString(v) {
+		return errors.New("param 'fluentd_memory' must be a whole number of Mi or Gi, such as 200Mi or 1Gi")
+	}
+
+	if v, has := params["router_type"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "nginx" && lower != "contour" {
+			return fmt.Errorf("param 'router_type' must be 'nginx' or 'contour'")
+		}
+		params["router_type"] = lower
+	}
+
+	effectiveRouterType := params["router_type"]
+	if effectiveRouterType == "" {
+		effectiveRouterType = currentParams["router_type"]
+	}
+
+	if effectiveRouterType == "contour" && params["proxy_protocol"] != "" {
+		currentPP := currentParams["proxy_protocol"]
+		if currentPP == "" {
+			currentPP = "false"
+		}
+		if params["proxy_protocol"] != currentPP {
+			fmt.Fprintf(os.Stderr, "WARNING: Changing proxy_protocol while router_type=contour causes a traffic interruption of several minutes during the Envoy DaemonSet rollout. Plan this change during a maintenance window.\n")
+			fmt.Fprintf(os.Stderr, "All apps with IP whitelisting must be redeployed after the change.\n")
+		}
+	}
+
+	nginxAdditionalConfig := params["nginx_additional_config"]
+	if nginxAdditionalConfig == "" {
+		nginxAdditionalConfig = currentParams["nginx_additional_config"]
+	}
+	if effectiveRouterType == "contour" && nginxAdditionalConfig != "" && nginxAdditionalConfig != "null" {
+		fmt.Fprintf(os.Stderr, "WARNING: nginx_additional_config has no effect when router_type=contour\n")
+	}
+	if effectiveRouterType == "contour" {
+		sslCiphers := params["ssl_ciphers"]
+		if sslCiphers == "" {
+			sslCiphers = currentParams["ssl_ciphers"]
+		}
+		if sslCiphers != "" && sslCiphers != "null" {
+			fmt.Fprintf(os.Stderr, "WARNING: custom ssl_ciphers are not applied when router_type=contour. Envoy uses its built-in cipher suite.\n")
+		}
+		sslProtocols := params["ssl_protocols"]
+		if sslProtocols == "" {
+			sslProtocols = currentParams["ssl_protocols"]
+		}
+		if sslProtocols != "" && sslProtocols != "null" && sslProtocols != "TLSv1.2 TLSv1.3" {
+			fmt.Fprintf(os.Stderr, "WARNING: custom ssl_protocols are not applied when router_type=contour. Envoy uses TLS 1.2 minimum.\n")
+		}
+	}
+
+	currentRouterType := currentParams["router_type"]
+	if currentRouterType == "" || currentRouterType == "null" {
+		currentRouterType = "nginx"
+	}
+	if params["router_type"] != "" && params["router_type"] != currentRouterType {
+		fmt.Fprintf(os.Stderr, "WARNING: Changing router_type requires redeploying all apps.\n")
+		fmt.Fprintf(os.Stderr, "Apps will lose connectivity until their next deployment.\n")
+		if params["router_type"] == "contour" {
+			fmt.Fprintf(os.Stderr, "WARNING: Router access logs will use Envoy default format. The access_log_retention_in_days param will not apply until a follow-up fluentd update.\n")
+		}
+	}
+
+	effectivePodSecurityStandard := currentParams["pod_security_standard"]
+	if v, ok := params["pod_security_standard"]; ok {
+		effectivePodSecurityStandard = v
+	}
+	effectivePodSecurityMode := currentParams["pod_security_mode"]
+	if v, ok := params["pod_security_mode"]; ok {
+		effectivePodSecurityMode = v
+	}
+	if effectivePodSecurityMode == "enforce" && effectivePodSecurityStandard != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: pod_security_mode=enforce rejects non-conforming app pods at admission.\n")
+		fmt.Fprintf(os.Stderr, "Any service that sets a violating securityContext will fail to deploy.\n")
+		fmt.Fprintf(os.Stderr, "restricted with enforce also rejects default convox pods. Roll out warn, then audit, then enforce.\n")
+		fmt.Fprintf(os.Stderr, "After leaving enforce, each app namespace keeps enforcing until its next promote. Builds route around this automatically.\n")
+	}
+
+	if v, has := params["access_log_retention_in_days"]; has && v != "" {
+		if _, err := strconv.Atoi(v); err != nil {
+			return fmt.Errorf("param 'access_log_retention_in_days' must be an integer")
+		}
+	}
+
+	if v, has := params["cloudwatch_retention_in_days"]; has && v != "" {
+		if !cloudwatchRetentionValues[v] {
+			return fmt.Errorf("param 'cloudwatch_retention_in_days' must be Never or one of the periods AWS allows: %s", strings.Join(cloudwatchRetentionDays, ", "))
+		}
+	}
+
+	if v, has := params["elasticsearch_disk"]; has {
+		if !elasticsearchDiskRe.MatchString(v) {
+			return fmt.Errorf("param 'elasticsearch_disk' must be a whole number of Gi and at least 5Gi, such as 20Gi")
+		}
+		want := resource.MustParse(v)
+		if cur, err := resource.ParseQuantity(currentParams["elasticsearch_disk"]); err == nil && !force && want.Cmp(cur) < 0 {
+			return fmt.Errorf("param 'elasticsearch_disk' cannot be below the current %s: the volumes can grow but not shrink (use --force to set it anyway)", currentParams["elasticsearch_disk"])
+		}
+	}
+
+	if v, has := params["router_log_redact_params"]; has && v != "" {
+		nameRe := regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
+		names := strings.Split(v, ",")
+		for _, n := range names {
+			if strings.EqualFold(n, "all") && (n != "all" || len(names) > 1) {
+				return fmt.Errorf("param 'router_log_redact_params' takes 'all' on its own and in lowercase, or a comma-separated list of names")
+			}
+			if !nameRe.MatchString(n) {
+				return fmt.Errorf("param 'router_log_redact_params' has an invalid name %q: use letters, digits, '_', '.' and '-', separated by commas", n)
+			}
+		}
+	}
+
+	if v, has := params["syslog"]; has && v != "" {
+		for _, e := range strings.Split(v, ",") {
+			if !syslogURLRe.MatchString(strings.Trim(e, " \t")) {
+				return fmt.Errorf("param 'syslog' must be tcp://, tcp+tls:// or udp:// followed by a host and optional port, such as tcp+tls://logs.example.com:6514 (got %q)", e)
+			}
+		}
+	}
+
+	// Reject karpenter_* params for non-AWS racks
+	if provider != "aws" {
+		for k := range params {
+			if strings.HasPrefix(k, "karpenter_") || k == "additional_karpenter_nodepools_config" {
+				return fmt.Errorf("karpenter parameters are only supported for AWS racks")
+			}
+		}
+	}
+
+	// karpenter_auth_mode and karpenter_enabled are type=string in TF (not bool).
+	// Reject junk values — only "true" or "false" are valid.
+	for _, boolishParam := range []string{"eks_access_entries", "karpenter_auth_mode", "karpenter_enabled"} {
+		if v, ok := params[boolishParam]; ok && v != "" && v != "true" && v != "false" {
+			return fmt.Errorf("param '%s' must be 'true' or 'false'", boolishParam)
+		}
+	}
+
+	if params["eks_access_entries"] == "false" && currentParams["eks_access_entries"] == "true" {
+		return fmt.Errorf("eks_access_entries cannot be disabled once enabled (AWS EKS access config migration is one-way)")
+	}
+
+	if params["karpenter_auth_mode"] == "false" && currentParams["karpenter_auth_mode"] == "true" {
+		return fmt.Errorf("karpenter_auth_mode cannot be disabled once enabled (AWS EKS access config migration is one-way)")
+	}
+
+	// karpenter_enabled=true requires karpenter_auth_mode=true — either already
+	// applied or being set in the same call.
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") {
+		if !strings.EqualFold(currentParams["karpenter_auth_mode"], "true") && params["karpenter_auth_mode"] != "true" {
+			return fmt.Errorf("karpenter_enabled=true requires karpenter_auth_mode=true.\n  Either include both: convox rack params set karpenter_auth_mode=true karpenter_enabled=true\n  Or set karpenter_auth_mode=true first and wait for the update to complete")
+		}
+	}
+
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") {
+		currentNCT := strings.ToLower(currentParams["node_capacity_type"])
+		if currentNCT != "" && currentNCT != "on_demand" {
+			if strings.EqualFold(currentParams["karpenter_auth_mode"], "true") || params["karpenter_auth_mode"] == "true" {
+				return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Current node_capacity_type is %s. First run:\n    convox rack params set node_capacity_type=ON_DEMAND\n  Wait for the update to complete, then enable Karpenter:\n    convox rack params set karpenter_enabled=true", currentParams["node_capacity_type"])
+			}
+			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Current node_capacity_type is %s. First run:\n    convox rack params set karpenter_auth_mode=true node_capacity_type=ON_DEMAND\n  Wait for the update to complete, then enable Karpenter:\n    convox rack params set karpenter_enabled=true", currentParams["node_capacity_type"])
+		}
+		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
+			return fmt.Errorf("karpenter_enabled=true requires node_capacity_type=ON_DEMAND to prevent a node\nscheduling deadlock during node group replacement.\n  Cannot set node_capacity_type=%s in the same call as karpenter_enabled=true.\n  Set node_capacity_type=ON_DEMAND first, wait for the update to complete, then enable Karpenter", v)
+		}
+	}
+
+	if strings.EqualFold(currentParams["karpenter_enabled"], "true") && params["karpenter_enabled"] != "false" {
+		if v, ok := params["node_capacity_type"]; ok && !strings.EqualFold(v, "on_demand") {
+			return fmt.Errorf("node_capacity_type cannot be set to %s while Karpenter is enabled.\n  Karpenter requires ON_DEMAND system nodes. To use %s capacity, disable\n  Karpenter first: convox rack params set karpenter_enabled=false", v, v)
+		}
+	}
+
+	if params["karpenter_enabled"] == "true" && !strings.EqualFold(currentParams["karpenter_enabled"], "true") &&
+		strings.EqualFold(currentParams["high_availability"], "false") {
+		ltParams := []string{
+			"gpu_tag_enable",
+			"imds_http_tokens",
+			"imds_http_hop_limit",
+			"imds_tags_enable",
+			"ebs_volume_encryption_enabled",
+			"user_data",
+			"user_data_url",
+			"kubelet_registry_pull_qps",
+			"kubelet_registry_burst",
+			"key_pair_name",
+			"fast_image_pull_enable",
+			"node_volume_iops",
+			"node_volume_throughput",
+			"karpenter_node_volume_iops",
+			"karpenter_node_volume_throughput",
+		}
+		var conflicts []string
+		for _, p := range ltParams {
+			if _, ok := params[p]; ok {
+				conflicts = append(conflicts, p)
+			}
+		}
+		if len(conflicts) > 0 {
+			return fmt.Errorf("cannot change launch template settings in the same call as karpenter_enabled=true on\n  a non-HA rack (single node). These params trigger a node rolling update that can\n  deadlock with the Karpenter taint on undersized nodes:\n    %s\n  Set them in a separate call first, wait for the update to complete, then enable Karpenter",
+				strings.Join(conflicts, ", "))
+		}
+	}
+
+	// gpu_observability_enable requires nvidia_device_plugin_enable (DCGM needs the device plugin socket).
+	// GKE manages the device plugin on GCP, so the requirement applies only to self-managed providers.
+	if provider != "gcp" && params["gpu_observability_enable"] == "true" && currentParams["gpu_observability_enable"] != "true" {
+		if currentParams["nvidia_device_plugin_enable"] != "true" && params["nvidia_device_plugin_enable"] != "true" {
+			return fmt.Errorf("gpu_observability_enable=true requires nvidia_device_plugin_enable=true.\n  Set both in the same `convox rack params set` invocation, or enable\n  the device plugin first.")
+		}
+	}
+
+	// ecr_docker_hub_cache=true requires docker_hub_username and docker_hub_password —
+	// either already applied or being set in the same call. AWS ECR pull-through
+	// cache rules require authenticated Docker Hub credentials.
+	if params["ecr_docker_hub_cache"] == "true" && currentParams["ecr_docker_hub_cache"] != "true" {
+		hasUsername := (currentParams["docker_hub_username"] != "" || params["docker_hub_username"] != "")
+		hasPassword := (currentParams["docker_hub_password"] != "" || params["docker_hub_password"] != "")
+		if !hasUsername || !hasPassword {
+			return fmt.Errorf("ecr_docker_hub_cache=true requires docker_hub_username and docker_hub_password.\n  Set all three: convox rack params set ecr_docker_hub_cache=true docker_hub_username=USER docker_hub_password=TOKEN\n  Or set docker_hub_username and docker_hub_password first")
+		}
+	}
+
+	if v, has := params["karpenter_node_volume_type"]; has && v != "" {
+		validVolTypes := map[string]bool{"gp2": true, "gp3": true, "io1": true, "io2": true}
+		if !validVolTypes[v] {
+			return fmt.Errorf("param 'karpenter_node_volume_type' must be gp2, gp3, io1, or io2")
+		}
+	}
+
+	if v, has := params["karpenter_node_os"]; has && v != "" {
+		lower := strings.ToLower(v)
+		if lower != "al2023" && lower != "bottlerocket" {
+			return fmt.Errorf("param 'karpenter_node_os' must be 'al2023' or 'bottlerocket'")
+		}
+		params["karpenter_node_os"] = lower
+	}
+
+	// Karpenter parameter validation
+	// When enabling Karpenter, temporarily inject current params for re-validation so stale
+	// invalid values saved during a previous karpenter_enabled=false call are caught.
+	// Injected keys are removed after validation to avoid sending them to UpdateParams.
+	var karpenterInjectedKeys []string
+	if params["karpenter_enabled"] == "true" {
+		karpenterRevalidateKeys := []string{
+			"karpenter_arch",
+			"karpenter_capacity_types", "karpenter_cpu_limit", "karpenter_memory_limit_gb",
+			"karpenter_consolidate_after", "karpenter_build_consolidate_after",
+			"karpenter_node_expiry", "karpenter_disruption_budget_nodes",
+			"karpenter_build_disruption_budget_nodes",
+			"karpenter_build_capacity_types", "karpenter_build_cpu_limit",
+			"karpenter_build_memory_limit_gb", "karpenter_node_taints",
+			"karpenter_node_labels", "karpenter_build_node_labels",
+			"karpenter_build_imds_tokens", "karpenter_build_imds_hop_limit",
+			"karpenter_ami_alias", "karpenter_system_node_min_count_per_az",
+		}
+		for _, rk := range karpenterRevalidateKeys {
+			if _, inCall := params[rk]; !inCall {
+				if cv, exists := currentParams[rk]; exists && cv != "" {
+					params[rk] = cv
+					karpenterInjectedKeys = append(karpenterInjectedKeys, rk)
+				}
+			}
+		}
+	}
+	if v, ok := params["karpenter_arch"]; ok && v != "" {
+		for _, arch := range strings.Split(v, ",") {
+			arch = strings.TrimSpace(arch)
+			if arch != "amd64" && arch != "arm64" {
+				return fmt.Errorf("invalid karpenter architecture: %s (must be amd64 or arm64)", arch)
+			}
+		}
+	}
+
+	if provider == "aws" {
+		if v, ok := params["node_type"]; ok {
+			if err := validateInstanceTypeList("node_type", v); err != nil {
+				return err
+			}
+		}
+		if v, ok := params["build_node_type"]; ok && strings.Contains(v, ",") {
+			return errors.New("build_node_type takes a single instance type; use node_type for a list")
+		}
+	}
+
+	if v := params["node_type"]; armMachineType(provider, v) {
+		if !force {
+			return fmt.Errorf("param 'node_type' %s is an Arm machine type; the primary node pool must stay x86\n"+
+				"  Add Arm nodes with additional_node_groups_config instead.\n"+
+				"  Re-run with --force to proceed", v)
+		}
+		impact := "Elasticsearch, the rack log store, has no Arm image and will not run"
+		if provider == "gcp" {
+			impact = "GKE taints Arm nodes, so rack services cannot schedule there and the rack goes offline without another x86 node group"
+		}
+		fmt.Fprintf(os.Stderr, "WARNING: node_type %s is an Arm machine type. %s.\n", v, impact)
+	}
+
+	if err := validateKarpenterArchFamilies(params, currentParams); err != nil {
+		return err
+	}
+
+	for k, v := range params {
+		if !boolParams[k] || v == "" {
+			continue
+		}
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("param '%s' must be 'true' or 'false' (got %q)", k, v)
+		}
+		// Canonicalize to "true"/"false" for consistent vars.json storage.
+		params[k] = strconv.FormatBool(b)
+	}
+
+	if provider == "aws" {
+		effectiveFluentd := params["fluentd_disable"]
+		if effectiveFluentd == "" {
+			effectiveFluentd = currentParams["fluentd_disable"]
+		}
+		effectiveCloudwatch := params["cloudwatch_disable"]
+		if effectiveCloudwatch == "" {
+			effectiveCloudwatch = currentParams["cloudwatch_disable"]
+		}
+		effectiveAppCloudwatch := params["app_cloudwatch_disable"]
+		if effectiveAppCloudwatch == "" {
+			effectiveAppCloudwatch = currentParams["app_cloudwatch_disable"]
+		}
+		if params["cloudwatch_disable"] == "true" && effectiveFluentd != "true" && effectiveAppCloudwatch != "true" {
+			fmt.Fprintf(os.Stderr, "WARNING: cloudwatch_disable stops Convox rack-side CloudWatch writes and makes 'convox logs' return empty, but fluentd is still enabled and will keep shipping application logs to CloudWatch and creating /convox/<rack>/<app> groups. To stop CloudWatch entirely, also set fluentd_disable=true.\n")
+		}
+		if params["fluentd_disable"] == "true" && effectiveCloudwatch != "true" && effectiveAppCloudwatch != "true" {
+			fmt.Fprintf(os.Stderr, "WARNING: disabling fluentd stops application logs, but the rack still creates an empty CloudWatch log group per app (/convox/<rack>/<app>). Set app_cloudwatch_disable=true to prevent them while keeping 'convox rack logs', or cloudwatch_disable=true to stop all rack CloudWatch.\n")
+		}
+		if (params["app_cloudwatch_disable"] == "true" && effectiveCloudwatch == "true") ||
+			(params["cloudwatch_disable"] == "true" && effectiveAppCloudwatch == "true") {
+			fmt.Fprintf(os.Stderr, "WARNING: cloudwatch_disable also covers the rack system log group, so 'convox rack logs' stays empty while it is set. Set cloudwatch_disable=false to get the rack view back.\n")
+		}
+	}
+
+	if v, ok := params["karpenter_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter capacity type: %s (must be on-demand or spot)", ct)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_system_node_min_count_per_az"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > rack.KarpenterSystemNodeMaxPerAZ {
+			return fmt.Errorf("karpenter_system_node_min_count_per_az must be an integer from 1 to %d", rack.KarpenterSystemNodeMaxPerAZ)
+		}
+	}
+
+	if v, ok := params["cost_tracking_history_days"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 31 || n > 400 {
+			return fmt.Errorf("cost_tracking_history_days must be an integer from 31 to 400")
+		}
+	}
+
+	durationRe := regexp.MustCompile(`^\d+[smh]$`)
+	for _, dk := range []string{"karpenter_consolidate_after", "karpenter_build_consolidate_after"} {
+		if v, ok := params[dk]; ok && v != "" {
+			if !durationRe.MatchString(v) {
+				return fmt.Errorf("%s must be a duration like 30s, 5m, or 1h", dk)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_node_expiry"]; ok && v != "" {
+		expiryRe := regexp.MustCompile(`^\d+h$`)
+		if v != "Never" && !expiryRe.MatchString(v) {
+			return fmt.Errorf("karpenter_node_expiry must be a duration like 720h or Never")
+		}
+	}
+
+	// Pattern matches the Karpenter NodePool CRD validation for disruption budgets,
+	// so an out-of-range percentage fails here instead of at terraform apply.
+	budgetRe := regexp.MustCompile(`^((100|[0-9]{1,2})%|[0-9]+)$`)
+	for _, bk := range []string{"karpenter_disruption_budget_nodes", "karpenter_build_disruption_budget_nodes"} {
+		if v, ok := params[bk]; ok && v != "" {
+			if !budgetRe.MatchString(v) {
+				return fmt.Errorf("%s must be a node count or a percentage from 0%% to 100%% (e.g. 100%%)", bk)
+			}
+		}
+	}
+
+	amiAliasRe := regexp.MustCompile(`^al2023@(latest|v[0-9]{8})$`)
+	if v, ok := params["karpenter_ami_alias"]; ok && v != "" {
+		if !amiAliasRe.MatchString(v) {
+			return fmt.Errorf("karpenter_ami_alias pins AL2023 node pools and must be al2023@latest or al2023@vYYYYMMDD (e.g. al2023@v20260828)")
+		}
+	}
+
+	if v, ok := params["karpenter_build_capacity_types"]; ok && v != "" {
+		for _, ct := range strings.Split(v, ",") {
+			ct = strings.TrimSpace(ct)
+			if ct != "on-demand" && ct != "spot" {
+				return fmt.Errorf("invalid karpenter build capacity type: %s (must be on-demand or spot)", ct)
+			}
+		}
+	}
+
+	if v, ok := params["karpenter_build_cpu_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_cpu_limit must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_memory_limit_gb"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("karpenter_build_memory_limit_gb must be a positive integer")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_tokens"]; ok && v != "" {
+		if v != "optional" && v != "required" {
+			return fmt.Errorf("param 'karpenter_build_imds_tokens' must be 'optional' or 'required'")
+		}
+	}
+
+	if v, ok := params["karpenter_build_imds_hop_limit"]; ok && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			return fmt.Errorf("karpenter_build_imds_hop_limit must be a non-negative integer")
+		}
+	}
+
+	// Validate karpenter_node_taints format: key=value:Effect (same check as KarpenterNodePoolConfigParam.Validate)
+	if v, ok := params["karpenter_node_taints"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_taints: taint keys and values must not contain double quotes")
+		}
+		validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+		for _, t := range strings.Split(v, ",") {
+			t = strings.TrimSpace(t)
+			colonParts := strings.SplitN(t, ":", 2)
+			if len(colonParts) != 2 || colonParts[0] == "" {
+				return fmt.Errorf("invalid karpenter_node_taints entry '%s', use format key=value:Effect or key:Effect", t)
+			}
+			if !validEffects[colonParts[1]] {
+				return fmt.Errorf("invalid karpenter_node_taints effect '%s' (must be NoSchedule, PreferNoSchedule, or NoExecute)", colonParts[1])
+			}
+		}
+	}
+
+	// Reject Convox-reserved label keys and double quotes in label values
+	reservedWorkloadLabels := map[string]bool{"convox.io/nodepool": true}
+	if v, ok := params["karpenter_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_node_labels: label keys and values must not contain double quotes")
+		}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedWorkloadLabels[k] {
+				return fmt.Errorf("karpenter_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
+			}
+		}
+	}
+
+	reservedBuildLabels := map[string]bool{"convox-build": true, "convox.io/nodepool": true}
+	if v, ok := params["karpenter_build_node_labels"]; ok && v != "" {
+		if strings.Contains(v, `"`) {
+			return fmt.Errorf("karpenter_build_node_labels: label keys and values must not contain double quotes")
+		}
+		for _, pair := range strings.Split(v, ",") {
+			k := strings.TrimSpace(strings.SplitN(pair, "=", 2)[0])
+			if reservedBuildLabels[k] {
+				return fmt.Errorf("karpenter_build_node_labels: '%s' is a Convox-reserved label key and cannot be overridden", k)
+			}
+		}
+	}
+
+	// Remove temporarily-injected currentParams keys so they aren't sent to UpdateParams
+	for _, rk := range karpenterInjectedKeys {
+		delete(params, rk)
+	}
+
+	// Normalize empty values for JSON config params — users clear with param= or param=""
+	// but TF needs valid base64-encoded JSON (empty array or empty object).
+	for _, k := range []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_node_overlays_config"} {
+		if v, ok := params[k]; ok && (v == "" || v == `""`) {
+			params[k] = base64.StdEncoding.EncodeToString([]byte("[]"))
+		}
+	}
+	if v, ok := params["karpenter_config"]; ok && (v == "" || v == `""`) {
+		params["karpenter_config"] = base64.StdEncoding.EncodeToString([]byte("{}"))
+	}
+
+	ngKeys := []string{"additional_node_groups_config", "additional_build_groups_config"}
+	for _, k := range ngKeys {
+		if params[k] != "" {
+			var err error
+			cfgData := []byte(params[k])
+			if strings.HasSuffix(params[k], ".json") {
+				cfgData, err = os.ReadFile(params[k])
+				if err != nil {
+					return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+				}
+			} else if !strings.HasPrefix(params[k], "[") {
+				data, err := base64.StdEncoding.DecodeString(params[k])
+				if err != nil {
+					return fmt.Errorf("invalid param '%s' value: %s", k, err)
+				}
+
+				cfgData = data
+			}
+
+			nCfgs := AdditionalNodeGroups{}
+			if err := json.Unmarshal(cfgData, &nCfgs); err != nil {
+				return err
+			}
+
+			// Preserve existing ids from currentParams when new config omits them.
+			// This prevents Terraform for_each key changes (destroy+create cycles)
+			// when a user modifies config without specifying ids.
+			hasNilId := false
+			for _, ng := range nCfgs {
+				if ng.Id == nil {
+					hasNilId = true
+					break
+				}
+			}
+			if hasNilId && currentParams[k] != "" {
+				var existingData []byte
+				if decoded, err := base64.StdEncoding.DecodeString(currentParams[k]); err == nil {
+					existingData = decoded
+				} else {
+					existingData = []byte(currentParams[k])
+				}
+				var existing AdditionalNodeGroups
+				if err := json.Unmarshal(existingData, &existing); err == nil {
+					for i := range nCfgs {
+						if nCfgs[i].Id != nil {
+							continue
+						}
+						if i < len(existing) {
+							if existing[i].Id != nil {
+								nCfgs[i].Id = existing[i].Id
+							} else {
+								// Legacy entry without id — use 0-based index to match Terraform's idx default
+								nCfgs[i].Id = options.Int(i)
+							}
+						}
+					}
+				}
+			}
+
+			if err := nCfgs.Validate(provider); err != nil {
+				return err
+			}
+
+			if provider == "azure" {
+				for i := range nCfgs {
+					ng := &nCfgs[i]
+					if !armMachineType(provider, ng.Type) || (ng.CapacityType != nil && strings.EqualFold(*ng.CapacityType, "spot")) {
+						continue
+					}
+					if k == "additional_build_groups_config" {
+						fmt.Fprintf(os.Stderr, "WARNING: %s type %s is an Arm machine type. Builds of apps without the BuildArch app parameter can run on it and produce Arm-only images.\n", k, ng.Type)
+					} else if ng.Dedicated == nil || !*ng.Dedicated {
+						fmt.Fprintf(os.Stderr, "WARNING: %s type %s is an Arm machine type without dedicated: true. Pods with x86-only images can schedule on it and fail to start.\n", k, ng.Type)
+					}
+				}
+			}
+
+			sort.Slice(nCfgs, func(i, j int) bool {
+				if nCfgs[i].Id == nil || nCfgs[j].Id == nil {
+					return true
+				}
+				return *nCfgs[i].Id < *nCfgs[j].Id
+			})
+
+			data, err := json.Marshal(nCfgs)
+			if err != nil {
+				return fmt.Errorf("failed to process params '%s': %s", k, err)
+			}
+			params[k] = base64.StdEncoding.EncodeToString(data)
+		}
+	}
+
+	// Preflight check: warn if enabling Karpenter with non-dedicated additional node groups
+	karpenterBeingEnabled := params["karpenter_enabled"] == "true"
+	karpenterAlreadyEnabled := currentParams["karpenter_enabled"] == "true" && params["karpenter_enabled"] != "false"
+	if karpenterBeingEnabled || karpenterAlreadyEnabled {
+		// Use the config from this call if provided, otherwise check current state
+		ngConfig := params["additional_node_groups_config"]
+		if ngConfig == "" {
+			ngConfig = currentParams["additional_node_groups_config"]
+		}
+		if ngConfig != "" {
+			var ngCfgData []byte
+			if decoded, err := base64.StdEncoding.DecodeString(ngConfig); err == nil {
+				ngCfgData = decoded
+			} else {
+				ngCfgData = []byte(ngConfig)
+			}
+			var ngs AdditionalNodeGroups
+			if err := json.Unmarshal(ngCfgData, &ngs); err == nil {
+				for _, ng := range ngs {
+					if ng.Dedicated == nil || !*ng.Dedicated {
+						return fmt.Errorf("karpenter_enabled=true requires all additional node groups to have dedicated=true to prevent scheduling overlap with Karpenter workload nodes; update your additional_node_groups_config to set dedicated=true on all groups, or include the updated config in the same call")
+					}
+				}
+			}
+		}
+	}
+
+	// Karpenter custom NodePools config (same pattern as additional_node_groups_config)
+	if params["additional_karpenter_nodepools_config"] != "" {
+		k := "additional_karpenter_nodepools_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "[") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		npCfgs := KarpenterNodePools{}
+		if err := json.Unmarshal(cfgData, &npCfgs); err != nil {
+			return fmt.Errorf("invalid karpenter nodepools config: %s", err)
+		}
+
+		if err := npCfgs.Validate(); err != nil {
+			return err
+		}
+
+		sort.Slice(npCfgs, func(i, j int) bool {
+			return npCfgs[i].Name < npCfgs[j].Name
+		})
+
+		data, err := json.Marshal(npCfgs)
+		if err != nil {
+			return fmt.Errorf("failed to process param '%s': %s", k, err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	if err := validateNodePoolRemoval(params, currentParams, force); err != nil {
+		return err
+	}
+
+	if provider == "aws" {
+		if err := validateNodeVolumeParams(params, currentParams); err != nil {
+			return err
+		}
+		if err := validateFastImagePull(params, currentParams, force); err != nil {
+			return err
+		}
+		if err := validateControlPlanePrivateSubnets(params, currentParams, force); err != nil {
+			return err
+		}
+	}
+
+	// karpenter_node_overlays_config: validate NodeOverlay entries and re-encode
+	if params["karpenter_node_overlays_config"] != "" {
+		k := "karpenter_node_overlays_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "[") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		const maxKarpenterNodeOverlaysSize = 64 * 1024
+		if len(cfgData) > maxKarpenterNodeOverlaysSize {
+			return fmt.Errorf("karpenter_node_overlays_config exceeds maximum size of 64KB (%d bytes)", len(cfgData))
+		}
+
+		overlays := KarpenterNodeOverlays{}
+		if err := json.Unmarshal(cfgData, &overlays); err != nil {
+			return fmt.Errorf("invalid karpenter_node_overlays_config JSON: %s", err)
+		}
+
+		if err := overlays.Validate(); err != nil {
+			return err
+		}
+
+		sort.Slice(overlays, func(i, j int) bool {
+			return overlays[i].Name < overlays[j].Name
+		})
+
+		data, err := json.Marshal(overlays)
+		if err != nil {
+			return fmt.Errorf("failed to process param '%s': %s", k, err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	// karpenter_config — validate JSON and block protected fields
+	if params["karpenter_config"] != "" {
+		k := "karpenter_config"
+		var err error
+		cfgData := []byte(params[k])
+		if strings.HasSuffix(params[k], ".json") {
+			cfgData, err = os.ReadFile(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value, failed to read the file: %s", k, err)
+			}
+		} else if !strings.HasPrefix(params[k], "{") {
+			data, err := base64.StdEncoding.DecodeString(params[k])
+			if err != nil {
+				return fmt.Errorf("invalid param '%s' value: %s", k, err)
+			}
+			cfgData = data
+		}
+
+		const maxKarpenterConfigSize = 64 * 1024 // 64 KB
+		if len(cfgData) > maxKarpenterConfigSize {
+			return fmt.Errorf("karpenter_config exceeds maximum size of 64KB (%d bytes)", len(cfgData))
+		}
+
+		var config map[string]interface{}
+		if err := json.Unmarshal(cfgData, &config); err != nil {
+			return fmt.Errorf("invalid karpenter_config JSON: %s", err)
+		}
+
+		// Only nodePool and ec2NodeClass sections are allowed
+		for key := range config {
+			if key != "nodePool" && key != "ec2NodeClass" {
+				return fmt.Errorf("karpenter_config: unknown top-level key '%s' (allowed: nodePool, ec2NodeClass)", key)
+			}
+		}
+
+		// Block protected EC2NodeClass fields that would break infrastructure
+		if ec2Val, exists := config["ec2NodeClass"]; exists {
+			ec2, ok := ec2Val.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: ec2NodeClass must be a JSON object")
+			}
+			blocked := []string{"role", "instanceProfile", "subnetSelectorTerms", "securityGroupSelectorTerms"}
+			for _, field := range blocked {
+				if _, exists := ec2[field]; exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.%s is managed by Convox and cannot be overridden", field)
+				}
+			}
+
+			if familyVal, exists := ec2["amiFamily"]; exists {
+				family, ok := familyVal.(string)
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily must be a string")
+				}
+				if !karpenterAmiFamilies[family] {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily '%s' is not a valid AMI family", family)
+				}
+				termsVal, exists := ec2["amiSelectorTerms"]
+				if !exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily requires ec2NodeClass.amiSelectorTerms")
+				}
+				terms, ok := termsVal.([]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiSelectorTerms must be a JSON array")
+				}
+				if len(terms) == 0 {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiSelectorTerms must not be empty")
+				}
+				if _, exists := ec2["userData"]; family == "Custom" && !exists {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.amiFamily 'Custom' requires ec2NodeClass.userData, Karpenter generates none")
+				}
+			}
+
+			// Block reserved tag keys in ec2NodeClass.tags (Name/Rack are forced by Convox)
+			if tagsVal, exists := ec2["tags"]; exists {
+				tags, ok := tagsVal.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: ec2NodeClass.tags must be a JSON object")
+				}
+				reservedTags := []string{"name", "rack"}
+				for tagKey := range tags {
+					if common.ContainsInStringSlice(reservedTags, strings.ToLower(tagKey)) {
+						return fmt.Errorf("karpenter_config: reserved tag key '%s' is not allowed in ec2NodeClass.tags (managed by Convox)", tagKey)
+					}
+				}
+			}
+		}
+
+		// Block protected NodePool fields
+		if npVal, exists := config["nodePool"]; exists {
+			np, ok := npVal.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("karpenter_config: nodePool must be a JSON object")
+			}
+			if tmplVal, exists := np["template"]; exists {
+				tmpl, ok := tmplVal.(map[string]interface{})
+				if !ok {
+					return fmt.Errorf("karpenter_config: nodePool.template must be a JSON object")
+				} else {
+					// Block reserved labels in nodePool.template.metadata.labels
+					if metaVal, exists := tmpl["metadata"]; exists {
+						meta, ok := metaVal.(map[string]interface{})
+						if !ok {
+							return fmt.Errorf("karpenter_config: nodePool.template.metadata must be a JSON object")
+						}
+						if labelsVal, exists := meta["labels"]; exists {
+							labels, ok := labelsVal.(map[string]interface{})
+							if !ok {
+								return fmt.Errorf("karpenter_config: nodePool.template.metadata.labels must be a JSON object")
+							}
+							reservedConfigLabels := []string{"convox.io/nodepool"}
+							for labelKey := range labels {
+								for _, reserved := range reservedConfigLabels {
+									if labelKey == reserved {
+										return fmt.Errorf("karpenter_config: '%s' is a Convox-reserved label and cannot be overridden in nodePool.template.metadata.labels", labelKey)
+									}
+								}
+							}
+						}
+					}
+					if specVal, exists := tmpl["spec"]; exists {
+						spec, ok := specVal.(map[string]interface{})
+						if !ok {
+							return fmt.Errorf("karpenter_config: nodePool.template.spec must be a JSON object")
+						} else {
+							if _, exists := spec["nodeClassRef"]; exists {
+								return fmt.Errorf("karpenter_config: nodePool.template.spec.nodeClassRef is managed by Convox and cannot be overridden")
+							}
+							if reqVal, exists := spec["requirements"]; exists {
+								reqs, ok := reqVal.([]interface{})
+								if !ok {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must be a JSON array")
+								}
+								if len(reqs) == 0 {
+									return fmt.Errorf("karpenter_config: nodePool.template.spec.requirements must not be empty (Karpenter needs at least one requirement to provision nodes)")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Re-encode to base64 for storage (normalized)
+		data, err := json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("failed to process karpenter_config: %s", err)
+		}
+		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	if err := validateKarpenterDisruptionWindow(params, currentParams); err != nil {
+		return err
+	}
+
+	// prometheus_url: SSRF-guarded validation (rejects private/loopback, allows *.svc.cluster.local).
+	if v, has := params["prometheus_url"]; has && v != "" {
+		if err := validator.ValidateExternalURL(v, nil); err != nil {
+			return fmt.Errorf("prometheus_url: %s; see docs/configuration/rack-parameters/aws/prometheus_url.md for the in-cluster %s recipe", err, validator.InClusterSuffix)
+		}
+	}
+
+	// dcgm_scrape_interval: bounded duration (15s-300s). Empty falls back to TF default 15s.
+	if v, has := params["dcgm_scrape_interval"]; has && v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("dcgm_scrape_interval: must be a valid duration (e.g. '15s', '30s', '60s'): %s", err)
+		}
+		if d < 15*time.Second || d > 5*time.Minute {
+			return fmt.Errorf("dcgm_scrape_interval: must be between 15s and 300s (got %s)", v)
+		}
+	}
+
+	// release_watcher_gc_interval: bounded duration (60s-1h). Empty falls back to provider package default 5m.
+	if v, has := params["release_watcher_gc_interval"]; has && v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return fmt.Errorf("release_watcher_gc_interval: must be a valid duration (e.g. '60s', '5m', '1h'): %s", err)
+		}
+		if d < 60*time.Second || d > time.Hour {
+			return fmt.Errorf("release_watcher_gc_interval: must be between 60s and 1h (got %s)", v)
+		}
+	}
+
+	// gpu_metrics_max_pods: positive integer, hard cap 500 to prevent operator from defeating the DoS bound.
+	if v, has := params["gpu_metrics_max_pods"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("gpu_metrics_max_pods: must be a positive integer (got %q)", v)
+		}
+		if n > 500 {
+			return fmt.Errorf("gpu_metrics_max_pods: must be at most 500 (got %d)", n)
+		}
+	}
+
+	// deploy_progress_deadline: 0 to leave unset, otherwise 30-21600 seconds.
+	if v, has := params["deploy_progress_deadline"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("deploy_progress_deadline: must be an integer (got %q)", v)
+		}
+		if n != 0 && (n < manifest.ProgressDeadlineFloor || n > manifest.ProgressDeadlineCeiling) {
+			return fmt.Errorf("deploy_progress_deadline: must be 0 or between %d and %d seconds (got %d)", manifest.ProgressDeadlineFloor, manifest.ProgressDeadlineCeiling, n)
+		}
+	}
+
+	// deploy_crash_restart_limit: 0 disables, otherwise a positive restart count.
+	if v, has := params["deploy_crash_restart_limit"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return fmt.Errorf("deploy_crash_restart_limit: must be an integer (got %q)", v)
+		}
+		if n < 0 {
+			return fmt.Errorf("deploy_crash_restart_limit: must be 0 to disable or a positive number of restarts (got %d)", n)
+		}
+	}
+
+	// gpu_metrics_max_concurrent: positive integer, range 1-50.
+	if v, has := params["gpu_metrics_max_concurrent"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return fmt.Errorf("gpu_metrics_max_concurrent: must be a positive integer (got %q)", v)
+		}
+		if n > 50 {
+			return fmt.Errorf("gpu_metrics_max_concurrent: must be at most 50 (got %d)", n)
+		}
+	}
+
+	// grafana_dashboard_var_*: simple identifier strings used as URL var-name segments.
+	// Empty (clear) falls back to canonical default. Reject characters that would
+	// break URL substitution or Grafana template syntax.
+	grafanaVarRe := regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+	for _, k := range []string{
+		"grafana_dashboard_var_rack",
+		"grafana_dashboard_var_namespace",
+		"grafana_dashboard_var_service",
+		"grafana_dashboard_var_app",
+	} {
+		if v, has := params[k]; has && v != "" {
+			if !grafanaVarRe.MatchString(v) {
+				return fmt.Errorf("%s: must contain only letters, digits, and underscore (got %q)", k, v)
+			}
+		}
+	}
+
+	if err := validateWhitelist(params, force); err != nil {
+		return err
 	}
 
 	return nil
@@ -164,6 +3335,27 @@ func Rack(rack sdk.Interface, c *stdcli.Context) error {
 		} else {
 			i.Add("Router", s.Domain)
 		}
+	}
+
+	if s.RouterInternal != "" {
+		i.Add("RouterInternal", s.RouterInternal)
+	}
+
+	if nlb := s.Outputs["NLBHost"]; nlb != "" {
+		var eips []string
+		for _, k := range []string{"NLBEIP0", "NLBEIP1", "NLBEIP2"} {
+			if v := s.Outputs[k]; v != "" {
+				eips = append(eips, v)
+			}
+		}
+		if len(eips) > 0 {
+			i.Add("NLB", fmt.Sprintf("%s (%s)", nlb, strings.Join(eips, ", ")))
+		} else {
+			i.Add("NLB", nlb)
+		}
+	}
+	if nlbi := s.Outputs["NLBInternalHost"]; nlbi != "" {
+		i.Add("NLB Internal", nlbi)
 	}
 
 	i.Add("Status", s.Status)
@@ -222,16 +3414,25 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	name := c.Arg(1)
 	args := c.Args[2:]
 	version := c.String("version")
+	runtime := c.String("runtime")
 
 	if !provider.Valid(slug) {
 		return fmt.Errorf("unknown provider: %s", slug)
+	}
+	var parts []string
+	if runtime != "" {
+		parts = strings.Split(name, "/")
+		name = parts[1]
 	}
 
 	if err := checkRackNameRegex(name); err != nil {
 		return err
 	}
 
-	opts := argsToOptions(args)
+	opts, err := argsToOptions(args)
+	if err != nil {
+		return err
+	}
 
 	if c.Bool("prepare") {
 		opts["release"] = version
@@ -248,8 +3449,16 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 		return nil
 	}
 
-	if err := rack.Install(c, slug, name, version, opts); err != nil {
+	if runtime != "" {
+		name = parts[0] + "/" + parts[1]
+	}
+
+	if err := rack.Install(c, slug, name, version, runtime, opts); err != nil {
 		return err
+	}
+
+	if runtime != "" {
+		c.Writef("Convox Rack installation initiated. Check the progress on the Console Racks page if desired. \n")
 	}
 
 	if _, err := rack.Current(c); err != nil {
@@ -259,6 +3468,16 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	return nil
+}
+
+func RackKarpenterCleanup(rack sdk.Interface, c *stdcli.Context) error {
+	c.Startf("Cleaning up Karpenter nodes")
+
+	if err := rack.KarpenterCleanup(); err != nil {
+		return err
+	}
+
+	return c.OK()
 }
 
 func RackKubeconfig(_ sdk.Interface, c *stdcli.Context) error {
@@ -312,12 +3531,28 @@ func RackLogs(rack sdk.Interface, c *stdcli.Context) error {
 
 	opts.Prefix = options.Bool(true)
 
+	if opts.Tail != nil {
+		if s, err := rack.SystemGet(); err == nil && (!strings.HasPrefix(s.Version, "3.") || isVersionLessThan(s.Version, "3.25.12")) {
+			fmt.Fprintln(c.Writer().Stderr, "WARNING: --tail needs rack version 3.25.12 or later; this rack prints every line in the --since window")
+		}
+	}
+
+	if opts.Previous != nil {
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --allow-previous has no effect on convox rack logs")
+	}
+
+	if opts.MaxLogRequests != nil {
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --max-log-requests has no effect on convox rack logs")
+	}
+
 	r, err := rack.SystemLogs(opts)
 	if err != nil {
 		return err
 	}
 
-	io.Copy(c, r)
+	if _, err = io.Copy(c, r); err == nil && c.Bool("no-follow") {
+		return logStreamErr(r)
+	}
 
 	return nil
 }
@@ -381,6 +3616,19 @@ func RackMv(_ sdk.Interface, c *stdcli.Context) error {
 }
 
 func RackParams(_ sdk.Interface, c *stdcli.Context) error {
+	var (
+		groupFilter   map[string]bool
+		resolvedGroup string
+	)
+	if groupInput := c.String("group"); groupInput != "" {
+		resolved, rerr := resolveGroup(groupInput)
+		if rerr != nil {
+			return rerr
+		}
+		resolvedGroup = resolved
+		groupFilter = paramGroups[resolved]
+	}
+
 	r, err := rack.Current(c)
 	if err != nil {
 		return err
@@ -397,15 +3645,47 @@ func RackParams(_ sdk.Interface, c *stdcli.Context) error {
 		keys = append(keys, k)
 	}
 
-	sort.Strings(keys)
-
-	i := c.Info()
-
-	for _, k := range keys {
-		i.Add(k, params[k])
+	b64Keys := []string{"additional_node_groups_config", "additional_build_groups_config", "additional_karpenter_nodepools_config", "karpenter_config", "karpenter_node_overlays_config"}
+	for _, k := range b64Keys {
+		if params[k] != "" {
+			v, err := base64.StdEncoding.DecodeString(params[k])
+			if err == nil {
+				params[k] = string(v)
+			}
+		}
 	}
 
-	return i.Print()
+	sort.Strings(keys)
+
+	shouldMask := !c.Bool("reveal") && IsTerminalFn(c)
+
+	i := c.Info()
+	rowsAdded := 0
+
+	for _, k := range keys {
+		if groupFilter != nil && !groupFilter[k] {
+			continue
+		}
+		v := params[k]
+		if shouldMask && sensitiveParams[k] && v != "" {
+			v = "**********"
+		}
+		i.Add(k, v)
+		rowsAdded++
+	}
+
+	if err := i.Print(); err != nil {
+		return err
+	}
+
+	if groupFilter != nil && rowsAdded == 0 {
+		// Write via stdcli's captured writer so test harnesses observe the
+		// NOTICE. The underlying stdcli.Writer.Stderr defaults to os.Stderr,
+		// so this is byte-identical in production; only test buffers differ.
+		fmt.Fprintf(c.Writer().Stderr, "NOTICE: no params in group '%s' for this rack\n", resolvedGroup)
+	}
+
+	return nil
 }
 
 func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
@@ -416,8 +3696,17 @@ func RackParamsSet(_ sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Updating parameters")
 
-	params := argsToOptions(c.Args)
-	if err := validateParams(params); err != nil {
+	currentParams, err := r.Parameters()
+	if err != nil {
+		return err
+	}
+
+	params, err := argsToOptions(c.Args)
+	if err != nil {
+		return err
+	}
+	force, _ := c.Value("force").(bool)
+	if err := validateAndMutateParams(params, r.Provider(), currentParams, force); err != nil {
 		return err
 	}
 
@@ -612,6 +3901,7 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 
 	currentVersion := s.Version
 	newVersion := c.Arg(0)
+	force, _ := c.Value("force").(bool)
 
 	// disable downgrabe from minor version for v3 rack
 	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") &&
@@ -630,10 +3920,49 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 
-	force, _ := c.Value("force").(bool)
+	if newVersion != "" && isVersionLessThan(newVersion, currentVersion) {
+		currentParams, pErr := r.Parameters()
+		if pErr != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: could not verify router_type before downgrade: %v\n", pErr)
+		} else if currentParams["router_type"] == "contour" {
+			return fmt.Errorf(
+				"cannot downgrade to %s while router_type=contour is set.\n"+
+					"  Set router_type=nginx first: convox rack params set router_type=nginx",
+				newVersion)
+		}
+	}
+
+	if newVersion != "" {
+		c.Startf("Updating to <release>%s</release>", newVersion)
+	} else {
+		c.Startf("Updating")
+	}
+
 	if err := r.UpdateVersion(newVersion, force); err != nil {
 		return err
 	}
 
-	return nil
+	return c.OK()
+}
+
+func isVersionLessThan(a, b string) bool {
+	partsA := strings.Split(strings.SplitN(a, "-", 2)[0], ".")
+	partsB := strings.Split(strings.SplitN(b, "-", 2)[0], ".")
+	if len(partsA) < 3 || len(partsB) < 3 {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		va, errA := strconv.Atoi(partsA[i])
+		vb, errB := strconv.Atoi(partsB[i])
+		if errA != nil || errB != nil {
+			return false
+		}
+		if va < vb {
+			return true
+		}
+		if va > vb {
+			return false
+		}
+	}
+	return false
 }

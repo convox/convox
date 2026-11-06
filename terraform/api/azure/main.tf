@@ -33,11 +33,14 @@ module "fluentd" {
     kubernetes = kubernetes
   }
 
-  cluster       = var.cluster
-  elasticsearch = module.elasticsearch.host
-  namespace     = var.namespace
-  rack          = var.name
-  syslog        = var.syslog
+  cluster                  = var.cluster
+  elasticsearch            = module.elasticsearch.host
+  fluentd_memory           = var.fluentd_memory
+  namespace                = var.namespace
+  rack                     = var.name
+  router_log_redact_params = var.router_log_redact_params
+  syslog                   = var.syslog
+  syslog_tls_verify        = var.syslog_tls_verify
 }
 
 module "k8s" {
@@ -47,34 +50,46 @@ module "k8s" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = var.docker_hub_authentication
-  domain                    = var.domain
-  image                     = var.image
-  namespace                 = var.namespace
-  rack                      = var.name
-  rack_name                 = var.rack_name
-  release                   = var.release
-  resolver                  = var.resolver
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_authentication  = var.docker_hub_authentication
+  domain                     = var.domain
+  domain_internal            = var.domain_internal
+  image                      = var.image
+  namespace                  = var.namespace
+  rack                       = var.name
+  rack_name                  = var.rack_name
+  release                    = var.release
+  replicas                   = var.high_availability ? 2 : 1
+  resolver                   = var.resolver
+  webhook_signing_key        = var.webhook_signing_key
+
+  annotations = {
+    "cert-manager.io/cluster-issuer" = "letsencrypt"
+  }
 
   labels = {
     "aadpodidbinding" : "api"
   }
 
   env = {
-    AZURE_CLIENT_ID       = azuread_service_principal.api.application_id
-    AZURE_CLIENT_SECRET   = azuread_service_principal_password.api.value
-    AZURE_SUBSCRIPTION_ID = data.azurerm_subscription.current.subscription_id
-    AZURE_TENANT_ID       = data.azurerm_client_config.current.tenant_id
-    CERT_MANAGER          = "true"
-    ELASTIC_URL           = module.elasticsearch.url
-    PROVIDER              = "azure"
-    REGION                = var.region
-    REGISTRY              = azurerm_container_registry.registry.login_server
-    RESOLVER              = var.resolver
-    RESOURCE_GROUP        = var.name
-    ROUTER                = var.router
-    STORAGE_ACCOUNT       = azurerm_storage_account.storage.name
-    STORAGE_SHARE         = azurerm_storage_share.storage.name
-    WORKSPACE             = var.workspace
+    AZURE_CLIENT_ID                      = azuread_service_principal.api.client_id
+    AZURE_CLIENT_SECRET                  = azuread_service_principal_password.api.value
+    AZURE_FILES_ENABLED                  = tostring(var.azure_files_enable)
+    AZURE_SUBSCRIPTION_ID                = data.azurerm_subscription.current.subscription_id
+    AZURE_TENANT_ID                      = data.azurerm_client_config.current.tenant_id
+    CERT_MANAGER                         = "true"
+    ELASTIC_URL                          = module.elasticsearch.url
+    ELASTICSEARCH_DISK                   = var.elasticsearch_disk
+    PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE = var.pdb_default_min_available_percentage
+    PROVIDER                             = "azure"
+    REGION                               = var.region
+    REGISTRY                             = azurerm_container_registry.registry.login_server
+    RESOLVER                             = var.resolver
+    RESOURCE_GROUP                       = var.name
+    ROUTER                               = var.router
+    STORAGE_ACCOUNT                      = azurerm_storage_account.storage.name
+    STORAGE_SHARE                        = azurerm_storage_share.storage.name
+    WORKSPACE                            = var.workspace
   }
 }

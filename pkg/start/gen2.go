@@ -25,7 +25,7 @@ import (
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/prefix"
 	"github.com/convox/convox/pkg/structs"
-	"github.com/docker/docker/builder/dockerignore"
+	"github.com/moby/patternmatcher/ignorefile"
 )
 
 const (
@@ -120,6 +120,10 @@ func (*Start) Start2(ctx context.Context, w io.Writer, opts Options2) error {
 			bopts.Manifest = options.String(opts.Manifest)
 		}
 
+		if !opts.Cache {
+			bopts.NoCache = options.Bool(true)
+		}
+
 		b, err := opts.buildCreate(ctx, &pw, bopts)
 		if err != nil {
 			return err
@@ -200,7 +204,7 @@ func (opts Options2) buildCreate(ctx context.Context, pw *prefix.Writer, bopts s
 
 	pw.Writef("build", "uploading source\n")
 
-	data, err := common.Tarball(".")
+	data, err := common.Tarball(".", ".dockerignore")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -262,6 +266,10 @@ func (opts Options2) buildCreateExternal(ctx context.Context, pw *prefix.Writer,
 
 	if _, err := opts.Provider.BuildUpdate(b.App, b.Id, structs.BuildUpdateOptions{Manifest: options.String(string(data))}); err != nil {
 		return nil, err
+	}
+
+	if b.Repository == "" {
+		return nil, fmt.Errorf("external builds are not available on this rack")
 	}
 
 	u, err := url.Parse(b.Repository)
@@ -342,7 +350,7 @@ func (opts Options2) handleAdds(pid, remote string, adds []changes.Change) error
 	ch := make(chan error)
 
 	go func() {
-		ch <- opts.Provider.FilesUpload(opts.App, pid, rp)
+		ch <- opts.Provider.FilesUpload(opts.App, pid, rp, structs.FileTransterOptions{})
 		close(ch)
 	}()
 
@@ -585,7 +593,7 @@ func buildIgnores(root, service string) ([]string, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return dockerignore.ReadAll(fd)
+	return ignorefile.ReadAll(fd)
 }
 
 func buildSources(m *manifest.Manifest, root, service string) ([]buildSource, error) {

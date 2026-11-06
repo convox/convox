@@ -1,7 +1,7 @@
 ---
 title: "Environment Variables"
-draft: false
-slug: Environment Variables
+description: "Environment variables keep application secrets out of your codebase, defined in convox.yml at the application level or per service for different deployments."
+slug: environment-variables
 url: /configuration/environment
 ---
 # Environment Variables
@@ -10,24 +10,24 @@ Convox encourages the use of environment variables for managing application secr
 variables allows you to keep secrets out of your codebase and to have different configuration values
 for different deployments (i.e. staging and production).
 
-## Definition
+## Defining Environment Variables
 
 Environment variables that can be used by the application are defined in [`convox.yml`](/configuration/convox-yml):
 
 ### Application Level
 
 Environment variables defined at the top level affect every service in the application.
-```html
+```yaml
+environment:
+  - ENCRYPTION_KEY
+services:
+  web:
     environment:
-      - ENCRYPTION_KEY
-    services:
-      web:
-        environment:
-          - ALLOWED_IPS
-          - COOKIE_SECRET
-      worker:
-        environment:
-          - QUEUE
+      - ALLOWED_IPS
+      - COOKIE_SECRET
+  worker:
+    environment:
+      - QUEUE
 ```
 This application would require four environment variables to be set: `ALLOWED_IPS`, `COOKIE_SECRET`, `ENCRYPTION_KEY`, and `QUEUE`.
 
@@ -36,15 +36,15 @@ The `ENCRYPTION_KEY` variable will be available to both services.
 ### Service Level
 
 Environment variables can be defined for each [Service](/reference/primitives/app/service).
-```html
-    services:
-      web:
-        environment:
-          - ALLOWED_IPS
-          - COOKIE_SECRET
-      worker:
-        environment:
-          - QUEUE
+```yaml
+services:
+  web:
+    environment:
+      - ALLOWED_IPS
+      - COOKIE_SECRET
+  worker:
+    environment:
+      - QUEUE
 ```
 This application would require three environment variables to be set: `ALLOWED_IPS`, `COOKIE_SECRET`, and `QUEUE`.
 
@@ -52,39 +52,94 @@ This application would require three environment variables to be set: `ALLOWED_I
 > the `web` service would not have a value set for the `QUEUE` environment variable as that variable is only defined
 > on the `worker` service.
 
-
 ### Default Values
 
 You can set a default value for any environment variable in the manifest:
-```html
-    environment:
-      - QUEUE=main
+```yaml
+environment:
+  - QUEUE=main
 ```
 ### Interpolation
 
 You can also use environment variables to add dynamic configuration to your `convox.yml`:
-```html
-    services:
-      web:
-        health: ${HEALTH_CHECK_PATH}
+```yaml
+services:
+  web:
+    health: ${HEALTH_CHECK_PATH}
 ```
-## Configuration
+
+`${VAR}` interpolation is resolved at release time and only sees variables in the release environment (set with `convox env set` or through the Console). Credentials injected by [Resource](/reference/primitives/app/resource) links (`METADB_URL`, `METADB_USER`, and so on) are added to the container at runtime and are not visible to interpolation, so referencing them resolves to an empty string:
+
+```yaml
+# Does NOT work: METADB_URL is not in the release environment,
+# so this resolves to an empty string at release time.
+environment:
+  - SOME_VAR=${METADB_URL}
+```
+
+To place a resource credential into an environment variable name of your choosing, use the resource link alias form instead. See [Resource Linking](/reference/primitives/app/resource#linking):
+
+```yaml
+services:
+  web:
+    resources:
+      - metadb:SOME_VAR
+```
+
+## Setting Environment Variables
 
 You can set values for your environment variables using `convox env set`:
-```html
+```bash
     $ convox env set ALLOWED_IPS=1.2.3.4 COOKIE_SECRET=foo QUEUE=main
     Setting ALLOWED_IPS, COOKIE_SECRET, QUEUE... OK
     Release: RABCDEFGHI
 ```
 Setting environment variables will cause a new [Release](/reference/primitives/app/release) to be created. In order to deploy
 your changes you will need to promote this release.
-```html
+```bash
     $ convox releases promote RABCDEFGHI
     Promoting RABCDEFGHI... OK
 ```
 
 > Environment variables can be set using the CLI or through the Console and their values will be available to the
 > [Service](/reference/primitives/app/service).
+
+> Starting with CLI version 3.25.1, if environment changes staged with `convox env set` or `convox env unset` (without `--promote`) would cause the next build to drop variables that are set in the running release, `convox build`, `convox deploy`, and `convox test` report the pending drop before building. Since CLI version 3.25.2 this is a warning and the build continues; set `CONVOX_ENV_DROP_GUARD=strict` to make it blocking. See [Environment Drop Guard](/reference/cli/build#environment-drop-guard).
+
+### Release-Based Environment Management
+
+You can manage environment variables for a specific release by using the `--release` flag with any `convox env` command. This is useful in workflows where multiple builds may occur between promotions, allowing you to target environment changes to a specific release rather than always applying them to the latest release.
+
+View environment variables for a specific release:
+```bash
+    $ convox env -a myapp --release RXYZ123
+    ALLOWED_IPS=1.2.3.4
+    COOKIE_SECRET=foo
+    QUEUE=main
+```
+
+Set environment variables for a specific release:
+```bash
+    $ convox env set FEATURE_FLAG=true -a myapp --release RXYZ123
+    Setting FEATURE_FLAG... OK
+    Release: RXYZ123
+```
+
+Unset environment variables for a specific release:
+```bash
+    $ convox env unset LEGACY_MODE -a myapp --release RXYZ123
+    Unsetting LEGACY_MODE... OK
+    Release: RXYZ123
+```
+
+Edit environment variables interactively for a specific release:
+```bash
+    $ convox env edit -a myapp --release RXYZ123
+    Setting ... OK
+    Release: RXYZ123
+```
+
+This release-specific environment management ensures that environment changes are only applied to the intended release, preventing unintentional modifications to other releases in your workflow.
 
 ## System Variables
 
@@ -99,3 +154,10 @@ The following environment variables are automatically set by Convox.
 | **RACK**              | The name of the [Rack](/reference/primitives/rack)                                       |
 | **RELEASE**           | ID of the currently-promoted [Release](/reference/primitives/app/release)                |
 | **SERVICE**           | Name of the [Service](/reference/primitives/app/service)                                 |
+
+## See Also
+
+- [convox.yml](/configuration/convox-yml) for the full configuration reference
+- [Deploying Changes](/deployment/deploying-changes) for how environment changes create new releases
+- [App Settings](/configuration/app-settings) for app-level configuration
+- [env mask](/reference/cli/env#env-mask) for masking sensitive env values in terminal output

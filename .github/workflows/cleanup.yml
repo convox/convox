@@ -5,35 +5,67 @@ on:
     - cron:  '0 2/24 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cleanup-${{ github.workflow }}
+
 jobs:
   cleanup-aws:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
     strategy:
       fail-fast: false
+      matrix:
+        provider: [aws]
     steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: secrets
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: AWS secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: aws
-      - name: dependencies
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: System dependencies
         run: ci/dependencies.sh
-      - name: cleanup
-        run: ci/cleanup.sh
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ci/go.mod
+      - name: Cache / download Go modules
+        working-directory: ci
+        run: go mod download
+      - name: AWS cleanup
+        working-directory: ci
+        run: |
+          go run .
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION:    us-east-1
   cleanup-do:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: do secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
           PROVIDER: do
+          DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
+          DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
       - name: dependencies
         run: ci/dependencies.sh
       - name: do cleanup

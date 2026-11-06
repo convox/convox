@@ -24,6 +24,9 @@ locals {
   rack_name = lower(var.rack_name)
   current   = jsondecode(data.http.releases.response_body).tag_name
   release   = coalesce(var.release, local.current)
+
+  # a malformed non-empty value must fail the plan, not silently become [] and destroy the pools
+  additional_node_groups = var.additional_node_groups_config == "" ? [] : try(jsondecode(var.additional_node_groups_config), jsondecode(base64decode(var.additional_node_groups_config)))
 }
 
 module "cluster" {
@@ -33,11 +36,17 @@ module "cluster" {
     google = google
   }
 
-  k8s_version = var.k8s_version
-  name        = local.name
-  node_type   = var.node_type
-  preemptible = var.preemptible
-  project_id  = module.project.id
+  additional_node_groups          = local.additional_node_groups
+  k8s_version                     = var.k8s_version
+  name                            = local.name
+  node_disk                       = var.node_disk
+  node_type                       = var.node_type
+  terraform_update_timeout        = var.terraform_update_timeout
+  preemptible                     = var.preemptible
+  project_id                      = module.project.id
+  gpu_observability_enable        = var.gpu_observability_enable
+  gpu_observability_chart_version = var.gpu_observability_chart_version == "4.8.1" ? "" : var.gpu_observability_chart_version # 4.8.1 is the old default that Console stored at install
+  dcgm_scrape_interval            = var.dcgm_scrape_interval
 }
 
 module "rack" {
@@ -48,21 +57,29 @@ module "rack" {
     google     = google
   }
 
-  buildkit_enabled      = var.buildkit_enabled
-  cluster               = module.cluster.id
-  docker_hub_username   = var.docker_hub_username
-  docker_hub_password   = var.docker_hub_password
-  image                 = var.image
-  name                  = local.name
-  rack_name             = local.rack_name
-  network               = module.cluster.network
-  nodes_account         = module.cluster.nodes_account
-  project_id            = module.project.id
-  region                = var.region
-  release               = local.release
-  syslog                = var.syslog
-  telemetry             = var.telemetry
-  telemetry_map         = local.telemetry_map
-  telemetry_default_map = local.telemetry_default_map
-  whitelist             = split(",", var.whitelist)
+  buildkit_enabled           = var.buildkit_enabled
+  cluster                    = module.cluster.id
+  cost_tracking_enable       = var.cost_tracking_enable
+  cost_tracking_history_days = var.cost_tracking_history_days
+  docker_hub_username        = var.docker_hub_username
+  docker_hub_password        = var.docker_hub_password
+  elasticsearch_disk         = var.elasticsearch_disk
+  fluentd_memory             = var.fluentd_memory
+  image                      = var.image
+  name                       = local.name
+  rack_name                  = local.rack_name
+  network                    = module.cluster.network
+  nodes_account              = module.cluster.nodes_account
+  nginx_additional_config    = var.nginx_additional_config
+  project_id                 = module.project.id
+  region                     = var.region
+  release                    = local.release
+  router_log_redact_params   = var.router_log_redact_params
+  syslog                     = var.syslog
+  syslog_tls_verify          = var.syslog_tls_verify
+  telemetry                  = var.telemetry
+  telemetry_map              = local.telemetry_map
+  telemetry_default_map      = local.telemetry_default_map
+  webhook_signing_key        = var.webhook_signing_key
+  whitelist                  = [for c in split(",", var.whitelist) : cidrsubnet(c, 0, 0)]
 }

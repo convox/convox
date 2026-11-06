@@ -5,43 +5,78 @@ on:
     - cron:  '0 0/24 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test-clouds:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
         provider:
           - aws
-          # - azure
+          - azure
           - do
           - gcp
+    env:
+      PROVIDER: ${{ matrix.provider }}
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - name: name
-        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> $GITHUB_ENV
-      - name: provider
-        run: echo "PROVIDER=${{ matrix.provider }}" >> $GITHUB_ENV
+        run: echo "RACK_NAME=ci-$(date +"%Y%m%d%H%M%S")" >> "$GITHUB_ENV"
       - name: secrets
         run: ci/secrets.sh
         env:
-          SECRETS: ${{ toJson(secrets) }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_REGION: ${{ secrets.ARM_REGION }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DIGITALOCEAN_ACCESS_ID: ${{ secrets.DIGITALOCEAN_ACCESS_ID }}
+          DIGITALOCEAN_REGION: ${{ secrets.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SECRET_KEY }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          GOOGLE_REGION: ${{ secrets.GOOGLE_REGION }}
       - name: dependencies
         run: ci/dependencies.sh
       - name: cli
         run: ci/cli.sh
-      - name: cli-update
-        run: sudo convox update
-      - name: install
-        run: ci/install.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: registry credentials
+        run: ci/ecr_credentials.sh
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: install last release
+        run: ci/install_last_release.sh
+        timeout-minutes: 60
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: wait
-        run: sleep 600
+        run: ci/wait_ready.sh
+        timeout-minutes: 30
       - name: test
         run: ci/test.sh
+        timeout-minutes: 60
+        env:
+          CI_DOCKERHUB_TOKEN: ${{ secrets.CI_DOCKERHUB_TOKEN }}
       - name: debug
         run: ci/debug.sh
         if: always()
+        timeout-minutes: 15
       - name: uninstall
         run: ci/uninstall.sh
         if: always()
+        timeout-minutes: 240

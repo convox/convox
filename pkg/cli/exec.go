@@ -15,7 +15,7 @@ func init() {
 		Flags:    []stdcli.Flag{flagRack, flagApp},
 		Usage:    "<pid> <command>",
 		Validate: stdcli.ArgsMin(2),
-	})
+	}, WithCloud())
 }
 
 func Exec(rack sdk.Interface, c *stdcli.Context) error {
@@ -38,7 +38,7 @@ func Exec(rack sdk.Interface, c *stdcli.Context) error {
 
 	code, err := rack.ProcessExec(app(c), pid, command, c, opts)
 	if err != nil {
-		return err
+		return execExitError(err, "The command may still be running in the target process, so retrying could run it twice.")
 	}
 
 	return stdcli.Exit(code)

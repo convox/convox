@@ -1,19 +1,28 @@
 package rack
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
+	"unicode"
+	"unicode/utf8"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
@@ -26,6 +35,87 @@ const (
 	MINOR_RACK_NAME_SUPPORT = 11
 	PATCH_RACK_NAME_SUPPORT = 2
 )
+
+// preserveEmpty is the writeVars carve-out: for these TF variables, an empty
+// value is preserved through to vars.json (instead of stripped) because empty
+// is a valid clear operation. Subset of pkg/cli.clearableParams; JSON-config
+// params are excluded because the CLI base64-encodes them before writeVars
+// runs.
+//
+// MAINTENANCE: when adding a new clearable param in pkg/cli/rack.go, add it
+// here too. TestClearableMatchesPreserveEmpty in pkg/cli reflects this map
+// via PreserveEmptyParams() and asserts parity.
+var preserveEmpty = map[string]bool{
+	"tags":                                true,
+	"karpenter_node_labels":               true,
+	"karpenter_node_taints":               true,
+	"karpenter_build_node_labels":         true,
+	"karpenter_build_imds_tokens":         true,
+	"karpenter_ami_alias":                 true,
+	"karpenter_instance_families":         true,
+	"karpenter_instance_sizes":            true,
+	"karpenter_build_instance_families":   true,
+	"karpenter_build_instance_sizes":      true,
+	"schedule_rack_scale_down":            true,
+	"schedule_rack_scale_up":              true,
+	"karpenter_disruption_block_schedule": true,
+	"karpenter_disruption_block_duration": true,
+	"ssl_ciphers":                         true,
+	"ssl_protocols":                       true,
+	"nlb_security_group":                  true,
+	"cloudwatch_retention_in_days":        true,
+	"build_node_type":                     true,
+	"key_pair_name":                       true,
+	"nginx_additional_config":             true,
+	"private_eks_host":                    true,
+	"private_eks_user":                    true,
+	"private_eks_pass":                    true,
+	"docker_hub_username":                 true,
+	"docker_hub_password":                 true,
+	"syslog":                              true,
+	"router_log_redact_params":            true,
+	"eks_log_types":                       true,
+	"eks_api_server_private_access_cidrs": true,
+	"convox_rack_domain":                  true,
+	"user_data":                           true,
+	"user_data_url":                       true,
+	"api_feature_gates":                   true,
+	// Clearable Prometheus + DCGM overrides. Empty falls through to TF
+	// defaults via coalesce() guards in cluster/aws/prometheus.tf and dcgm.tf.
+	"prometheus_url":                       true,
+	"grafana_url":                          true,
+	"prometheus_gpu_metrics_chart_version": true,
+	"prometheus_gpu_metrics_retention":     true,
+	"gpu_observability_chart_version":      true,
+	// GPU observability + release-watcher rack params. Safe defaults;
+	// stripped on downgrade by reconcileVarsWithModule.
+	"dcgm_scrape_interval":            true,
+	"gpu_metrics_max_pods":            true,
+	"gpu_metrics_max_concurrent":      true,
+	"release_watcher_gc_interval":     true,
+	"grafana_dashboard_var_rack":      true,
+	"grafana_dashboard_var_namespace": true,
+	"grafana_dashboard_var_service":   true,
+	"grafana_dashboard_var_app":       true,
+	"ecr_additional_policy_arn":       true,
+	"pod_security_standard":           true,
+	"contour_cpu_request":             true,
+	"contour_memory_request":          true,
+	"envoy_cpu_request":               true,
+	"envoy_memory_request":            true,
+}
+
+// PreserveEmptyParams returns a copy of the writeVars empty-preservation
+// allowlist. Exported only for cross-package parity tests in pkg/cli —
+// production code should not call this. A defensive copy is returned so
+// callers cannot accidentally mutate the package-level map.
+func PreserveEmptyParams() map[string]bool {
+	out := make(map[string]bool, len(preserveEmpty))
+	for k, v := range preserveEmpty {
+		out[k] = v
+	}
+	return out
+}
 
 type Terraform struct {
 	ctx      *stdcli.Context
@@ -85,6 +175,15 @@ func InstallTerraform(c *stdcli.Context, provider, name, version string, options
 	}
 
 	if err := t.init(); err != nil {
+		return err
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return err
+	}
+
+	if err := t.reconcileBeforeApply(version, vars); err != nil {
 		return err
 	}
 
@@ -193,7 +292,7 @@ func (t Terraform) Metadata() (*Metadata, error) {
 		return nil, err
 	}
 
-	state, err := ioutil.ReadFile(filepath.Join(dir, "terraform.tfstate"))
+	state, err := os.ReadFile(filepath.Join(dir, "terraform.tfstate"))
 	if err != nil {
 		return nil, err
 	}
@@ -310,6 +409,10 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
+	if err := t.reconcileBeforeApply(release, vars); err != nil {
+		return err
+	}
+
 	if err := t.apply(); err != nil {
 		return err
 	}
@@ -330,6 +433,13 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 		if err := isSkippingMinor(s.Version, version); err != nil {
 			return err
 		}
+
+		if versionLessThan(version, s.Version) {
+			vars, vErr := t.vars()
+			if vErr == nil && vars["router_type"] == "contour" {
+				return fmt.Errorf("cannot downgrade to %s while router_type=contour is set", version)
+			}
+		}
 	}
 
 	vars, err := t.vars()
@@ -342,6 +452,10 @@ func (t Terraform) UpdateVersion(version string, force bool) error {
 	}
 
 	if err := t.init(); err != nil {
+		return err
+	}
+
+	if err := t.reconcileBeforeApply(version, vars); err != nil {
 		return err
 	}
 
@@ -358,11 +472,421 @@ func (t Terraform) apply() error {
 		return err
 	}
 
+	t.reconcileStuckHelmReleases()
+
+	if w := t.inertNLBSecurityGroupWarning(); w != "" {
+		defer fmt.Fprint(os.Stderr, w)
+	}
+
+	if w := t.nginxImageWarning(); w != "" {
+		defer fmt.Fprint(os.Stderr, w)
+	}
+
 	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// moduleVarNames returns the set of variable names declared by the downloaded
+// system module after terraform init. It reads the Terraform modules manifest
+// to locate the module directory, then scans .tf files for variable blocks.
+func (t Terraform) moduleVarNames() (map[string]bool, error) {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return nil, err
+	}
+
+	manifestPath := filepath.Join(dir, ".terraform", "modules", "modules.json")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var manifest struct {
+		Modules []struct {
+			Key string `json:"Key"`
+			Dir string `json:"Dir"`
+		} `json:"Modules"`
+	}
+
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, err
+	}
+
+	moduleDir := ""
+	for _, m := range manifest.Modules {
+		if m.Key == "system" {
+			moduleDir = filepath.Join(dir, m.Dir)
+			break
+		}
+	}
+
+	if moduleDir == "" {
+		return nil, fmt.Errorf("system module not found in manifest")
+	}
+
+	files, err := filepath.Glob(filepath.Join(moduleDir, "*.tf"))
+	if err != nil {
+		return nil, err
+	}
+
+	varNames := map[string]bool{}
+	re := regexp.MustCompile(`(?m)^variable\s+"([^"]+)"`)
+
+	for _, f := range files {
+		content, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		for _, match := range re.FindAllStringSubmatch(string(content), -1) {
+			varNames[match[1]] = true
+		}
+	}
+
+	return varNames, nil
+}
+
+// reconcileBeforeApply runs the pre-apply reconcilers. Every path that reaches
+// apply() must go through here: install, param update, and version update all
+// mutate a live rack, and a path that skips this silently loses the reconcilers.
+func (t Terraform) reconcileBeforeApply(release string, vars map[string]string) error {
+	if err := t.reconcileVarsWithModule(release); err != nil {
+		return err
+	}
+
+	return t.reconcileEKSNodeGroupDesired(t.varsAfterModuleReconcile(vars))
+}
+
+// varsAfterModuleReconcile returns the variables reconcileVarsWithModule left on disk,
+// so a parameter it stripped cannot still drive a reconcile.
+func (t Terraform) varsAfterModuleReconcile(fallback map[string]string) map[string]string {
+	current, err := t.vars()
+	if err != nil || len(current) == 0 {
+		return fallback
+	}
+
+	return current
+}
+
+// reconcileVarsWithModule filters rack parameters to only those accepted by
+// the target module version. When a rack changes versions, previously-set
+// parameters may not exist in the new version's module. Without filtering,
+// Terraform errors with "argument not expected." This scans the downloaded
+// module for declared variables and removes any unrecognized parameters from
+// both main.tf and vars.json before apply.
+func (t Terraform) reconcileVarsWithModule(release string) error {
+	accepted, err := t.moduleVarNames()
+	if err != nil {
+		return nil
+	}
+
+	// sanity check: every version should declare name and release
+	if !accepted["name"] || !accepted["release"] {
+		return nil
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return err
+	}
+
+	var removed []string
+	for k := range vars {
+		if !accepted[k] {
+			removed = append(removed, k)
+		}
+	}
+
+	if len(removed) == 0 {
+		return nil
+	}
+
+	sort.Strings(removed)
+	fmt.Fprintf(os.Stderr, "NOTICE: removing parameters not supported by version %s: %s\n",
+		release, strings.Join(removed, ", "))
+
+	for _, k := range removed {
+		delete(vars, k)
+	}
+
+	return t.update(release, vars)
+}
+
+type nodeGroupDesired struct {
+	Id      *int `json:"id"`
+	MinSize *int `json:"min_size"`
+	MaxSize *int `json:"max_size"`
+}
+
+type pendingUpdate struct {
+	nodegroup string
+	id        string
+}
+
+// KarpenterSystemNodeMaxPerAZ is the Karpenter-mode max_size the system node groups
+// render in terraform/cluster/aws/main.tf. A higher minimum makes the apply invalid.
+const KarpenterSystemNodeMaxPerAZ = 100
+
+type nodeGroupTargets struct {
+	cluster     string
+	groups      []nodeGroupDesired
+	buildMin    int64
+	onDemandMin int64
+	systemMin   int64
+}
+
+func (t nodeGroupTargets) empty() bool {
+	return len(t.groups) == 0 && t.buildMin == 0 && t.onDemandMin == 0 && t.systemMin == 0
+}
+
+// reconcileTargets reports the minimums to raise before apply, and whether any are owed.
+func (t Terraform) reconcileTargets(vars map[string]string) (nodeGroupTargets, bool) {
+	if t.provider != "aws" {
+		return nodeGroupTargets{}, false
+	}
+
+	targets := targetsFromVars(vars, t.name)
+
+	return targets, !targets.empty()
+}
+
+func targetsFromVars(vars map[string]string, name string) nodeGroupTargets {
+	targets := nodeGroupTargets{cluster: strings.ToLower(common.CoalesceString(vars["name"], name))}
+
+	if raw := vars["additional_node_groups_config"]; strings.TrimSpace(raw) != "" {
+		data := []byte(raw)
+		if decoded, err := base64.StdEncoding.DecodeString(raw); err == nil {
+			data = decoded
+		}
+		if err := json.Unmarshal(data, &targets.groups); err != nil {
+			targets.groups = nil
+		}
+	}
+
+	if vars["karpenter_enabled"] == "true" {
+		targets.systemMin = parseMinimum(vars["karpenter_system_node_min_count_per_az"], KarpenterSystemNodeMaxPerAZ)
+		return targets
+	}
+
+	if enabled, err := strconv.ParseBool(vars["build_node_enabled"]); err == nil && enabled {
+		targets.buildMin = parseMinimum(vars["build_node_min_count"], 100)
+	}
+
+	if strings.EqualFold(vars["node_capacity_type"], "mixed") {
+		ceiling := int64(100)
+		if n, err := strconv.ParseInt(vars["max_on_demand_count"], 10, 64); err == nil {
+			ceiling = n
+		}
+		targets.onDemandMin = parseMinimum(vars["min_on_demand_count"], ceiling)
+	}
+
+	return targets
+}
+
+func parseMinimum(raw string, ceiling int64) int64 {
+	n, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || n <= 0 || n > ceiling {
+		return 0
+	}
+	return n
+}
+
+// reconcileEKSNodeGroupDesired raises the EKS desiredSize of the additional, build
+// and on-demand node groups to their new minimums before apply. AWS only, best-effort.
+func (t Terraform) reconcileEKSNodeGroupDesired(vars map[string]string) error {
+	targets, ok := t.reconcileTargets(vars)
+	if !ok {
+		return nil
+	}
+
+	region := common.CoalesceString(vars["region"], os.Getenv("AWS_REGION"), os.Getenv("AWS_DEFAULT_REGION"))
+
+	s, err := session.NewSession(aws.NewConfig().WithRegion(region))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "NOTICE: skipping node group desired size reconcile, could not build aws session: %v\n", err)
+		return nil
+	}
+
+	return reconcileNodeGroupDesired(eks.New(s), targets)
+}
+
+func reconcileNodeGroupDesired(api eksiface.EKSAPI, targets nodeGroupTargets) error {
+	cluster := targets.cluster
+
+	listed, err := api.ListNodegroups(&eks.ListNodegroupsInput{ClusterName: aws.String(cluster)})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "NOTICE: skipping node group desired size reconcile, could not list node groups for %s: %v\n", cluster, err)
+		return nil
+	}
+
+	var pending []pendingUpdate
+
+	for i, g := range targets.groups {
+		if g.MinSize == nil {
+			continue
+		}
+
+		key := i
+		if g.Id != nil {
+			key = *g.Id
+		}
+		prefix := fmt.Sprintf("%s-additional-%d-", cluster, key)
+
+		matches := matchNodeGroups(listed.Nodegroups, prefix, "")
+		if len(matches) == 0 {
+			continue
+		}
+
+		// create_before_destroy can leave more than one node group per pool, and
+		// which one survives is not knowable here, so raise every match: missing
+		// the survivor is what blocks the apply.
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: node group id %d matches %d node groups: %s\n", key, len(matches), strings.Join(matches, ", "))
+		}
+
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, int64(*g.MinSize))...)
+	}
+
+	if targets.buildMin > 0 {
+		matches := matchNodeGroups(listed.Nodegroups, cluster+"-build-", cluster+"-build-additional-")
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: build node group matches %d node groups: %s\n", len(matches), strings.Join(matches, ", "))
+		}
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.buildMin)...)
+	}
+
+	if targets.systemMin > 0 {
+		matches := matchSystemNodeGroups(listed.Nodegroups, cluster)
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.systemMin)...)
+	}
+
+	if targets.onDemandMin > 0 {
+		matches := matchOnDemandNodeGroups(listed.Nodegroups, cluster)
+		if len(matches) > 1 {
+			fmt.Fprintf(os.Stderr, "NOTICE: on-demand node group matches %d node groups: %s\n", len(matches), strings.Join(matches, ", "))
+		}
+		pending = append(pending, raiseNodeGroupsDesired(api, cluster, matches, targets.onDemandMin)...)
+	}
+
+	for _, p := range pending {
+		waitForNodeGroupUpdate(api, cluster, p.nodegroup, p.id)
+	}
+
+	return nil
+}
+
+func matchNodeGroups(names []*string, prefix, exclude string) []string {
+	var matches []string
+	for _, n := range names {
+		name := aws.StringValue(n)
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if exclude != "" && strings.HasPrefix(name, exclude) {
+			continue
+		}
+		matches = append(matches, name)
+	}
+	return matches
+}
+
+func matchIndexedNodeGroups(names []*string, cluster, index string) []string {
+	re := regexp.MustCompile("^" + regexp.QuoteMeta(cluster) + `-.+-` + index + `[0-9a-f]{16}$`)
+	var matches []string
+	for _, n := range names {
+		name := aws.StringValue(n)
+		if strings.HasPrefix(name, cluster+"-build-") || !re.MatchString(name) {
+			continue
+		}
+		matches = append(matches, name)
+	}
+	return matches
+}
+
+// min_on_demand_count reaches system group index 0 only, the sole ON_DEMAND group on a MIXED rack.
+func matchOnDemandNodeGroups(names []*string, cluster string) []string {
+	return matchIndexedNodeGroups(names, cluster, "0")
+}
+
+func matchSystemNodeGroups(names []*string, cluster string) []string {
+	return matchIndexedNodeGroups(names, cluster, "[0-9]")
+}
+
+func raiseNodeGroupsDesired(api eksiface.EKSAPI, cluster string, names []string, newMin int64) []pendingUpdate {
+	var pending []pendingUpdate
+
+	for _, name := range names {
+		desc, err := api.DescribeNodegroup(&eks.DescribeNodegroupInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+		})
+		if err != nil || desc.Nodegroup == nil || desc.Nodegroup.ScalingConfig == nil {
+			nodeGroupDebugf("describe node group %s: %v", name, err)
+			continue
+		}
+
+		currentDesired := aws.Int64Value(desc.Nodegroup.ScalingConfig.DesiredSize)
+		currentMax := aws.Int64Value(desc.Nodegroup.ScalingConfig.MaxSize)
+
+		if newMin <= currentDesired {
+			continue
+		}
+
+		// widen max too: EKS validates desired <= max against the pre-apply live max.
+		scaling := &eks.NodegroupScalingConfig{DesiredSize: aws.Int64(newMin)}
+		if newMin > currentMax {
+			scaling.MaxSize = aws.Int64(newMin)
+		}
+
+		out, err := api.UpdateNodegroupConfig(&eks.UpdateNodegroupConfigInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(name),
+			ScalingConfig: scaling,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "NOTICE: could not raise desired size on node group %s: %v\n", name, err)
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: raising node group %s desired size to %d before apply\n", name, newMin)
+
+		if out.Update != nil {
+			pending = append(pending, pendingUpdate{nodegroup: name, id: aws.StringValue(out.Update.Id)})
+		}
+	}
+
+	return pending
+}
+
+func waitForNodeGroupUpdate(api eksiface.EKSAPI, cluster, nodegroup, id string) {
+	if id == "" {
+		return
+	}
+
+	// 80 polls x 30s ~ 40min, matching the SDK nodegroup-active waiter.
+	for i := 0; i < 80; i++ {
+		out, err := api.DescribeUpdate(&eks.DescribeUpdateInput{
+			Name:          aws.String(cluster),
+			NodegroupName: aws.String(nodegroup),
+			UpdateId:      aws.String(id),
+		})
+		if err != nil {
+			nodeGroupDebugf("describe update %s/%s: %v", nodegroup, id, err)
+			return
+		}
+		if out.Update == nil || aws.StringValue(out.Update.Status) != eks.UpdateStatusInProgress {
+			return
+		}
+		time.Sleep(30 * time.Second)
+	}
+}
+
+func nodeGroupDebugf(format string, args ...interface{}) {
+	if os.Getenv("CONVOX_DEBUG") == "true" {
+		fmt.Fprintf(os.Stderr, "DEBUG: node group desired reconcile: "+format+"\n", args...)
+	}
 }
 
 func (t Terraform) create(release string, vars map[string]string, state []byte) error {
@@ -388,7 +912,7 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 	}
 
 	if state != nil {
-		if err := ioutil.WriteFile(filepath.Join(dir, "terraform.tfstate"), state, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "terraform.tfstate"), state, 0600); err != nil {
 			return err
 		}
 	}
@@ -511,7 +1035,7 @@ func (t Terraform) vars() (map[string]string, error) {
 	}
 
 	if _, err := os.Stat(vf); !os.IsNotExist(err) {
-		data, err := ioutil.ReadFile(vf)
+		data, err := os.ReadFile(vf)
 		if err != nil {
 			return nil, err
 		}
@@ -541,7 +1065,7 @@ func (t Terraform) varsFile() (string, error) {
 
 func (t Terraform) writeVars(vars map[string]string) error {
 	for k, v := range vars {
-		if strings.TrimSpace(v) == "" {
+		if strings.TrimSpace(v) == "" && !preserveEmpty[k] {
 			delete(vars, k)
 		}
 	}
@@ -556,7 +1080,7 @@ func (t Terraform) writeVars(vars map[string]string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(vf, data, 0600); err != nil {
+	if err := os.WriteFile(vf, data, 0600); err != nil {
 		return err
 	}
 
@@ -573,7 +1097,7 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 		return []Terraform{}, nil
 	}
 
-	subs, err := ioutil.ReadDir(dir)
+	subs, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -581,7 +1105,7 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	ts := []Terraform{}
 
 	for _, sub := range subs {
-		if !sub.IsDir() {
+		if !isDir(dir, sub) {
 			continue
 		}
 
@@ -595,6 +1119,18 @@ func listTerraform(c *stdcli.Context) ([]Terraform, error) {
 	}
 
 	return ts, nil
+}
+
+// isDir reports whether an entry in dir is a directory, following symlinks so that a rack directory can be linked
+// in from elsewhere (for example, a git checkout that holds the rack's Terraform).
+func isDir(dir string, entry os.DirEntry) bool {
+	if entry.Type()&os.ModeSymlink == 0 {
+		return entry.IsDir()
+	}
+
+	fi, err := os.Stat(filepath.Join(dir, entry.Name()))
+
+	return err == nil && fi.IsDir()
 }
 
 func optionalEnv(vars ...string) map[string]string {
@@ -641,6 +1177,8 @@ func terraform(c *stdcli.Context, dir string, args ...string) error {
 
 	signal.Ignore(os.Interrupt)
 	defer signal.Reset(os.Interrupt)
+
+	os.Setenv("AWS_STS_REGIONAL_ENDPOINTS", "regional")
 
 	if err := c.Terminal("terraform", args...); err != nil {
 		return err
@@ -709,7 +1247,7 @@ func getGitHubReleaseData(url string, response interface{}) error {
 	}
 	defer res.Body.Close()
 
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -751,7 +1289,7 @@ func getLatestRevisionForCurrentVersion(currentReleaseVersion *ReleaseVersion) (
 		page++
 	}
 
-	return "", fmt.Errorf("No published revisions found for this version: " + currentReleaseVersion.toString())
+	return "", fmt.Errorf("No published revisions found for this version: %s", currentReleaseVersion.toString())
 }
 
 func ConvertToReleaseVersion(version string) (*ReleaseVersion, error) {
@@ -797,6 +1335,7 @@ func terraformProviderVars(provider string) (map[string]string, error) {
 
 func terraformTemplateHelpers() template.FuncMap {
 	return template.FuncMap{
+		"hcl": hclEscape,
 		"keys": func(h map[string]string) []string {
 			ks := []string{}
 			for k := range h {
@@ -806,6 +1345,42 @@ func terraformTemplateHelpers() template.FuncMap {
 			return ks
 		},
 	}
+}
+
+// hclEscape renders s as the body of an HCL quoted string, without the quotes.
+func hclEscape(s string) string {
+	buf := make([]byte, 0, len(s))
+
+	for i, r := range s {
+		switch r {
+		case '\n':
+			buf = append(buf, '\\', 'n')
+		case '\r':
+			buf = append(buf, '\\', 'r')
+		case '\t':
+			buf = append(buf, '\\', 't')
+		case '"':
+			buf = append(buf, '\\', '"')
+		case '\\':
+			buf = append(buf, '\\', '\\')
+		case '$', '%':
+			buf = utf8.AppendRune(buf, r)
+			// only ${ and %{ introduce a template, so only those are doubled
+			if i+1 < len(s) && s[i+1] == '{' {
+				buf = utf8.AppendRune(buf, r)
+			}
+		default:
+			if unicode.IsPrint(r) {
+				buf = utf8.AppendRune(buf, r)
+			} else if r < 0x10000 {
+				buf = append(buf, fmt.Sprintf("\\u%04x", r)...)
+			} else {
+				buf = append(buf, fmt.Sprintf("\\U%08x", r)...)
+			}
+		}
+	}
+
+	return string(buf)
 }
 
 func terraformWriteBackend(filename, backend string) error {
@@ -826,12 +1401,12 @@ func terraformWriteBackend(filename, backend string) error {
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		terraform {
 			backend "http" {
-				address        = "{{.Address}}/state"
-				username       = "{{.Username}}"
-				password       = "{{.Password}}"
-				lock_address   = "{{.Address}}/lock"
+				address        = "{{hcl .Address}}/state"
+				username       = "{{hcl .Username}}"
+				password       = "{{hcl .Password}}"
+				lock_address   = "{{hcl .Address}}/lock"
 				lock_method    = "POST"
-				unlock_address = "{{.Address}}/lock"
+				unlock_address = "{{hcl .Address}}/lock"
 				unlock_method  = "DELETE"
 				skip_cert_verification = {{.SkipVerify}}
 			}
@@ -865,23 +1440,24 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 
 	t, err := template.New("main").Funcs(terraformTemplateHelpers()).Parse(`
 		module "system" {
-			source = "{{.Source}}"
+			source = "{{hcl .Source}}"
 
 			{{- range (keys .Vars) }}
-			{{.}} = "{{index $.Vars .}}"
+			{{.}} = "{{hcl (index $.Vars .)}}"
 			{{- end }}
 		}
 
 		output "api" {
-			value = module.system.api
+			value     = module.system.api
+			sensitive = true
 		}
 
 		output "provider" {
-			value = "{{.Provider}}"
+			value = "{{hcl .Provider}}"
 		}
 
 		output "release" {
-			value = "{{index .Vars "release"}}"
+			value = "{{hcl (index .Vars "release")}}"
 		}`,
 	)
 	if err != nil {
@@ -899,4 +1475,23 @@ func terraformWriteTemplate(filename, version string, params map[string]interfac
 	}
 
 	return nil
+}
+
+func versionLessThan(a, b string) bool {
+	pa := strings.Split(strings.SplitN(a, "-", 2)[0], ".")
+	pb := strings.Split(strings.SplitN(b, "-", 2)[0], ".")
+	if len(pa) < 3 || len(pb) < 3 {
+		return false
+	}
+	for i := 0; i < 3; i++ {
+		va, _ := strconv.Atoi(pa[i])
+		vb, _ := strconv.Atoi(pb[i])
+		if va < vb {
+			return true
+		}
+		if va > vb {
+			return false
+		}
+	}
+	return false
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -12,13 +13,32 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/convox/convox/pkg/common"
+	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
 )
 
 var sequenceTokens sync.Map
 
-func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
-	group := p.appLogGroup(app)
+var (
+	logRetrySleep              = 3 * time.Second
+	logPageSleep               = 2 * time.Second
+	logEmptySleep              = 5 * time.Second
+	logPollSleep               = 1 * time.Second
+	resourceNotFoundMaxRetries = 20
+	logRetentionInterval       = time.Hour
+	logRetentionPutInterval    = 250 * time.Millisecond
+)
+
+func (p *Provider) Log(name, stream string, ts time.Time, message string) error {
+	if p.CloudwatchDisable {
+		return nil
+	}
+
+	if p.AppCloudwatchDisable && name != "system" {
+		return nil
+	}
+
+	group := p.appLogGroup(name)
 
 	req := &cloudwatchlogs.PutLogEventsInput{
 		LogGroupName:  aws.String(group),
@@ -44,7 +64,7 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 		switch awsErrorCode(err) {
 		case "ResourceNotFoundException":
 			if strings.Contains(err.Error(), "log group") {
-				if err := p.createLogGroup(app); err != nil {
+				if err := p.createLogGroup(name); err != nil {
 					return err
 				}
 			}
@@ -69,10 +89,19 @@ func (p *Provider) Log(app, stream string, ts time.Time, message string) error {
 }
 
 func (p *Provider) AppLogs(name string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	if p.CloudwatchDisable || p.AppCloudwatchDisable {
+		return io.NopCloser(strings.NewReader("")), nil
+	}
+	if p.ContextTID() != "" {
+		name = fmt.Sprintf("%s-%s", p.ContextTID(), name)
+	}
 	return p.subscribeLogs(p.Context(), p.appLogGroup(name), "", opts)
 }
 
 func (p *Provider) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
+	if p.CloudwatchDisable {
+		return io.NopCloser(strings.NewReader("")), nil
+	}
 	return p.subscribeLogs(p.Context(), p.appLogGroup("system"), "", opts)
 }
 
@@ -93,21 +122,319 @@ func (p *Provider) createLogGroup(app string) error {
 		return err
 	}
 
+	if p.CloudwatchRetentionNever {
+		return nil
+	}
+
+	retention := int64(7)
+
+	if p.CloudwatchRetentionInDays > 0 {
+		retention = int64(p.CloudwatchRetentionInDays)
+	}
+
+	_, err = p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(p.appLogGroup(app)),
+		RetentionInDays: aws.Int64(retention),
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (p *Provider) UpdateOrDisableLogGroupRetention(app string, retentionDays int, disableRetention bool) error {
+	if p.CloudwatchDisable || p.AppCloudwatchDisable {
+		return nil
+	}
+
+	// disable retention policy
+	if disableRetention {
+		_, err := p.CloudWatchLogs.DeleteRetentionPolicy(&cloudwatchlogs.DeleteRetentionPolicyInput{
+			LogGroupName: aws.String(p.appLogGroup(app)),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// Round retentionDays to the nearest higher allowed value
+	retentionDays = roundUpToNearestAllowedRetention(retentionDays)
+	_, err := p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(p.appLogGroup(app)),
+		RetentionInDays: aws.Int64(int64(retentionDays)),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func roundUpToNearestAllowedRetention(retentionDays int) int {
+	allowedRetentionValues := []int{1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653}
+
+	// Find the first allowed retention value that is greater than or equal to retentionDays
+	for _, allowedValue := range allowedRetentionValues {
+		if allowedValue >= retentionDays {
+			return allowedValue
+		}
+	}
+
+	return allowedRetentionValues[len(allowedRetentionValues)-1]
+}
+
+// The third return is false for an awsLogs block carrying neither a positive
+// cwRetention nor disableRetention, which expresses no preference.
+func appLogRetention(m *manifest.Manifest) (int, bool, bool) {
+	l := m.AppSettings.AwsLogs
+
+	switch {
+	case l == nil:
+		return 0, false, false
+	case l.RetentionDisable:
+		return 0, true, true
+	case l.CwRetention > 0:
+		return l.CwRetention, false, true
+	default:
+		return 0, false, false
+	}
+}
+
+// normalizeRetention reports the rack-wide target. Zero days with never false
+// means Convox does not manage retention at all.
+func normalizeRetention(v string) (int, bool) {
+	v = strings.TrimSpace(v)
+
+	if strings.EqualFold(v, "never") {
+		return 0, true
+	}
+
+	n, _ := strconv.Atoi(v)
+
+	if n < 1 {
+		return 0, false
+	}
+
+	return roundUpToNearestAllowedRetention(n), false
+}
+
+func (p *Provider) logRetentionManaged() bool {
+	return p.CloudwatchRetentionNever || p.CloudwatchRetentionInDays > 0
+}
+
+func (p *Provider) setLogGroupRetention(group string, current *int64) error {
+	if p.CloudwatchRetentionNever {
+		if current == nil {
+			return nil
+		}
+
+		return p.deleteLogGroupRetention(group)
+	}
+
+	if aws.Int64Value(current) == int64(p.CloudwatchRetentionInDays) {
+		return nil
+	}
+
+	return p.putLogGroupRetention(group, int64(p.CloudwatchRetentionInDays))
+}
+
+func (p *Provider) applyAppLogRetention(app string, m *manifest.Manifest) error {
+	days, disable, ok := appLogRetention(m)
+	if !ok {
+		return nil
+	}
+
+	return p.UpdateOrDisableLogGroupRetention(app, days, disable)
+}
+
+func (p *Provider) runLogRetentionReconciler(ctx context.Context) {
+	if !p.logRetentionManaged() {
+		return
+	}
+
+	p.reconcileLogRetentionSafe(ctx)
+
+	tick := time.NewTicker(logRetentionInterval)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			p.reconcileLogRetentionSafe(ctx)
+		}
+	}
+}
+
+func (p *Provider) reconcileLogRetentionSafe(ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("ns=log_retention at=error kind=panic_recovered rack=%s recovered=%v\n", p.Name, r)
+		}
+	}()
+
+	if err := p.reconcileLogRetention(ctx); err != nil {
+		fmt.Printf("ns=log_retention at=warn kind=reconcile rack=%s err=%q\n", p.Name, err)
+	}
+}
+
+func (p *Provider) reconcileLogRetention(ctx context.Context) error {
+	skip, err := p.logRetentionOverrides()
+	if err != nil {
+		return err
+	}
+
+	prefix := fmt.Sprintf("/convox/%s/", p.Name)
+
+	var rerr error
+
+	err = p.CloudWatchLogs.DescribeLogGroupsPages(&cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(prefix),
+	}, func(page *cloudwatchlogs.DescribeLogGroupsOutput, last bool) bool {
+		for _, g := range page.LogGroups {
+			if ctx.Err() != nil {
+				return false
+			}
+
+			group := aws.StringValue(g.LogGroupName)
+
+			if group == "" || skip[group] {
+				continue
+			}
+
+			if err := p.setLogGroupRetention(group, g.RetentionInDays); err != nil {
+				rerr = fmt.Errorf("%s: %s", group, err)
+			}
+		}
+
+		return true
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := p.reconcileEksLogRetention(); err != nil {
+		rerr = err
+	}
+
+	return rerr
+}
+
+// An app whose manifest cannot be read joins the set, because an override that
+// cannot be seen must not be overwritten.
+func (p *Provider) logRetentionOverrides() (map[string]bool, error) {
+	nss, err := p.ListNamespacesFromInformer(fmt.Sprintf("system=convox,rack=%s,type=app", p.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	skip := map[string]bool{}
+
+	for i := range nss.Items {
+		ns := nss.Items[i]
+
+		app := common.CoalesceString(ns.Labels["app"], ns.Labels["name"])
+		if app == "" {
+			continue
+		}
+
+		// A tenant app's namespace carries a tid that its fluentd group name does
+		// not, and the event controller writes a second group that does.
+		tid := ns.Labels["tid"]
+
+		groups := []string{p.appLogGroup(app)}
+
+		gp := structs.Provider(p)
+
+		if tid != "" {
+			groups = append(groups, p.appLogGroup(fmt.Sprintf("%s-%s", tid, app)))
+			gp = p.WithContext(context.WithValue(p.Context(), structs.ConvoxTIDCtxKey, tid))
+		}
+
+		// The atom carries the active release before the annotation mirroring it
+		// does, so a promote in flight must not be read as the previous release.
+		release := ns.Annotations["convox.com/app-release"]
+
+		if _, id, serr := p.Atom.Status(ns.Name, "app"); serr == nil && id != "" {
+			release = id
+		}
+
+		if release == "" {
+			continue
+		}
+
+		m, _, merr := common.ReleaseManifest(gp, app, release)
+
+		keep := merr != nil
+		if merr == nil {
+			_, _, keep = appLogRetention(m)
+		}
+
+		if keep {
+			for _, g := range groups {
+				skip[g] = true
+			}
+		}
+	}
+
+	return skip, nil
+}
+
+func (p *Provider) reconcileEksLogRetention() error {
+	group := fmt.Sprintf("/aws/eks/%s/cluster", p.Name)
+
+	res, err := p.CloudWatchLogs.DescribeLogGroups(&cloudwatchlogs.DescribeLogGroupsInput{
+		LogGroupNamePrefix: aws.String(group),
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, g := range res.LogGroups {
+		if aws.StringValue(g.LogGroupName) != group {
+			continue
+		}
+
+		return p.setLogGroupRetention(group, g.RetentionInDays)
+	}
+
+	return nil
+}
+
+func (p *Provider) deleteLogGroupRetention(group string) error {
+	time.Sleep(logRetentionPutInterval)
+
+	_, err := p.CloudWatchLogs.DeleteRetentionPolicy(&cloudwatchlogs.DeleteRetentionPolicyInput{
+		LogGroupName: aws.String(group),
+	})
+	if awsErrorCode(err) == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		return nil
+	}
+
+	return err
+}
+
+func (p *Provider) putLogGroupRetention(group string, days int64) error {
+	time.Sleep(logRetentionPutInterval)
+
+	_, err := p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
+		LogGroupName:    aws.String(group),
+		RetentionInDays: aws.Int64(days),
+	})
+	if awsErrorCode(err) == cloudwatchlogs.ErrCodeResourceNotFoundException {
+		return nil
+	}
+
+	return err
 }
 
 func (p *Provider) createLogStream(group, stream string) error {
 	_, err := p.CloudWatchLogs.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  aws.String(group),
 		LogStreamName: aws.String(stream),
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = p.CloudWatchLogs.PutRetentionPolicy(&cloudwatchlogs.PutRetentionPolicyInput{
-		LogGroupName:    aws.String(group),
-		RetentionInDays: aws.Int64(7),
 	})
 	if err != nil {
 		return err
@@ -137,6 +464,16 @@ func (p *Provider) nextSequenceToken(group, stream string) (string, error) {
 func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stream string, opts structs.LogsOptions) error {
 	defer w.Close()
 
+	tail := -1
+	if opts.Tail != nil {
+		tail = *opts.Tail
+	}
+
+	if tail > structs.LogsTailMax {
+		fmt.Fprintf(w, "error: tail cannot be more than %d lines\n", structs.LogsTailMax)
+		return nil
+	}
+
 	req := &cloudwatchlogs.FilterLogEventsInput{
 		LogGroupName: aws.String(group),
 	}
@@ -154,6 +491,13 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 		req.StartTime = aws.Int64(start)
 	}
 
+	holding := tail >= 0
+	held := []*cloudwatchlogs.FilteredLogEvent{}
+
+	if !follow || holding {
+		req.EndTime = aws.Int64(time.Now().UTC().UnixNano() / int64(time.Millisecond))
+	}
+
 	if stream != "" {
 		req.LogStreamNames = []*string{aws.String(stream)}
 	} else {
@@ -161,6 +505,7 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 	}
 
 	seen := map[string]bool{}
+	rnf := 0
 
 	for {
 		select {
@@ -175,13 +520,26 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 			res, err := p.CloudWatchLogs.FilterLogEvents(req)
 			if err != nil {
 				switch awsErrorCode(err) {
-				case "ThrottlingException", "ResourceNotFoundException":
-					time.Sleep(1 * time.Second)
+				case "ThrottlingException":
+					time.Sleep(logRetrySleep)
+					continue
+				case "ResourceNotFoundException":
+					// The group is created on the app's first log write, so a fresh
+					// tail may briefly miss; retry bounded rather than forever (a group
+					// that never appears would otherwise be a permanent FilterLogEvents storm).
+					rnf++
+					if rnf >= resourceNotFoundMaxRetries {
+						return nil
+					}
+					time.Sleep(logRetrySleep)
 					continue
 				default:
+					fmt.Fprintf(w, "error: %v\n", err)
 					return err
 				}
 			}
+
+			rnf = 0
 
 			es := []*cloudwatchlogs.FilteredLogEvent{}
 
@@ -198,17 +556,40 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 
 			sort.Slice(es, func(i, j int) bool { return *es[i].Timestamp < *es[j].Timestamp })
 
+			if holding {
+				held = append(held, es...)
+				if len(held) > tail {
+					held = held[len(held)-tail:]
+				}
+				es = nil
+
+				if res.NextToken == nil {
+					es, held, holding = held, nil, false
+					if follow {
+						req.EndTime = nil
+					}
+				}
+			}
+
 			if _, err := writeLogEvents(w, es, opts); err != nil {
 				return err
 			}
 
 			req.NextToken = res.NextToken
 
-			if res.NextToken == nil {
-				if !follow {
-					return nil
-				}
+			if res.NextToken == nil && !follow {
+				return nil
+			}
 
+			if res.NextToken != nil {
+				time.Sleep(logPageSleep)
+			} else if len(es) == 0 {
+				time.Sleep(logEmptySleep)
+			} else {
+				time.Sleep(logPollSleep)
+			}
+
+			if res.NextToken == nil {
 				req.StartTime = aws.Int64(start)
 			}
 		}

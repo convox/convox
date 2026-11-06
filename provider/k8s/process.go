@@ -3,9 +3,12 @@ package k8s
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/api/validate/content"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -29,9 +33,24 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, err
 	}
 
+	runningPs := structs.Processes{}
+	for _, pp := range pss {
+		if pp.Status == "running" {
+			runningPs = append(runningPs, pp)
+		}
+	}
+
+	if len(runningPs) == 0 {
+		ps, err := p.ProcessGet(app, pid)
+		if err != nil {
+			return 0, err
+		}
+		runningPs = append(runningPs, *ps)
+	}
+
 	// if pid is a service name, pick one at random
-	if len(pss) > 0 {
-		pid = pss[rand.Intn(len(pss))].Id
+	if len(runningPs) > 0 {
+		pid = runningPs[rand.Intn(len(runningPs))].Id
 	}
 
 	req := p.Cluster.CoreV1().RESTClient().Post().Resource("pods").Name(pid).Namespace(p.AppNamespace(app)).SubResource("exec").Param("container", app)
@@ -76,6 +95,14 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		TTY:       true,
 	}
 
+	if opts.DisableStdin != nil && *opts.DisableStdin {
+		eo.Stdin = false
+	}
+
+	if opts.Tty != nil && !*opts.Tty {
+		eo.TTY = false
+	}
+
 	req.VersionedParams(eo, scheme.ParameterCodec)
 
 	e, err := remotecommand.NewSPDYExecutor(p.Config, "POST", req.URL())
@@ -83,33 +110,23 @@ func (p *Provider) ProcessExec(app, pid, command string, rw io.ReadWriter, opts 
 		return 0, errors.WithStack(err)
 	}
 
-	inr, inw := io.Pipe()
-	go io.Copy(inw, rw)
-
-	sopts := remotecommand.StreamOptions{
-		Stdin:  inr,
-		Stdout: rw,
-		Stderr: rw,
-		Tty:    true,
-	}
-
-	if opts.Height != nil && opts.Width != nil {
-		sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
-	}
-
-	err = e.Stream(sopts)
+	err = e.StreamWithContext(p.ctx, execStreamOptions(eo, rw, opts))
 	if ee, ok := err.(exec.ExitError); ok {
 		return ee.ExitStatus(), nil
 	}
 	if err != nil {
-		return 0, errors.WithStack(err)
+		return 1, errors.WithStack(err)
 	}
 
 	return 0, nil
 }
 
 func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+	return p.processGet(p.AppNamespace(app), app, pid)
+}
+
+func (p *Provider) processGet(ns, app, pid string) (*structs.Process, error) {
+	pd, err := p.GetPodFromInformer(pid, ns)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -119,11 +136,42 @@ func (p *Provider) ProcessGet(app, pid string) (*structs.Process, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
-	if err != nil {
-		p.logger.Errorf("failed to fetch pod metrics: %s", err)
-	} else if m != nil && len(m.Containers) > 0 {
-		ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+	// metrics-server serves nothing for a pod that has already exited, so asking
+	// would only log an error on every poll of a retained process
+	if !ps.Terminal() {
+		m, err := p.MetricsClient.MetricsV1beta1().PodMetricses(ns).Get(context.TODO(), pid, am.GetOptions{})
+		if err != nil {
+			_ = p.logger.Errorf("failed to fetch pod metrics: %s", err)
+		} else if m != nil && len(m.Containers) > 0 {
+			ps.Cpu, ps.Memory = calculatePodCpuAndMem(m)
+		}
+	}
+
+	// GPU runtime telemetry — best-effort enrichment from the rack's
+	// prometheus_url when the pod has a GPU resource request. PromClient is nil
+	// when prometheus_url is unset → short-circuit. Per-call timeout is applied
+	// inside QueryGPUMetrics. Errors are logged and absorbed: the existing
+	// process record still returns successfully.
+	if p.PromClient != nil && ps.Gpu > 0 {
+		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, []string{ps.Name})
+		if err != nil {
+			_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		} else if gm, has := gpuByPod[pid]; has {
+			// Per-metric per-pod presence: gm fields are now *float64 / *int64.
+			// Nil propagates straight through to the Process struct. Each field
+			// gets a fresh pointer (allocated by QueryGPUMetrics setter) so no
+			// loop-variable aliasing concern remains. Resolver decode of nil =
+			// "metric absent for this pod" — UI renders `—`.
+			ps.GpuUtil = gm.Util
+			ps.GpuMemUsed = gm.MemUsed
+			ps.GpuMemTotal = gm.MemTotal
+			ps.GpuTensorActive = gm.TensorActive
+			ps.GpuSmActive = gm.SmActive
+			ps.GpuDramActive = gm.DramActive
+			ps.GpuFp16Active = gm.Fp16Active
+			ps.GpuFp32Active = gm.Fp32Active
+			ps.GpuPowerW = gm.PowerW
+		}
 	}
 
 	return ps, nil
@@ -143,7 +191,7 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		filters = append(filters, fmt.Sprintf("service=%s", *opts.Service))
 	}
 
-	pds, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).List(context.TODO(), am.ListOptions{LabelSelector: strings.Join(filters, ",")})
+	pds, err := p.ListPodsFromInformer(p.AppNamespace(app), strings.Join(filters, ","))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -175,18 +223,58 @@ func (p *Provider) ProcessList(app string, opts structs.ProcessListOptions) (str
 		}
 	}
 
+	// GPU runtime telemetry — single batched Prom query for the whole
+	// process slice. Skipped when PromClient is nil (rack without
+	// PROMETHEUS_URL). When opts.Service is set, scope the query to that
+	// one service; otherwise QueryGPUMetrics's empty-services branch
+	// matches all services for the app. Each pss entry is allocated
+	// its own pointer to avoid loop-variable aliasing.
+	if p.PromClient != nil {
+		services := []string{}
+		if opts.Service != nil {
+			services = append(services, *opts.Service)
+		}
+		gpuByPod, err := p.PromClient.QueryGPUMetrics(context.TODO(), app, services)
+		if err != nil {
+			_ = p.logger.Errorf("failed to fetch gpu metrics: %s", err)
+		} else {
+			for i := range pss {
+				if pss[i].Gpu == 0 {
+					continue
+				}
+				if gm, has := gpuByPod[pss[i].Id]; has {
+					// Per-metric per-pod presence: gm fields are now *float64 / *int64.
+					// Direct pointer propagation — nil = "metric absent for this pod".
+					pss[i].GpuUtil = gm.Util
+					pss[i].GpuMemUsed = gm.MemUsed
+					pss[i].GpuMemTotal = gm.MemTotal
+					pss[i].GpuTensorActive = gm.TensorActive
+					pss[i].GpuSmActive = gm.SmActive
+					pss[i].GpuDramActive = gm.DramActive
+					pss[i].GpuFp16Active = gm.Fp16Active
+					pss[i].GpuFp32Active = gm.Fp32Active
+					pss[i].GpuPowerW = gm.PowerW
+				}
+			}
+		}
+	}
+
 	return pss, nil
 }
 
 func (p *Provider) ProcessLogs(app, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
+	return p.processLogsNamespace(p.AppNamespace(app), pid, opts)
+}
+
+func (p *Provider) processLogsNamespace(ns, pid string, opts structs.LogsOptions) (io.ReadCloser, error) {
 	r, w := io.Pipe()
 
-	go p.streamProcessLogs(w, app, pid, opts)
+	go p.streamProcessLogs(w, ns, pid, opts)
 
 	return r, nil
 }
 
-func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts structs.LogsOptions) {
+func (p *Provider) streamProcessLogs(w io.WriteCloser, ns, pid string, opts structs.LogsOptions) {
 	defer w.Close() // skipcq
 
 	lopts := &ac.PodLogOptions{
@@ -200,27 +288,46 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 	}
 
 	service := ""
+	pendingTimeout := time.After(10 * time.Minute)
+	tick := time.NewTicker(1 * time.Second)
+	defer tick.Stop()
+	pendingHeartbeat := time.NewTicker(15 * time.Second)
+	defer pendingHeartbeat.Stop()
 
+pendingLoop:
 	for {
-		pp, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
-		if err != nil {
-			fmt.Printf("err: %+v\n", err)
-			break
+		select {
+		case <-pendingTimeout:
+			fmt.Fprintf(w, "build pod did not start within 10 minutes -- check cluster resources and node availability\n")
+			return
+		case <-pendingHeartbeat.C:
+			if _, err := fmt.Fprintf(w, "waiting for build pod to be scheduled...\n"); err != nil {
+				return
+			}
+		case <-tick.C:
+			pp, err := p.GetPodFromInformer(pid, ns)
+			if err != nil {
+				fmt.Printf("err: %+v\n", err)
+				fmt.Fprintf(w, "waiting for build pod...\n")
+				continue
+			}
+
+			service = pp.Labels["service"]
+
+			if pp.Status.Phase != "Pending" {
+				break pendingLoop
+			}
 		}
-
-		service = pp.Labels["service"]
-
-		if pp.Status.Phase != "Pending" {
-			break
-		}
-
-		time.Sleep(1 * time.Second)
 	}
 
+	tick.Stop()
+	pendingHeartbeat.Stop()
+
 	for {
-		r, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).GetLogs(pid, lopts).Stream(context.TODO())
+		r, err := p.Cluster.CoreV1().Pods(ns).GetLogs(pid, lopts).Stream(context.TODO())
 		if err != nil {
 			fmt.Printf("err: %+v\n", err)
+			fmt.Fprintf(w, "build log stream interrupted, retrying...\n")
 			break
 		}
 
@@ -265,7 +372,48 @@ func (p *Provider) streamProcessLogs(w io.WriteCloser, app, pid string, opts str
 }
 
 func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOptions) (*structs.Process, error) {
-	s, err := p.podSpecFromRunOptions(app, service, opts)
+	// Gate ProcessRun on the budget breaker, EXCEPT for build pods. The
+	// `service` URL-path parameter is caller-controlled and cannot be
+	// trusted for this exemption — instead we key on `opts.IsBuild`, a
+	// server-side struct flag set only by BuildCreate at build.go:112.
+	// The flag has no `header:` / `flag:` tag so it is not wire-exposed;
+	// a client spoofing `service="build"` gets blocked because IsBuild
+	// stays false. Build pods themselves must pass to allow users to
+	// ship a fix when over cap.
+	if !opts.IsBuild {
+		if err := p.budgetCircuitBreakerTripped(app); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	if opts.UseServiceVolume != nil && *opts.UseServiceVolume {
+		m, _, err := common.AppManifest(p, app)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		s, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if s.Stateful {
+			return nil, structs.ErrBadRequest("--use-service-volume is not supported for stateful services because each replica has its own volume")
+		}
+	}
+
+	// Build pods run in a dedicated namespace while PSA enforcement applies so
+	// the app namespace's enforce label does not reject them. Ensure it before
+	// podSpecFromRunOptions, which writes the pull secret into this namespace.
+	createNs := p.AppNamespace(app)
+	if opts.IsBuild {
+		createNs = p.processBuildNamespace(app)
+		if createNs != p.AppNamespace(app) {
+			if err := p.ensureBuildNamespace(app); err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
+	}
+
+	s, err := p.podSpecFromRunOptions(app, service, createNs, opts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -284,8 +432,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	ans := map[string]string{}
 	if service == "build" {
 		for idx := 0; idx < len(s.Containers); idx++ {
-			// assign the build container a BestEffor QoS to avoid eating all compute resources
-			s.Containers[idx].Resources = ac.ResourceRequirements{}
 			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
 			if opts.Privileged != nil && *opts.Privileged {
 				s.Containers[idx].SecurityContext.Privileged = options.Bool(true)
@@ -294,32 +440,117 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		}
 		s.RestartPolicy = ac.RestartPolicyNever
 		if p.BuildNodeEnabled == "true" {
+			matchExprs := []ac.NodeSelectorRequirement{
+				{
+					Key:      "convox-build",
+					Operator: ac.NodeSelectorOpIn,
+					Values:   []string{"true"},
+				},
+			}
+			if opts.BuildArch != nil && *opts.BuildArch != "" {
+				matchExprs = append(matchExprs, ac.NodeSelectorRequirement{
+					Key:      "kubernetes.io/arch",
+					Operator: ac.NodeSelectorOpIn,
+					Values:   []string{*opts.BuildArch},
+				})
+			}
 			s.Affinity = &ac.Affinity{
 				NodeAffinity: &ac.NodeAffinity{
 					RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
 						NodeSelectorTerms: []ac.NodeSelectorTerm{
 							{
-								MatchExpressions: []ac.NodeSelectorRequirement{
-									{
-										Key:      "convox-build",
-										Operator: ac.NodeSelectorOpIn,
-										Values: []string{
-											"true",
-										},
-									},
-								},
+								MatchExpressions: matchExprs,
 							},
 						},
 					},
 				},
 			}
-			s.Tolerations = []ac.Toleration{
-				{
-					Key:      "dedicated",
-					Operator: ac.TolerationOpExists,
-					Effect:   ac.TaintEffectNoSchedule,
+		}
+
+		if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
+			// mount persistent BuildKit cache on the host
+			hostPathType := ac.HostPathDirectoryOrCreate
+			s.Volumes = append(s.Volumes, ac.Volume{
+				Name: "buildkit-cache",
+				VolumeSource: ac.VolumeSource{
+					HostPath: &ac.HostPathVolumeSource{
+						Path: "/mnt/buildkit-cache",
+						Type: &hostPathType,
+					},
 				},
+			})
+			s.Containers[0].VolumeMounts = append(s.Containers[0].VolumeMounts, ac.VolumeMount{
+				Name:      "buildkit-cache",
+				MountPath: "/var/lib/buildkit",
+			})
+		}
+
+		s.Tolerations = append(s.Tolerations, ac.Toleration{
+			Key:      "dedicated",
+			Operator: ac.TolerationOpExists,
+			Effect:   ac.TaintEffectNoSchedule,
+		})
+	}
+
+	if opts.SystemCritical != nil && *opts.SystemCritical {
+		s.PriorityClassName = "system-node-critical"
+	}
+
+	labels := map[string]string{
+		"app":     app,
+		"rack":    p.Name,
+		"release": release,
+		"service": service,
+		"system":  "convox",
+		"type":    "process",
+		"name":    service,
+	}
+
+	if opts.IsBuild {
+		labels["service-type"] = "build"
+	}
+
+	// set ahead of the caller's annotations so the merge below leaves this one alone
+	if opts.Retain != nil {
+		ans[AnnotationProcessRetain] = strconv.Itoa(*opts.Retain)
+	}
+
+	if opts.Annotations != nil {
+		kv, err := parseRunKV(*opts.Annotations)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range kv {
+			if msgs := content.IsLabelKey(k); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid annotation key %q: %s", k, strings.Join(msgs, "; "))
 			}
+			if _, ok := ans[k]; ok {
+				continue
+			}
+			ans[k] = v
+		}
+	}
+
+	if opts.Labels != nil {
+		reserved := map[string]bool{
+			"app": true, "rack": true, "service": true, "system": true,
+			"type": true, "name": true, "release": true, "service-type": true,
+		}
+		kv, err := parseRunKV(*opts.Labels)
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range kv {
+			if reserved[k] {
+				return nil, structs.ErrBadRequest("label key %q is reserved by convox", k)
+			}
+			if msgs := content.IsLabelKey(k); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid label key %q: %s", k, strings.Join(msgs, "; "))
+			}
+			if msgs := content.IsLabelValue(v); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid label value %q: %s", v, strings.Join(msgs, "; "))
+			}
+			labels[k] = v
 		}
 	}
 
@@ -327,20 +558,12 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		ObjectMeta: am.ObjectMeta{
 			Annotations:  ans,
 			GenerateName: fmt.Sprintf("%s-", service),
-			Labels: map[string]string{
-				"app":     app,
-				"rack":    p.Name,
-				"release": release,
-				"service": service,
-				"system":  "convox",
-				"type":    "process",
-				"name":    service,
-			},
+			Labels:       labels,
 		},
 		Spec: *s,
 	}
 
-	pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Create(
+	pd, err := p.Cluster.CoreV1().Pods(createNs).Create(
 		context.TODO(),
 		pod,
 		am.CreateOptions{},
@@ -349,7 +572,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		return nil, errors.WithStack(err)
 	}
 
-	ps, err := p.ProcessGet(app, pd.ObjectMeta.Name)
+	ps, err := p.processGet(createNs, app, pd.Name)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -367,7 +590,7 @@ func (p *Provider) ProcessStop(app, pid string) error {
 
 func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	for {
-		pd, err := p.Cluster.CoreV1().Pods(p.AppNamespace(app)).Get(context.TODO(), pid, am.GetOptions{})
+		pd, err := p.GetPodFromInformer(pid, p.AppNamespace(app))
 		if err != nil {
 			return 0, errors.WithStack(err)
 		}
@@ -388,7 +611,7 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	}
 }
 
-func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec, error) {
+func (p *Provider) podSpecFromService(app, service, release string, isBuild bool) (*ac.PodSpec, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -425,7 +648,10 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		},
 	})
 
-	if service != "build" && release != "" {
+	serviceAccountName := ""
+	var nodeSelectorLabels map[string]string
+	var graceSecs *int64
+	if !isBuild && release != "" {
 		m, r, err := common.ReleaseManifest(p, app, release)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -440,6 +666,7 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 		env := map[string]string{}
 
 		if s, _ := m.Service(service); s != nil {
+			serviceAccountName = s.Name
 			if s.Command != "" {
 				parts, err := shellquote.Split(s.Command)
 				if err != nil {
@@ -492,6 +719,15 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 					MountPath: to,
 				})
 			}
+
+			nodeSelectorLabels = s.NodeSelectorLabels
+
+			g := int64(s.Termination.Grace)
+			graceSecs = &g
+
+			if sc := serviceSecurityContext(s); sc != nil {
+				c.SecurityContext = sc
+			}
 		}
 
 		for k, v := range env {
@@ -500,15 +736,76 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 	}
 
 	ps := &ac.PodSpec{
+		ServiceAccountName:    serviceAccountName,
 		Containers:            []ac.Container{c},
 		ShareProcessNamespace: options.Bool(true),
 		Volumes:               vs,
 	}
 
-	if ip, err := p.Engine.ResolverHost(); err == nil {
+	if graceSecs != nil {
+		ps.TerminationGracePeriodSeconds = graceSecs
+	}
+
+	if len(nodeSelectorLabels) > 0 {
+		matchExpressions := []ac.NodeSelectorRequirement{}
+		for k, v := range nodeSelectorLabels {
+			matchExpressions = append(matchExpressions, ac.NodeSelectorRequirement{
+				Key:      k,
+				Operator: ac.NodeSelectorOpIn,
+				Values:   []string{v},
+			})
+		}
+		ps.Affinity = &ac.Affinity{
+			NodeAffinity: &ac.NodeAffinity{
+				RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
+					NodeSelectorTerms: []ac.NodeSelectorTerm{
+						{MatchExpressions: matchExpressions},
+					},
+				},
+			},
+		}
+
+		for k, v := range nodeSelectorLabels {
+			if k == "convox.io/label" || k == "convox.io/nodepool" {
+				if ps.Tolerations == nil {
+					ps.Tolerations = []ac.Toleration{}
+				}
+				ps.Tolerations = append(ps.Tolerations, ac.Toleration{
+					Key:      "dedicated-node",
+					Operator: ac.TolerationOpEqual,
+					Value:    v,
+					Effect:   ac.TaintEffectNoSchedule,
+				})
+			}
+		}
+	}
+
+	if !isBuild {
+		if ip, err := p.Engine.ResolverHost(); err == nil {
+			ps.DNSPolicy = "None"
+			ps.DNSConfig = &ac.PodDNSConfig{
+				Nameservers: []string{ip},
+				Options: []ac.PodDNSConfigOption{
+					{Name: "ndots", Value: options.String("1")},
+				},
+				Searches: []string{
+					fmt.Sprintf("%s.%s.local", app, p.Name),
+					fmt.Sprintf("%s.svc.cluster.local", p.AppNamespace(app)),
+					fmt.Sprintf("%s.local", p.Name),
+					"svc.cluster.local",
+					"cluster.local",
+				},
+			}
+			if options.GetFeatureGates()[options.FeatureGateExternalDnsResolver] {
+				ps.DNSConfig.Searches = []string{}
+			}
+		}
+	}
+
+	if isBuild && !p.BuildDisableResolver && p.Resolver != "" {
 		ps.DNSPolicy = "None"
 		ps.DNSConfig = &ac.PodDNSConfig{
-			Nameservers: []string{ip},
+			Nameservers: []string{p.Resolver},
 			Options: []ac.PodDNSConfigOption{
 				{Name: "ndots", Value: options.String("1")},
 			},
@@ -525,10 +822,117 @@ func (p *Provider) podSpecFromService(app, service, release string) (*ac.PodSpec
 	return ps, nil
 }
 
-func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) {
-	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""))
+func parseRunKV(csv string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		parts := strings.SplitN(seg, "=", 2)
+		if len(parts) != 2 || parts[0] == "" {
+			return nil, structs.ErrBadRequest("invalid entry %q, use format key=value", seg)
+		}
+		out[parts[0]] = parts[1]
+	}
+	return out, nil
+}
+
+func parseRunNodeAffinity(csv string) ([]ac.PreferredSchedulingTerm, error) {
+	var terms []ac.PreferredSchedulingTerm
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		weight := 100
+		kv := seg
+		if i := strings.Index(seg, ":"); i >= 0 {
+			kv = seg[:i]
+			w, err := strconv.Atoi(seg[i+1:])
+			if err != nil || w < 1 || w > 100 {
+				return nil, structs.ErrBadRequest("invalid node-affinity weight in %q, must be an integer 1-100", seg)
+			}
+			weight = w
+		}
+		parts := strings.SplitN(kv, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, structs.ErrBadRequest("invalid node-affinity entry %q, use format key=value[:weight]", seg)
+		}
+		key, value := parts[0], parts[1]
+		if msgs := content.IsLabelKey(key); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid node-affinity key %q: %s", key, strings.Join(msgs, "; "))
+		}
+		if msgs := content.IsLabelValue(value); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid node-affinity value %q: %s", value, strings.Join(msgs, "; "))
+		}
+		terms = append(terms, ac.PreferredSchedulingTerm{
+			Weight: int32(weight), //nolint:gosec // weight range-checked to [1,100]
+			Preference: ac.NodeSelectorTerm{
+				MatchExpressions: []ac.NodeSelectorRequirement{
+					{Key: key, Operator: ac.NodeSelectorOpIn, Values: []string{value}},
+				},
+			},
+		})
+	}
+	return terms, nil
+}
+
+func parseRunTolerations(csv string) ([]ac.Toleration, error) {
+	validEffects := map[string]bool{"NoSchedule": true, "PreferNoSchedule": true, "NoExecute": true}
+	var tols []ac.Toleration
+	for _, seg := range strings.Split(csv, ",") {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		left := seg
+		effect := ""
+		if colon := strings.SplitN(seg, ":", 2); len(colon) == 2 {
+			left = colon[0]
+			effect = colon[1]
+		}
+		if effect != "" && !validEffects[effect] {
+			return nil, structs.ErrBadRequest("invalid toleration effect %q (must be NoSchedule, PreferNoSchedule, or NoExecute)", effect)
+		}
+		key := left
+		value := ""
+		hasValue := false
+		if eq := strings.SplitN(left, "=", 2); len(eq) == 2 {
+			key, value, hasValue = eq[0], eq[1], true
+		}
+		if key == "" {
+			return nil, structs.ErrBadRequest("invalid toleration entry %q, key must not be empty", seg)
+		}
+		if hasValue && value == "" {
+			return nil, structs.ErrBadRequest("invalid toleration entry %q, value must not be empty after '='", seg)
+		}
+		if msgs := content.IsLabelKey(key); len(msgs) > 0 {
+			return nil, structs.ErrBadRequest("invalid toleration key %q: %s", key, strings.Join(msgs, "; "))
+		}
+		t := ac.Toleration{Key: key, Effect: ac.TaintEffect(effect)}
+		if hasValue {
+			if msgs := content.IsLabelValue(value); len(msgs) > 0 {
+				return nil, structs.ErrBadRequest("invalid toleration value %q: %s", value, strings.Join(msgs, "; "))
+			}
+			t.Operator = ac.TolerationOpEqual
+			t.Value = value
+		} else {
+			t.Operator = ac.TolerationOpExists
+		}
+		tols = append(tols, t)
+	}
+	return tols, nil
+}
+
+func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) { //nolint:gocritic // by-value opts matches ProcessRun and sibling helpers
+	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""), opts.IsBuild)
 	if err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	if options.GetFeatureGates()[options.FeatureGateDisableHostUsersAsDefault] {
+		s.HostUsers = options.Bool(false)
 	}
 
 	if opts.Command != nil {
@@ -558,6 +962,26 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["cpu"] = resource.MustParse(fmt.Sprintf("%dm", *opts.CpuLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Cpu != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["cpu"] = s.Containers[0].Resources.Requests["cpu"]
+	}
+
+	if opts.Gpu != nil {
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		gpuKey := ac.ResourceName(gpuResourceKey(vendor))
+		gpuQty := resource.MustParse(fmt.Sprintf("%d", *opts.Gpu))
+
+		s.Containers[0].Resources.Requests[gpuKey] = gpuQty
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits[gpuKey] = gpuQty
 	}
 
 	if opts.Memory != nil {
@@ -569,9 +993,178 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = resource.MustParse(fmt.Sprintf("%dMi", *opts.MemoryLimit))
+	} else if options.GetFeatureGates()[options.FeatureGateAppLimitRequired] && opts.Memory != nil {
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Limits["memory"] = s.Containers[0].Resources.Requests["memory"]
 	}
 
-	if opts.Volumes != nil {
+	if opts.NodeLabels != nil {
+		s.Affinity = nil
+		s.Tolerations = nil
+		labelStrList := strings.Split(*opts.NodeLabels, ",")
+		for _, lb := range labelStrList {
+			parts := strings.SplitN(lb, "=", 2)
+			if len(parts) == 2 {
+				if s.NodeSelector == nil {
+					s.NodeSelector = map[string]string{}
+				}
+				s.NodeSelector[parts[0]] = parts[1]
+			}
+		}
+
+		if target := s.NodeSelector[NodePoolLabel]; target != "" {
+			subject := "--node-labels"
+			if opts.IsBuild {
+				subject = "the BuildLabels app parameter"
+			}
+
+			if pools, ok := p.karpenterNodePools(); ok {
+				if err := validateNodePool(target, pools, subject); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		if s.Tolerations == nil {
+			s.Tolerations = []ac.Toleration{}
+		}
+		s.Tolerations = append(s.Tolerations, ac.Toleration{
+			Key:      "dedicated-node",
+			Operator: ac.TolerationOpExists,
+			Effect:   ac.TaintEffectNoSchedule,
+		})
+	}
+
+	if opts.Gpu != nil && *opts.Gpu > 0 {
+		vendor := ""
+		if opts.GpuVendor != nil {
+			vendor = *opts.GpuVendor
+		}
+		gpuKey := gpuResourceKey(vendor)
+		hasGpuToleration := false
+		for _, t := range s.Tolerations {
+			if t.Key == gpuKey && t.Effect == ac.TaintEffectNoSchedule && t.Operator == ac.TolerationOpExists {
+				hasGpuToleration = true
+				break
+			}
+		}
+		if !hasGpuToleration {
+			s.Tolerations = append(s.Tolerations, ac.Toleration{
+				Key:      gpuKey,
+				Operator: ac.TolerationOpExists,
+				Effect:   ac.TaintEffectNoSchedule,
+			})
+		}
+	}
+
+	if opts.NodeAffinity != nil {
+		terms, err := parseRunNodeAffinity(*opts.NodeAffinity)
+		if err != nil {
+			return nil, err
+		}
+		if len(terms) > 0 {
+			if s.Affinity == nil {
+				s.Affinity = &ac.Affinity{}
+			}
+			if s.Affinity.NodeAffinity == nil {
+				s.Affinity.NodeAffinity = &ac.NodeAffinity{}
+			}
+			s.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution = append(
+				s.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution, terms...)
+		}
+	}
+
+	if opts.Tolerations != nil {
+		tols, err := parseRunTolerations(*opts.Tolerations)
+		if err != nil {
+			return nil, err
+		}
+		s.Tolerations = append(s.Tolerations, tols...)
+	}
+
+	if opts.UseServiceLifecycle != nil && *opts.UseServiceLifecycle {
+		release := common.DefaultString(opts.Release, "")
+		if release == "" {
+			a, err := p.AppGet(app)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			release = a.Release
+		}
+
+		m, _, err := common.ReleaseManifest(p, app, release)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		svc, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if svc.Lifecycle.PostStart != "" || svc.Lifecycle.PreStop != "" {
+			s.Containers[0].Lifecycle = &ac.Lifecycle{}
+
+			if svc.Lifecycle.PostStart != "" {
+				cmd, err := shellquote.Split(svc.Lifecycle.PostStart)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				s.Containers[0].Lifecycle.PostStart = &ac.LifecycleHandler{Exec: &ac.ExecAction{Command: cmd}}
+			}
+
+			if svc.Lifecycle.PreStop != "" {
+				cmd, err := shellquote.Split(svc.Lifecycle.PreStop)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+				s.Containers[0].Lifecycle.PreStop = &ac.LifecycleHandler{Exec: &ac.ExecAction{Command: cmd}}
+			}
+		}
+	}
+
+	if opts.TerminationGrace != nil {
+		if *opts.TerminationGrace < 0 {
+			return nil, structs.ErrBadRequest("termination-grace must be a non-negative integer")
+		}
+		g := int64(*opts.TerminationGrace)
+		s.TerminationGracePeriodSeconds = &g
+	}
+
+	if p.hasDockerHubAuth() {
+		if err := p.ensureDockerHubSecret(ns); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: "docker-hub-authentication"})
+	}
+
+	// Per-service private-registry pull secrets declared in convox.yml.
+	// The Secrets themselves are created by the release promote flow; here we
+	// only reference them so convox run Pods can pull from those registries.
+	// Build pods use the rack's internal build image and have no user
+	// imagePullSecrets to apply, so skip the manifest read in that case.
+	if !opts.IsBuild {
+		if m, _, merr := common.AppManifest(p, app); merr == nil {
+			if sm, serr := m.Service(service); serr == nil {
+				for _, name := range imagePullSecretNames(app, service, sm.ImagePullSecrets) {
+					s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: name})
+				}
+			}
+		}
+	}
+
+	if !opts.IsBuild && p.hasRegistryPullCredentials() {
+		if err := p.ensureRegistryPullSecret(p.ctx, ns); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		s.ImagePullSecrets = append(s.ImagePullSecrets, ac.LocalObjectReference{Name: registryPullSecretName})
+	}
+
+	if opts.Volumes != nil && opts.UseServiceVolume == nil {
 		var vs []string
 
 		for from, to := range opts.Volumes {
@@ -595,9 +1188,66 @@ func (p *Provider) podSpecFromRunOptions(app, service string, opts structs.Proce
 		}
 	}
 
+	if opts.UseServiceVolume != nil && *opts.UseServiceVolume {
+		m, _, err := common.AppManifest(p, app)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		sManifest, err := m.Service(service)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if sManifest.Agent.Enabled {
+			ds, err := p.serviceDaemonset(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = ds.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = ds.Spec.Template.Spec.Containers[0].VolumeMounts
+		} else {
+			dp, err := p.serviceDeployment(app, service)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+
+			s.Volumes = dp.Spec.Template.Spec.Volumes
+			s.Containers[0].VolumeMounts = dp.Spec.Template.Spec.Containers[0].VolumeMounts
+		}
+	}
+
 	s.RestartPolicy = "Never"
 
 	return s, nil
+}
+
+func (p *Provider) ensureDockerHubSecret(namespace string) error {
+	_, err := p.CreateOrPatchSecret(p.ctx, am.ObjectMeta{
+		Name:      "docker-hub-authentication",
+		Namespace: namespace,
+	}, func(s *ac.Secret) *ac.Secret {
+		s.Data = map[string][]byte{
+			".dockerconfigjson": []byte(fmt.Sprintf(
+				`{
+				"auths": {
+				  "https://index.docker.io/v1/": {
+					"auth": "%s"
+				  }
+				}
+			  }`, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", p.DockerUsername, p.DockerPassword))))),
+		}
+		s.Type = "kubernetes.io/dockerconfigjson"
+		return s
+	}, am.PatchOptions{
+		FieldManager: "convox",
+	})
+	return errors.WithStack(err)
+}
+
+func (p *Provider) hasDockerHubAuth() bool {
+	return p.DockerUsername != "" && p.DockerPassword != ""
 }
 
 func (p *Provider) podVolume(app, from string) ac.Volume {
@@ -642,13 +1292,32 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		status = "complete"
 	}
 
-	if cds := pd.Status.Conditions; len(cds) > 0 && status != "complete" && status != "failed" {
+	if cds := pd.Status.Conditions; len(cds) > 0 && status != "complete" && status != "failed" && status != "pending" {
 		for _, cd := range cds {
 			if cd.Type == "Ready" && cd.Status == "False" {
-				status = "unhealthy"
+				// The kubelet sets Ready=False on two unrelated paths:
+				// the normal-startup window (initial-delay before the
+				// first readiness probe runs, init containers pending,
+				// container still being created) AND a genuine probe
+				// failure or container crash. Routing both to
+				// "unhealthy" leaks a spurious red status into the
+				// CLI/Console for every pod during a normal promote.
+				// Inspect Reason to split the two: documented startup
+				// reasons → "starting"; everything else (including
+				// empty Reason on older kubelets) stays on the
+				// conservative "unhealthy" verdict so we never mask a
+				// real probe failure.
+				switch cd.Reason {
+				case "ContainersNotReady", "PodInitializing", "ContainerCreating":
+					status = "starting"
+				default:
+					status = "unhealthy"
+				}
 			}
 		}
 	}
+
+	var exitCode *int
 
 	if css := pd.Status.ContainerStatuses; len(css) > 0 && css[0].Name == app {
 		if cs := css[0]; cs.State.Waiting != nil {
@@ -656,6 +1325,10 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 			case "CrashLoopBackOff":
 				status = "crashed"
 			}
+		}
+
+		if t := css[0].State.Terminated; t != nil {
+			exitCode = options.Int(int(t.ExitCode))
 		}
 	}
 
@@ -676,10 +1349,19 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		Image:    c.Image,
 		Instance: pd.Spec.NodeName,
 		Name:     pd.ObjectMeta.Labels["service"],
+		Service:  pd.ObjectMeta.Labels["service"],
 		Ports:    ports,
 		Release:  pd.ObjectMeta.Labels["release"],
 		Started:  pd.CreationTimestamp.Time,
 		Status:   status,
+		ExitCode: exitCode,
+	}
+
+	for key := range gpuKeyToVendor {
+		if q, ok := c.Resources.Requests[ac.ResourceName(key)]; ok {
+			ps.Gpu = int(q.Value())
+			break
+		}
 	}
 
 	if ps.App == "system" {
@@ -687,6 +1369,36 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	}
 
 	return ps, nil
+}
+
+func execStreamOptions(eo *ac.PodExecOptions, rw io.ReadWriter, opts structs.ProcessExecOptions) remotecommand.StreamOptions {
+	sopts := remotecommand.StreamOptions{
+		Stdout: rw,
+		Stderr: rw,
+		Tty:    eo.TTY,
+	}
+
+	if eo.Stdin {
+		sopts.Stdin = stdinPipe(rw)
+	}
+
+	if opts.Height != nil && opts.Width != nil {
+		sopts.TerminalSizeQueue = &terminalSize{Height: *opts.Height, Width: *opts.Width}
+	}
+
+	return sopts
+}
+
+func stdinPipe(r io.Reader) io.Reader {
+	pr, pw := io.Pipe()
+
+	go func() {
+		if _, err := io.Copy(pw, r); err == nil {
+			pw.Close()
+		}
+	}()
+
+	return pr
 }
 
 type terminalSize struct {

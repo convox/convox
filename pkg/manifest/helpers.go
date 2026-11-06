@@ -13,3 +13,13 @@ func interpolate(data []byte, env map[string]string) ([]byte, error) {
 
 	return p, nil
 }
+
+// if s string is in ss slice
+func containsInStringSlice(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}

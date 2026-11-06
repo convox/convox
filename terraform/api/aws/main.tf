@@ -13,23 +13,36 @@ module "k8s" {
 
   providers = {
     kubernetes = kubernetes
+    kubectl    = kubectl
   }
 
-  buildkit_enabled               = var.buildkit_enabled
-  build_node_enabled             = var.build_node_enabled
-  convox_domain_tls_cert_disable = var.convox_domain_tls_cert_disable
-  docker_hub_authentication      = var.docker_hub_authentication
-  domain                         = var.domain
-  domain_internal                = var.domain_internal
-  disable_image_manifest_cache   = var.disable_image_manifest_cache
-  image                          = var.image
-  metrics_scraper_host           = var.metrics_scraper_host
-  namespace                      = var.namespace
-  rack                           = var.name
-  rack_name                      = var.rack_name
-  release                        = var.release
-  replicas                       = var.high_availability ? 2 : 1
-  resolver                       = var.resolver
+  buildkit_enabled                = var.buildkit_enabled
+  build_node_enabled              = var.build_node_enabled
+  buildkit_host_path_cache_enable = var.buildkit_host_path_cache_enable
+  convox_domain_tls_cert_disable  = var.convox_domain_tls_cert_disable
+  docker_hub_authentication       = var.docker_hub_authentication
+  docker_hub_username             = var.docker_hub_username
+  docker_hub_password             = var.docker_hub_password
+  ecr_docker_hub_cache_prefix     = var.ecr_docker_hub_cache_prefix
+  domain                          = var.domain
+  domain_internal                 = var.domain_internal
+  disable_image_manifest_cache    = var.disable_image_manifest_cache
+  image                           = var.image
+  cost_tracking_enable            = var.cost_tracking_enable
+  cost_tracking_history_days      = var.cost_tracking_history_days
+  seccomp_default_enabled         = var.seccomp_default_enabled
+  router_type                     = var.router_type
+  cert_duration                   = var.cert_duration
+  karpenter_enabled               = var.karpenter_enabled
+  system_readonly_rootfs_enabled  = var.system_readonly_rootfs_enabled
+  namespace                       = var.namespace
+  prometheus_url                  = var.prometheus_url
+  rack                            = var.name
+  rack_name                       = var.rack_name
+  release                         = var.release
+  replicas                        = var.high_availability ? 2 : 1
+  resolver                        = var.resolver
+  webhook_signing_key             = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "letsencrypt"
@@ -39,13 +52,65 @@ module "k8s" {
   }
 
   env = {
-    AWS_REGION            = data.aws_region.current.name
-    BUCKET                = aws_s3_bucket.storage.id
-    CERT_MANAGER          = "true"
-    CERT_MANAGER_ROLE_ARN = aws_iam_role.cert-manager.arn
-    PROVIDER              = "aws"
-    RESOLVER              = var.resolver
-    ROUTER                = var.router
-    SOCKET                = "/var/run/docker.sock"
+    AWS_REGION                                = data.aws_region.current.name
+    BUCKET                                    = var.custom_provided_bucket != "" ? data.aws_s3_bucket.custom_bucket[0].id : aws_s3_bucket.storage.id
+    CERT_MANAGER                              = "true"
+    CERT_MANAGER_ROLE_ARN                     = aws_iam_role.cert-manager.arn
+    EFS_FILE_SYSTEM_ID                        = var.efs_file_system_id
+    BUILD_ARCHS                               = var.build_archs
+    BUILD_DISABLE_CONVOX_RESOLVER             = var.build_disable_convox_resolver
+    DEPLOY_CRASH_RESTART_LIMIT                = var.deploy_crash_restart_limit
+    DEPLOY_PROGRESS_DEADLINE                  = var.deploy_progress_deadline
+    PDB_DEFAULT_MIN_AVAILABLE_PERCENTAGE      = var.pdb_default_min_available_percentage
+    PROVIDER                                  = "aws"
+    RESOLVER                                  = var.disable_convox_resolver ? "" : var.resolver
+    ROUTER                                    = var.router
+    SOCKET                                    = "/var/run/docker.sock"
+    ECR_IMMUTABLE_TAGS_ENABLED                = var.ecr_immutable_tags_enabled
+    ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
+    APP_CLOUDWATCH_DISABLE                    = var.app_cloudwatch_disable
+    CLOUDWATCH_DISABLE                        = var.cloudwatch_disable
+    CLOUDWATCH_RETENTION_IN_DAYS              = var.cloudwatch_retention_in_days
+    SUBNET_IDS                                = join(",", var.subnets)
+    VPC_ID                                    = var.vpc_id
+    RELEASES_TO_RETAIN_AFTER_ACTIVE           = var.releases_to_retain_after_active
+    RELEASES_TO_RETAIN_TASK_RUN_INTERVAL_HOUR = var.releases_to_retain_task_run_interval_hour
+    RELEASE_WATCHER_GC_INTERVAL               = var.release_watcher_gc_interval
+    GPU_METRICS_MAX_PODS                      = var.gpu_metrics_max_pods
+    GPU_METRICS_MAX_CONCURRENT                = var.gpu_metrics_max_concurrent
+    KARPENTER_ENABLED                         = var.karpenter_enabled
+    KEDA_ENABLED                              = var.keda_enable
+    VPA_ENABLED                               = var.vpa_enable
+    FEATURE_GATES                             = var.api_feature_gates
+    ROUTER_TYPE                               = var.router_type
+    PROXY_PROTOCOL                            = var.proxy_protocol
+    POD_IMDS_BLOCK_ENABLED                    = var.pod_imds_block_enabled
+    NETWORK_POLICY_ENABLED                    = var.network_policy_enable
+    POD_SECURITY_STANDARD                     = var.pod_security_standard
+    POD_SECURITY_MODE                         = var.pod_security_mode
+    CONTOUR_INTERNAL_TLS                      = var.contour_internal_tls
+  }
+}
+
+
+// efs related resources
+
+resource "kubernetes_persistent_volume_claim_v1" "efs-pvc-system-root" {
+  count = var.efs_csi_driver_enable ? 1 : 0
+
+  metadata {
+    name      = "efs-pvc-system-root"
+    namespace = var.namespace
+  }
+
+  spec {
+    access_modes = ["ReadWriteMany"]
+    resources {
+      requests = {
+        storage = "2Gi"
+      }
+    }
+    volume_name        = "efs-pv-root"
+    storage_class_name = "efs-sc-base"
   }
 }

@@ -1,9 +1,11 @@
 #!/bin/bash
 
+. "$(dirname "$0")/../lib.sh"
+
 set -ex
 
 convox resources -a httpd | grep postgresdb
-ps=$(convox api get /apps/httpd/processes | jq -r '.[]|select(.status=="running" and .name == "web")|.id' | grep web | head -n 1)
+ps=$(web_ps httpd)
 convox exec $ps "/usr/scripts/db_insert.sh" -a httpd
 convox exec $ps "/usr/scripts/db_check.sh" -a httpd
 convox resources export postgresdb -f /tmp/pdb.sql

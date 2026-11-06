@@ -28,6 +28,10 @@ func run() error {
 
 	s.Password = os.Getenv("PASSWORD")
 
+	if s.Password == "" {
+		fmt.Fprintf(os.Stderr, "WARNING: PASSWORD is empty -- password-based API authentication is disabled\n")
+	}
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	go handleSignals(s, ch)

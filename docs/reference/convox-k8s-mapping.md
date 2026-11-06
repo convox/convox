@@ -1,0 +1,749 @@
+---
+title: "Convox to Kubernetes Resource Mapping"
+description: "Map Convox concepts (apps, services, resources, timers, volumes, balancers) to their underlying Kubernetes resources for kubectl inspection and troubleshooting."
+slug: convox-k8s-mapping
+url: /reference/convox-k8s-mapping
+---
+# Convox to Kubernetes Resource Mapping Reference
+
+## How Convox Maps to Kubernetes
+
+This document provides a comprehensive mapping of Convox concepts to their underlying Kubernetes implementations. It is intended for DevOps engineers who are familiar with Kubernetes and need to inspect, troubleshoot, or interact with their Convox-managed clusters using `kubectl`.
+
+Convox abstracts Kubernetes complexity by mapping high-level concepts from your `convox.yml` to standard Kubernetes resources. Key principles of the Convox model on Kubernetes include:
+
+-   **Namespace Isolation**: Each application is deployed into its own dedicated Kubernetes namespace, providing strong isolation. Rack-level system components also reside in their own namespace.
+-   **Label-Driven Architecture**: Convox uses a consistent labeling scheme across all generated resources, making it easy to find and manage related components. The primary labels are `system=convox`, `rack=<rack-name>`, `app=<app-name>`, and `service=<service-name>`.
+-   **Declarative Configuration**: Your `convox.yml` file is the authoritative definition, which Convox translates into Kubernetes Deployments, Services, Ingresses, and other resource types.
+
+Understanding these mappings allows you to use the full range of Kubernetes tooling for advanced debugging and observability while still benefiting from the simplicity of the Convox developer experience.
+
+## Namespace Mapping
+
+Convox isolates resources by creating dedicated namespaces for the Rack system and for each application.
+
+-   **Rack System Namespace**: Contains core Rack components like the API, controller, and router.
+    -   **Pattern**: `<rack-name>-system`
+    -   **Example**: `my-rack-system`
+
+-   **Application Namespace**: Contains all Kubernetes resources specific to a single application, including its services, resources, timers, and environment variables.
+    -   **Pattern**: `<rack-name>-<app-name>`
+    -   **Example**: `my-rack-my-app`
+
+**`kubectl` Commands:**
+
+```bash
+# List all namespaces managed by Convox for a given rack
+kubectl get ns -l system=convox,rack=my-rack
+
+# Set your kubectl context to a specific app's namespace for easier commands
+kubectl config set-context --current --namespace=my-rack-my-app
+```
+
+## Quick Reference Table
+
+| Convox Concept | K8s Resource(s) | Namespace | Naming Pattern | `kubectl` Command |
+| :--- | :--- | :--- | :--- | :--- |
+| **Rack** | `Namespace` | N/A | `<rack-name>-system` | `kubectl get ns -l type=rack` |
+| **App** | `Namespace` | N/A | `<rack-name>-<app-name>` | `kubectl get ns -l type=app` |
+| **Web Service** | `Deployment`, `Service`, `Ingress`, `HPA` | App | `<service-name>` | `kubectl get deploy,svc,ing,hpa -l service=<web>` |
+| **Worker Service** | `Deployment`, `Service` (if ports) | App | `<service-name>` | `kubectl get deploy -l service=<worker>` |
+| **Agent Service** | `DaemonSet`, `Service` (if ports) | App | `<service-name>` | `kubectl get ds -l service=<agent>` |
+| **Service Pod** | `Pod` | App | `<service-name>-<rs-hash>-<pod-hash>` | `kubectl get pods -l service=<web>` |
+| **Database Resource** | `Deployment`, `Service`, `PVC`, `ConfigMap` | App | `resource-<resource-name>` | `kubectl get all -l resource=<postgres>` |
+| **Cache Resource** | `Deployment`, `Service`, `ConfigMap` | App | `resource-<resource-name>` | `kubectl get all -l resource=<redis>` |
+| **Timer** | `CronJob` | App | `timer-<timer-name>` | `kubectl get cronjob -l system=convox` |
+| **Environment** | `Secret` | App | `env-<service-name>` | `kubectl get secret env-<service-name>` |
+| **Release** | `Label` on resources, `Image Tag` | App | `release=<release-id>` | `kubectl get pods -l release=<RABC1234DEF>` |
+| **Custom Balancer** | `Service` (type: `LoadBalancer`) | App | `balancer-<balancer-name>` | `kubectl get svc -l type=balancer` |
+| **EFS Volume** | `PersistentVolumeClaim` | App | `efs-<service-name>-<volume-id>` | `kubectl get pvc -l system=convox` |
+| **emptyDir Volume** | `Pod.spec.volumes` | App | `ed-<volume-id>` | `kubectl describe pod <pod-name>` |
+| **Init Container** | `Pod.spec.initContainers` | App | `init` | `kubectl describe pod <pod-name>` |
+| **Pod Identity** | `ServiceAccount` | App | `<service-name>` | `kubectl get sa <service-name> -o yaml` |
+
+## Complete convox.yml Example
+
+The following `convox.yml` demonstrates every Convox concept covered in this document. The annotations after the example explain which Kubernetes resources each section generates, so you can use this as a cross-reference when inspecting your cluster with `kubectl`.
+
+```yaml
+environment:
+  - PORT=3000
+  - RAILS_ENV=production
+  - DATABASE_URL
+
+resources:
+  database:
+    type: postgres
+    options:
+      version: "13"
+      storage: 20
+
+  cache:
+    type: redis
+
+  analytics-db:
+    type: rds-postgres
+    options:
+      class: db.t3.large
+      storage: 100
+      version: "13"
+      encrypted: true
+      durable: true
+      deletionProtection: true
+      backupRetentionPeriod: 7
+      preferredBackupWindow: "02:00-03:00"
+
+  sessions:
+    type: elasticache-redis
+    options:
+      class: cache.t3.micro
+      version: "6.2"
+      encrypted: true
+      durable: true
+
+services:
+  web:
+    build:
+      path: .
+      manifest: Dockerfile
+    command: bin/web
+    domain: ${WEB_HOST}
+    port: 3000
+    internal: false
+    annotations:
+      - prometheus.io/scrape=true
+    ingressAnnotations:
+      - nginx.ingress.kubernetes.io/limit-rpm=100
+    labels:
+      convox.com/team: platform
+    environment:
+      - PORT=3000
+      - WEB_HOST
+    health:
+      path: /health
+      grace: 10
+      interval: 5
+      timeout: 3
+    liveness:
+      path: /liveness
+      grace: 15
+      interval: 10
+      timeout: 5
+      successThreshold: 1
+      failureThreshold: 3
+    certificate:
+      duration: 2160h
+    tls:
+      redirect: true
+    deployment:
+      minimum: 50
+      maximum: 200
+    termination:
+      grace: 45
+    lifecycle:
+      preStop: "sleep 10"
+    dnsConfig:
+      ndots: 5
+    sticky: true
+    timeout: 180
+    whitelist: "10.0.0.0/16,192.168.1.0/24"
+    scale:
+      count: 2-10
+      cpu: 250
+      memory: 512
+      limit:
+        cpu: 500
+        memory: 1024
+      targets:
+        cpu: 70
+        memory: 80
+    resources:
+      - database
+      - cache
+      - analytics-db
+      - sessions
+    accessControl:
+      awsPodIdentity:
+        policyArns:
+          - "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+    volumeOptions:
+      - awsEfs:
+          id: "shared-uploads"
+          accessMode: ReadWriteMany
+          mountPath: "/app/public/uploads"
+    initContainer:
+      command: "bin/migrate"
+
+  worker:
+    build: ./worker
+    command: bin/worker
+    environment:
+      - QUEUE_NAME=default
+    ports:
+      - 3001
+      - 3002
+    scale:
+      count: 2
+      cpu: 500
+      memory: 1024
+    resources:
+      - database
+      - cache
+    volumeOptions:
+      - emptyDir:
+          id: "tmp-data"
+          mountPath: "/tmp/processing"
+
+  agent:
+    build: ./agent
+    agent: true
+    ports:
+      - 8125/udp
+      - 8126
+
+  jobs:
+    build: ./jobs
+    scale:
+      count: 0
+    resources:
+      - database
+
+timers:
+  cleanup:
+    command: bin/cleanup
+    schedule: "0 3 * * *"
+    service: jobs
+    concurrency: Forbid
+
+  data-import:
+    command: bin/import
+    schedule: "0 * * * *"
+    service: jobs
+    parallelCount: 4
+    concurrency: Forbid
+    annotations:
+      - monitoring.example.com/alert=true
+
+balancers:
+  tcp-lb:
+    annotations:
+      - service.beta.kubernetes.io/aws-load-balancer-type=nlb
+    service: worker
+    ports:
+      5000: 3001
+      5002: 3002
+```
+
+### How convox.yml Maps to Kubernetes
+
+Convox translates each section of the example above into Kubernetes resources in the app namespace.
+
+**`environment`** creates one `Secret` per service named `env-<service-name>` (`env-web`, `env-worker`, `env-agent`, `env-jobs`). The Secret holds the shared values plus any service-level overrides. Inspect it with `kubectl get secret env-web -n <rack>-<app> -o yaml`.
+
+**`resources`** create backing services in two flavors:
+
+| Resource | `type` | Kubernetes resources | Notes |
+| :--- | :--- | :--- | :--- |
+| `database` | `postgres` | `Deployment`, `Service` (`NodePort`), `PVC`, `ConfigMap` | Containerized. Injects `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASS`, and related vars. |
+| `cache` | `redis` | `Deployment`, `Service` (`NodePort`), `ConfigMap` | Containerized. No `PVC` because Redis is stateless here. |
+| `analytics-db` | `rds-postgres` | `ConfigMap` only | Cloud-managed. The provider runs the instance; Convox exposes it through the ConfigMap and env vars. |
+| `sessions` | `elasticache-redis` | `ConfigMap` only | Cloud-managed. |
+
+Containerized resources are named `resource-<name>` (for example `resource-database`, `resource-cache`). Find their components with `kubectl get deploy,svc,pvc,configmap -l resource=<name>`. Managed resources (`rds-*`, `elasticache-*`) are provisioned in the cloud provider and exposed to the app through the same ConfigMap and env var pattern.
+
+**`services`** map to different workload types based on their configuration:
+
+| Service | Trigger | Kubernetes resources |
+| :--- | :--- | :--- |
+| `web` | `port` set | `Deployment`, `Service` (`ClusterIP`), `Ingress`, `HPA`, `Secret` (`env-web`), and a `ServiceAccount` when `accessControl` is set |
+| `worker` | `ports` defined | `Deployment`, `Secret` (`env-worker`), and a `Service` (because `ports` are defined, for the balancer) |
+| `agent` | `agent: true` | `DaemonSet` (one pod per node), `Service` (because `ports` are defined), `Secret` (`env-agent`) |
+| `jobs` | `scale.count: 0` | `Deployment` with 0 replicas, `Secret` (`env-jobs`). No running pods; used only as the image source for Timers. |
+
+Inspect them with `kubectl get deploy,svc,ing,hpa -l service=web`, `kubectl get deploy -l service=worker`, and `kubectl get ds -l service=agent`.
+
+Service-level settings on `web` generate further Kubernetes detail:
+
+| `convox.yml` field | Kubernetes effect |
+| :--- | :--- |
+| `annotations` | `metadata.annotations` on the Pod and the ServiceAccount |
+| `ingressAnnotations` | `metadata.annotations` on the Ingress |
+| `labels` | Custom labels on all generated resources |
+| `environment` | Merged into the `env-web` Secret |
+| `health` | `readinessProbe` on the container |
+| `liveness` | `livenessProbe` on the container |
+| `certificate.duration` | Duration of the auto-issued TLS certificate |
+| `tls.redirect` | TLS redirect annotation on the Ingress |
+| `deployment.minimum` / `maximum` | `Deployment.spec.strategy` (rolling deployment) |
+| `termination.grace` | `Pod.spec.terminationGracePeriodSeconds` |
+| `lifecycle.preStop` | `Pod.spec.containers[].lifecycle` |
+| `dnsConfig` | `Pod.spec.dnsConfig` |
+| `sticky` | Session-cookie annotation on the Ingress |
+| `timeout` | `proxy-read-timeout` annotation on the Ingress |
+| `whitelist` | `whitelist-source-range` annotation on the Ingress |
+| `scale.count` (range) | `HPA` `minReplicas` / `maxReplicas` |
+| `scale.cpu` / `memory` | Container `resources.requests` |
+| `scale.limit` | Container `resources.limits` |
+| `scale.targets` | `HPA` metrics |
+| `resources` | Env vars injected from each linked resource's ConfigMap |
+| `accessControl.awsPodIdentity` | `ServiceAccount` with an IAM role annotation (inspect with `kubectl describe sa web`) |
+| `volumeOptions.awsEfs` | `PersistentVolumeClaim` plus a `volumeMount` (PVC name `efs-web-shared-uploads`; find it with `kubectl get pvc -l system=convox`) |
+| `initContainer` | `Pod.spec.initContainers` |
+
+The `worker` service shows the `emptyDir` form of `volumeOptions`, which maps to an ephemeral scratch volume in `Pod.spec.volumes` rather than a PVC.
+
+**`timers`** each create a `CronJob` named `timer-<timer-name>` (`timer-cleanup`, `timer-data-import`). The `data-import` timer sets `parallelCount: 4`, which maps to `parallelism: 4` on the Job, and each replica receives a `TIMER_INDEX` env var (`0`, `1`, `2`, `3`). List them with `kubectl get cronjobs -l system=convox` and find the resulting jobs with `kubectl get jobs -l name=<timer-name>`.
+
+**`balancers`** each create a `Service` of type `LoadBalancer` named `balancer-<balancer-name>` (`balancer-tcp-lb`). Find them with `kubectl get svc -l type=balancer`.
+
+## Detailed Mappings
+
+### Rack
+
+A Convox Rack's system components are deployed into a dedicated Kubernetes namespace.
+
+-   **K8s Resource**: `Namespace`
+-   **Naming Pattern**: `<rack-name>-system`
+-   **`kubectl` Commands**:
+    ```bash
+    # View the rack system namespace
+    kubectl get namespace my-rack-system
+
+    # View all system components running in the rack
+    kubectl get all -n my-rack-system
+    ```
+
+### Apps
+
+Each Convox App is deployed into its own dedicated Kubernetes namespace.
+
+-   **K8s Resource**: `Namespace`
+-   **Naming Pattern**: `<rack-name>-<app-name>`
+-   **`kubectl` Commands**:
+    ```bash
+    # View the namespace for a specific app
+    kubectl get namespace my-rack-my-app
+
+    # View all resources for a specific app
+    kubectl get all -n my-rack-my-app
+    ```
+
+### Services
+
+Services defined in `convox.yml` are the core of your application. They map to different Kubernetes workload resources based on their configuration.
+
+#### Web Services
+
+A standard, publicly-exposed service with an HTTP/HTTPS endpoint.
+
+-   **K8s Resources**: `Deployment`, `Service` (type `ClusterIP`), `Ingress`, `HorizontalPodAutoscaler` (if autoscaling is enabled).
+-   **Naming Pattern**: All resources are named after the service (e.g., `web`).
+-   **YAML Snippet (`Deployment`)**:
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: web # from convox.yml: services.web
+      namespace: my-rack-my-app
+      labels:
+        app: my-app
+        rack: my-rack
+        service: web
+        system: convox
+    spec:
+      replicas: 2 # from convox.yml: scale.count
+      selector:
+        matchLabels:
+          service: web
+      template:
+        metadata:
+          labels:
+            service: web
+        spec:
+          terminationGracePeriodSeconds: 45 # from convox.yml: termination.grace
+          containers:
+            - name: my-app
+              image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-rack/my-app:web.RABC1234DEF
+              ports:
+                - containerPort: 3000 # from convox.yml: services.web.port
+              readinessProbe: # from convox.yml: services.web.health
+                httpGet:
+                  path: /health
+                  port: 3000
+                initialDelaySeconds: 10
+              livenessProbe: # from convox.yml: services.web.liveness
+                httpGet:
+                  path: /liveness
+                  port: 3000
+                initialDelaySeconds: 15
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Get all primary resources for the 'web' service
+    kubectl get deploy,svc,ing,hpa -n my-rack-my-app -l service=web
+
+    # Describe the deployment to see its status and configuration
+    kubectl describe deployment web -n my-rack-my-app
+
+    # View the running pods for the service
+    kubectl get pods -n my-rack-my-app -l service=web
+    ```
+
+#### Worker Services
+
+A background service that does not expose a public endpoint.
+
+-   **K8s Resources**: `Deployment`. A `Service` (type `ClusterIP`) is created only if `ports` are defined for internal communication or for a custom balancer.
+-   **Naming Pattern**: `<service-name>` (e.g., `worker`).
+-   **YAML Snippet (`Deployment`)**:
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: worker # from convox.yml: services.worker
+      namespace: my-rack-my-app
+    spec:
+      replicas: 2 # from convox.yml: scale.count
+      template:
+        spec:
+          containers:
+            - name: my-app
+              command: ["node", "worker/index.js"] # from convox.yml: services.worker.command
+              # No 'ports' section unless defined in convox.yml
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Get the deployment for the 'worker' service
+    kubectl get deployment worker -n my-rack-my-app
+
+    # Tail logs from all worker pods
+    kubectl logs -f -n my-rack-my-app -l service=worker
+    ```
+
+#### Agent Services
+
+A service that runs one pod on every node in the cluster.
+
+-   **K8s Resource**: `DaemonSet`.
+-   **Naming Pattern**: `<service-name>` (e.g., `agent`).
+-   **YAML Snippet (`DaemonSet`)**:
+    ```yaml
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      name: agent # from convox.yml: services.agent
+      namespace: my-rack-my-app
+    spec:
+      template:
+        spec:
+          containers:
+            - name: my-app
+              ports:
+                - containerPort: 8125
+                  hostPort: 8125 # from convox.yml: services.agent.ports
+                  protocol: UDP
+                - containerPort: 8126
+                  hostPort: 8126
+                  protocol: TCP
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Get the DaemonSet for the 'agent' service
+    kubectl get daemonset agent -n my-rack-my-app
+
+    # Check which nodes the agent pods are running on
+    kubectl get pods -n my-rack-my-app -l service=agent -o wide
+    ```
+
+### Resources
+
+Convox can provision containerized or cloud-managed (e.g., AWS RDS) backing services.
+
+#### Stateful Resources (e.g., Postgres, MySQL)
+
+-   **K8s Resources**: `Deployment`, `Service` (type `NodePort`), `PersistentVolumeClaim` (PVC), and a `ConfigMap` for connection details.
+-   **Naming Pattern**: `resource-<resource-name>` (e.g., `resource-main-pg`).
+-   **YAML Snippet (`Deployment`)**:
+    ```yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: resource-main-pg # from convox.yml: resources.main-pg
+      labels:
+        type: resource
+        resource: main-pg
+    spec:
+      strategy:
+        type: Recreate # Ensures only one pod is running at a time
+      template:
+        spec:
+          containers:
+            - name: postgres
+              image: postgres:13 # from convox.yml: resources.main-pg.type/version
+              volumeMounts:
+                - name: data
+                  mountPath: /var/lib/postgresql/data
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: resource-main-pg
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Get all components for a postgres resource
+    kubectl get deploy,svc,pvc,configmap -n my-rack-my-app -l resource=main-pg
+
+    # View the connection details stored in the ConfigMap
+    kubectl get configmap resource-main-pg -n my-rack-my-app -o yaml
+    ```
+
+#### Stateless Resources (e.g., Redis, Memcached)
+
+-   **K8s Resources**: `Deployment`, `Service` (type `NodePort`), and a `ConfigMap`. No `PersistentVolumeClaim` is created.
+-   **`kubectl` Commands**:
+    ```bash
+    # Get all components for a redis resource
+    kubectl get deploy,svc,configmap -n my-rack-my-app -l resource=redis
+    ```
+
+### Timers
+
+Scheduled tasks defined in `convox.yml`.
+
+-   **K8s Resource**: `CronJob`
+-   **Naming Pattern**: `timer-<timer-name>` (e.g., `timer-hourly-cleanup`).
+-   **YAML Snippet (`CronJob`)**:
+    ```yaml
+    apiVersion: batch/v1
+    kind: CronJob
+    metadata:
+      name: timer-hourly-cleanup # from convox.yml: timers.hourly-cleanup
+      namespace: my-rack-my-app
+    spec:
+      schedule: "0 * * * *" # from convox.yml: schedule
+      jobTemplate:
+        spec:
+          template:
+            spec:
+              containers:
+                - name: my-app
+                  image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-rack/my-app:worker.RABC1234DEF # from convox.yml: service
+                  args: ["./scripts/hourly-cleanup.sh"] # from convox.yml: command
+              restartPolicy: Never
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # List all CronJobs for the app
+    kubectl get cronjobs -n my-rack-my-app
+
+    # View the jobs created by a CronJob
+    kubectl get jobs -n my-rack-my-app --watch
+
+    # View logs from the most recent job pod for a timer
+    kubectl logs -n my-rack-my-app -l name=hourly-cleanup
+    ```
+
+### Environment
+
+Environment variables are stored as Kubernetes Secrets and injected into pods.
+
+-   **K8s Resource**: `Secret`
+-   **Naming Pattern**: `env-<service-name>`
+-   **Injection Method**: The `envFrom` field in the container spec references the Secret.
+-   **YAML Snippet (`Pod` spec)**:
+    ```yaml
+    spec:
+      containers:
+        - name: my-app
+          envFrom:
+            - secretRef:
+                name: env-web # Contains all env vars for the 'web' service
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # View a service's environment secret (values are base64 encoded)
+    kubectl get secret env-web -n my-rack-my-app -o yaml
+
+    # Decode a specific secret value
+    kubectl get secret env-web -n my-rack-my-app -o jsonpath='{.data.API_KEY}' | base64 --decode
+    ```
+
+### Volumes
+
+Convox supports both ephemeral (`emptyDir`) and persistent (`awsEfs`) volumes.
+
+-   **`emptyDir`**: Maps directly to an `emptyDir` volume in the Pod spec.
+-   **`awsEfs`**: Creates a `PersistentVolumeClaim` (PVC) which is then mounted by the Pod.
+-   **Naming Pattern (PVC)**: `efs-<service-name>-<volume-id>`
+-   **YAML Snippet (`Pod` spec for EFS)**:
+    ```yaml
+    spec:
+      containers:
+      - name: my-app
+        volumeMounts:
+          - name: efs-shared-data # from convox.yml: volumeOptions.awsEfs.id
+            mountPath: /data/shared # from convox.yml: mountPath
+      volumes:
+        - name: efs-shared-data
+          persistentVolumeClaim:
+            claimName: efs-storage-shared-data
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # List all PersistentVolumeClaims in the app namespace
+    kubectl get pvc -n my-rack-my-app
+
+    # Describe a PVC to see its status and the PersistentVolume it's bound to
+    kubectl describe pvc efs-storage-shared-data -n my-rack-my-app
+    ```
+
+### Scaling
+
+Service scaling settings in `convox.yml` map to `Deployment` replicas and `HorizontalPodAutoscaler` resources.
+
+-   **`scale.count` (fixed)**: Sets `spec.replicas` in the `Deployment`.
+-   **`scale.count` (range)**: Creates a `HorizontalPodAutoscaler` (HPA).
+-   **`scale.cpu`/`memory`**: Sets `spec.template.spec.containers[].resources.requests` and `.limits`.
+-   **`scale.targets`**: Sets the target utilization in the `HPA` spec.
+-   **YAML Snippet (`HPA`)**:
+    ```yaml
+    apiVersion: autoscaling/v2
+    kind: HorizontalPodAutoscaler
+    metadata:
+      name: web # from convox.yml: services.web
+    spec:
+      scaleTargetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: web
+      minReplicas: 2 # from convox.yml: scale.count (min)
+      maxReplicas: 5 # from convox.yml: scale.count (max)
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70 # from convox.yml: scale.targets.cpu
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Describe the HPA to see its current metrics and scaling events
+    kubectl describe hpa web -n my-rack-my-app
+
+    # Manually scale a deployment (will be overridden by HPA if active)
+    kubectl scale deployment/web --replicas=3 -n my-rack-my-app
+    ```
+
+### Balancers
+
+Custom balancers defined in `convox.yml`.
+
+-   **K8s Resource**: `Service` of type `LoadBalancer`.
+-   **Naming Pattern**: `balancer-<balancer-name>`
+-   **Port Names**: the balancer port number. A port with `protocol: TCP_UDP` renders as two `ServicePort` entries at the same number, named `<port>-tcp` and `<port>-udp`. Changing a port between `TCP` and `TCP_UDP` renames its entries, from `5000` to `5000-tcp` and back. An allocated node port follows the port number and protocol rather than the name, so it survives the rename and is released only when that number and protocol leave the Service. A balancer with `awsLoadBalancerController: true` registers targets by Pod IP, so no traffic uses the node port.
+-   **YAML Snippet (`Service`)**:
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: balancer-tcp-lb # from convox.yml: balancers.tcp-lb
+      labels:
+        type: balancer
+    spec:
+      type: LoadBalancer
+      selector:
+        service: worker # from convox.yml: balancers.tcp-lb.service
+      ports:
+        - name: "6000"
+          port: 6000 # from convox.yml: ports
+          protocol: TCP
+          targetPort: 6001
+    ```
+-   **YAML Snippet (`Service` for a `TCP_UDP` port)**: a `TCP_UDP` port requires `awsLoadBalancerController: true`, and Convox generates the annotations that hand the Service to the AWS Load Balancer Controller. See [Load Balancers](/configuration/load-balancers).
+    ```yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: balancer-dns # from convox.yml: balancers.dns
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-enable-tcp-udp-listener: "true"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+      labels:
+        type: balancer
+    spec:
+      type: LoadBalancer
+      selector:
+        service: resolver # from convox.yml: balancers.dns.service
+      ports:
+        - name: 5353-tcp
+          port: 5353 # from convox.yml: ports, protocol: TCP_UDP
+          protocol: TCP
+          targetPort: 5300
+        - name: 5353-udp
+          port: 5353
+          protocol: UDP
+          targetPort: 5300
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Get all custom balancers for an app
+    kubectl get svc -n my-rack-my-app -l type=balancer
+
+    # Get the external IP or hostname of a balancer
+    kubectl get svc balancer-tcp-lb -n my-rack-my-app -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+    ```
+
+### Pod Identity (AWS)
+
+The `accessControl.awsPodIdentity` feature maps to an EKS Pod Identity association.
+
+-   **K8s Resources**: `ServiceAccount` with AWS role annotations, and specific `volumeMounts` and `env` vars injected into the `Pod`.
+-   **YAML Snippet (`ServiceAccount`)**:
+    ```yaml
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: s3-service # from convox.yml: services.s3-service
+      namespace: my-rack-my-app
+      annotations:
+        # This annotation is added by Convox to associate the SA with an IAM role
+        eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/convox-my-rack-my-app-s3-service
+    ```
+-   **`kubectl` Commands**:
+    ```bash
+    # Describe the ServiceAccount to see its annotations
+    kubectl describe sa s3-service -n my-rack-my-app
+
+    # Exec into a pod to verify AWS identity
+    kubectl exec -it <pod-name> -n my-rack-my-app -- aws sts get-caller-identity
+    ```
+
+## Troubleshooting Cheat Sheet
+
+### Finding Things
+
+Use labels to quickly find all resources related to a specific Convox primitive.
+
+| Task | `kubectl` Command |
+| :--- | :--- |
+| Find all resources for an app | `kubectl get all -n my-rack-my-app` |
+| Find all pods for a service | `kubectl get pods -n my-rack-my-app -l service=web` |
+| Find all pods for a release | `kubectl get pods -n my-rack-my-app -l release=RABC1234DEF` |
+| Find the deployment for a service | `kubectl get deployment -n my-rack-my-app -l service=web` |
+| Find the CronJob for a timer | `kubectl get cronjob -n my-rack-my-app -l system=convox,type=timer` |
+| Find the Service for a resource | `kubectl get svc -n my-rack-my-app -l resource=main-pg` |
+
+### Common Issues
+
+| Convox Symptom | K8s Root Cause | Investigation Steps (`kubectl`) |
+| :--- | :--- | :--- |
+| **Deployment fails or rolls back** | Pods are not becoming "Ready". Common reasons: `CrashLoopBackOff`, `ImagePullBackOff`, failing readiness probes. | 1. `kubectl get pods -n my-rack-my-app -l service=<service>` (Check STATUS); 2. `kubectl describe pod <pod-name> -n my-rack-my-app` (Look at Events); 3. `kubectl logs <pod-name> -n my-rack-my-app` (Check for application errors) |
+| **Service is unreachable (503 error)** | No healthy pods are available to receive traffic. Service selector might be wrong, or all pods are failing health checks. | 1. `kubectl describe svc <service> -n my-rack-my-app` (Check Endpoints); 2. `kubectl get pods -l service=<service> -n my-rack-my-app` (Ensure pods are Running/Ready); 3. `kubectl describe ing <service> -n my-rack-my-app` (Check backend service/port) |
+| **App has no logs** | Pods are in `CrashLoopBackOff` and restart before logging, or the logging driver has issues. | 1. `kubectl logs --previous <pod-name> -n my-rack-my-app` (Get logs from previous failed container); 2. `kubectl describe pod <pod-name> -n my-rack-my-app` (Check `Restart Count` and `Events`) |
+| **`convox run` fails** | Insufficient cluster resources (`Pending` state), image pull error, or command exits immediately. | 1. `kubectl get pods -n my-rack-my-app` (Find the one-off pod); 2. `kubectl describe pod <pod-name> -n my-rack-my-app` (Check Events for scheduling errors); 3. `kubectl logs <pod-name> -n my-rack-my-app` (See command output/errors) |
+| **Timer job never runs** | CronJob schedule is invalid, or the job fails to create pods. | 1. `kubectl describe cronjob timer-<timer-name> -n my-rack-my-app` (Check schedule and events); 2. `kubectl get jobs -n my-rack-my-app` (See if jobs are being created); 3. `kubectl logs $(kubectl get pods -l name=<timer-name> -o jsonpath='{.items[0].metadata.name}')` |
+| **Autoscaling not working** | HPA can't fetch metrics, or resource requests are not set on pods. | 1. `kubectl describe hpa <service> -n my-rack-my-app` (Look at Events and Metrics); 2. `kubectl get --raw "/apis/metrics.k8s.io/v1beta1/namespaces/my-rack-my-app/pods" \| jq .` (Check if metrics are available) |
+| **Persistent data is lost** | PVC is not configured correctly, or the pod is not mounting the volume. | 1. `kubectl get pvc -n my-rack-my-app` (Check PVC status is `Bound`); 2. `kubectl describe pod <pod-name> -n my-rack-my-app` (Verify `Volumes` and `Volume Mounts` sections) |

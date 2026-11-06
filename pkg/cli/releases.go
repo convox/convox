@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -14,30 +16,35 @@ import (
 )
 
 func init() {
-	register("releases", "list releases for an app", Releases, stdcli.CommandOptions{
-		Flags:    append(stdcli.OptionFlags(structs.ReleaseListOptions{}), flagRack, flagApp),
+	register("releases", "list releases for an app", watch(Releases), stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ReleaseListOptions{}), flagRack, flagApp, flagWatchInterval),
 		Validate: stdcli.Args(0),
-	})
+	}, WithCloud())
+
+	register("releases create-from", "create a new release using the build from one release and the environment from another for an app", ReleasesCreateFrom, stdcli.CommandOptions{
+		Flags:    append(stdcli.OptionFlags(structs.ReleaseCreateFromOptions{}), flagRack, flagApp),
+		Validate: stdcli.Args(0),
+	}, WithCloud())
 
 	register("releases info", "get information about a release", ReleasesInfo, stdcli.CommandOptions{
-		Flags:    []stdcli.Flag{flagApp, flagRack},
+		Flags:    []stdcli.Flag{flagApp, flagRack, stdcli.BoolFlag("reveal", "", "show unmasked env values")},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("releases manifest", "get manifest for a release", ReleasesManifest, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 
 	register("releases promote", "promote a release", ReleasesPromote, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagRack, flagForce},
 		Validate: stdcli.ArgsMax(1),
-	})
+	}, WithCloud())
 
 	register("releases rollback", "copy an old release forward and promote it", ReleasesRollback, stdcli.CommandOptions{
 		Flags:    []stdcli.Flag{flagApp, flagId, flagRack, flagForce},
 		Validate: stdcli.Args(1),
-	})
+	}, WithCloud())
 }
 
 func Releases(rack sdk.Interface, c *stdcli.Context) error {
@@ -72,6 +79,67 @@ func Releases(rack sdk.Interface, c *stdcli.Context) error {
 	return t.Print()
 }
 
+func ReleasesCreateFrom(rack sdk.Interface, c *stdcli.Context) error {
+	var opts structs.ReleaseCreateFromOptions
+
+	if err := c.Options(&opts); err != nil {
+		return err
+	}
+
+	if (opts.BuildFrom == nil && opts.UseActiveReleaseBuild == nil) || (opts.BuildFrom != nil && opts.UseActiveReleaseBuild != nil) {
+		return fmt.Errorf("must specify either --build-from or --use-active-release-build")
+	}
+
+	if (opts.EnvFrom == nil && opts.UseActiveReleaseEnv == nil) || (opts.EnvFrom != nil && opts.UseActiveReleaseEnv != nil) {
+		return fmt.Errorf("must specify either --env-from or --use-active-release-env")
+	}
+
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
+
+	buildRelease := a.Release
+	if opts.BuildFrom != nil {
+		buildRelease = *opts.BuildFrom
+	}
+
+	buildRs, err := rack.ReleaseGet(app(c), buildRelease)
+	if err != nil {
+		return err
+	}
+
+	envRelease := a.Release
+	if opts.EnvFrom != nil {
+		envRelease = *opts.EnvFrom
+	}
+
+	envRs, err := rack.ReleaseGet(app(c), envRelease)
+	if err != nil {
+		return err
+	}
+
+	c.Writef("Using build from release: %s\n", buildRs.Id)
+	c.Writef("Using env from release: %s\n", envRs.Id)
+
+	result, err := rack.ReleaseCreate(app(c), structs.ReleaseCreateOptions{
+		Build:       options.String(buildRs.Build),
+		Env:         options.String(envRs.Env),
+		Description: options.String(fmt.Sprintf("Created from build release: %s and environment release: %s", buildRs.Id, envRs.Id)),
+	})
+	if err != nil {
+		return err
+	}
+
+	c.Writef("Created release: %s\n", result.Id)
+
+	if opts.Promote != nil && *opts.Promote {
+		return releasePromote(rack, c, app(c), result.Id, false)
+	}
+
+	return c.OK()
+}
+
 func ReleasesInfo(rack sdk.Interface, c *stdcli.Context) error {
 	r, err := rack.ReleaseGet(app(c), c.Arg(0))
 	if err != nil {
@@ -84,7 +152,19 @@ func ReleasesInfo(rack sdk.Interface, c *stdcli.Context) error {
 	i.Add("Build", r.Build)
 	i.Add("Created", r.Created.Format(time.RFC3339))
 	i.Add("Description", r.Description)
-	i.Add("Env", r.Env)
+
+	envDisplay := r.Env
+	if !c.Bool("reveal") && c.Writer().IsTerminal() {
+		if masked := maskedKeysSet(rack, app(c)); masked != nil {
+			env := structs.Environment{}
+			if err := env.Load([]byte(r.Env)); err == nil {
+				envDisplay = env.StringMasked(masked)
+			}
+			// env.Load failure: fall through with raw r.Env (no masking, but no crash)
+		}
+	}
+
+	i.Add("Env", envDisplay)
 
 	return i.Print()
 }
@@ -144,21 +224,37 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 		c.Startf("Waiting for app to be ready")
 
 		if err := common.WaitForAppRunning(rack, app); err != nil {
+			if errors.Is(err, common.ErrRolloutFailed) {
+				return fmt.Errorf("release %s for %s was not promoted, another rollout failed while it waited\n  convox deploy-debug -a %s", id, app, app)
+			}
 			return err
 		}
 
 		c.OK()
+
+		a, err = rack.AppGet(app)
+		if err != nil {
+			return err
+		}
 	}
 
+	previous := a.Release
+
 	c.Startf("Promoting <release>%s</release>", id)
+	c.Writef("\n")
+
+	ctx, cancel := context.WithCancel(c.Context)
+
+	go printPromotingInProgress(ctx, c)
 
 	if err := rack.ReleasePromote(app, id, structs.ReleasePromoteOptions{
 		Force: &force,
 	}); err != nil {
+		cancel()
 		return err
 	}
 
-	c.Writef("\n")
+	cancel()
 
 	if err := common.WaitForAppWithLogs(rack, c, app); err != nil {
 		return err
@@ -169,11 +265,22 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 		return err
 	}
 
-	if a.Release != id {
-		return fmt.Errorf("rollback")
+	if err := promoteResult(app, id, previous, a.Release); err != nil {
+		return err
 	}
 
 	return c.OK()
+}
+
+func promoteResult(app, id, previous, current string) error {
+	switch current {
+	case id:
+		return nil
+	case previous, "":
+		return common.RolloutFailedError(app)
+	default:
+		return fmt.Errorf("release %s for %s was superseded by %s\n  convox releases info %s -a %s", id, app, current, current, app)
+	}
 }
 
 func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
@@ -205,6 +312,13 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Promoting <release>%s</release>", rn.Id)
 
+	a, err := rack.AppGet(app(c))
+	if err != nil {
+		return err
+	}
+
+	previous := a.Release
+
 	force := c.Bool("force")
 	if err := rack.ReleasePromote(app(c), rn.Id, structs.ReleasePromoteOptions{
 		Force: &force,
@@ -218,17 +332,17 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	a, err := rack.AppGet(app(c))
+	a, err = rack.AppGet(app(c))
 	if err != nil {
 		return err
 	}
 
-	if a.Release != rn.Id {
-		return fmt.Errorf("rollback")
+	if err := promoteResult(app(c), rn.Id, previous, a.Release); err != nil {
+		return err
 	}
 
 	if c.Bool("id") {
-		fmt.Fprintf(stdout, rn.Id)
+		fmt.Fprintf(stdout, "%s", rn.Id)
 	}
 
 	return c.OK()

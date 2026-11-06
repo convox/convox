@@ -3,8 +3,8 @@ variable "high_availability" {
 }
 
 variable "k8s_version" {
-  type = string
-  default = "1.24"
+  type    = string
+  default = "1.36"
 }
 
 variable "name" {
@@ -13,6 +13,11 @@ variable "name" {
 
 variable "node_type" {
   type = string
+}
+
+variable "terraform_update_timeout" {
+  type    = string
+  default = "2h"
 }
 
 variable "region" {

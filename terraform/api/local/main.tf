@@ -23,6 +23,7 @@ module "k8s" {
   replicas                  = 1
   resolver                  = var.resolver
   set_priority_class        = false
+  webhook_signing_key       = var.webhook_signing_key
 
   annotations = {
     "cert-manager.io/cluster-issuer" = "self-signed"

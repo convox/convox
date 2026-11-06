@@ -1,14 +1,17 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/convox/convox"
 	"github.com/convox/convox/pkg/docs"
 	"github.com/convox/stdapi"
-	"github.com/gobuffalo/packr"
 	"github.com/pkg/errors"
 )
 
@@ -30,6 +33,13 @@ var categorySlugs = []string{
 }
 
 var (
+
+	// go:embed templates/*
+	templatesFS embed.FS
+
+	// go:embed public/*
+	publicFS embed.FS
+
 	documents *docs.Documents
 )
 
@@ -47,16 +57,26 @@ func run() error {
 		return err
 	}
 
-	s.Router.Static("/assets", packr.NewBox("./public/assets"))
-	s.Router.Static("/images", packr.NewBox("./public/images"))
+	assetFs, err := fs.Sub(publicFS, "assets")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	imagesFs, err := fs.Sub(publicFS, "images")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	s.Router.Static("/assets", http.FS(assetFs))
+	s.Router.Static("/images", http.FS(imagesFs))
 
 	s.Route("GET", "/", index)
 	s.Route("GET", "/toc/{slug:.*}", toc)
 	s.Route("GET", "/{slug:.*}", doc)
 
-	stdapi.LoadTemplates(packr.NewBox("./templates"), helpers)
+	stdapi.LoadTemplates(http.FS(templatesFS), helpers)
 
-	if err := s.Listen("https", ":3000"); err != nil {
+	if err := s.Listen("http", ":3000"); err != nil {
 		return err
 	}
 
@@ -114,7 +134,7 @@ func index(c *stdapi.Context) error {
 }
 
 func loadDocuments() error {
-	ds, err := docs.Load(packr.NewBox("../../docs"))
+	ds, err := docs.Load(convox.DocsFS, "docs")
 	if err != nil {
 		return err
 	}

@@ -1,18 +1,68 @@
 provider "kubernetes" {
-  cluster_ca_certificate = base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
-  host                   = aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
 
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", var.name]
-    command     = "aws"
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+      command     = "aws"
+    }
   }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
+}
+
+provider "helm" {
+  kubernetes {
+    cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+    host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
+
+    dynamic "exec" {
+      for_each = var.private_eks_host != "" ? [] : [1]
+      content {
+        api_version = "client.authentication.k8s.io/v1beta1"
+        args        = ["eks", "get-token", "--cluster-name", var.name]
+        command     = "aws"
+      }
+    }
+
+    insecure = var.private_eks_host != "" ? true : false
+    username = var.private_eks_host != "" ? var.private_eks_user : null
+    password = var.private_eks_host != "" ? var.private_eks_pass : null
+  }
+}
+
+provider "kubectl" {
+  host                   = var.private_eks_host != "" ? var.private_eks_host : aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = var.private_eks_host != "" ? null : base64decode(aws_eks_cluster.cluster.certificate_authority.0.data)
+  load_config_file       = false # prevents reading local kubeconfig in CI
+
+  dynamic "exec" {
+    for_each = var.private_eks_host != "" ? [] : [1]
+    content {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      args        = ["eks", "get-token", "--cluster-name", var.name]
+      command     = "aws"
+    }
+  }
+
+  insecure = var.private_eks_host != "" ? true : false
+  username = var.private_eks_host != "" ? var.private_eks_user : null
+  password = var.private_eks_host != "" ? var.private_eks_pass : null
 }
 
 locals {
   availability_zones     = var.availability_zones != "" ? compact(split(",", var.availability_zones)) : data.aws_availability_zones.available.names
   network_resource_count = var.high_availability ? 3 : 2
+  node_types             = compact([for t in split(",", random_id.node_group.keepers.node_type) : trimspace(t)])
   oidc_sub               = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
+
+  cluster_node_group_names = [for i in range(var.high_availability ? 3 : 1) : "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[i].availability_zone : data.aws_subnet.public_subnet_details[i].availability_zone}${length(local.node_types) > 1 ? "m" : ""}-${i}${random_id.node_group.hex}"]
+  build_node_group_names   = [for i in range(var.build_node_enabled ? 1 : 0) : "${var.name}-build-${var.private ? data.aws_subnet.private_subnet_details[i].availability_zone : data.aws_subnet.public_subnet_details[i].availability_zone}-${i}${random_id.build_node_group[0].hex}"]
 }
 
 data "aws_availability_zones" "available" {
@@ -49,10 +99,18 @@ resource "aws_eks_cluster" "cluster" {
   version  = var.k8s_version
 
   vpc_config {
-    endpoint_public_access  = true
-    endpoint_private_access = false
+    endpoint_public_access = var.disable_public_access ? false : true
+    // if public access is disabled, then private access must be true
+    endpoint_private_access = var.disable_public_access ? true : var.enable_private_access
+    public_access_cidrs     = var.public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
-    subnet_ids              = concat(local.public_subnets_ids)
+    subnet_ids              = var.eks_control_plane_private_subnets ? local.private_subnets_ids : local.public_subnets_ids
+  }
+
+  enabled_cluster_log_types = var.eks_log_types
+
+  lifecycle {
+    ignore_changes = [access_config]
   }
 }
 
@@ -67,8 +125,11 @@ resource "random_id" "node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "2"
-    node_capacity_type  = var.node_capacity_type
+    dummy = "3"
+    # E1 FIX: Use effective capacity type, not raw variable.
+    # Without this, SPOT/MIXED racks fail on karpenter toggle because
+    # capacity_type is ForceNew but the node group name doesn't change.
+    node_capacity_type  = var.karpenter_enabled ? "ON_DEMAND" : var.node_capacity_type
     node_disk           = var.node_disk
     node_type           = var.node_type
     private             = var.private
@@ -84,10 +145,11 @@ resource "random_id" "build_node_group" {
   byte_length = 8
 
   keepers = {
-    dummy               = "2"
+    dummy               = "3"
     node_disk           = var.node_disk
     node_type           = var.build_node_type
     private_subnets_ids = join("-", local.private_subnets_ids)
+    public_subnets_ids  = join("-", local.public_subnets_ids)
     role_arn            = replace(aws_iam_role.nodes.arn, "role/convox/", "role/") # eks barfs on roles with paths
   }
 }
@@ -100,30 +162,83 @@ resource "aws_eks_node_group" "cluster" {
 
   count = var.high_availability ? 3 : 1
 
-  ami_type        = var.gpu_type ? "AL2_x86_64_GPU" : var.arm_type ? "AL2_ARM_64" : "AL2_x86_64"
-  capacity_type   = var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
+  ami_type = var.gpu_type ? "AL2023_x86_64_NVIDIA" : var.arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
+  # When Karpenter is enabled, ALL system nodes must be ON_DEMAND to prevent
+  # spot reclamation of Karpenter controller nodes.
+  capacity_type = var.karpenter_enabled ? "ON_DEMAND" : (
+    var.node_capacity_type == "MIXED" ? count.index == 0 ? "ON_DEMAND" : "SPOT" : var.node_capacity_type
+  )
   cluster_name    = aws_eks_cluster.cluster.name
-  node_group_name = "${var.name}-${var.private ? data.aws_subnet.private_subnet_details[count.index].availability_zone : data.aws_subnet.public_subnet_details[count.index].availability_zone}-${count.index}${random_id.node_group.hex}"
+  instance_types  = length(local.node_types) > 1 ? local.node_types : null
+  node_group_name = local.cluster_node_group_names[count.index]
   node_role_arn   = random_id.node_group.keepers.role_arn
   subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
+  release_version = lookup(local.node_ami_release, local.cluster_node_group_names[count.index], null)
+
+  labels = var.karpenter_auth_mode ? { "convox.io/system-node" = "true" } : {}
+
+  dynamic "taint" {
+    for_each = var.karpenter_enabled ? [1] : []
+    content {
+      key    = "convox.io/system-node"
+      value  = "true"
+      effect = "NO_SCHEDULE"
+    }
+  }
 
   launch_template {
     id      = aws_launch_template.cluster.id
-    version = "$Latest"
+    version = aws_launch_template.cluster.latest_version
   }
 
+  # System nodes remain in all AZs regardless of Karpenter state.
+  # Karpenter provisions workload nodes separately across all AZs.
   scaling_config {
-    desired_size = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
-    min_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
-    max_size     = var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
+    desired_size = var.karpenter_enabled ? (
+      count.index <= 2 ? var.karpenter_system_node_min_count_per_az : 0
+      ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    )
+    min_size = var.karpenter_enabled ? (
+      count.index <= 2 ? var.karpenter_system_node_min_count_per_az : 0
+      ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.min_on_demand_count : 1 : 1
+    )
+    max_size = var.karpenter_enabled ? (
+      count.index <= 2 ? 100 : 0
+      ) : (
+      var.node_capacity_type == "MIXED" ? count.index == 0 ? var.max_on_demand_count : 100 : 100
+    )
+  }
+
+  dynamic "update_config" {
+    for_each = var.node_max_unavailable_percentage > 0 ? [var.node_max_unavailable_percentage] : []
+    content {
+      max_unavailable_percentage = var.node_max_unavailable_percentage
+    }
   }
 
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [scaling_config[0].desired_size]
   }
+
+  timeouts {
+    update = var.terraform_update_timeout
+    delete = "1h"
+    create = "1h"
+  }
+}
+
+module "asg_tags_cluster" {
+  source = "../../helpers/aws-asg-tag"
+
+  count = var.high_availability ? 3 : 1
+
+  asg_name = aws_eks_node_group.cluster[count.index].resources[0].autoscaling_groups[0].name
+  asg_tags = local.tags
 }
 
 resource "aws_eks_node_group" "cluster-build" {
@@ -132,17 +247,17 @@ resource "aws_eks_node_group" "cluster-build" {
     aws_iam_openid_connect_provider.cluster,
   ]
 
-  count = var.build_node_enabled ? 1 : 0
-
-  ami_type        = var.build_gpu_type ? "AL2_x86_64_GPU" : var.build_arm_type ? "AL2_ARM_64" : "AL2_x86_64"
+  count           = var.build_node_enabled ? 1 : 0
+  ami_type        = var.build_gpu_type ? "AL2023_x86_64_NVIDIA" : var.build_arm_type ? "AL2023_ARM_64_STANDARD" : "AL2023_x86_64_STANDARD"
   capacity_type   = "ON_DEMAND"
   cluster_name    = aws_eks_cluster.cluster.name
-  instance_types  = split(",", random_id.build_node_group[0].keepers.node_type)
-  node_group_name = "${var.name}-build-${data.aws_subnet.private_subnet_details[count.index].availability_zone}-${count.index}${random_id.build_node_group[0].hex}"
+  instance_types  = compact([for t in split(",", random_id.build_node_group[0].keepers.node_type) : trimspace(t)])
+  node_group_name = local.build_node_group_names[count.index]
   node_role_arn   = random_id.build_node_group[0].keepers.role_arn
-  subnet_ids      = [local.private_subnets_ids[count.index]]
+  subnet_ids      = [var.private ? local.private_subnets_ids[count.index] : local.public_subnets_ids[count.index]]
   tags            = local.tags
   version         = var.k8s_version
+  release_version = lookup(local.node_ami_release, local.build_node_group_names[count.index], null)
 
   labels = {
     "convox-build" : "true"
@@ -156,18 +271,34 @@ resource "aws_eks_node_group" "cluster-build" {
 
   launch_template {
     id      = aws_launch_template.cluster-build.id
-    version = "$Latest"
+    version = aws_launch_template.cluster-build.latest_version
   }
 
   scaling_config {
-    desired_size = var.build_node_min_count
-    min_size     = var.build_node_min_count
+    desired_size = var.karpenter_enabled ? 0 : var.build_node_min_count
+    min_size     = var.karpenter_enabled ? 0 : var.build_node_min_count
     max_size     = 100
+  }
+
+  timeouts {
+    update = var.terraform_update_timeout
+    delete = "1h"
+    create = "1h"
   }
 
   lifecycle {
     create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
   }
+}
+
+module "asg_tags_build" {
+  source = "../../helpers/aws-asg-tag"
+
+  count = var.build_node_enabled ? 1 : 0
+
+  asg_name = aws_eks_node_group.cluster-build[0].resources[0].autoscaling_groups[0].name
+  asg_tags = local.tags
 }
 
 resource "aws_autoscaling_group_tag" "cluster-build" {
@@ -210,17 +341,197 @@ resource "null_resource" "wait_k8s_cluster" {
   ]
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [
-    aws_eks_node_group.cluster,
-  ]
+# Enable API_AND_CONFIG_MAP auth mode on the EKS cluster via AWS CLI.
+# This is done outside the aws_eks_cluster resource to avoid modifying
+# the cluster resource in-place, which would cause the endpoint attribute
+# to become "(known after apply)" during planning. That cascading unknown
+# breaks ALL kubernetes/helm/kubectl provider configurations (they fall
+# back to http://localhost:80) because every provider reads host from
+# aws_eks_cluster.cluster.endpoint.
+resource "null_resource" "karpenter_access_config" {
+  count = (var.karpenter_auth_mode || var.eks_access_entries) ? 1 : 0
 
-  filename = pathexpand("~/.kube/config.aws.${var.name}")
-  content = templatefile("${path.module}/kubeconfig.tpl", {
-    ca       = aws_eks_cluster.cluster.certificate_authority.0.data
-    cluster  = aws_eks_cluster.cluster.id
-    endpoint = aws_eks_cluster.cluster.endpoint
-  })
+  triggers = {
+    cluster_name = aws_eks_cluster.cluster.name
+    region       = data.aws_region.current.name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      CURRENT=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
+        --query 'cluster.accessConfig.authenticationMode' --output text 2>/dev/null || echo "UNKNOWN")
+      if [ "$CURRENT" = "API_AND_CONFIG_MAP" ] || [ "$CURRENT" = "API" ]; then
+        echo "EKS access config already $CURRENT - skipping"
+      else
+        echo "Updating EKS access config from $CURRENT to API_AND_CONFIG_MAP..."
+        aws eks update-cluster-config \
+          --name "$CLUSTER" --region "$REGION" \
+          --access-config authenticationMode=API_AND_CONFIG_MAP
+        echo "Waiting for cluster update to start..."
+        sleep 15
+        echo "Waiting for cluster to reach ACTIVE state..."
+        aws eks wait cluster-active --name "$CLUSTER" --region "$REGION"
+        echo "Verifying auth mode propagation..."
+        for i in $(seq 1 12); do
+          VERIFIED=$(aws eks describe-cluster --name "$CLUSTER" --region "$REGION" \
+            --query 'cluster.accessConfig.authenticationMode' --output text 2>/dev/null || echo "UNKNOWN")
+          if [ "$VERIFIED" = "API_AND_CONFIG_MAP" ] || [ "$VERIFIED" = "API" ]; then
+            echo "Auth mode verified: $VERIFIED"
+            break
+          fi
+          echo "Auth mode still $VERIFIED, retrying... ($i/12)"
+          sleep 5
+        done
+        if [ "$VERIFIED" != "API_AND_CONFIG_MAP" ] && [ "$VERIFIED" != "API" ]; then
+          echo "ERROR: Auth mode not verified after 60s, still $VERIFIED"
+          exit 1
+        fi
+        echo "Waiting for access entry API propagation..."
+        sleep 30
+        echo "EKS access config update complete"
+      fi
+    EOF
+  }
+
+  depends_on = [
+    aws_eks_cluster.cluster,
+    null_resource.wait_k8s_cluster,
+  ]
+}
+
+data "aws_iam_session_context" "current" {
+  count = var.eks_access_entries ? 1 : 0
+  arn   = data.aws_caller_identity.current.arn
+}
+
+resource "null_resource" "eks_access_entry" {
+  count = var.eks_access_entries ? 1 : 0
+
+  depends_on = [null_resource.karpenter_access_config]
+
+  triggers = {
+    cluster_name  = aws_eks_cluster.cluster.name
+    principal_arn = data.aws_iam_session_context.current[0].issuer_arn
+    region        = data.aws_region.current.name
+    partition     = data.aws_partition.current.partition
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -e
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      PRINCIPAL="${self.triggers.principal_arn}"
+      POLICY_ARN="arn:${self.triggers.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+      if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+        echo "Access entry already exists for $PRINCIPAL - skipping creation"
+      else
+        echo "Creating access entry for $PRINCIPAL..."
+        aws eks create-access-entry \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --type STANDARD \
+          --region "$REGION" || {
+            if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+              echo "Access entry was created concurrently - continuing"
+            else
+              echo "ERROR: Failed to create access entry" >&2
+              exit 1
+            fi
+          }
+      fi
+
+      EXISTING=$(aws eks list-associated-access-policies \
+        --cluster-name "$CLUSTER" \
+        --principal-arn "$PRINCIPAL" \
+        --region "$REGION" \
+        --query "associatedAccessPolicies[?policyArn=='$POLICY_ARN'].policyArn" \
+        --output text) || {
+          echo "ERROR: Failed to list access policies" >&2
+          exit 1
+        }
+
+      if [ -n "$EXISTING" ]; then
+        echo "Policy $POLICY_ARN already associated - skipping"
+      else
+        echo "Associating policy $POLICY_ARN..."
+        aws eks associate-access-policy \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --policy-arn "$POLICY_ARN" \
+          --access-scope type=cluster \
+          --region "$REGION" || {
+            echo "ERROR: Failed to associate access policy" >&2
+            exit 1
+          }
+      fi
+
+      echo "EKS access entry setup complete"
+    EOF
+  }
+
+}
+
+resource "null_resource" "eks_access_entry_nodes" {
+  count = var.eks_access_entries ? 1 : 0
+
+  depends_on = [null_resource.karpenter_access_config]
+
+  triggers = {
+    cluster_name  = aws_eks_cluster.cluster.name
+    principal_arn = aws_iam_role.nodes.arn
+    region        = data.aws_region.current.name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      set -e
+      CLUSTER="${self.triggers.cluster_name}"
+      REGION="${self.triggers.region}"
+      PRINCIPAL="${self.triggers.principal_arn}"
+
+      if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+        echo "Access entry already exists for $PRINCIPAL - skipping creation"
+      else
+        echo "Creating EC2_LINUX access entry for nodes role $PRINCIPAL..."
+        aws eks create-access-entry \
+          --cluster-name "$CLUSTER" \
+          --principal-arn "$PRINCIPAL" \
+          --type EC2_LINUX \
+          --region "$REGION" || {
+            if aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$PRINCIPAL" --region "$REGION" >/dev/null 2>&1; then
+              echo "Access entry was created concurrently - continuing"
+            else
+              echo "ERROR: Failed to create nodes access entry" >&2
+              exit 1
+            fi
+          }
+      fi
+
+      echo "Nodes access entry setup complete"
+    EOF
+  }
+}
+
+# resource "local_file" "kubeconfig" {
+#   depends_on = [
+#     aws_eks_node_group.cluster,
+#   ]
+
+#   filename = pathexpand("~/.kube/config.aws.${var.name}")
+#   content = templatefile("${path.module}/kubeconfig.tpl", {
+#     ca       = aws_eks_cluster.cluster.certificate_authority.0.data
+#     cluster  = aws_eks_cluster.cluster.id
+#     endpoint = aws_eks_cluster.cluster.endpoint
+#   })
+# }
+
+data "http" "user_data_content" {
+  count = var.user_data_url != "" ? 1 : 0
+  url   = var.user_data_url
 }
 
 resource "aws_launch_template" "cluster" {
@@ -229,6 +540,9 @@ resource "aws_launch_template" "cluster" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
+      encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.node_volume_iops_effective > 0 ? local.node_volume_iops_effective : null
+      throughput  = local.node_volume_throughput_effective > 0 ? local.node_volume_throughput_effective : null
     }
   }
 
@@ -236,10 +550,10 @@ resource "aws_launch_template" "cluster" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
-  instance_type = split(",", random_id.node_group.keepers.node_type)[0]
+  instance_type = length(local.node_types) > 1 ? null : split(",", random_id.node_group.keepers.node_type)[0]
 
   dynamic "tag_specifications" {
     for_each = toset(
@@ -251,6 +565,15 @@ resource "aws_launch_template" "cluster" {
       tags          = local.tags
     }
   }
+
+  user_data = var.user_data_url != "" || var.user_data != "" || local.node_config_set ? base64encode(templatefile("${path.module}/files/custom_user_data.sh", {
+    kubelet_registry_pull_qps = local.kubelet_registry_pull_qps_effective
+    kubelet_registry_burst    = local.kubelet_registry_burst_effective
+    kubelet_registry_set      = local.kubelet_registry_set
+    fast_image_pull           = var.fast_image_pull_enable
+    user_data_script_file     = var.user_data_url != "" ? data.http.user_data_content[0].response_body : ""
+    user_data                 = var.user_data
+  })) : ""
 
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
 }
@@ -261,6 +584,9 @@ resource "aws_launch_template" "cluster-build" {
     ebs {
       volume_type = "gp3"
       volume_size = random_id.node_group.keepers.node_disk
+      encrypted   = var.ebs_volume_encryption_enabled
+      iops        = local.node_volume_iops_effective > 0 ? local.node_volume_iops_effective : null
+      throughput  = local.node_volume_throughput_effective > 0 ? local.node_volume_throughput_effective : null
     }
   }
 
@@ -268,7 +594,7 @@ resource "aws_launch_template" "cluster-build" {
     http_tokens                 = var.imds_http_tokens
     http_put_response_hop_limit = var.imds_http_hop_limit
     http_endpoint               = "enabled"
-    instance_metadata_tags      = var.imds_tags_enable ? "enabled": "disabled"
+    instance_metadata_tags      = var.imds_tags_enable ? "enabled" : "disabled"
   }
 
   dynamic "tag_specifications" {
@@ -282,30 +608,9 @@ resource "aws_launch_template" "cluster-build" {
     }
   }
 
+  user_data = local.node_config_user_data != "" ? base64encode(local.node_config_user_data) : null
+
   key_name = var.key_pair_name != "" ? var.key_pair_name : null
-}
-
-module "ebs_csi_driver_controller" {
-  depends_on = [
-    null_resource.wait_eks_addons
-  ]
-
-  source = "github.com/convox/terraform-kubernetes-ebs-csi-driver?ref=01740b559d14f489e5ea2160d2dad0ee951fb4d9"
-
-  arn_format                                 = data.aws_partition.current.partition
-  ebs_csi_controller_image                   = "public.ecr.aws/ebs-csi-driver/aws-ebs-csi-driver"
-  ebs_csi_driver_version                     = "v1.28.0"
-  ebs_csi_controller_role_name               = "convox-ebs-csi-driver-controller"
-  ebs_csi_controller_role_policy_name_prefix = "convox-ebs-csi-driver-policy"
-  csi_controller_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  node_tolerations = [
-    { operator = "Exists", key = "CriticalAddonsOnly" },
-    { operator = "Exists", effect = "NoExecute", toleration_seconds = 300 }
-  ]
-  oidc_url = aws_iam_openid_connect_provider.cluster.url
 }
 
 resource "kubernetes_storage_class" "default" {
@@ -314,10 +619,6 @@ resource "kubernetes_storage_class" "default" {
   ]
 
   metadata {
-    labels = {
-      "ebs_driver_name" = module.ebs_csi_driver_controller.ebs_csi_driver_name
-    }
-
     name = "gp3"
     annotations = {
       "storageclass.kubernetes.io/is-default-class" = "true"
@@ -356,21 +657,42 @@ resource "aws_eks_addon" "vpc_cni" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "vpc-cni"
-  addon_version     = var.vpc_cni_version
-  resolve_conflicts = "OVERWRITE"
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "vpc-cni"
+  addon_version               = var.vpc_cni_version
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = var.pod_imds_block_enabled || var.network_policy_enable ? jsonencode({
+    enableNetworkPolicy = "true"
+  }) : null
 }
 
 resource "aws_eks_addon" "coredns" {
   depends_on = [
-    null_resource.wait_k8s_api
+    null_resource.wait_k8s_api,
+    aws_eks_node_group.cluster,
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "coredns"
-  addon_version     = var.coredns_version
-  resolve_conflicts = "OVERWRITE"
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "coredns"
+  addon_version               = var.coredns_version
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = var.karpenter_auth_mode ? jsonencode({
+    nodeSelector = {
+      "convox.io/system-node" = "true"
+    }
+    tolerations = [
+      {
+        key      = "convox.io/system-node"
+        operator = "Equal"
+        value    = "true"
+        effect   = "NoSchedule"
+      }
+    ]
+  }) : null
 }
 
 resource "aws_eks_addon" "kube_proxy" {
@@ -378,10 +700,74 @@ resource "aws_eks_addon" "kube_proxy" {
     null_resource.wait_k8s_api
   ]
 
-  cluster_name      = aws_eks_cluster.cluster.name
-  addon_name        = "kube-proxy"
-  addon_version     = var.kube_proxy_version
-  resolve_conflicts = "OVERWRITE"
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "kube-proxy"
+  addon_version               = var.kube_proxy_version
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "eks_pod_identity_agent" {
+  depends_on = [
+    null_resource.wait_k8s_api
+  ]
+
+  count = var.pod_identity_agent_enable ? 1 : 0
+
+  cluster_name                = aws_eks_cluster.cluster.name
+  addon_name                  = "eks-pod-identity-agent"
+  addon_version               = var.pod_identity_agent_version
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+}
+
+resource "aws_eks_addon" "aws_ebs_csi_driver" {
+  depends_on = [
+    null_resource.wait_k8s_api,
+    null_resource.wait_eks_addons,
+    aws_eks_node_group.cluster,
+  ]
+
+  cluster_name  = aws_eks_cluster.cluster.name
+  addon_name    = "aws-ebs-csi-driver"
+  addon_version = var.aws_ebs_csi_driver_version
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = jsonencode(merge(
+    {
+      sidecars = {
+        snapshotter = {
+          forceEnable = false
+        }
+      }
+    },
+    var.karpenter_auth_mode ? {
+      controller = {
+        nodeSelector = {
+          "convox.io/system-node" = "true"
+        }
+        tolerations = [
+          {
+            key      = "CriticalAddonsOnly"
+            operator = "Exists"
+          },
+          {
+            operator          = "Exists"
+            effect            = "NoExecute"
+            tolerationSeconds = 300
+          },
+          {
+            key      = "convox.io/system-node"
+            operator = "Equal"
+            value    = "true"
+            effect   = "NoSchedule"
+          },
+        ]
+      }
+    } : {}
+  ))
 }
 
 resource "null_resource" "wait_eks_addons" {
@@ -392,12 +778,12 @@ resource "null_resource" "wait_eks_addons" {
   depends_on = [
     aws_eks_addon.vpc_cni,
     aws_eks_addon.coredns,
-    aws_eks_addon.kube_proxy
+    aws_eks_addon.kube_proxy,
   ]
 }
 
 resource "aws_autoscaling_schedule" "scaledown" {
-  count = length(var.schedule_rack_scale_down) > 6 ? (var.high_availability ? 3 : 1) : 0
+  count = (length(var.schedule_rack_scale_down) > 6 && !var.karpenter_enabled) ? (var.high_availability ? 3 : 1) : 0
 
   scheduled_action_name  = "scaledown${count.index}"
   min_size               = 0
@@ -409,7 +795,7 @@ resource "aws_autoscaling_schedule" "scaledown" {
 }
 
 resource "aws_autoscaling_schedule" "scaleup" {
-  count = length(var.schedule_rack_scale_up) > 6 ? (var.high_availability ? 3 : 1) : 0
+  count = (length(var.schedule_rack_scale_up) > 6 && !var.karpenter_enabled) ? (var.high_availability ? 3 : 1) : 0
 
   scheduled_action_name  = "scaleup${count.index}"
   min_size               = 1

@@ -3,7 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"runtime"
 
@@ -94,7 +94,7 @@ func getGitHubReleaseData(url string, response interface{}) error {
 	}
 	defer res.Body.Close()
 
-	data, err := ioutil.ReadAll(res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -105,4 +105,3 @@ func getGitHubReleaseData(url string, response interface{}) error {
 
 	return nil
 }
-

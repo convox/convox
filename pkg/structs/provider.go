@@ -13,19 +13,39 @@ type Provider interface {
 
 	AppCancel(name string) error
 	AppCreate(name string, opts AppCreateOptions) (*App, error)
+	AppConfigGet(app, name string) (*AppConfig, error)
+	AppConfigList(app string) ([]AppConfig, error)
+	AppConfigSet(app, name, valueBase64 string) error
 	AppGet(name string) (*App, error)
 	AppDelete(name string) error
+	AppDiagnose(app string, opts AppDiagnoseOptions) (*AppDiagnosticReport, error)
 	AppList() (Apps, error)
 	AppLogs(name string, opts LogsOptions) (io.ReadCloser, error)
+	AppManifestService(app, service string) (*ManifestService, error)
 	AppMetrics(name string, opts MetricsOptions) (Metrics, error)
+	MetricsByService(app string, services []string, opts MetricsOptions) ([]ServiceMetricsRow, error)
 	AppUpdate(name string, opts AppUpdateOptions) error
+
+	AppBudgetGet(app string) (*AppBudget, *AppBudgetState, error)
+	AppBudgetSet(app string, opts AppBudgetOptions, ackBy string) error
+	AppBudgetClear(app string, ackBy string) error
+	AppBudgetReset(app string, ackBy string) error
+	AppBudgetResetWithOptions(app string, ackBy string, opts AppBudgetResetOptions) error
+	AppBudgetShutdownStateGet(app string) (*AppBudgetShutdownState, error)
+	AppBudgetSimulate(app string) (*AppBudgetSimulationResult, error)
+	AppBudgetDismissRecovery(app string, ackBy string) error
+	AppBudgetDismissRecoveryWithResult(app string, ackBy string) (*AppBudgetDismissRecoveryResult, error)
+	AppCost(app string) (*AppCost, error)
+	AppCostWithOptions(app string, opts AppCostOptions) (*AppCost, error)
 
 	BalancerList(app string) (Balancers, error)
 
+	BuildCancel(app, id string) error
 	BuildCreate(app, url string, opts BuildCreateOptions) (*Build, error)
 	BuildExport(app, id string, w io.Writer) error
 	BuildGet(app, id string) (*Build, error)
 	BuildImport(app string, r io.Reader) (*Build, error)
+	BuildImportImage(app, id, image string, opts BuildImportImageOptions) error
 	BuildLogs(app, id string, opts LogsOptions) (io.ReadCloser, error)
 	BuildList(app string, opts BuildListOptions) (Builds, error)
 	BuildUpdate(app, id string, opts BuildUpdateOptions) (*Build, error)
@@ -36,8 +56,8 @@ type Provider interface {
 	CertificateCreate(pub, key string, opts CertificateCreateOptions) (*Certificate, error)
 	CertificateDelete(id string) error
 	CertificateRenew(id string) error
-	CertificateGenerate(domains []string) (*Certificate, error)
-	CertificateList() (Certificates, error)
+	CertificateGenerate(domains []string, opts CertificateGenerateOptions) (*Certificate, error)
+	CertificateList(opts CertificateListOptions) (Certificates, error)
 
 	LetsEncryptConfigGet() (*LetsEncryptConfig, error)
 	LetsEncryptConfigApply(config LetsEncryptConfig) error
@@ -46,7 +66,7 @@ type Provider interface {
 
 	FilesDelete(app, pid string, files []string) error
 	FilesDownload(app, pid string, file string) (io.Reader, error)
-	FilesUpload(app, pid string, r io.Reader) error
+	FilesUpload(app, pid string, r io.Reader, opts FileTransterOptions) error
 
 	InstanceKeyroll() (*KeyPair, error)
 	InstanceList() (Instances, error)
@@ -85,8 +105,14 @@ type Provider interface {
 	ResourceList(app string) (Resources, error)
 
 	ServiceList(app string) (Services, error)
+	ServiceMetrics(app, service string, opts MetricsOptions) (Metrics, error)
 	ServiceRestart(app, name string) error
+	ServiceScaleOverrideSet(app, service string, active bool, ackBy string) error
+	ServiceTriggersEnable(app, service string, opts ServiceTriggersOptions, ackBy string) error
+	ServiceTriggersDisable(app, service, ackBy string) error
+	ServiceTriggersThresholdSet(app, service, triggerType string, threshold float64, ackBy string) error
 	ServiceUpdate(app, name string, opts ServiceUpdateOptions) error
+	ServiceLogs(app, name string, opts LogsOptions) (io.ReadCloser, error)
 
 	SystemGet() (*System, error)
 	SystemInstall(w io.Writer, opts SystemInstallOptions) (string, error)
@@ -98,6 +124,8 @@ type Provider interface {
 	SystemReleases() (Releases, error)
 	SystemUninstall(name string, w io.Writer, opts SystemUninstallOptions) error
 	SystemUpdate(opts SystemUpdateOptions) error
+
+	KarpenterCleanup() error
 
 	SystemResourceCreate(kind string, opts ResourceCreateOptions) (*Resource, error)
 	SystemResourceDelete(name string) error

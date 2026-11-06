@@ -5,3 +5,4 @@ discovery.zen.ping.unicast.hosts: elasticsearch
 discovery.zen.minimum_master_nodes: 1
 xpack.security.enabled: false
 xpack.monitoring.enabled: false
+transport.tcp.connect_timeout: 5s
