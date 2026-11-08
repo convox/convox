@@ -181,11 +181,18 @@ resource "kubernetes_deployment" "registry" {
           name = "htpasswd"
 
           secret {
-            secret_name = kubernetes_secret.registry_htpasswd.metadata.0.name
+            secret_name = kubernetes_secret.registry_htpasswd.metadata[0].name
           }
         }
       }
     }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      spec[0].template[0].metadata[0].annotations["convox.com/triggered-reschedule-for-node"],
+      spec[0].template[0].metadata[0].annotations["convox.com/restart"]
+    ]
   }
 }
 
@@ -258,7 +265,7 @@ resource "kubernetes_ingress_v1" "registry" {
         path {
           backend {
             service {
-              name = kubernetes_service.registry.metadata.0.name
+              name = kubernetes_service.registry.metadata[0].name
               port {
                 number = 80
               }
