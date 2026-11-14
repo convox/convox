@@ -482,6 +482,10 @@ func (t Terraform) apply() error {
 		defer fmt.Fprint(os.Stderr, w)
 	}
 
+	if w := t.nativeBuildWarning(); w != "" {
+		defer fmt.Fprint(os.Stderr, w)
+	}
+
 	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
 		return err
 	}

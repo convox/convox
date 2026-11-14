@@ -12,6 +12,11 @@ variable "build_archs" {
   default = ""
 }
 
+variable "build_native_arch" {
+  type    = string
+  default = ""
+}
+
 variable "build_disable_convox_resolver" {
   default = false
 }
