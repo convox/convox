@@ -108,6 +108,10 @@ locals {
   ))
   build_archs = var.karpenter_enabled == "true" && length(local.node_archs) > 1 ? join(",", sort(local.karpenter_arch_all)) : ""
 
+  build_arch       = local.build_arm_type ? "arm64" : "amd64"
+  build_native     = var.karpenter_build_native_arch_enabled && var.karpenter_enabled == "true" && var.build_node_enabled
+  build_pool_archs = join(", ", sort(distinct(concat(local.karpenter_arch_all, [local.build_arch]))))
+
   public_access_cidrs  = var.eks_api_server_public_access_cidrs == "" ? ["0.0.0.0/0"] : split(",", var.eks_api_server_public_access_cidrs)
   private_access_cidrs = var.eks_api_server_private_access_cidrs == "" ? [] : split(",", var.eks_api_server_private_access_cidrs)
   eks_log_types        = var.eks_log_types == "" ? [] : split(",", var.eks_log_types)
@@ -190,6 +194,7 @@ module "cluster" {
   karpenter_build_memory_limit_gb         = var.karpenter_build_memory_limit_gb
   karpenter_build_consolidate_after       = var.karpenter_build_consolidate_after
   karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
+  karpenter_build_native_archs            = local.build_native ? local.build_pool_archs : ""
   karpenter_build_node_labels             = var.karpenter_build_node_labels
   karpenter_build_imds_tokens             = var.karpenter_build_imds_tokens
   karpenter_build_imds_hop_limit          = var.karpenter_build_imds_hop_limit
@@ -301,6 +306,7 @@ module "rack" {
   karpenter_enabled                         = var.karpenter_enabled == "true"
   system_readonly_rootfs_enabled            = var.system_readonly_rootfs_enabled
   build_archs                               = local.build_archs
+  build_native_arch                         = local.build_native ? local.build_arch : ""
   build_node_enabled                        = var.build_node_enabled
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   cluster                                   = module.cluster.id

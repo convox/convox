@@ -801,6 +801,10 @@ Groups:
         type: string
         regex: ^[a-z0-9]+(,[a-z0-9]+)*$
         description: Instance sizes for the build NodePool.
+      - name: karpenter_build_native_arch_enabled
+        default: "false"
+        type: boolean
+        description: "Builds each image architecture on a build node of that architecture instead of under emulation. &l Requires Karpenter (&i karpenter_enabled &i) and a separate build node (&i build_node_enabled &i). A build that targets both architectures uses a second build node while it runs. &l"
       - name: karpenter_build_capacity_types
         default: on-demand
         type: string

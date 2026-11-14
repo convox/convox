@@ -357,7 +357,7 @@ resource "kubectl_manifest" "karpenter_nodepool_build" {
     karpenter_build_memory_limit_gb         = var.karpenter_build_memory_limit_gb
     karpenter_build_consolidate_after       = var.karpenter_build_consolidate_after
     karpenter_build_disruption_budget_nodes = var.karpenter_build_disruption_budget_nodes
-    karpenter_build_arch                    = var.build_arm_type ? "arm64" : "amd64"
+    karpenter_build_arch                    = var.karpenter_build_native_archs != "" ? var.karpenter_build_native_archs : (var.build_arm_type ? "arm64" : "amd64")
     extra_labels                            = local.karpenter_build_extra_labels
     block_schedule                          = var.karpenter_disruption_block_schedule
     block_duration                          = var.karpenter_disruption_block_duration

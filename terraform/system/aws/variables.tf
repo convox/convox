@@ -457,6 +457,11 @@ variable "karpenter_build_disruption_budget_nodes" {
   default = "100%"
 }
 
+variable "karpenter_build_native_arch_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "karpenter_build_node_labels" {
   type    = string
   default = ""
