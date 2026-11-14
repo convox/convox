@@ -89,6 +89,7 @@ locals {
     karpenter_build_instance_families         = var.karpenter_build_instance_families
     karpenter_build_instance_sizes            = var.karpenter_build_instance_sizes
     karpenter_build_memory_limit_gb           = var.karpenter_build_memory_limit_gb
+    karpenter_build_native_arch_enabled       = var.karpenter_build_native_arch_enabled
     karpenter_build_node_labels               = var.karpenter_build_node_labels
     karpenter_capacity_types                  = var.karpenter_capacity_types
     karpenter_config                          = var.karpenter_config
@@ -263,6 +264,7 @@ locals {
     karpenter_build_instance_families         = ""
     karpenter_build_instance_sizes            = ""
     karpenter_build_memory_limit_gb           = "256"
+    karpenter_build_native_arch_enabled       = "false"
     karpenter_build_node_labels               = ""
     karpenter_capacity_types                  = "on-demand"
     karpenter_config                          = ""

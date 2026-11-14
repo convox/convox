@@ -87,6 +87,11 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 		prev = bk.previousBuild(bb)
 	}
 
+	h := newHelper(bk, bb)
+	if h != nil {
+		defer os.RemoveAll(h.dir)
+	}
+
 	for ix, build := range builds {
 		if build.Image != "" {
 			os.WriteFile(fmt.Sprintf("%s/Dockerfile.%d", dir, ix), []byte(fmt.Sprintf("FROM %s", build.Image)), 0600)
@@ -99,7 +104,11 @@ func (bk *BuildKit) Build(bb *Build, dir string) error {
 			if rel, err := filepath.Rel(dir, path); err != nil || !filepath.IsLocal(rel) {
 				return fmt.Errorf("build path is outside the source: %s", build.Build.Path)
 			}
-			if err := bk.build(bb, path, build.Build.Manifest, build.Tag, prev, env); err != nil {
+			run := bk.build
+			if h != nil && !hasOnbuild(filepath.Join(path, build.Build.Manifest)) {
+				run = h.build
+			}
+			if err := run(bb, path, build.Build.Manifest, build.Tag, prev, env); err != nil {
 				return err
 			}
 		}
@@ -276,47 +285,7 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag, prev string, env map
 		args = append(args, "--opt", fmt.Sprintf("platform=%s", strings.Join(platforms, ","))) // skipcq
 	}
 
-	localCacheAdded := false
-
-	if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
-		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
-		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
-		localCacheAdded = true
-	}
-
-	if bk.cacheProvider(os.Getenv("PROVIDER")) {
-		tagParts := strings.Split(tag, ":")
-		reg := tagParts[0]
-		if len(tagParts) > 1 && strings.LastIndex(tagParts[1], ".") > 0 {
-			// remove service build id(...<service>.<build-id>) and put buildcache
-			reg = fmt.Sprintf("%s.buildcache", tag[:strings.LastIndex(tag, ".")])
-		} else {
-			reg = fmt.Sprintf("%s:buildcache", reg)
-		}
-		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=%s", reg)) // skipcq
-		args = append(args, "--import-cache", fmt.Sprintf("type=registry,ref=%s", reg))                                                                    // skipcq
-	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
-		tagParts := strings.Split(tag, ":")
-		reg := tagParts[0]
-		if len(tagParts) > 1 && strings.LastIndex(tagParts[1], ".") > 0 {
-			// remove service build id(...<service>.<build-id>) and put buildcache
-			reg = fmt.Sprintf("%s.buildcache", tag[:strings.LastIndex(tag, ".")])
-		} else {
-			reg = fmt.Sprintf("%s:buildcache", reg)
-		}
-		export, imp := reg, reg
-		if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" {
-			export, imp = fmt.Sprintf("%s.%s", reg, bb.Id), bk.cacheImportRef(bb, reg, prev)
-		}
-		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", export)) // skipcq
-		if imp != "" {
-			args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", imp)) // skipcq
-		}
-	} else if !localCacheAdded {
-		// keep a local cache for services using the same Dockerfile
-		args = append(args, "--export-cache", "type=local,dest=/var/lib/buildkit") // skipcq
-		args = append(args, "--import-cache", "type=local,src=/var/lib/buildkit")  // skipcq
-	}
+	args = append(args, bk.cacheArgs(bb, tag, prev, "", true)...)
 
 	df := filepath.Join(path, dockerfile)
 
@@ -337,16 +306,76 @@ func (bk *BuildKit) build(bb *Build, path, dockerfile, tag, prev string, env map
 		}
 	} else {
 		if err := bb.Exec.Run(bb.writer, "buildctl", args...); err != nil {
-			if platformed && strings.Contains(bb.logs.String(), "no match for platform") {
-				if len(archs) == 1 {
-					return fmt.Errorf("an image in this build is not published for the requested build architecture (%s): use an image published for %s or a multi-arch image", archs[0], archs[0])
-				}
-				return fmt.Errorf("an image in this build is not published for the requested build architectures (%s): set the BuildArch app parameter to an architecture the image supports (convox apps params set BuildArch=amd64 -a %s) or use multi-arch images", strings.Join(archs, ","), bb.App)
+			if platformed {
+				return platformError(bb, archs, err)
 			}
 			return err
 		}
 	}
 
+	return bk.recordEntrypoint(bb, tag)
+}
+
+func platformError(bb *Build, archs []string, err error) error {
+	if !strings.Contains(bb.logs.String(), "no match for platform") {
+		return err
+	}
+	if len(archs) == 1 {
+		return fmt.Errorf("an image in this build is not published for the requested build architecture (%s): use an image published for %s or a multi-arch image", archs[0], archs[0])
+	}
+	return fmt.Errorf("an image in this build is not published for the requested build architectures (%s): set the BuildArch app parameter to an architecture the image supports (convox apps params set BuildArch=amd64 -a %s) or use multi-arch images", strings.Join(archs, ","), bb.App)
+}
+
+// cacheArgs returns one invocation's cache flags; local is false when it must not use this pod's cache directory.
+func (bk *BuildKit) cacheArgs(bb *Build, tag, prev, suffix string, local bool) []string {
+	var args []string
+
+	localCacheAdded := false
+
+	if local && os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
+		args = append(args,
+			"--import-cache", "type=local,src=/var/lib/buildkit",
+			"--export-cache", "type=local,dest=/var/lib/buildkit",
+		) // skipcq
+		localCacheAdded = true
+	}
+
+	tagParts := strings.Split(tag, ":")
+	reg := tagParts[0]
+	if len(tagParts) > 1 && strings.LastIndex(tagParts[1], ".") > 0 {
+		// remove service build id(...<service>.<build-id>) and put buildcache
+		reg = fmt.Sprintf("%s.buildcache", tag[:strings.LastIndex(tag, ".")])
+	} else {
+		reg = fmt.Sprintf("%s:buildcache", reg)
+	}
+	reg += suffix
+
+	if bk.cacheProvider(os.Getenv("PROVIDER")) {
+		args = append(args,
+			"--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,type=registry,ref=%s", reg),
+			"--import-cache", fmt.Sprintf("type=registry,ref=%s", reg),
+		) // skipcq
+	} else if bk.imageManifestCacheProvider(os.Getenv("PROVIDER")) {
+		export, imp := reg, reg
+		if os.Getenv("ECR_IMMUTABLE_TAGS_ENABLED") == "true" {
+			export, imp = fmt.Sprintf("%s.%s", reg, bb.Id), bk.cacheImportRef(bb, reg, prev)
+		}
+		args = append(args, "--export-cache", fmt.Sprintf("mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true,compression=estargz,type=registry,ref=%s", export)) // skipcq
+		if imp != "" {
+			args = append(args, "--import-cache", fmt.Sprintf("type=registry,ignore-error=true,ref=%s", imp)) // skipcq
+		}
+	} else if local && !localCacheAdded {
+		// keep a local cache for services using the same Dockerfile
+		args = append(args,
+			"--export-cache", "type=local,dest=/var/lib/buildkit",
+			"--import-cache", "type=local,src=/var/lib/buildkit",
+		) // skipcq
+	}
+
+	return args
+}
+
+func (bk *BuildKit) recordEntrypoint(bb *Build, tag string) error {
 	ep := bk.entrypoint(bb, tag)
 	if len(ep) > 0 {
 		opts := structs.BuildUpdateOptions{

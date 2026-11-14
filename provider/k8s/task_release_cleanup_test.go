@@ -450,5 +450,8 @@ func TestAppReleaseAndBuildCleanupTags(t *testing.T) {
 	require.NoError(t, cleaner.appReleaseAndBuildCleanup(&structs.App{Name: "app1", Release: "release1"}))
 
 	mockEngine.AssertExpectations(t)
-	assert.ElementsMatch(t, []string{"web.BUILD2", "web.buildcache.BUILD2", "api.BUILD2", "api.buildcache.BUILD2"}, tags)
+	assert.ElementsMatch(t, []string{
+		"web.BUILD2", "web.buildcache.BUILD2", "web.buildcache-amd64.BUILD2", "web.buildcache-arm64.BUILD2",
+		"api.BUILD2", "api.buildcache.BUILD2", "api.buildcache-amd64.BUILD2", "api.buildcache-arm64.BUILD2",
+	}, tags)
 }

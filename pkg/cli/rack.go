@@ -81,6 +81,7 @@ var awsKnownParams = map[string]bool{
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
 	"karpenter_build_cpu_limit": true, "karpenter_build_instance_families": true,
 	"karpenter_build_disruption_budget_nodes": true,
+	"karpenter_build_native_arch_enabled":     true,
 	"karpenter_build_instance_sizes":          true, "karpenter_build_memory_limit_gb": true,
 	"karpenter_build_imds_tokens": true, "karpenter_build_imds_hop_limit": true,
 	"karpenter_build_node_labels": true, "karpenter_capacity_types": true,
@@ -234,6 +235,8 @@ var boolParams = map[string]bool{
 	"system_readonly_rootfs_enabled":    true,
 	"telemetry":                         true,
 	"vpa_enable":                        true,
+
+	"karpenter_build_native_arch_enabled": true,
 }
 
 // sensitiveParams enumerates rack params whose values are rendered as
@@ -287,6 +290,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_build_instance_families":       true,
 		"karpenter_build_instance_sizes":          true,
 		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_native_arch_enabled":     true,
 		"karpenter_build_node_labels":             true,
 		"karpenter_capacity_types":                true,
 		"karpenter_config":                        true,
@@ -538,6 +542,7 @@ var paramGroups = map[string]map[string]bool{
 		"karpenter_build_instance_families":       true,
 		"karpenter_build_instance_sizes":          true,
 		"karpenter_build_memory_limit_gb":         true,
+		"karpenter_build_native_arch_enabled":     true,
 		"karpenter_build_node_labels":             true,
 		// v2 PascalCase (no-op on v3 racks; surfaced on v2 racks)
 		"BuildCpu":                    true,
@@ -1648,6 +1653,50 @@ func validateKarpenterArchFamilies(params, currentParams map[string]string) erro
 		buildArchs = append(buildArchs, a)
 	}
 	return checkArchFamilies("karpenter_build_instance_families", effective("karpenter_build_instance_families"), buildArchs, "build_node_type")
+}
+
+const nativeBuildParam = "karpenter_build_native_arch_enabled"
+
+// validateNativeBuilds rejects native builds on a rack whose build pool could not launch a node for each architecture it runs.
+func validateNativeBuilds(params, currentParams map[string]string) error {
+	on := func(key string) bool {
+		b, _ := strconv.ParseBool(effectiveParam(params, currentParams, key, ""))
+		return b
+	}
+
+	if !on(nativeBuildParam) {
+		return nil
+	}
+
+	if params[nativeBuildParam] == "true" && (effectiveParam(params, currentParams, "karpenter_enabled", "") != "true" || !on("build_node_enabled")) {
+		return fmt.Errorf("%s=true requires karpenter_enabled=true and build_node_enabled=true", nativeBuildParam)
+	}
+
+	relevant := false
+	for _, k := range []string{nativeBuildParam, "karpenter_enabled", "karpenter_arch", "node_type", "karpenter_build_instance_families", "additional_karpenter_nodepools_config"} {
+		if _, ok := params[k]; ok {
+			relevant = true
+		}
+	}
+	if !relevant {
+		return nil
+	}
+
+	archs := strings.Split(effectiveParam(params, currentParams, "karpenter_arch", instanceArch(effectiveParam(params, currentParams, "node_type", ""))), ",")
+	if pools, err := decodeKarpenterNodePools(effectiveParam(params, currentParams, "additional_karpenter_nodepools_config", "")); err == nil {
+		for i := range pools {
+			archs = append(archs, strings.Split(common.DefaultString(pools[i].Arch, "amd64"), ",")...)
+		}
+	}
+
+	families := effectiveParam(params, currentParams, "karpenter_build_instance_families", "")
+	for _, arch := range common.BuildArchs(strings.Join(archs, ",")) {
+		if checkArchFamilies("karpenter_build_instance_families", families, []string{arch}, "") != nil {
+			return fmt.Errorf("karpenter_build_instance_families (%s) has no %s family; with %s=true the build pool needs a family for each architecture the rack runs", families, arch, nativeBuildParam)
+		}
+	}
+
+	return nil
 }
 
 var (
@@ -3046,6 +3095,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 			return fmt.Errorf("failed to process param '%s': %s", k, err)
 		}
 		params[k] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	if err := validateNativeBuilds(params, currentParams); err != nil {
+		return err
 	}
 
 	if err := validateNodePoolRemoval(params, currentParams, force); err != nil {

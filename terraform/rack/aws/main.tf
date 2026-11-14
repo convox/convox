@@ -28,6 +28,7 @@ module "api" {
   buildkit_enabled                          = var.buildkit_enabled
   build_archs                               = var.build_archs
   build_disable_convox_resolver             = var.build_disable_convox_resolver
+  build_native_arch                         = var.build_native_arch
   build_node_enabled                        = var.build_node_enabled
   cluster_helm_ids                          = var.cluster_helm_ids
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
