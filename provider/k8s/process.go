@@ -439,33 +439,6 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			}
 		}
 		s.RestartPolicy = ac.RestartPolicyNever
-		if p.BuildNodeEnabled == "true" {
-			matchExprs := []ac.NodeSelectorRequirement{
-				{
-					Key:      "convox-build",
-					Operator: ac.NodeSelectorOpIn,
-					Values:   []string{"true"},
-				},
-			}
-			if opts.BuildArch != nil && *opts.BuildArch != "" {
-				matchExprs = append(matchExprs, ac.NodeSelectorRequirement{
-					Key:      "kubernetes.io/arch",
-					Operator: ac.NodeSelectorOpIn,
-					Values:   []string{*opts.BuildArch},
-				})
-			}
-			s.Affinity = &ac.Affinity{
-				NodeAffinity: &ac.NodeAffinity{
-					RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
-						NodeSelectorTerms: []ac.NodeSelectorTerm{
-							{
-								MatchExpressions: matchExprs,
-							},
-						},
-					},
-				},
-			}
-		}
 
 		if os.Getenv("BUILDKIT_HOST_PATH_CACHE_ENABLE") == "true" {
 			// mount persistent BuildKit cache on the host
@@ -485,11 +458,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			})
 		}
 
-		s.Tolerations = append(s.Tolerations, ac.Toleration{
-			Key:      "dedicated",
-			Operator: ac.TolerationOpExists,
-			Effect:   ac.TaintEffectNoSchedule,
-		})
+		p.buildPlacement(s, common.DefaultString(opts.BuildArch, ""))
 	}
 
 	if opts.SystemCritical != nil && *opts.SystemCritical {

@@ -867,8 +867,14 @@ func TestBuildCacheProvider(t *testing.T) {
 		"--import-cache", "type=local,src=/var/lib/buildkit",
 	}
 
+	hostPath := []string{
+		"--import-cache", "type=local,src=/var/lib/buildkit",
+		"--export-cache", "type=local,dest=/var/lib/buildkit",
+	}
+
 	tests := []struct {
 		Provider string
+		HostPath string
 		Cache    []string
 	}{
 		{Provider: "azure", Cache: registry},
@@ -876,6 +882,8 @@ func TestBuildCacheProvider(t *testing.T) {
 		{Provider: "do", Cache: registry},
 		{Provider: "az", Cache: local},
 		{Provider: "metal", Cache: local},
+		{Provider: "gcp", HostPath: "true", Cache: append(append([]string{}, hostPath...), registry...)},
+		{Provider: "metal", HostPath: "true", Cache: hostPath},
 	}
 
 	opts := build.Options{
@@ -890,8 +898,9 @@ func TestBuildCacheProvider(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.Provider, func(t *testing.T) {
+		t.Run(test.Provider+test.HostPath, func(t *testing.T) {
 			t.Setenv("PROVIDER", test.Provider)
+			t.Setenv("BUILDKIT_HOST_PATH_CACHE_ENABLE", test.HostPath)
 
 			testBuild(t, opts, bkEngine, func(b *build.Build, p *structs.MockProvider, e *exec.MockInterface, out *bytes.Buffer) {
 				p.On("BuildGet", "app1", "build1").Return(fxBuildStarted(), nil).Once()

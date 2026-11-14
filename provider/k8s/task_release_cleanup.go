@@ -205,7 +205,13 @@ func (a *releaseCleaner) appReleaseAndBuildCleanup(app *structs.App) error {
 			tags := []string{}
 			for svcName := range cm.Services {
 				if svcName != "" {
-					tags = append(tags, fmt.Sprintf("%s.%s", svcName, strings.ToUpper(b.Name)), fmt.Sprintf("%s.buildcache.%s", svcName, strings.ToUpper(b.Name)))
+					id := strings.ToUpper(b.Name)
+					tags = append(tags,
+						fmt.Sprintf("%s.%s", svcName, id),
+						fmt.Sprintf("%s.buildcache.%s", svcName, id),
+						fmt.Sprintf("%s.buildcache-amd64.%s", svcName, id),
+						fmt.Sprintf("%s.buildcache-arm64.%s", svcName, id),
+					)
 				}
 			}
 			buildToDelete[b.Name] = tags

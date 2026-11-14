@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -455,6 +456,10 @@ func matchTempdirFile(name string) func(string) bool {
 }
 
 func testBuild(t *testing.T, opts build.Options, engine build.Engine, fn func(*build.Build, *structs.MockProvider, *exec.MockInterface, *bytes.Buffer)) {
+	home := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(home, ".docker"), 0700))
+	t.Setenv("HOME", home)
+
 	e := &exec.MockInterface{}
 	p := &structs.MockProvider{}
 

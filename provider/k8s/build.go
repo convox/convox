@@ -212,6 +212,35 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 		env["BUILD_ARCHS"] = arch
 	}
 
+	var helper *buildHelper
+
+	if home := p.buildNativeArch(); home != "" && psOpts.BuildArch == nil && psOpts.NodeLabels == nil {
+		switch archs := common.BuildArchs(env["BUILD_ARCHS"]); len(archs) {
+		case 1:
+			psOpts.BuildArch = options.String(archs[0])
+		case 2:
+			psOpts.BuildArch = options.String(home)
+
+			if !common.DefaultBool(opts.Development, false) {
+				other := archs[0]
+				if other == home {
+					other = archs[1]
+				}
+
+				h, err := p.buildHelperPrepare(app, b.Id, other)
+				if err != nil {
+					return nil, errors.WithStack(err)
+				}
+
+				for k, v := range h.env() {
+					env[k] = v
+				}
+
+				helper = h
+			}
+		}
+	}
+
 	if cpu := appObj.Parameters[structs.AppParamBuildCpu]; cpu != "" {
 		v, err := strconv.ParseInt(cpu, 10, 32)
 		if err != nil {
@@ -257,6 +286,13 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	if _, err := p.buildUpdate(b); err != nil {
 		return nil, errors.WithStack(err)
+	}
+
+	// The build falls back to emulation when its helper never answers.
+	if helper != nil {
+		if err := p.buildHelperCreate(app, ps.Id, helper, &psOpts); err != nil {
+			_ = p.logger.Errorf("build %s: %s helper: %s", b.Id, helper.arch, err)
+		}
 	}
 
 	return b, nil
