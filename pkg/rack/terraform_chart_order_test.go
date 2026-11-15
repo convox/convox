@@ -97,7 +97,11 @@ func evalAnnotations(t *testing.T, expr hclsyntax.Expression, helmIDs string) ma
 
 	ctx := &hcl.EvalContext{
 		Variables: map[string]cty.Value{
-			"var": cty.ObjectVal(map[string]cty.Value{"cluster_helm_ids": cty.StringVal(helmIDs)}),
+			"var": cty.ObjectVal(map[string]cty.Value{
+				"cluster_helm_ids": cty.StringVal(helmIDs),
+				"replicas":         cty.NumberIntVal(2),
+				"replicas_max":     cty.NumberIntVal(2),
+			}),
 		},
 		Functions: map[string]function.Function{"merge": stdlib.MergeFunc},
 	}
