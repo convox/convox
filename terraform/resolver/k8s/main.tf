@@ -55,8 +55,9 @@ resource "kubernetes_deployment" "resolver" {
   depends_on = [kubernetes_cluster_role_binding.resolver]
 
   metadata {
-    namespace = var.namespace
-    name      = "resolver"
+    namespace   = var.namespace
+    name        = "resolver"
+    annotations = var.replicas == 1 ? { "convox.com/pdb-minavailable" = "1" } : null
 
     labels = {
       app     = "system"

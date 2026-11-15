@@ -128,8 +128,9 @@ resource "kubernetes_service_account" "api" {
 
 resource "kubernetes_deployment" "api" {
   metadata {
-    namespace = var.namespace
-    name      = "api"
+    namespace   = var.namespace
+    name        = "api"
+    annotations = var.replicas == 1 ? { "convox.com/pdb-minavailable" = "1" } : null
 
     labels = {
       app     = "system"
