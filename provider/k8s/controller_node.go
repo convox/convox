@@ -218,6 +218,10 @@ func (c *NodeController) findAndRescheduleDeploymentWithOneReplica(node string) 
 		for i := range podList.Items {
 			pod := &podList.Items[i]
 
+			if pod.DeletionTimestamp != nil || pod.Status.Phase == ac.PodSucceeded || pod.Status.Phase == ac.PodFailed {
+				continue
+			}
+
 			if pod.Labels["app"] == "cluster-autoscaler" {
 				c.triggerDeploymentReschedule("cluster-autoscaler", pod.Namespace, node)
 			}
