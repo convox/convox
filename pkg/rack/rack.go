@@ -3,6 +3,7 @@ package rack
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"sort"
@@ -15,7 +16,8 @@ import (
 )
 
 var (
-	TestLatest string
+	TestLatest    string
+	TestTerraform func(stdout, stderr io.Writer, args ...string) error
 )
 
 type Metadata struct {

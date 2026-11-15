@@ -7,16 +7,22 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/common"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 const helmReleaseType = "helm.sh/release.v1"
+
+const helmPendingSelector = "owner=helm,status in (pending-install,pending-upgrade,pending-rollback)"
 
 // Only clear releases pending longer than most live helm ops: system releases time
 // out within 600s (contour 3600s), so a fresh pending secret may be an in-flight apply.
@@ -27,6 +33,22 @@ var helmPendingStatuses = map[string]bool{
 	"pending-upgrade":  true,
 	"pending-rollback": true,
 }
+
+var (
+	helmClearInterval = 5 * time.Second
+	helmClearBudget   = 60 * time.Second
+)
+
+// Helm returns these before it writes a release record.
+var helmNoRecordErrors = []string{
+	"another operation (install/upgrade/rollback) is in progress",
+	"cannot re-use a name that is still in use",
+}
+
+// The helm provider can return this in place of a failed install's own error.
+const helmUnreachableError = "Kubernetes cluster unreachable"
+
+var helmReleaseResource = regexp.MustCompile(`resource "helm_release" "([a-z0-9_]+)"`)
 
 func convoxHelmReleases(rack string) map[string]string {
 	system := strings.ToLower(rack) + "-system"
@@ -50,11 +72,10 @@ type helmReleaseSecret struct {
 	status     string
 	version    string
 	created    time.Time
+	uid        types.UID
 }
 
-// stuckHelmSecrets returns the allowlisted release secrets stuck pending-* past
-// minAge. Helm blocks new ops while pending, so no max-revision math is needed.
-func stuckHelmSecrets(found []helmReleaseSecret, allow map[string]string, now time.Time, minAge time.Duration) []helmReleaseSecret {
+func pendingHelmSecrets(found []helmReleaseSecret, allow map[string]string) []helmReleaseSecret {
 	var out []helmReleaseSecret
 	for _, s := range found {
 		if ns, ok := allow[s.release]; !ok || ns != s.namespace {
@@ -63,6 +84,16 @@ func stuckHelmSecrets(found []helmReleaseSecret, allow map[string]string, now ti
 		if !helmPendingStatuses[s.status] {
 			continue
 		}
+		out = append(out, s)
+	}
+	return out
+}
+
+// stuckHelmSecrets returns the allowlisted release secrets stuck pending-* past
+// minAge. Helm blocks new ops while pending, so no max-revision math is needed.
+func stuckHelmSecrets(found []helmReleaseSecret, allow map[string]string, now time.Time, minAge time.Duration) []helmReleaseSecret {
+	var out []helmReleaseSecret
+	for _, s := range pendingHelmSecrets(found, allow) {
 		if now.Sub(s.created) < minAge {
 			continue
 		}
@@ -73,14 +104,14 @@ func stuckHelmSecrets(found []helmReleaseSecret, allow map[string]string, now ti
 
 // reconcileStuckHelmReleases clears convox-owned Helm releases stranded in
 // pending-* by an interrupted apply. Best-effort: it never fails an apply.
-func (t Terraform) reconcileStuckHelmReleases() {
+func (t Terraform) reconcileStuckHelmReleases() (seen map[types.UID]bool, recent string) {
 	if t.provider != "aws" {
-		return
+		return nil, ""
 	}
 
 	vars, err := t.vars()
 	if err != nil {
-		return
+		return nil, ""
 	}
 
 	// the console job that applies private racks cannot set CONVOX_DEBUG
@@ -94,16 +125,50 @@ func (t Terraform) reconcileStuckHelmReleases() {
 	client, err := eksClient(ctx, cluster, vars)
 	if err != nil {
 		helmReconcileDebug("build eks client for %s: %v", cluster, err)
-		return
+		return nil, ""
 	}
 
-	list, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: "owner=helm"})
+	found, err := listPendingHelmSecrets(ctx, client)
 	if err != nil {
 		if privateEKS {
 			fmt.Fprintln(os.Stderr, "NOTICE: skipping stuck Helm release check, could not reach the cluster")
 		}
 		helmReconcileDebug("list helm secrets: %v", err)
-		return
+		return nil, ""
+	}
+
+	allow := convoxHelmReleases(t.name)
+	now := time.Now()
+
+	seen = map[types.UID]bool{}
+
+	for _, s := range pendingHelmSecrets(found, allow) {
+		seen[s.uid] = true
+
+		if now.Sub(s.created) < helmStuckMinAge {
+			recent += fmt.Sprintf("WARNING: Helm release %s is %s (revision %s) and under 15 minutes old, so it was not cleared. A rack update that changes it fails until then.\n", s.release, s.status, s.version)
+		}
+	}
+
+	for _, s := range stuckHelmSecrets(found, allow, now, helmStuckMinAge) {
+		if err := client.CoreV1().Secrets(s.namespace).Delete(ctx, s.secretName, metav1.DeleteOptions{}); err != nil {
+			if privateEKS {
+				fmt.Fprintf(os.Stderr, "NOTICE: could not confirm clearing of stuck Helm release %s (%s, revision %s)\n", s.release, s.status, s.version)
+			}
+			helmReconcileDebug("delete %s/%s: %v", s.namespace, s.secretName, err)
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: cleared stuck Helm release %s (%s, revision %s) before apply\n", s.release, s.status, s.version)
+	}
+
+	return seen, recent
+}
+
+func listPendingHelmSecrets(ctx context.Context, client kubernetes.Interface) ([]helmReleaseSecret, error) {
+	list, err := client.CoreV1().Secrets(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: helmPendingSelector})
+	if err != nil {
+		return nil, err
 	}
 
 	var found []helmReleaseSecret
@@ -119,20 +184,120 @@ func (t Terraform) reconcileStuckHelmReleases() {
 			status:     s.Labels["status"],
 			version:    s.Labels["version"],
 			created:    s.CreationTimestamp.Time,
+			uid:        s.UID,
 		})
 	}
 
-	for _, s := range stuckHelmSecrets(found, convoxHelmReleases(t.name), time.Now(), helmStuckMinAge) {
-		if err := client.CoreV1().Secrets(s.namespace).Delete(ctx, s.secretName, metav1.DeleteOptions{}); err != nil {
-			if privateEKS {
-				fmt.Fprintf(os.Stderr, "NOTICE: could not confirm clearing of stuck Helm release %s (%s, revision %s)\n", s.release, s.status, s.version)
-			}
-			helmReconcileDebug("delete %s/%s: %v", s.namespace, s.secretName, err)
+	return found, nil
+}
+
+func failedHelmReleases(stderr string) (failed, installs map[string]bool) {
+	failed, installs = map[string]bool{}, map[string]bool{}
+	vetoed := map[string]bool{}
+
+	for _, block := range strings.Split("\n"+stderr, "\nError: ")[1:] {
+		block = strings.Join(strings.Fields(block), " ")
+
+		m := helmReleaseResource.FindStringSubmatch(block)
+		if m == nil {
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr, "NOTICE: cleared stuck Helm release %s (%s, revision %s) before apply\n", s.release, s.status, s.version)
+		release := strings.ReplaceAll(m[1], "_", "-")
+
+		switch {
+		case slices.ContainsFunc(helmNoRecordErrors, func(text string) bool { return strings.Contains(block, text) }):
+			vetoed[release] = true
+		case strings.Contains(block, helmUnreachableError):
+			installs[release] = true
+		default:
+			failed[release] = true
+		}
 	}
+
+	for release := range vetoed {
+		delete(failed, release)
+		delete(installs, release)
+	}
+
+	return failed, installs
+}
+
+// clearFailedHelmReleases is best-effort: it never fails an apply.
+func (t Terraform) clearFailedHelmReleases(seen map[types.UID]bool, start time.Time, stderr string) {
+	if t.provider != "aws" {
+		return
+	}
+
+	failed, installs := failedHelmReleases(stderr)
+	if len(failed)+len(installs) == 0 {
+		return
+	}
+
+	vars, err := t.vars()
+	if err != nil {
+		return
+	}
+
+	deadline := time.Now().Add(helmClearBudget)
+	waiting := false
+
+	for !t.clearFailedHelmReleasesOnce(vars, failed, installs, seen, start, deadline) {
+		if time.Until(deadline) < helmClearInterval {
+			fmt.Fprintln(os.Stderr, "NOTICE: could not clear Helm releases the failed apply may have left pending. A rerun can fail on them for up to 15 minutes.")
+			return
+		}
+
+		if !waiting {
+			fmt.Fprintf(os.Stderr, "NOTICE: retrying for up to %s to clear Helm releases the failed apply may have left pending\n", helmClearBudget)
+			waiting = true
+		}
+
+		time.Sleep(helmClearInterval)
+	}
+}
+
+func (t Terraform) clearFailedHelmReleasesOnce(vars map[string]string, failed, installs map[string]bool, seen map[types.UID]bool, start, deadline time.Time) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), min(30*time.Second, time.Until(deadline)))
+	defer cancel()
+
+	cluster := strings.ToLower(t.name)
+
+	client, err := eksClient(ctx, cluster, vars)
+	if err != nil {
+		helmReconcileDebug("build eks client for %s: %v", cluster, err)
+		return ctx.Err() == nil
+	}
+
+	found, err := listPendingHelmSecrets(ctx, client)
+	if err != nil {
+		helmReconcileDebug("list helm secrets: %v", err)
+		return false
+	}
+
+	done := true
+
+	for _, s := range pendingHelmSecrets(found, convoxHelmReleases(t.name)) {
+		if !failed[s.release] && (!installs[s.release] || s.status != "pending-install") {
+			continue
+		}
+
+		// creation timestamps have one second resolution
+		if seen[s.uid] || (seen == nil && s.created.Before(start.Truncate(time.Second))) {
+			continue
+		}
+
+		err := client.CoreV1().Secrets(s.namespace).Delete(ctx, s.secretName, metav1.DeleteOptions{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			helmReconcileDebug("delete %s/%s: %v", s.namespace, s.secretName, err)
+			done = false
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "NOTICE: cleared Helm release %s left %s by the failed apply (revision %s)\n", s.release, s.status, s.version)
+	}
+
+	return done
 }
 
 func eksClient(ctx context.Context, cluster string, vars map[string]string) (*kubernetes.Clientset, error) {

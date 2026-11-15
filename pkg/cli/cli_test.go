@@ -34,6 +34,29 @@ var (
 	fxStarted = time.Now().UTC().Add(-48 * time.Hour)
 )
 
+func TestMain(m *testing.M) {
+	rack.TestTerraform = func(_, _ io.Writer, args ...string) error {
+		return fmt.Errorf("unexpected terraform %s", strings.Join(args, " "))
+	}
+
+	os.Exit(m.Run())
+}
+
+func recordTerraform(t *testing.T) *[][]string {
+	t.Helper()
+
+	calls := [][]string{}
+
+	orig := rack.TestTerraform
+	rack.TestTerraform = func(_, _ io.Writer, args ...string) error {
+		calls = append(calls, args)
+		return nil
+	}
+	t.Cleanup(func() { rack.TestTerraform = orig })
+
+	return &calls
+}
+
 func testClient(t *testing.T, fn func(*cli.Engine, *mocksdk.Interface)) {
 	testClientWait(t, 1, fn)
 }
