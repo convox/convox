@@ -24,6 +24,7 @@ resource "kubernetes_config_map" "nginx-configuration" {
       "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
       "allow-snippet-annotations" = "true"
       "annotations-risk-level"    = "Critical"
+      "worker-shutdown-timeout"   = "540s"
     },
     local.additional_config_map
   )
@@ -272,7 +273,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
       }
 
       spec {
-        termination_grace_period_seconds = 300
+        termination_grace_period_seconds = 600
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
@@ -396,7 +397,7 @@ resource "kubernetes_deployment" "ingress-nginx" {
           lifecycle {
             pre_stop {
               exec {
-                command = ["/wait-shutdown"]
+                command = ["/bin/sh", "-c", "sleep 10; exec /wait-shutdown"]
               }
             }
           }
@@ -478,7 +479,7 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
       }
 
       spec {
-        termination_grace_period_seconds = 300
+        termination_grace_period_seconds = 600
         service_account_name             = "ingress-nginx"
         automount_service_account_token  = true
         priority_class_name              = var.set_priority_class ? "system-cluster-critical" : null
@@ -602,7 +603,7 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           lifecycle {
             pre_stop {
               exec {
-                command = ["/wait-shutdown"]
+                command = ["/bin/sh", "-c", "sleep 10; exec /wait-shutdown"]
               }
             }
           }
