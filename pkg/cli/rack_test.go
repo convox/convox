@@ -57,8 +57,7 @@ func TestRackInstall(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		calls := recordTerraform(t)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1", nil)
@@ -90,6 +89,11 @@ func TestRackInstall(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{"rack1"})
 
+		require.Equal(t, [][]string{
+			{"init", "-force-copy", "-no-color", "-upgrade"},
+			{"apply", "-auto-approve", "-no-color"},
+		}, *calls)
+
 		me.AssertExpectations(t)
 	})
 }
@@ -111,8 +115,7 @@ func TestRackInstallArgs(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		calls := recordTerraform(t)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1 foo=bar baz=qux", nil)
@@ -137,6 +140,11 @@ func TestRackInstallArgs(t *testing.T) {
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
+		require.Equal(t, [][]string{
+			{"init", "-force-copy", "-no-color", "-upgrade"},
+			{"apply", "-auto-approve", "-no-color"},
+		}, *calls)
+
 		me.AssertExpectations(t)
 	})
 }
@@ -147,7 +155,7 @@ func TestRackInstallPrepare(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
+		calls := recordTerraform(t)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1 --prepare", nil)
@@ -172,6 +180,10 @@ func TestRackInstallPrepare(t *testing.T) {
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
 
+		require.Equal(t, [][]string{
+			{"init", "-force-copy", "-no-color", "-upgrade"},
+		}, *calls)
+
 		me.AssertExpectations(t)
 	})
 }
@@ -182,8 +194,7 @@ func TestRackInstallSwitch(t *testing.T) {
 
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		calls := recordTerraform(t)
 		me.On("Execute", "terraform", "output", "-json").Return([]byte(`{}`), nil)
 		e.Executor = me
 
@@ -219,6 +230,11 @@ func TestRackInstallSwitch(t *testing.T) {
 		res.RequireStderr(t, []string{""})
 		res.RequireStdout(t, []string{"dev1"})
 
+		require.Equal(t, [][]string{
+			{"init", "-force-copy", "-no-color", "-upgrade"},
+			{"apply", "-auto-approve", "-no-color"},
+		}, *calls)
+
 		me.AssertExpectations(t)
 	})
 }
@@ -227,8 +243,7 @@ func TestRackInstallVersion(t *testing.T) {
 	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
 		me := &mockstdcli.Executor{}
 		me.On("Execute", "terraform", "version").Return([]byte{}, nil)
-		me.On("Terminal", "terraform", "init", "-force-copy", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "apply", "-auto-approve", "-no-color").Return(nil)
+		calls := recordTerraform(t)
 		e.Executor = me
 
 		res, err := testExecute(e, "rack install local dev1 -v otherver", nil)
@@ -252,6 +267,11 @@ func TestRackInstallVersion(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, strings.Trim(removeSettingsLine(string(tfdata)), "\n"), removeSettingsLine(strings.Trim(string(testdata), "\n")))
+
+		require.Equal(t, [][]string{
+			{"init", "-force-copy", "-no-color", "-upgrade"},
+			{"apply", "-auto-approve", "-no-color"},
+		}, *calls)
 
 		me.AssertExpectations(t)
 	})
@@ -929,8 +949,7 @@ func TestRackUninstall(t *testing.T) {
 		require.NoError(t, testLocalRack(e, "dev1", "local", "https://host1"))
 
 		me := e.Executor.(*mockstdcli.Executor)
-		me.On("Terminal", "terraform", "init", "-no-color", "-upgrade").Return(nil)
-		me.On("Terminal", "terraform", "destroy", "-auto-approve", "-no-color", "-refresh=true").Return(nil)
+		calls := recordTerraform(t)
 
 		res, err := testExecute(e, "rack uninstall dev1", nil)
 		require.NoError(t, err)
@@ -942,6 +961,11 @@ func TestRackUninstall(t *testing.T) {
 
 		_, err = os.Stat(dir)
 		require.True(t, os.IsNotExist(err))
+
+		require.Equal(t, [][]string{
+			{"init", "-no-color", "-upgrade"},
+			{"destroy", "-auto-approve", "-no-color", "-refresh=true"},
+		}, *calls)
 
 		me.AssertExpectations(t)
 	})

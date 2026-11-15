@@ -11,17 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type terraformStub struct{}
-
-func (terraformStub) Execute(string, ...string) ([]byte, error) { return nil, nil }
-
-func (terraformStub) Run(io.Writer, string, ...string) error { return nil }
-
-func (terraformStub) Terminal(cmd string, args ...string) error {
-	fmt.Fprintf(os.Stderr, "%s %s\n", cmd, args[0])
-	return nil
-}
-
 func staleNginxMessage(version string) string {
 	return "WARNING: nginx_image pins ingress-nginx controller " + version + ", which is older than the patched v1.13.9, v1.14.5 and v1.15.1 releases. Rack updates keep this image until nginx_image is changed or cleared with 'convox rack params set nginx_image= --force'.\n"
 }
@@ -92,7 +81,11 @@ func TestApplyPrintsNginxWarningAfterTerraform(t *testing.T) {
 
 	e := stdcli.New("convox", "test")
 	e.Settings = root
-	e.Executor = terraformStub{}
+	stubTerraform(t, func(_, stderr io.Writer, args ...string) error {
+		fmt.Fprintf(stderr, "terraform %s\n", args[0])
+		return nil
+	})
+
 	e.Command("rt", "apply-test handler", func(c *stdcli.Context) error {
 		return Terraform{ctx: c, name: "myrack", provider: "azure"}.apply()
 	}, stdcli.CommandOptions{})
