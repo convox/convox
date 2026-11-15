@@ -70,6 +70,7 @@ resource "kubernetes_config_map" "nginx-configuration" {
       "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
       "allow-snippet-annotations" = "true"
       "annotations-risk-level"    = "Critical"
+      "worker-shutdown-timeout"   = "540s"
     },
     {
       # with use-proxy-protocol and use-forwarded-headers, ingress-nginx 1.13+ renders "real_ip_header proxy_protocol"
@@ -95,6 +96,7 @@ resource "kubernetes_config_map" "nginx-internal-configuration" {
     "ssl-protocols"             = var.ssl_protocols == "" ? null : var.ssl_protocols
     "allow-snippet-annotations" = "true"
     "annotations-risk-level"    = "Critical"
+    "worker-shutdown-timeout"   = "540s"
   }
 }
 
