@@ -29,6 +29,7 @@ module "api" {
   build_archs                               = var.build_archs
   build_disable_convox_resolver             = var.build_disable_convox_resolver
   build_node_enabled                        = var.build_node_enabled
+  cluster_helm_ids                          = var.cluster_helm_ids
   buildkit_host_path_cache_enable           = var.buildkit_host_path_cache_enable
   convox_domain_tls_cert_disable            = var.convox_domain_tls_cert_disable
   custom_provided_bucket                    = var.custom_provided_bucket
@@ -150,6 +151,7 @@ module "router" {
   tags                      = var.tags
   whitelist                 = var.whitelist
   lbc_helm_id               = var.lbc_helm_id
+  cluster_helm_ids          = var.cluster_helm_ids
   router_type               = var.router_type
   contour_cpu_request       = var.contour_cpu_request
   contour_memory_request    = var.contour_memory_request

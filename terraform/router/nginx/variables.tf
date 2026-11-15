@@ -1,3 +1,8 @@
+variable "cluster_helm_ids" {
+  default = ""
+  type    = string
+}
+
 variable "docker_hub_authentication" {
   type    = string
   default = null

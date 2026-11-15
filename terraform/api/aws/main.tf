@@ -33,6 +33,7 @@ module "k8s" {
   seccomp_default_enabled         = var.seccomp_default_enabled
   router_type                     = var.router_type
   cert_duration                   = var.cert_duration
+  cluster_helm_ids                = var.cluster_helm_ids
   karpenter_enabled               = var.karpenter_enabled
   system_readonly_rootfs_enabled  = var.system_readonly_rootfs_enabled
   namespace                       = var.namespace

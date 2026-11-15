@@ -21,6 +21,7 @@ resource "helm_release" "karpenter_crd" {
     aws_iam_role_policy.karpenter_controller_eks,
     aws_iam_role_policy.karpenter_controller_sqs,
     aws_iam_role_policy.karpenter_controller_pricing,
+    aws_eks_node_group.cluster,
   ]
 
   name       = "karpenter-crd"
@@ -34,7 +35,7 @@ resource "helm_release" "karpenter_crd" {
 resource "helm_release" "karpenter" {
   count = var.karpenter_enabled ? 1 : 0
 
-  depends_on = [helm_release.karpenter_crd]
+  depends_on = [helm_release.karpenter_crd, aws_eks_node_group.cluster]
 
   name       = "karpenter"
   namespace  = "kube-system"
