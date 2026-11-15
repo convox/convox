@@ -24,6 +24,7 @@ resource "helm_release" "dcgm_exporter" {
     null_resource.wait_eks_addons,
     helm_release.nvidia_device_plugin,
     kubernetes_config_map.dcgm_metrics_convox,
+    aws_eks_node_group.cluster,
   ]
 
   count = var.gpu_observability_enable && var.nvidia_device_plugin_enable ? 1 : 0

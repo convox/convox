@@ -12,7 +12,7 @@ locals {
 resource "kubectl_manifest" "vpa_crds" {
   for_each = var.vpa_enable ? fileset("${path.module}/files/vpa-crds", "*.yaml") : toset([])
 
-  depends_on = [null_resource.wait_eks_addons]
+  depends_on = [null_resource.wait_eks_addons, aws_eks_node_group.cluster]
 
   yaml_body         = file("${path.module}/files/vpa-crds/${each.value}")
   server_side_apply = true

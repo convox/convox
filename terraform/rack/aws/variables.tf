@@ -186,6 +186,11 @@ variable "lbc_helm_id" {
   type    = string
 }
 
+variable "cluster_helm_ids" {
+  default = ""
+  type    = string
+}
+
 variable "name" {
   type = string
 }

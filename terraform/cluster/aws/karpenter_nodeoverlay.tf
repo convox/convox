@@ -16,5 +16,5 @@ resource "kubectl_manifest" "karpenter_node_overlay" {
   })
 
   wait       = true
-  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd]
+  depends_on = [null_resource.wait_karpenter_ready, helm_release.karpenter_crd, aws_eks_node_group.cluster]
 }
