@@ -128,9 +128,12 @@ resource "kubernetes_service_account" "api" {
 
 resource "kubernetes_deployment" "api" {
   metadata {
-    namespace   = var.namespace
-    name        = "api"
-    annotations = var.cluster_helm_ids == "" ? null : { "convox.io/dependency" = var.cluster_helm_ids }
+    namespace = var.namespace
+    name      = "api"
+    annotations = merge(
+      var.cluster_helm_ids == "" ? {} : { "convox.io/dependency" = var.cluster_helm_ids },
+      var.replicas == 1 ? { "convox.com/pdb-minavailable" = "1" } : {}
+    )
 
     labels = {
       app     = "system"

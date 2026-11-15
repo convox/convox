@@ -238,9 +238,12 @@ resource "kubernetes_role_binding" "ingress-nginx" {
 
 resource "kubernetes_deployment" "ingress-nginx" {
   metadata {
-    namespace   = var.namespace
-    name        = "ingress-nginx"
-    annotations = var.cluster_helm_ids == "" ? null : { "convox.io/dependency" = var.cluster_helm_ids }
+    namespace = var.namespace
+    name      = "ingress-nginx"
+    annotations = merge(
+      var.cluster_helm_ids == "" ? {} : { "convox.io/dependency" = var.cluster_helm_ids },
+      var.replicas_max == 1 ? { "convox.com/pdb-minavailable" = "1" } : {}
+    )
     labels = {
       app     = "system"
       name    = "ingress-nginx"
@@ -444,8 +447,16 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
   metadata {
     namespace = var.namespace
     name      = "ingress-nginx-internal"
-    annotations = {
+    annotations = merge({
       "managed-by" = "convox"
+    }, var.replicas_max == 1 ? { "convox.com/pdb-minavailable" = "1" } : {})
+    labels = {
+      app     = "system"
+      name    = "ingress-nginx-internal"
+      rack    = var.rack
+      system  = "convox"
+      service = "ingress-nginx-internal"
+      type    = "service"
     }
   }
 

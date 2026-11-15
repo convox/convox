@@ -8,6 +8,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	ac "k8s.io/api/core/v1"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -129,6 +130,7 @@ func TestSyncPDBReplicaModes(t *testing.T) {
 		name               string
 		replicas           int32
 		annots             map[string]string
+		defaultPercent     string
 		wantMinAvailable   string
 		wantMaxUnavailable bool
 	}{
@@ -148,11 +150,27 @@ func TestSyncPDBReplicaModes(t *testing.T) {
 			annots:           map[string]string{AnnotationPdbMinAvailable: "100%"},
 			wantMinAvailable: "100%",
 		},
+		{
+			name:             "single replica with integer annotation",
+			replicas:         1,
+			annots:           map[string]string{AnnotationPdbMinAvailable: "1"},
+			wantMinAvailable: "1",
+		},
+		{
+			name:             "integer annotation wins over a rack default of zero",
+			replicas:         1,
+			annots:           map[string]string{AnnotationPdbMinAvailable: "1"},
+			defaultPercent:   "0",
+			wantMinAvailable: "1",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := syncPDBController(t)
+			if tt.defaultPercent != "" {
+				c.Provider.PdbDefaultMinAvailablePercentage = tt.defaultPercent
+			}
 			d := syncPDBFixture("web", tt.replicas, tt.annots)
 
 			if err := c.SyncPDB(d, false); err != nil {
@@ -172,8 +190,9 @@ func TestSyncPDBReplicaModes(t *testing.T) {
 					t.Errorf("MinAvailable = %v, want nil", pdb.Spec.MinAvailable)
 				}
 			} else {
-				if pdb.Spec.MinAvailable == nil || pdb.Spec.MinAvailable.String() != tt.wantMinAvailable {
-					t.Errorf("MinAvailable = %v, want %s", pdb.Spec.MinAvailable, tt.wantMinAvailable)
+				want := intstr.Parse(tt.wantMinAvailable)
+				if pdb.Spec.MinAvailable == nil || *pdb.Spec.MinAvailable != want {
+					t.Errorf("MinAvailable = %#v, want %#v", pdb.Spec.MinAvailable, want)
 				}
 				if pdb.Spec.MaxUnavailable != nil {
 					t.Errorf("MaxUnavailable = %v, want nil", pdb.Spec.MaxUnavailable)
