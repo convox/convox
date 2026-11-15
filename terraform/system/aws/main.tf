@@ -324,6 +324,7 @@ module "rack" {
   image                                     = local.image
   keda_enable                               = var.keda_enable
   lbc_helm_id                               = module.cluster.lbc_helm_id
+  cluster_helm_ids                          = module.cluster.cluster_helm_ids
   name                                      = local.name
   rack_name                                 = local.rack_name
   nlb_security_group                        = var.nlb_security_group

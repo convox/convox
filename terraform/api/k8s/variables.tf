@@ -89,6 +89,11 @@ variable "karpenter_enabled" {
   default = false
 }
 
+variable "cluster_helm_ids" {
+  default = ""
+  type    = string
+}
+
 variable "system_readonly_rootfs_enabled" {
   type    = bool
   default = false

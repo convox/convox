@@ -48,6 +48,18 @@ output "lbc_helm_id" {
   value = helm_release.aws_lbc.id
 }
 
+output "cluster_helm_ids" {
+  value = join(",", [
+    helm_release.aws_lbc.id,
+    var.keda_enable ? helm_release.keda[0].id : "",
+    var.vpa_enable ? helm_release.vpa[0].id : "",
+    var.karpenter_auth_mode ? helm_release.karpenter_crd[0].id : "",
+    var.karpenter_enabled ? helm_release.karpenter[0].id : "",
+    var.nvidia_device_plugin_enable ? helm_release.nvidia_device_plugin[0].id : "",
+    var.gpu_observability_enable && var.nvidia_device_plugin_enable ? helm_release.dcgm_exporter[0].id : "",
+  ])
+}
+
 output "efs_file_system_id" {
   value = var.efs_csi_driver_enable ? aws_efs_file_system.convox_efs[0].id : ""
 }

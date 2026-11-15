@@ -219,6 +219,8 @@ func LoadTerraform(c *stdcli.Context, name string) (*Terraform, error) {
 
 	os.Chdir(filepath.Dir(tf))
 
+	terraformBackendRetryEnv()
+
 	data, err := c.Execute("terraform", "output", "-json")
 	if err != nil {
 		return nil, err
@@ -1193,6 +1195,7 @@ func terraformCapture(dir string, capture io.Writer, args ...string) error {
 	defer signal.Reset(os.Interrupt)
 
 	os.Setenv("AWS_STS_REGIONAL_ENDPOINTS", "regional")
+	terraformBackendRetryEnv()
 
 	red := &redactor{}
 	red.seed(terraformSecrets()...)
@@ -1216,6 +1219,21 @@ func terraformCapture(dir string, capture io.Writer, args ...string) error {
 	stderr.Flush()
 
 	return err
+}
+
+var terraformBackendRetry = map[string]string{
+	"TF_HTTP_RETRY_MAX":      "10",
+	"TF_HTTP_RETRY_WAIT_MIN": "2",
+	"TF_HTTP_RETRY_WAIT_MAX": "15",
+}
+
+// Terraform's default of two retries gives up on the state backend after three seconds.
+func terraformBackendRetryEnv() {
+	for k, v := range terraformBackendRetry {
+		if os.Getenv(k) == "" {
+			os.Setenv(k, v)
+		}
+	}
 }
 
 func terraformEnv(provider string) (map[string]string, error) {

@@ -40,6 +40,7 @@ module "nginx" {
   }
 
   cloud_provider            = "aws"
+  cluster_helm_ids          = var.cluster_helm_ids
   docker_hub_authentication = var.docker_hub_authentication
   karpenter_enabled         = var.karpenter_enabled
   internal_router           = var.internal_router

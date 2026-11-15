@@ -62,7 +62,7 @@ resource "kubernetes_service_account" "lbc" {
 resource "kubectl_manifest" "lbc_crds" {
   for_each = fileset("${path.module}/files/lbc-crds", "*.yaml")
 
-  depends_on = [null_resource.wait_eks_addons]
+  depends_on = [null_resource.wait_eks_addons, aws_eks_node_group.cluster]
 
   yaml_body         = file("${path.module}/files/lbc-crds/${each.value}")
   server_side_apply = true

@@ -1,6 +1,7 @@
 resource "helm_release" "nvidia_device_plugin" {
   depends_on = [
     null_resource.wait_eks_addons,
+    aws_eks_node_group.cluster,
   ]
 
   count = var.nvidia_device_plugin_enable ? 1 : 0
