@@ -3,6 +3,7 @@ package rack
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -371,11 +372,11 @@ func (t Terraform) Uninstall() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, "init", "-no-color", "-upgrade"); err != nil {
+	if err := terraform(dir, "init", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, "destroy", "-auto-approve", "-no-color", "-refresh=true"); err != nil {
+	if err := terraform(dir, "destroy", "-auto-approve", "-no-color", "-refresh=true"); err != nil {
 		return err
 	}
 
@@ -472,7 +473,7 @@ func (t Terraform) apply() error {
 		return err
 	}
 
-	t.reconcileStuckHelmReleases()
+	seen, recent := t.reconcileStuckHelmReleases()
 
 	if w := t.inertNLBSecurityGroupWarning(); w != "" {
 		defer fmt.Fprint(os.Stderr, w)
@@ -482,7 +483,16 @@ func (t Terraform) apply() error {
 		defer fmt.Fprint(os.Stderr, w)
 	}
 
-	if err := terraform(t.ctx, dir, "apply", "-auto-approve", "-no-color"); err != nil {
+	start := time.Now()
+	stderr := &cappedBuffer{}
+
+	if err := terraformCapture(dir, stderr, "apply", "-auto-approve", "-no-color"); err != nil {
+		if !errors.Is(err, errTerraformInterrupted) && !stderr.overflow {
+			t.clearFailedHelmReleases(seen, start, stderr.buf.String())
+		}
+
+		fmt.Fprint(os.Stderr, recent)
+
 		return err
 	}
 
@@ -926,7 +936,7 @@ func (t Terraform) init() error {
 		return err
 	}
 
-	if err := terraform(t.ctx, dir, "init", "-force-copy", "-no-color", "-upgrade"); err != nil {
+	if err := terraform(dir, "init", "-force-copy", "-no-color", "-upgrade"); err != nil {
 		return err
 	}
 
@@ -1164,7 +1174,11 @@ func requireEnv(vars ...string) (map[string]string, error) {
 	return env, nil
 }
 
-func terraform(c *stdcli.Context, dir string, args ...string) error {
+func terraform(dir string, args ...string) error {
+	return terraformCapture(dir, nil, args...)
+}
+
+func terraformCapture(dir string, capture io.Writer, args ...string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -1180,11 +1194,28 @@ func terraform(c *stdcli.Context, dir string, args ...string) error {
 
 	os.Setenv("AWS_STS_REGIONAL_ENDPOINTS", "regional")
 
-	if err := c.Terminal("terraform", args...); err != nil {
-		return err
+	red := &redactor{}
+	red.seed(terraformSecrets()...)
+
+	errw := io.Writer(os.Stderr)
+	if capture != nil {
+		errw = io.MultiWriter(capture, os.Stderr)
 	}
 
-	return nil
+	stdout := &redactWriter{red: red, w: os.Stdout}
+	stderr := &redactWriter{red: red, w: errw}
+
+	run := runTerraform
+	if TestTerraform != nil {
+		run = TestTerraform
+	}
+
+	err = run(stdout, stderr, args...)
+
+	stdout.Flush()
+	stderr.Flush()
+
+	return err
 }
 
 func terraformEnv(provider string) (map[string]string, error) {
