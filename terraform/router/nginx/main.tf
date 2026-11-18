@@ -1,5 +1,5 @@
 locals {
-  default_nginx_image = "convox/ingress-nginx:1.15.1-1@sha256:40b907401d849828ea5645b258b68dc4afe1b8f329130a0043541c7fe1bb395b"
+  default_nginx_image = "convox/ingress-nginx:c0f4828c54c619954559e67144b9610e28127e49@sha256:6db81a87dd1d749d5520a2ddb0e1b50afe6ac9d8a79cd9deae0b95c02db1e67f"
   nginx_image         = var.nginx_image != "" ? var.nginx_image : local.default_nginx_image
 
   additional_config_str = try(base64decode(var.nginx_additional_config), var.nginx_additional_config)
