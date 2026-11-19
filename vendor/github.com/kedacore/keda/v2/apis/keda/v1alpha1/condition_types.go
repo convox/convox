@@ -34,6 +34,11 @@ const (
 	ConditionFallback ConditionType = "Fallback"
 	// ConditionPaused specifies that the resource is paused.
 	ConditionPaused ConditionType = "Paused"
+	// ConditionHPAActive mirrors the underlying HPA's ScalingActive condition.
+	// It is ScaledObject-specific (ScaledJob has no HPA), so it is intentionally NOT part of
+	// GetInitializedConditions/AreInitialized. It is set lazily by checkHPAHealth once an HPA
+	// exists for the ScaledObject.
+	ConditionHPAActive ConditionType = "HPAActive"
 )
 
 const (
@@ -45,16 +50,30 @@ const (
 	ScaledObjectConditionPausedReason = "ScaledObjectPaused"
 	// ScaledObjectConditionPausedMessage defines the default Message for paused ScaledObject
 	ScaledObjectConditionPausedMessage = "ScaledObject is paused"
+
+	// ScaledObjectConditionHPAMetricsUnavailableReason is the HPAActive condition reason when the HPA cannot fetch metrics
+	ScaledObjectConditionHPAMetricsUnavailableReason = "HPAMetricsUnavailable"
+	// ScaledObjectConditionScalingDegradedReason was the Ready condition reason when both scalers and HPA were unhealthy.
+	// Since #7914, HPA health no longer affects Ready, so this reason is no longer emitted.
+	// TODO: possibly removable, maintainer decision (#7914)
+	ScaledObjectConditionScalingDegradedReason = "ScalingDegraded"
+	// ScaledObjectConditionHPAActiveReason is the HPAActive condition reason when the HPA is healthy
+	ScaledObjectConditionHPAActiveReason = "HPAActive"
+	// ScaledObjectConditionHPAScalingDisabledReason is the HPAActive condition reason mirroring the HPA's own
+	// ScalingDisabled reason. The HPA sets this when KEDA has scaled the target to zero; HPAActive stays
+	// True (the HPA is not unhealthy, just intentionally idle) but this reason distinguishes it from a
+	// normally-scaling HPA.
+	ScaledObjectConditionHPAScalingDisabledReason = "ScalingDisabled"
 )
 
 const (
 	// ScaledJobConditionPausedReason defines the default Reason for paused ScaledJob
 	ScaledJobConditionPausedReason = "ScaledJobPaused"
-	// ScaledJobConditionPausedReason defines the default Reason for paused ScaledJob
+	// ScaledJobConditionUnpausedReason defines the default Reason for unpaused ScaledJob
 	ScaledJobConditionUnpausedReason = "ScaledJobUnpaused"
 	// ScaledJobConditionPausedMessage defines the default Message for paused ScaledJob
 	ScaledJobConditionPausedMessage = "ScaledJob is paused"
-	// ScaledJobConditionPausedMessage defines the default Message for paused ScaledJob
+	// ScaledJobConditionUnpausedMessage defines the default Message for unpaused ScaledJob
 	ScaledJobConditionUnpausedMessage = "ScaledJob is unpaused"
 )
 
@@ -150,39 +169,49 @@ func (c *Condition) IsUnknown() bool {
 // SetReadyCondition modifies Ready Condition according to input parameters
 func (c *Conditions) SetReadyCondition(status metav1.ConditionStatus, reason string, message string) {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
-	c.setCondition(ConditionReady, status, reason, message)
+	c.SetCondition(ConditionReady, status, reason, message)
 }
 
 // SetActiveCondition modifies Active Condition according to input parameters
 func (c *Conditions) SetActiveCondition(status metav1.ConditionStatus, reason string, message string) {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
-	c.setCondition(ConditionActive, status, reason, message)
+	c.SetCondition(ConditionActive, status, reason, message)
 }
 
 // SetFallbackCondition modifies Fallback Condition according to input parameters
 func (c *Conditions) SetFallbackCondition(status metav1.ConditionStatus, reason string, message string) {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
-	c.setCondition(ConditionFallback, status, reason, message)
+	c.SetCondition(ConditionFallback, status, reason, message)
 }
 
 // SetPausedCondition modifies Paused Condition according to input parameters
 func (c *Conditions) SetPausedCondition(status metav1.ConditionStatus, reason string, message string) {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
-	c.setCondition(ConditionPaused, status, reason, message)
+	c.SetCondition(ConditionPaused, status, reason, message)
+}
+
+// SetHPAActiveCondition modifies HPAActive Condition according to input parameters.
+// HPAActive is ScaledObject-specific and is set lazily (see ConditionHPAActive); it is not part of
+// GetInitializedConditions, but SetCondition will append it the first time it is set.
+func (c *Conditions) SetHPAActiveCondition(status metav1.ConditionStatus, reason string, message string) {
+	if *c == nil {
+		*c = *GetInitializedConditions()
+	}
+	c.SetCondition(ConditionHPAActive, status, reason, message)
 }
 
 // GetActiveCondition returns Condition of type Active
 func (c *Conditions) GetActiveCondition() Condition {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
 	return c.getCondition(ConditionActive)
 }
@@ -190,7 +219,7 @@ func (c *Conditions) GetActiveCondition() Condition {
 // GetReadyCondition returns Condition of type Ready
 func (c *Conditions) GetReadyCondition() Condition {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
 	return c.getCondition(ConditionReady)
 }
@@ -198,7 +227,7 @@ func (c *Conditions) GetReadyCondition() Condition {
 // GetFallbackCondition returns Condition of type Fallback
 func (c *Conditions) GetFallbackCondition() Condition {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
 	return c.getCondition(ConditionFallback)
 }
@@ -206,9 +235,19 @@ func (c *Conditions) GetFallbackCondition() Condition {
 // GetPausedCondition returns Condition of type Paused
 func (c *Conditions) GetPausedCondition() Condition {
 	if *c == nil {
-		c = GetInitializedConditions()
+		*c = *GetInitializedConditions()
 	}
 	return c.getCondition(ConditionPaused)
+}
+
+// GetHPAActiveCondition returns Condition of type HPAActive. If it has not been set yet
+// (e.g. no HPA exists for the ScaledObject yet, or this is a ScaledJob), a zero-value Condition
+// is returned.
+func (c *Conditions) GetHPAActiveCondition() Condition {
+	if *c == nil {
+		*c = *GetInitializedConditions()
+	}
+	return c.getCondition(ConditionHPAActive)
 }
 
 func (c Conditions) getCondition(conditionType ConditionType) Condition {
@@ -220,12 +259,27 @@ func (c Conditions) getCondition(conditionType ConditionType) Condition {
 	return Condition{}
 }
 
-func (c Conditions) setCondition(conditionType ConditionType, status metav1.ConditionStatus, reason string, message string) {
-	for i := range c {
-		if c[i].Type == conditionType {
-			c[i].Status = status
-			c[i].Reason = reason
-			c[i].Message = message
+func (c *Conditions) SetCondition(conditionType ConditionType, status metav1.ConditionStatus, reason string, message string) {
+	for i := range *c {
+		if (*c)[i].Type == conditionType {
+			(*c)[i].Status = status
+			(*c)[i].Reason = reason
+			(*c)[i].Message = message
+			return
+		}
+	}
+	*c = append(*c, Condition{Type: conditionType, Status: status, Reason: reason, Message: message})
+}
+
+// RemoveCondition removes a condition of the given type from the Conditions slice.
+func (c *Conditions) RemoveCondition(conditionType ConditionType) {
+	for i := range *c {
+		if (*c)[i].Type == conditionType {
+			ret := (*c)[:i]
+			if i+1 < len(*c) {
+				ret = append(ret, (*c)[i+1:]...)
+			}
+			*c = ret
 			break
 		}
 	}

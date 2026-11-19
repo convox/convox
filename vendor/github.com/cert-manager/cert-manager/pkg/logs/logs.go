@@ -20,23 +20,22 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/pflag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/component-base/logs"
+	logsapi "k8s.io/component-base/logs/api/v1"
 	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/klogr"
 
 	"github.com/cert-manager/cert-manager/pkg/api"
+
+	_ "k8s.io/component-base/logs/json/register"
 )
 
-var (
-	Log = klogr.New().WithName("cert-manager")
-)
+var Log = klog.TODO().WithName("cert-manager")
 
 const (
 	// Following analog to https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md
@@ -49,35 +48,50 @@ const (
 	TraceLevel        = 5
 )
 
-var logFlushFreq = flag.Duration("log-flush-frequency", 5*time.Second, "Maximum number of seconds between log flushes")
+// InitLogs initializes logs the way we want for kubernetes.
+func InitLogs() {
+	logs.InitLogs()
 
-// GlogWriter serves as a bridge between the standard log package and the glog package.
-type GlogWriter struct{}
-
-// Write implements the io.Writer interface.
-func (writer GlogWriter) Write(data []byte) (n int, err error) {
-	klog.Info(string(data))
-	return len(data), nil
+	klog.EnableContextualLogging(true) // Enable contextual logging
 }
 
-// InitLogs initializes logs the way we want for kubernetes.
-func InitLogs(fs *flag.FlagSet) {
-	if fs == nil {
-		fs = flag.CommandLine
-	}
-	klog.InitFlags(fs)
-	_ = fs.Set("logtostderr", "true")
+func AddFlagsNonDeprecated(opts *logsapi.LoggingConfiguration, fs *pflag.FlagSet) {
+	var allFlags pflag.FlagSet
+	logsapi.AddFlags(opts, &allFlags)
 
-	log.SetOutput(GlogWriter{})
-	log.SetFlags(0)
+	allFlags.VisitAll(func(f *pflag.Flag) {
+		switch f.Name {
+		case "logging-format", "log-flush-frequency", "v", "vmodule":
+			fs.AddFlag(f)
+		}
+	})
+}
 
-	// The default glog flush interval is 30 seconds, which is frighteningly long.
-	go wait.Until(klog.Flush, *logFlushFreq, wait.NeverStop)
+func AddFlags(opts *logsapi.LoggingConfiguration, fs *pflag.FlagSet) {
+	var allFlags flag.FlagSet
+	klog.InitFlags(&allFlags)
+
+	allFlags.VisitAll(func(f *flag.Flag) {
+		switch f.Name {
+		case "add_dir_header", "alsologtostderr", "log_backtrace_at", "log_dir", "log_file", "log_file_max_size",
+			"logtostderr", "one_output", "skip_headers", "skip_log_headers", "stderrthreshold":
+			pf := pflag.PFlagFromGoFlag(f)
+			pf.Deprecated = "this flag may be removed in the future"
+			pf.Hidden = true
+			fs.AddFlag(pf)
+		}
+	})
+
+	AddFlagsNonDeprecated(opts, fs)
+}
+
+func ValidateAndApply(opts *logsapi.LoggingConfiguration) error {
+	return logsapi.ValidateAndApply(opts, nil)
 }
 
 // FlushLogs flushes logs immediately.
 func FlushLogs() {
-	klog.Flush()
+	logs.FlushLogs()
 }
 
 const (
@@ -136,8 +150,6 @@ func WithRelatedResourceName(l logr.Logger, name, namespace, kind string) logr.L
 	)
 }
 
-var contextKey = &struct{}{}
-
 func FromContext(ctx context.Context, names ...string) logr.Logger {
 	l, err := logr.FromContext(ctx)
 	if err != nil {
@@ -156,10 +168,6 @@ func NewContext(ctx context.Context, l logr.Logger, names ...string) context.Con
 	return logr.NewContext(ctx, l)
 }
 
-func V(level int) klog.Verbose {
-	return klog.V(klog.Level(level))
-}
-
 // LogWithFormat is a wrapper for logger that adds Infof method to log messages
 // with the given format and arguments.
 //
@@ -173,6 +181,6 @@ func WithInfof(l logr.Logger) *LogWithFormat {
 }
 
 // Infof logs message with the given format and arguments.
-func (l *LogWithFormat) Infof(format string, a ...interface{}) {
+func (l *LogWithFormat) Infof(format string, a ...any) {
 	l.Info(fmt.Sprintf(format, a...))
 }

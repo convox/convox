@@ -69,8 +69,8 @@ func ExtKeyUsageTypeKube(usage certificatesv1.KeyUsage) (x509.ExtKeyUsage, bool)
 func KubeKeyUsageStrings(usage x509.KeyUsage) []certificatesv1.KeyUsage {
 	var usageStr []certificatesv1.KeyUsage
 
-	for i := 0; i < bits.UintSize; i++ {
-		if v := usage & (1 << uint(i)); v != 0 {
+	for i := range bits.UintSize {
+		if v := usage & (1 << i); v != 0 {
 			usageStr = append(usageStr, kubeKeyUsageString(v))
 		}
 	}
@@ -91,6 +91,10 @@ func KubeExtKeyUsageStrings(usage []x509.ExtKeyUsage) []certificatesv1.KeyUsage 
 
 // kubeKeyUsageString returns the cmapi.KeyUsage and "unknown" if not found
 func kubeKeyUsageString(usage x509.KeyUsage) certificatesv1.KeyUsage {
+	if usage == x509.KeyUsageDigitalSignature {
+		return certificatesv1.UsageDigitalSignature // we have two keys that map to KeyUsageDigitalSignature in our map, we should be consistent when parsing
+	}
+
 	for k, v := range keyUsagesKube {
 		if usage == v {
 			return k
@@ -102,6 +106,10 @@ func kubeKeyUsageString(usage x509.KeyUsage) certificatesv1.KeyUsage {
 
 // kubeExtKeyUsageString returns the cmapi.ExtKeyUsage and "unknown" if not found
 func kubeExtKeyUsageString(usage x509.ExtKeyUsage) certificatesv1.KeyUsage {
+	if usage == x509.ExtKeyUsageEmailProtection {
+		return certificatesv1.UsageEmailProtection // we have two keys that map to ExtKeyUsageEmailProtection in our map, we should be consistent when parsing
+	}
+
 	for k, v := range extKeyUsagesKube {
 		if usage == v {
 			return k
