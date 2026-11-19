@@ -4,6 +4,8 @@ resource "aws_eks_addon" "aws_efs_csi_driver" {
   depends_on = [
     null_resource.wait_k8s_api,
     aws_eks_node_group.cluster,
+    aws_eks_addon.eks_pod_identity_agent,
+    null_resource.delay_efs_csi,
   ]
 
   count = var.efs_csi_driver_enable ? 1 : 0
@@ -13,6 +15,14 @@ resource "aws_eks_addon" "aws_efs_csi_driver" {
   addon_version               = var.efs_csi_driver_version
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+  dynamic "pod_identity_association" {
+    for_each = var.pod_identity_agent_enable ? [1] : []
+    content {
+      role_arn        = aws_iam_role.efs_csi[0].arn
+      service_account = "efs-csi-controller-sa"
+    }
+  }
 
   configuration_values = var.karpenter_enabled ? jsonencode({
     controller = {
@@ -38,6 +48,36 @@ resource "aws_iam_role_policy" "efs_policy" {
   name   = "aws-efs-csi-driver"
   role   = aws_iam_role.nodes.name
   policy = file("${path.module}/files/efs_driver_policy.json")
+}
+
+resource "aws_iam_role" "efs_csi" {
+  count = var.efs_csi_driver_enable && var.pod_identity_agent_enable ? 1 : 0
+
+  name                  = "${var.name}-efs-csi"
+  assume_role_policy    = data.aws_iam_policy_document.assume_pod_identity.json
+  force_detach_policies = true
+  path                  = "/convox/"
+  tags                  = local.tags
+}
+
+resource "aws_iam_role_policy" "efs_csi" {
+  count = var.efs_csi_driver_enable && var.pod_identity_agent_enable ? 1 : 0
+
+  name   = "aws-efs-csi-driver"
+  role   = aws_iam_role.efs_csi[0].name
+  policy = file("${path.module}/files/efs_driver_policy.json")
+}
+
+resource "null_resource" "delay_efs_csi" {
+  count = var.efs_csi_driver_enable && var.pod_identity_agent_enable ? 1 : 0
+
+  provisioner "local-exec" {
+    command = "sleep 15"
+  }
+
+  triggers = {
+    policy = aws_iam_role_policy.efs_csi[0].id
+  }
 }
 
 // setup efs file system

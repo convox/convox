@@ -731,6 +731,8 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
     null_resource.wait_k8s_api,
     null_resource.wait_eks_addons,
     aws_eks_node_group.cluster,
+    aws_eks_addon.eks_pod_identity_agent,
+    null_resource.delay_ebs_csi,
   ]
 
   cluster_name  = aws_eks_cluster.cluster.name
@@ -739,6 +741,14 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
+
+  dynamic "pod_identity_association" {
+    for_each = var.pod_identity_agent_enable ? [1] : []
+    content {
+      role_arn        = aws_iam_role.ebs_csi[0].arn
+      service_account = "ebs-csi-controller-sa"
+    }
+  }
 
   configuration_values = jsonencode(merge(
     {
