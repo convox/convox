@@ -411,6 +411,11 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 				return nil, errors.WithStack(err)
 			}
 		}
+		if p.BuildImdsBlockEnabled {
+			if err := p.ensureBuildImdsBlockPolicy(context.TODO(), createNs); err != nil {
+				return nil, errors.WithStack(err)
+			}
+		}
 	}
 
 	s, err := p.podSpecFromRunOptions(app, service, createNs, opts)

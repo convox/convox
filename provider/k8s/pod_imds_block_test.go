@@ -5,12 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/options"
+	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -170,4 +173,201 @@ func TestRunPodImdsBlockReconciler_StopsOnContextCancel(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("runPodImdsBlockReconciler did not return after context cancel")
 	}
+}
+
+func TestBuildImdsBlockNetworkPolicy(t *testing.T) {
+	np := buildImdsBlockNetworkPolicy("rack1-app1", "rack1")
+
+	assert.Equal(t, buildImdsBlockPolicyName, np.Name)
+	assert.Equal(t, "rack1-app1", np.Namespace)
+	assert.Equal(t, map[string]string{"system": "convox", "rack": "rack1", "type": "build-imds-block"}, np.Labels)
+	assert.Equal(t, map[string]string{"service-type": "build"}, np.Spec.PodSelector.MatchLabels)
+	assert.Empty(t, np.Spec.PodSelector.MatchExpressions)
+	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}, np.Spec.PolicyTypes)
+	assert.Empty(t, np.Spec.Ingress)
+
+	require.Len(t, np.Spec.Egress, 1)
+	require.Len(t, np.Spec.Egress[0].To, 1)
+	assert.Empty(t, np.Spec.Egress[0].Ports)
+	ipb := np.Spec.Egress[0].To[0].IPBlock
+	require.NotNil(t, ipb)
+	assert.Equal(t, "0.0.0.0/0", ipb.CIDR)
+	assert.Equal(t, []string{"169.254.169.254/32"}, ipb.Except)
+}
+
+func buildImdsProvider(t *testing.T, enabled bool) (*Provider, *fake.Clientset) {
+	t.Helper()
+	p, kk, kc := minimalProvider(t)
+	createAppNamespace(t, kk, "rack1", "app1")
+	createBuild(t, kc, "rack1-app1", "build1")
+	createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
+	p.BuildImdsBlockEnabled = enabled
+	return p, kk
+}
+
+func buildRunOptions() structs.ProcessRunOptions {
+	return structs.ProcessRunOptions{Release: options.String("rel1"), Command: options.String("build"), IsBuild: true}
+}
+
+func TestProcessRunBuildImdsBlock(t *testing.T) {
+	for name, tc := range map[string]struct {
+		enabled bool
+		service string
+		isBuild bool
+	}{
+		"on":           {enabled: true, service: "build", isBuild: true},
+		"off":          {enabled: false, service: "build", isBuild: true},
+		"on-not-build": {enabled: true, service: "web", isBuild: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, kk := buildImdsProvider(t, tc.enabled)
+
+			_, err := p.ProcessRun("app1", tc.service, structs.ProcessRunOptions{Release: options.String("rel1"), IsBuild: tc.isBuild})
+			require.NoError(t, err)
+
+			pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+			require.NoError(t, err)
+			require.Len(t, pods.Items, 1)
+
+			sel, err := am.LabelSelectorAsSelector(&buildImdsBlockNetworkPolicy("rack1-app1", "rack1").Spec.PodSelector)
+			require.NoError(t, err)
+			assert.Equal(t, tc.isBuild, sel.Matches(labels.Set(pods.Items[0].Labels)))
+
+			_, err = kk.NetworkingV1().NetworkPolicies("rack1-app1").Get(context.TODO(), buildImdsBlockPolicyName, am.GetOptions{})
+			if !tc.enabled || !tc.isBuild {
+				require.True(t, k8serrors.IsNotFound(err))
+				return
+			}
+			require.NoError(t, err)
+
+			var order []string
+			for _, a := range kk.Actions() {
+				if r := a.GetResource().Resource; a.GetVerb() == "create" && (r == "networkpolicies" || r == "pods") {
+					order = append(order, r)
+				}
+			}
+			assert.Equal(t, []string{"networkpolicies", "pods"}, order)
+		})
+	}
+}
+
+func TestProcessRunBuildImdsBlockExisting(t *testing.T) {
+	p, kk := buildImdsProvider(t, true)
+	_, err := kk.NetworkingV1().NetworkPolicies("rack1-app1").Create(context.TODO(), buildImdsBlockNetworkPolicy("rack1-app1", "rack1"), am.CreateOptions{})
+	require.NoError(t, err)
+
+	_, err = p.ProcessRun("app1", "build", buildRunOptions())
+	require.NoError(t, err)
+}
+
+func TestProcessRunBuildImdsBlockCreateError(t *testing.T) {
+	p, kk := buildImdsProvider(t, true)
+	kk.PrependReactor("create", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, assert.AnError
+	})
+
+	_, err := p.ProcessRun("app1", "build", buildRunOptions())
+	require.ErrorIs(t, err, assert.AnError)
+
+	pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
+	require.NoError(t, err)
+	assert.Empty(t, pods.Items)
+}
+
+func TestProcessRunBuildImdsBlockBuildNamespace(t *testing.T) {
+	p, kk := buildImdsProvider(t, true)
+	p.PodSecurityStandard = "baseline"
+	p.PodSecurityMode = "enforce"
+
+	_, err := p.ProcessRun("app1", "build", buildRunOptions())
+	require.NoError(t, err)
+
+	_, err = kk.NetworkingV1().NetworkPolicies("rack1-build-app1").Get(context.TODO(), buildImdsBlockPolicyName, am.GetOptions{})
+	require.NoError(t, err)
+
+	_, err = kk.NetworkingV1().NetworkPolicies("rack1-app1").Get(context.TODO(), buildImdsBlockPolicyName, am.GetOptions{})
+	assert.True(t, k8serrors.IsNotFound(err))
+}
+
+func createPolicies(t *testing.T, cs *fake.Clientset, nps ...*networkingv1.NetworkPolicy) {
+	t.Helper()
+	for _, np := range nps {
+		_, err := cs.NetworkingV1().NetworkPolicies(np.Namespace).Create(context.Background(), np, am.CreateOptions{})
+		require.NoError(t, err)
+	}
+}
+
+func TestReconcilePodImdsBlock_BuildPolicyRemovedWhenOff(t *testing.T) {
+	cs := fake.NewSimpleClientset(newAppNamespace("app-a", "rack1"))
+	other := buildImdsBlockNetworkPolicy("app-a", "rack1")
+	other.Name = "convox-other"
+	other.Labels["type"] = "balancer"
+	createPolicies(t, cs,
+		buildImdsBlockNetworkPolicy("app-a", "rack1"),
+		buildImdsBlockNetworkPolicy("rack1-build-app-a", "rack1"),
+		buildImdsBlockNetworkPolicy("app-foreign", "rack2"),
+		imdsBlockNetworkPolicy("rack1-build-app-a"),
+		other,
+	)
+	p := &Provider{Cluster: cs, Name: "rack1"}
+
+	require.NoError(t, p.reconcilePodImdsBlock(context.Background()))
+
+	for _, ns := range []string{"app-a", "rack1-build-app-a"} {
+		_, err := cs.NetworkingV1().NetworkPolicies(ns).Get(context.Background(), buildImdsBlockPolicyName, am.GetOptions{})
+		assert.True(t, k8serrors.IsNotFound(err), "this rack's build policy must be deleted in %s", ns)
+	}
+	for _, kept := range [][2]string{{"app-foreign", buildImdsBlockPolicyName}, {"rack1-build-app-a", imdsBlockPolicyName}, {"app-a", "convox-other"}} {
+		_, err := cs.NetworkingV1().NetworkPolicies(kept[0]).Get(context.Background(), kept[1], am.GetOptions{})
+		assert.NoError(t, err, "%s/%s must stay", kept[0], kept[1])
+	}
+}
+
+func TestReconcilePodImdsBlock_BuildPolicyKeptWhenOn(t *testing.T) {
+	cs := fake.NewSimpleClientset(newAppNamespace("app-a", "rack1"))
+	createPolicies(t, cs,
+		buildImdsBlockNetworkPolicy("app-a", "rack1"),
+		buildImdsBlockNetworkPolicy("rack1-build-app-a", "rack1"),
+	)
+	p := &Provider{Cluster: cs, Name: "rack1", BuildImdsBlockEnabled: true}
+
+	require.NoError(t, p.reconcilePodImdsBlock(context.Background()))
+
+	for _, ns := range []string{"app-a", "rack1-build-app-a"} {
+		_, err := cs.NetworkingV1().NetworkPolicies(ns).Get(context.Background(), buildImdsBlockPolicyName, am.GetOptions{})
+		assert.NoError(t, err, "build policy must stay in %s", ns)
+	}
+}
+
+func TestReconcilePodImdsBlock_BuildDeleteErrorContinues(t *testing.T) {
+	cs := fake.NewSimpleClientset()
+	createPolicies(t, cs,
+		buildImdsBlockNetworkPolicy("app-a", "rack1"),
+		buildImdsBlockNetworkPolicy("app-b", "rack1"),
+	)
+	cs.PrependReactor("delete", "networkpolicies", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		if action.GetNamespace() == "app-a" {
+			return true, nil, assert.AnError
+		}
+		return false, nil, nil
+	})
+	p := &Provider{Cluster: cs, Name: "rack1"}
+
+	require.NoError(t, p.reconcilePodImdsBlock(context.Background()))
+
+	_, err := cs.NetworkingV1().NetworkPolicies("app-b").Get(context.Background(), buildImdsBlockPolicyName, am.GetOptions{})
+	assert.True(t, k8serrors.IsNotFound(err), "a failed delete in app-a must not skip app-b")
+}
+
+func TestReconcilePodImdsBlock_BuildListErrorContinues(t *testing.T) {
+	cs := fake.NewSimpleClientset(newAppNamespace("app-a", "rack1"))
+	cs.PrependReactor("list", "networkpolicies", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, assert.AnError
+	})
+	p := &Provider{Cluster: cs, Name: "rack1", PodImdsBlockEnabled: true}
+
+	require.NoError(t, p.reconcilePodImdsBlock(context.Background()))
+
+	_, err := cs.NetworkingV1().NetworkPolicies("app-a").Get(context.Background(), imdsBlockPolicyName, am.GetOptions{})
+	assert.NoError(t, err)
 }
