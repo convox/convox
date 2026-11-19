@@ -2022,6 +2022,46 @@ func validateControlPlanePrivateSubnets(params, currentParams map[string]string,
 	return nil
 }
 
+// imdsRestricted parses the hop limit as a float because Terraform reads "01" and "1.0" as 1.
+func imdsRestricted(params, currentParams map[string]string) bool {
+	hop, err := strconv.ParseFloat(effectiveParam(params, currentParams, "imds_http_hop_limit", "3"), 64)
+	return err == nil && hop == 1 && effectiveParam(params, currentParams, "imds_http_tokens", "optional") == "required"
+}
+
+func podIdentityAgentOn(params, currentParams map[string]string) bool {
+	on, _ := strconv.ParseBool(effectiveParam(params, currentParams, "pod_identity_agent_enable", "false"))
+	return on
+}
+
+func validateImdsHopLimit(params, currentParams map[string]string, force bool) error {
+	if force {
+		return nil
+	}
+	_, hop := params["imds_http_hop_limit"]
+	_, tokens := params["imds_http_tokens"]
+	_, agent := params["pod_identity_agent_enable"]
+	if !hop && !tokens && !agent {
+		return nil
+	}
+
+	was, now := podIdentityAgentOn(nil, currentParams), podIdentityAgentOn(params, currentParams)
+
+	if was && !now {
+		if imdsRestricted(params, currentParams) || len(params) > 1 {
+			return errors.New("pod_identity_agent_enable=false must be set in a call of its own, and not while\n  imds_http_hop_limit=1 with imds_http_tokens=required is set: the EBS and EFS volume\n  controllers take their AWS credentials from EKS Pod Identity. To turn it off, first run:\n    convox rack params set imds_http_hop_limit=3\n  Wait for the update to complete, then set pod_identity_agent_enable=false alone.\n  Use --force to override")
+		}
+		return nil
+	}
+
+	if !imdsRestricted(params, currentParams) {
+		return nil
+	}
+	if now && (was || imdsRestricted(nil, currentParams)) {
+		return nil
+	}
+	return errors.New("imds_http_hop_limit=1 with imds_http_tokens=required requires pod_identity_agent_enable=true\n  to be set first, on rack version 3.26.1 or later. With those metadata options pods cannot\n  read node credentials, and the EBS and EFS volume controllers use EKS Pod Identity instead.\n  First run:\n    convox rack params set pod_identity_agent_enable=true\n  Wait for the update to complete, then set the metadata options. Use --force to override")
+}
+
 func decodeKarpenterNodePools(v string) (KarpenterNodePools, error) {
 	if v == "" {
 		return nil, nil
@@ -3022,6 +3062,9 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if err := validateControlPlanePrivateSubnets(params, currentParams, force); err != nil {
 			return err
 		}
+		if err := validateImdsHopLimit(params, currentParams, force); err != nil {
+			return err
+		}
 	}
 
 	// karpenter_node_overlays_config: validate NodeOverlay entries and re-encode
@@ -3941,6 +3984,15 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 			return fmt.Errorf(
 				"cannot downgrade to %s while router_type=contour is set.\n"+
 					"  Set router_type=nginx first: convox rack params set router_type=nginx",
+				newVersion)
+		}
+	}
+
+	if !force && isVersionLessThan(newVersion, "3.26.1") && !isVersionLessThan(currentVersion, "3.26.1") {
+		if currentParams, pErr := r.Parameters(); pErr == nil && imdsRestricted(nil, currentParams) {
+			return fmt.Errorf(
+				"cannot downgrade to %s while imds_http_hop_limit=1 and imds_http_tokens=required are set.\n"+
+					"  Set imds_http_hop_limit=3 first: convox rack params set imds_http_hop_limit=3",
 				newVersion)
 		}
 	}

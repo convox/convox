@@ -108,6 +108,16 @@ resource "helm_release" "aws_lbc" {
   }
 
   set {
+    name  = "region"
+    value = data.aws_region.current.name
+  }
+
+  set {
+    name  = "vpcId"
+    value = local.vpc_id
+  }
+
+  set {
     name  = "enableServiceMutatorWebhook"
     value = "false"
   }
