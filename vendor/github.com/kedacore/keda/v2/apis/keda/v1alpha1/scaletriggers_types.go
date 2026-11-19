@@ -26,6 +26,7 @@ import (
 
 // ScaleTriggers reference the scaler that will be used
 type ScaleTriggers struct {
+	// +kubebuilder:validation:MinLength=1
 	Type string `json:"type"`
 	// +optional
 	Name string `json:"name,omitempty"`
@@ -45,6 +46,7 @@ type AuthenticationRef struct {
 	Name string `json:"name"`
 	// Kind of the resource being referred to. Defaults to TriggerAuthentication.
 	// +optional
+	// +kubebuilder:validation:Enum=TriggerAuthentication;ClusterTriggerAuthentication
 	Kind string `json:"kind,omitempty"`
 }
 
@@ -60,7 +62,7 @@ func ValidateTriggers(triggers []ScaleTriggers) error {
 
 	if triggers != nil && triggersCount > 0 {
 		triggerNames := make(map[string]bool, triggersCount)
-		for i := 0; i < triggersCount; i++ {
+		for i := range triggersCount {
 			trigger := triggers[i]
 
 			if trigger.UseCachedMetrics {

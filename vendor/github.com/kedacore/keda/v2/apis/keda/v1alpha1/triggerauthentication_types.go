@@ -30,6 +30,7 @@ import (
 // +kubebuilder:printcolumn:name="PodIdentity",type="string",JSONPath=".spec.podIdentity.provider"
 // +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=".spec.secretTargetRef[*].name"
 // +kubebuilder:printcolumn:name="Env",type="string",JSONPath=".spec.env[*].name"
+// +kubebuilder:printcolumn:name="FilePath",type="string",JSONPath=".spec.filePath"
 // +kubebuilder:printcolumn:name="VaultAddress",type="string",JSONPath=".spec.hashiCorpVault.address"
 // +kubebuilder:printcolumn:name="ScaledObjects",type="string",priority=1,JSONPath=".status.scaledobjects"
 // +kubebuilder:printcolumn:name="ScaledJobs",type="string",priority=1,JSONPath=".status.scaledjobs"
@@ -84,6 +85,11 @@ type TriggerAuthenticationSpec struct {
 	// +optional
 	Env []AuthEnvironment `json:"env,omitempty"`
 
+	// FilePath specifies a file containing auth parameters as JSON map[string]string.
+	// When set, auth params are read directly from this file instead.
+	// +optional
+	FilePath string `json:"filePath,omitempty"`
+
 	// +optional
 	HashiCorpVault *HashiCorpVault `json:"hashiCorpVault,omitempty"`
 
@@ -98,6 +104,12 @@ type TriggerAuthenticationSpec struct {
 
 	// +optional
 	BoundServiceAccountToken []BoundServiceAccountToken `json:"boundServiceAccountToken,omitempty"`
+
+	// +optional
+	OAuth2 *OAuth2 `json:"oauth2,omitempty"`
+
+	// +optional
+	AzureServicePrincipal *AzureServicePrincipal `json:"azureServicePrincipal,omitempty"`
 }
 
 // TriggerAuthenticationStatus defines the observed state of TriggerAuthentication
@@ -155,6 +167,10 @@ type AuthPodIdentity struct {
 	// +kubebuilder:validation:Optional
 	// RoleArn sets the AWS RoleArn to be used. Mutually exclusive with IdentityOwner
 	RoleArn *string `json:"roleArn,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// ExternalID sets the External ID to be used when assuming an identity. This is only applicable when using AWS pod identity with a RoleArn.
+	ExternalID *string `json:"externalID,omitempty"`
 
 	// +kubebuilder:validation:Enum=keda;workload
 	// +optional
@@ -217,7 +233,8 @@ type AuthEnvironment struct {
 type HashiCorpVault struct {
 	Address        string              `json:"address"`
 	Authentication VaultAuthentication `json:"authentication"`
-	Secrets        []VaultSecret       `json:"secrets"`
+	// +kubebuilder:validation:MinItems=1
+	Secrets []VaultSecret `json:"secrets"`
 
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -245,6 +262,7 @@ type Credential struct {
 }
 
 // VaultAuthentication contains the list of Hashicorp Vault authentication methods
+// +kubebuilder:validation:Enum=token;kubernetes
 type VaultAuthentication string
 
 // Client authenticating to Vault
@@ -255,6 +273,7 @@ const (
 )
 
 // VaultSecretType defines the type of vault secret
+// +kubebuilder:validation:Enum="";secretV2;secret;pki
 type VaultSecretType string
 
 const (
@@ -286,8 +305,9 @@ type VaultSecret struct {
 
 // AzureKeyVault is used to authenticate using Azure Key Vault
 type AzureKeyVault struct {
-	VaultURI string                `json:"vaultUri"`
-	Secrets  []AzureKeyVaultSecret `json:"secrets"`
+	VaultURI string `json:"vaultUri"`
+	// +kubebuilder:validation:MinItems=1
+	Secrets []AzureKeyVaultSecret `json:"secrets"`
 	// +optional
 	Credentials *AzureKeyVaultCredentials `json:"credentials"`
 	// +optional
@@ -331,6 +351,7 @@ type AzureKeyVaultCloudInfo struct {
 }
 
 type GCPSecretManager struct {
+	// +kubebuilder:validation:MinItems=1
 	Secrets []GCPSecretManagerSecret `json:"secrets"`
 	// +optional
 	Credentials *GCPCredentials `json:"credentials"`
@@ -355,6 +376,7 @@ type GCPSecretManagerSecret struct {
 
 // AwsSecretManager is used to authenticate using AwsSecretManager
 type AwsSecretManager struct {
+	// +kubebuilder:validation:MinItems=1
 	Secrets []AwsSecretManagerSecret `json:"secrets"`
 	// +optional
 	Credentials *AwsSecretManagerCredentials `json:"credentials"`
@@ -391,7 +413,62 @@ type BoundServiceAccountToken struct {
 	ServiceAccountName string `json:"serviceAccountName"`
 }
 
-func init() {
-	SchemeBuilder.Register(&ClusterTriggerAuthentication{}, &ClusterTriggerAuthenticationList{})
-	SchemeBuilder.Register(&TriggerAuthentication{}, &TriggerAuthenticationList{})
+type OAuth2 struct {
+	// +kubebuilder:validation:Enum=clientCredentials
+	// +kubebuilder:default=clientCredentials
+	Type OAuth2GrantType `json:"type"`
+
+	ClientID string `json:"clientId"`
+
+	// +optional
+	ClientSecret OAuth2ClientSecret `json:"clientSecret,omitempty"`
+
+	TokenURL string `json:"tokenUrl"`
+
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
+
+	// +optional
+	TokenURLParams map[string]string `json:"tokenUrlParams,omitempty"`
+}
+
+type OAuth2GrantType string
+
+const (
+	OAuth2GrantTypeClientCredentials OAuth2GrantType = "clientCredentials"
+)
+
+type OAuth2ClientSecret struct {
+	ValueFrom ValueFromSecret `json:"valueFrom"`
+}
+
+// AzureServicePrincipal defines Microsoft Entra service principal credentials
+// that can be shared by Azure scalers.
+type AzureServicePrincipal struct {
+	TenantID string `json:"tenantId"`
+
+	ClientID string `json:"clientId"`
+
+	// Cloud specifies the Azure cloud environment. Defaults to AzurePublicCloud.
+	// +optional
+	Cloud string `json:"cloud,omitempty"`
+
+	// ActiveDirectoryEndpoint is required when cloud is set to Private.
+	// +optional
+	ActiveDirectoryEndpoint string `json:"activeDirectoryEndpoint,omitempty"`
+
+	// +optional
+	ClientSecret *AzureServicePrincipalCredential `json:"clientSecret,omitempty"`
+
+	// +optional
+	ClientCertificate *AzureServicePrincipalCredential `json:"clientCertificate,omitempty"`
+
+	// +optional
+	ClientCertificatePassword *AzureServicePrincipalCredential `json:"clientCertificatePassword,omitempty"`
+}
+
+// AzureServicePrincipalCredential references credential data stored in a
+// Kubernetes Secret.
+type AzureServicePrincipalCredential struct {
+	ValueFrom ValueFromSecret `json:"valueFrom"`
 }

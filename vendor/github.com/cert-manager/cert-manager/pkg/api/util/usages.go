@@ -68,8 +68,8 @@ func ExtKeyUsageType(usage cmapi.KeyUsage) (x509.ExtKeyUsage, bool) {
 func KeyUsageStrings(usage x509.KeyUsage) []cmapi.KeyUsage {
 	var usageStr []cmapi.KeyUsage
 
-	for i := 0; i < bits.UintSize; i++ {
-		if v := usage & (1 << uint(i)); v != 0 {
+	for i := range bits.UintSize {
+		if v := usage & (1 << i); v != 0 {
 			usageStr = append(usageStr, keyUsageString(v))
 		}
 	}
@@ -90,10 +90,11 @@ func ExtKeyUsageStrings(usage []x509.ExtKeyUsage) []cmapi.KeyUsage {
 
 // keyUsageString returns the cmapi.KeyUsage and "unknown" if not found
 func keyUsageString(usage x509.KeyUsage) cmapi.KeyUsage {
+	if usage == x509.KeyUsageDigitalSignature {
+		return cmapi.UsageDigitalSignature // we have two keys that map to KeyUsageDigitalSignature in our map, we should be consistent when parsing
+	}
+
 	for k, v := range keyUsages {
-		if usage == x509.KeyUsageDigitalSignature {
-			return cmapi.UsageDigitalSignature // we have KeyUsageDigitalSignature twice in our array, we should be consistent when parsing
-		}
 		if usage == v {
 			return k
 		}
@@ -104,6 +105,10 @@ func keyUsageString(usage x509.KeyUsage) cmapi.KeyUsage {
 
 // extKeyUsageString returns the cmapi.ExtKeyUsage and "unknown" if not found
 func extKeyUsageString(usage x509.ExtKeyUsage) cmapi.KeyUsage {
+	if usage == x509.ExtKeyUsageEmailProtection {
+		return cmapi.UsageEmailProtection // we have two keys that map to ExtKeyUsageEmailProtection in our map, we should be consistent when parsing
+	}
+
 	for k, v := range extKeyUsages {
 		if usage == v {
 			return k

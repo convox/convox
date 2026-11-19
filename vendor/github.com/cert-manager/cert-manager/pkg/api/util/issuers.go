@@ -19,6 +19,9 @@ package util
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/cert-manager/cert-manager/pkg/apis/certmanager"
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
@@ -32,7 +35,7 @@ const (
 	IssuerVault string = "vault"
 	// IssuerSelfSigned is a self signing issuer
 	IssuerSelfSigned string = "selfsigned"
-	// IssuerVenafi uses Venafi Trust Protection Platform and Venafi Cloud
+	// IssuerVenafi uses CyberArk Certificate Manager
 	IssuerVenafi string = "venafi"
 )
 
@@ -51,13 +54,59 @@ func NameForIssuer(i cmapi.GenericIssuer) (string, error) {
 	case i.GetSpec().Venafi != nil:
 		return IssuerVenafi, nil
 	}
-	return "", fmt.Errorf("no issuer specified for Issuer '%s/%s'", i.GetObjectMeta().Namespace, i.GetObjectMeta().Name)
+	return "", fmt.Errorf("no issuer specified for Issuer '%s/%s'", i.GetNamespace(), i.GetName())
 }
 
 // IssuerKind returns the kind of issuer for a certificate.
-func IssuerKind(ref cmmeta.ObjectReference) string {
+func IssuerKind(ref cmmeta.IssuerReference) string {
 	if ref.Kind == "" {
 		return cmapi.IssuerKind
 	}
 	return ref.Kind
+}
+
+// IssuerGroup returns the API group of the issuer for a certificate.
+func IssuerGroup(ref cmmeta.IssuerReference) string {
+	if ref.Group == "" {
+		return certmanager.GroupName
+	}
+	return ref.Group
+}
+
+// SecretIssuerAnnotationsMatch reports whether the issuer recorded in the
+// Secret's cert-manager annotations is the same issuer resource as issuerRef.
+//
+// A Secret carrying none of the issuer annotations has no verifiable
+// provenance — it is typically pre-created by the user and may hold a
+// certificate from another CA. It nevertheless matches a ref whose kind and
+// group are the defaults (Issuer / cert-manager.io), and only mismatches
+// refs to other kinds or groups.
+//
+// Annotations that are present are compared against issuerRef with the usual
+// kind/group defaulting; a nil Secret returns false.
+func SecretIssuerAnnotationsMatch(secret *corev1.Secret, issuerRef cmmeta.IssuerReference) bool {
+	if secret == nil {
+		return false
+	}
+
+	name, hasName := secret.Annotations[cmapi.IssuerNameAnnotationKey]
+	kind, hasKind := secret.Annotations[cmapi.IssuerKindAnnotationKey]
+	group, hasGroup := secret.Annotations[cmapi.IssuerGroupAnnotationKey]
+
+	if (hasName || hasKind || hasGroup) && name != issuerRef.Name {
+		return false
+	}
+	return IssuerKindsEqual(kind, issuerRef.Kind) && IssuerGroupsEqual(group, issuerRef.Group)
+}
+
+// IssuerKindsEqual returns true if the two issuer reference kinds are equal,
+// taking into account the defaulting of an empty kind to "Issuer".
+func IssuerKindsEqual(l, r string) bool {
+	return IssuerKind(cmmeta.IssuerReference{Kind: l}) == IssuerKind(cmmeta.IssuerReference{Kind: r})
+}
+
+// IssuerGroupsEqual returns true if the two issuer reference groups are equal,
+// taking into account the defaulting of an empty group to "cert-manager.io".
+func IssuerGroupsEqual(l, r string) bool {
+	return IssuerGroup(cmmeta.IssuerReference{Group: l}) == IssuerGroup(cmmeta.IssuerReference{Group: r})
 }
