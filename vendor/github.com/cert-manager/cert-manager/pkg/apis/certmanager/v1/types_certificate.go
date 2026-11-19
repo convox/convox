@@ -22,34 +22,57 @@ import (
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 )
 
+// NOTE: Be mindful of adding OpenAPI validation - see https://github.com/cert-manager/cert-manager/issues/3644
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type == "Ready")].status`
+// +kubebuilder:printcolumn:name="Secret",type="string",JSONPath=`.spec.secretName`
+// +kubebuilder:printcolumn:name="Issuer",type="string",JSONPath=`.spec.issuerRef.name`,priority=1
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=`.status.conditions[?(@.type == "Ready")].message`,priority=1
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`,description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC."
+// +kubebuilder:resource:scope=Namespaced,shortName={cert,certs},categories=cert-manager
+// +kubebuilder:selectablefield:JSONPath=.spec.issuerRef.group
+// +kubebuilder:selectablefield:JSONPath=.spec.issuerRef.kind
+// +kubebuilder:selectablefield:JSONPath=.spec.issuerRef.name
+// +kubebuilder:subresource:status
 
 // A Certificate resource should be created to ensure an up to date and signed
-// x509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`.
+// X.509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`.
 //
 // The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`).
-// +k8s:openapi-gen=true
 type Certificate struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Desired state of the Certificate resource.
+	// Specification of the desired state of the Certificate resource.
+	// https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// +optional
 	Spec CertificateSpec `json:"spec"`
 
-	// Status of the Certificate. This is set and managed automatically.
+	// Status of the Certificate.
+	// This is set and managed automatically.
+	// Read-only.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
 	// +optional
 	Status CertificateStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// CertificateList is a list of Certificates
+// CertificateList is a list of Certificates.
 type CertificateList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// Standard list metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
+	// List of Certificates
 	Items []Certificate `json:"items"`
 }
 
@@ -57,13 +80,13 @@ type CertificateList struct {
 type PrivateKeyAlgorithm string
 
 const (
-	// Denotes the RSA private key type.
+	// RSA private key algorithm.
 	RSAKeyAlgorithm PrivateKeyAlgorithm = "RSA"
 
-	// Denotes the ECDSA private key type.
+	// ECDSA private key algorithm.
 	ECDSAKeyAlgorithm PrivateKeyAlgorithm = "ECDSA"
 
-	// Denotes the Ed25519 private key type.
+	// Ed25519 private key algorithm.
 	Ed25519KeyAlgorithm PrivateKeyAlgorithm = "Ed25519"
 )
 
@@ -71,158 +94,276 @@ const (
 type PrivateKeyEncoding string
 
 const (
-	// PKCS1 key encoding will produce PEM files that include the type of
-	// private key as part of the PEM header, e.g. `BEGIN RSA PRIVATE KEY`.
-	// If the keyAlgorithm is set to 'ECDSA', this will produce private keys
-	// that use the `BEGIN EC PRIVATE KEY` header.
+	// PKCS1 private key encoding.
+	// For RSA keys: produces PEM block with `BEGIN RSA PRIVATE KEY` header and private key in PKCS#1 format.
+	// For EC keys: produces PEM block with `BEGIN EC PRIVATE KEY` header and private key in SEC 1 format.
+	// For Ed25519 keys: option will be ignored and PKCS8 encoding will be used instead.
 	PKCS1 PrivateKeyEncoding = "PKCS1"
 
-	// PKCS8 key encoding will produce PEM files with the `BEGIN PRIVATE KEY`
-	// header. It encodes the keyAlgorithm of the private key as part of the
-	// DER encoded PEM block.
+	// PKCS8 private key encoding.
+	// PKCS8 produces a PEM block with a static header and both the private
+	// key algorithm and the private key in the body. A key that uses this
+	// encoding can be recognised by its `BEGIN PRIVATE KEY` header.
 	PKCS8 PrivateKeyEncoding = "PKCS8"
 )
 
+// +kubebuilder:validation:Enum=SHA256WithRSA;SHA384WithRSA;SHA512WithRSA;ECDSAWithSHA256;ECDSAWithSHA384;ECDSAWithSHA512;PureEd25519
+type SignatureAlgorithm string
+
+const (
+	SHA256WithRSA   SignatureAlgorithm = "SHA256WithRSA"
+	SHA384WithRSA   SignatureAlgorithm = "SHA384WithRSA"
+	SHA512WithRSA   SignatureAlgorithm = "SHA512WithRSA"
+	ECDSAWithSHA256 SignatureAlgorithm = "ECDSAWithSHA256"
+	ECDSAWithSHA384 SignatureAlgorithm = "ECDSAWithSHA384"
+	ECDSAWithSHA512 SignatureAlgorithm = "ECDSAWithSHA512"
+	PureEd25519     SignatureAlgorithm = "PureEd25519"
+)
+
 // CertificateSpec defines the desired state of Certificate.
-// A valid Certificate requires at least one of a CommonName, DNSName, or
-// URISAN to be valid.
+//
+// NOTE: The specification contains a lot of "requested" certificate attributes, it is
+// important to note that the issuer can choose to ignore or change any of
+// these requested attributes. How the issuer maps a certificate request to a
+// signed certificate is the full responsibility of the issuer itself. For example,
+// as an edge case, an issuer that inverts the isCA value is free to do so.
+//
+// A valid Certificate requires at least one of a CommonName, LiteralSubject, DNSName, or
+// URI to be valid.
 type CertificateSpec struct {
-	// Full X509 name specification (https://golang.org/pkg/crypto/x509/pkix/#Name).
+	// Requested set of X509 certificate subject attributes.
+	// More info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6
+	//
+	// The common name attribute is specified separately in the `commonName` field.
+	// Cannot be set if the `literalSubject` field is set.
 	// +optional
 	Subject *X509Subject `json:"subject,omitempty"`
 
-	// LiteralSubject is an LDAP formatted string that represents the [X.509 Subject field](https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6).
-	// Use this *instead* of the Subject field if you need to ensure the correct ordering of the RDN sequence, such as when issuing certs for LDAP authentication. See https://github.com/cert-manager/cert-manager/issues/3203, https://github.com/cert-manager/cert-manager/issues/4424.
-	// This field is alpha level and is only supported by cert-manager installations where LiteralCertificateSubject feature gate is enabled on both cert-manager controller and webhook.
+	// Requested X.509 certificate subject, represented using the LDAP "String
+	// Representation of a Distinguished Name" [1].
+	// Important: the LDAP string format also specifies the order of the attributes
+	// in the subject, this is important when issuing certs for LDAP authentication.
+	// Example: `CN=foo,DC=corp,DC=example,DC=com`
+	// More info [1]: https://datatracker.ietf.org/doc/html/rfc4514
+	// More info: https://github.com/cert-manager/cert-manager/issues/3203
+	// More info: https://github.com/cert-manager/cert-manager/issues/4424
+	//
+	// Cannot be set if the `subject` or `commonName` field is set.
 	// +optional
 	LiteralSubject string `json:"literalSubject,omitempty"`
 
-	// CommonName is a common name to be used on the Certificate.
-	// The CommonName should have a length of 64 characters or fewer to avoid
-	// generating invalid CSRs.
-	// This value is ignored by TLS clients when any subject alt name is set.
-	// This is x509 behaviour: https://tools.ietf.org/html/rfc6125#section-6.4.4
+	// Requested common name X509 certificate subject attribute.
+	// More info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.1.2.6
+	// NOTE: TLS clients will ignore this value when any subject alternative name is
+	// set (see https://tools.ietf.org/html/rfc6125#section-6.4.4).
+	//
+	// Should have a length of 64 characters or fewer to avoid generating invalid CSRs.
+	// Cannot be set if the `literalSubject` field is set.
 	// +optional
 	CommonName string `json:"commonName,omitempty"`
 
-	// The requested 'duration' (i.e. lifetime) of the Certificate. This option
-	// may be ignored/overridden by some issuer types. If unset this defaults to
-	// 90 days. Certificate will be renewed either 2/3 through its duration or
-	// `renewBefore` period before its expiry, whichever is later. Minimum
-	// accepted duration is 1 hour. Value must be in units accepted by Go
-	// time.ParseDuration https://golang.org/pkg/time/#ParseDuration
+	// Requested 'duration' (i.e. lifetime) of the Certificate. Note that the
+	// issuer may choose to ignore the requested duration, just like any other
+	// requested attribute.
+	//
+	// If unset, this defaults to 90 days.
+	// Minimum accepted duration is 1 hour.
+	// Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
 	// +optional
 	Duration *metav1.Duration `json:"duration,omitempty"`
 
-	// How long before the currently issued certificate's expiry
-	// cert-manager should renew the certificate. The default is 2/3 of the
-	// issued certificate's duration. Minimum accepted value is 5 minutes.
-	// Value must be in units accepted by Go time.ParseDuration
-	// https://golang.org/pkg/time/#ParseDuration
+	// How long before the currently issued certificate's expiry cert-manager should
+	// renew the certificate. For example, if a certificate is valid for 60 minutes,
+	// and `renewBefore=10m`, cert-manager will begin to attempt to renew the certificate
+	// 50 minutes after it was issued (i.e. when there are 10 minutes remaining until
+	// the certificate is no longer valid).
+	//
+	// NOTE: The actual lifetime of the issued certificate is used to determine the
+	// renewal time. If an issuer returns a certificate with a different lifetime than
+	// the one requested, cert-manager will use the lifetime of the issued certificate.
+	//
+	// If unset, this defaults to 1/3 of the issued certificate's lifetime.
+	// Minimum accepted value is 5 minutes.
+	// Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
+	// Cannot be set if the `renewBeforePercentage` field is set.
 	// +optional
 	RenewBefore *metav1.Duration `json:"renewBefore,omitempty"`
 
-	// DNSNames is a list of DNS subjectAltNames to be set on the Certificate.
+	// `renewBeforePercentage` is like `renewBefore`, except it is a relative percentage
+	// rather than an absolute duration. For example, if a certificate is valid for 60
+	// minutes, and  `renewBeforePercentage=25`, cert-manager will begin to attempt to
+	// renew the certificate 45 minutes after it was issued (i.e. when there are 15
+	// minutes (25%) remaining until the certificate is no longer valid).
+	//
+	// NOTE: The actual lifetime of the issued certificate is used to determine the
+	// renewal time. If an issuer returns a certificate with a different lifetime than
+	// the one requested, cert-manager will use the lifetime of the issued certificate.
+	//
+	// Value must be an integer in the range (0,100). The minimum effective
+	// `renewBefore` derived from the `renewBeforePercentage` and `duration` fields is 5
+	// minutes.
+	// Cannot be set if the `renewBefore` field is set.
 	// +optional
+	RenewBeforePercentage *int32 `json:"renewBeforePercentage,omitempty"`
+
+	// `renewal` allows configuration of how your certificate is renewed. If the policy mentioned is
+	// `RenewBefore` then the controller respects `renewBefore` and `renewBeforePercentage`.
+	// +optional
+	Renewal *CertificateRenewal `json:"renewal,omitempty"`
+
+	// Requested DNS subject alternative names.
+	// +optional
+	// +listType=atomic
 	DNSNames []string `json:"dnsNames,omitempty"`
 
-	// IPAddresses is a list of IP address subjectAltNames to be set on the Certificate.
+	// Requested IP address subject alternative names.
 	// +optional
+	// +listType=atomic
 	IPAddresses []string `json:"ipAddresses,omitempty"`
 
-	// URIs is a list of URI subjectAltNames to be set on the Certificate.
+	// Requested URI subject alternative names.
 	// +optional
+	// +listType=atomic
 	URIs []string `json:"uris,omitempty"`
 
-	// EmailAddresses is a list of email subjectAltNames to be set on the Certificate.
+	// `otherNames` is an escape hatch for SAN that allows any type. We currently restrict the support to string like otherNames, cf RFC 5280 p 37
+	// Any UTF8 String valued otherName can be passed with by setting the keys oid: x.x.x.x and UTF8Value: somevalue for `otherName`.
+	// Most commonly this would be UPN set with oid: 1.3.6.1.4.1.311.20.2.3
+	// You should ensure that any OID passed is valid for the UTF8String type as we do not explicitly validate this.
 	// +optional
+	// +listType=atomic
+	OtherNames []OtherName `json:"otherNames,omitempty"`
+
+	// Requested email subject alternative names.
+	// +optional
+	// +listType=atomic
 	EmailAddresses []string `json:"emailAddresses,omitempty"`
 
-	// SecretName is the name of the secret resource that will be automatically
-	// created and managed by this Certificate resource.
-	// It will be populated with a private key and certificate, signed by the
-	// denoted issuer.
+	// Name of the Secret resource that will be automatically created and
+	// managed by this Certificate resource. It will be populated with a
+	// private key and certificate, signed by the denoted issuer. The Secret
+	// resource lives in the same namespace as the Certificate resource.
 	SecretName string `json:"secretName"`
 
-	// SecretTemplate defines annotations and labels to be copied to the
-	// Certificate's Secret. Labels and annotations on the Secret will be changed
-	// as they appear on the SecretTemplate when added or removed. SecretTemplate
-	// annotations are added in conjunction with, and cannot overwrite, the base
-	// set of annotations cert-manager sets on the Certificate's Secret.
+	// Defines annotations and labels to be copied to the Certificate's Secret.
+	// Labels and annotations on the Secret will be changed as they appear on the
+	// SecretTemplate when added or removed. SecretTemplate annotations are added
+	// in conjunction with, and cannot overwrite, the base set of annotations
+	// cert-manager sets on the Certificate's Secret.
 	// +optional
 	SecretTemplate *CertificateSecretTemplate `json:"secretTemplate,omitempty"`
 
-	// Keystores configures additional keystore output formats stored in the
-	// `secretName` Secret resource.
+	// Additional keystore output formats to be stored in the Certificate's Secret.
 	// +optional
 	Keystores *CertificateKeystores `json:"keystores,omitempty"`
 
-	// IssuerRef is a reference to the issuer for this certificate.
-	// If the `kind` field is not set, or set to `Issuer`, an Issuer resource
-	// with the given name in the same namespace as the Certificate will be used.
-	// If the `kind` field is set to `ClusterIssuer`, a ClusterIssuer with the
-	// provided name will be used.
-	// The `name` field in this stanza is required at all times.
-	IssuerRef cmmeta.ObjectReference `json:"issuerRef"`
+	// Reference to the issuer responsible for issuing the certificate.
+	// If the issuer is namespace-scoped, it must be in the same namespace
+	// as the Certificate. If the issuer is cluster-scoped, it can be used
+	// from any namespace.
+	//
+	// The `name` field of the reference must always be specified.
+	IssuerRef cmmeta.IssuerReference `json:"issuerRef"`
 
-	// IsCA will mark this Certificate as valid for certificate signing.
-	// This will automatically add the `cert sign` usage to the list of `usages`.
+	// Requested basic constraints isCA value.
+	// The isCA value is used to set the `isCA` field on the created CertificateRequest
+	// resources. Note that the issuer may choose to ignore the requested isCA value, just
+	// like any other requested attribute.
+	//
+	// If true, this will automatically add the `cert sign` usage to the list
+	// of requested `usages`.
 	// +optional
 	IsCA bool `json:"isCA,omitempty"`
 
-	// Usages is the set of x509 usages that are requested for the certificate.
-	// Defaults to `digital signature` and `key encipherment` if not specified.
+	// Requested key usages and extended key usages.
+	// These usages are used to set the `usages` field on the created CertificateRequest
+	// resources. If `encodeUsagesInRequest` is unset or set to `true`, the usages
+	// will additionally be encoded in the `request` field which contains the CSR blob.
+	//
+	// If unset, defaults to `digital signature` and `key encipherment`.
 	// +optional
+	// +listType=atomic
 	Usages []KeyUsage `json:"usages,omitempty"`
 
-	// Options to control private keys used for the Certificate.
+	// Private key options. These include the key algorithm and size, the used
+	// encoding and the rotation policy.
 	// +optional
 	PrivateKey *CertificatePrivateKey `json:"privateKey,omitempty"`
 
-	// EncodeUsagesInRequest controls whether key usages should be present
-	// in the CertificateRequest
+	// Signature algorithm to use.
+	// Allowed values for RSA keys: SHA256WithRSA, SHA384WithRSA, SHA512WithRSA.
+	// Allowed values for ECDSA keys: ECDSAWithSHA256, ECDSAWithSHA384, ECDSAWithSHA512.
+	// Allowed values for Ed25519 keys: PureEd25519.
+	// +optional
+	SignatureAlgorithm SignatureAlgorithm `json:"signatureAlgorithm,omitempty"`
+
+	// Whether the KeyUsage and ExtKeyUsage extensions should be set in the encoded CSR.
+	//
+	// This option defaults to true, and should only be disabled if the target
+	// issuer does not support CSRs with these X509 KeyUsage/ ExtKeyUsage extensions.
 	// +optional
 	EncodeUsagesInRequest *bool `json:"encodeUsagesInRequest,omitempty"`
 
-	// revisionHistoryLimit is the maximum number of CertificateRequest revisions
-	// that are maintained in the Certificate's history. Each revision represents
-	// a single `CertificateRequest` created by this Certificate, either when it
-	// was created, renewed, or Spec was changed. Revisions will be removed by
-	// oldest first if the number of revisions exceeds this number. If set,
-	// revisionHistoryLimit must be a value of `1` or greater. If unset (`nil`),
-	// revisions will not be garbage collected. Default value is `nil`.
-	// +kubebuilder:validation:ExclusiveMaximum=false
+	// The maximum number of CertificateRequest revisions that are maintained in
+	// the Certificate's history. Each revision represents a single `CertificateRequest`
+	// created by this Certificate, either when it was created, renewed, or Spec
+	// was changed. Revisions will be removed by oldest first if the number of
+	// revisions exceeds this number.
+	//
+	// If set, revisionHistoryLimit must be a value of `1` or greater.
+	// Default value is `1`.
 	// +optional
-	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"` // Validated by the validating webhook.
+	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty"`
 
-	// AdditionalOutputFormats defines extra output formats of the private key
-	// and signed certificate chain to be written to this Certificate's target
-	// Secret. This is an Alpha Feature and is only enabled with the
-	// `--feature-gates=AdditionalCertificateOutputFormats=true` option on both
+	// Defines extra output formats of the private key and signed certificate chain
+	// to be written to this Certificate's target Secret.
+	// +optional
+	// +listType=atomic
+	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
+
+	// x.509 certificate NameConstraint extension which MUST NOT be used in a non-CA certificate.
+	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
+	//
+	// This is an Alpha Feature and is only enabled with the
+	// `--feature-gates=NameConstraints=true` option set on both
 	// the controller and webhook components.
 	// +optional
-	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
+	NameConstraints *NameConstraints `json:"nameConstraints,omitempty"`
+}
+
+type OtherName struct {
+	// OID is the object identifier for the otherName SAN.
+	// The object identifier must be expressed as a dotted string, for
+	// example, "1.2.840.113556.1.4.221".
+	OID string `json:"oid,omitempty"`
+
+	// utf8Value is the string value of the otherName SAN.
+	// The utf8Value accepts any valid UTF8 string to set as value for the otherName SAN.
+	UTF8Value string `json:"utf8Value,omitempty"`
 }
 
 // CertificatePrivateKey contains configuration options for private keys
 // used by the Certificate controller.
-// This allows control of how private keys are rotated.
+// These include the key algorithm and size, the used encoding and the
+// rotation policy.
 type CertificatePrivateKey struct {
 	// RotationPolicy controls how private keys should be regenerated when a
 	// re-issuance is being processed.
-	// If set to Never, a private key will only be generated if one does not
-	// already exist in the target `spec.secretName`. If one does exists but it
+	//
+	// If set to `Never`, a private key will only be generated if one does not
+	// already exist in the target `spec.secretName`. If one does exist but it
 	// does not have the correct algorithm or size, a warning will be raised
 	// to await user intervention.
-	// If set to Always, a private key matching the specified requirements
+	// If set to `Always`, a private key matching the specified requirements
 	// will be generated whenever a re-issuance occurs.
-	// Default is 'Never' for backward compatibility.
+	// Default is `Always`.
+	// The default was changed from `Never` to `Always` in cert-manager >=v1.18.0.
 	// +optional
-	// +kubebuilder:validation:Enum=Never;Always
 	RotationPolicy PrivateKeyRotationPolicy `json:"rotationPolicy,omitempty"`
 
 	// The private key cryptography standards (PKCS) encoding for this
 	// certificate's private key to be encoded in.
+	//
 	// If provided, allowed values are `PKCS1` and `PKCS8` standing for PKCS#1
 	// and PKCS#8, respectively.
 	// Defaults to `PKCS1` if not specified.
@@ -230,15 +371,18 @@ type CertificatePrivateKey struct {
 	Encoding PrivateKeyEncoding `json:"encoding,omitempty"`
 
 	// Algorithm is the private key algorithm of the corresponding private key
-	// for this certificate. If provided, allowed values are either `RSA`,`Ed25519` or `ECDSA`
+	// for this certificate.
+	//
+	// If provided, allowed values are either `RSA`, `ECDSA` or `Ed25519`.
 	// If `algorithm` is specified and `size` is not provided,
-	// key size of 256 will be used for `ECDSA` key algorithm and
-	// key size of 2048 will be used for `RSA` key algorithm.
+	// key size of 2048 will be used for `RSA` key algorithm and
+	// key size of 256 will be used for `ECDSA` key algorithm.
 	// key size is ignored when using the `Ed25519` key algorithm.
 	// +optional
 	Algorithm PrivateKeyAlgorithm `json:"algorithm,omitempty"`
 
 	// Size is the key bit size of the corresponding private key for this certificate.
+	//
 	// If `algorithm` is set to `RSA`, valid values are `2048`, `4096` or `8192`,
 	// and will default to `2048` if not specified.
 	// If `algorithm` is set to `ECDSA`, valid values are `256`, `384` or `521`,
@@ -246,17 +390,18 @@ type CertificatePrivateKey struct {
 	// If `algorithm` is set to `Ed25519`, Size is ignored.
 	// No other values are allowed.
 	// +optional
-	Size int `json:"size,omitempty"` // Validated by webhook. Be mindful of adding OpenAPI validation- see https://github.com/cert-manager/cert-manager/issues/3644
+	Size int `json:"size,omitempty"`
 }
 
 // Denotes how private keys should be generated or sourced when a Certificate
 // is being issued.
+// +kubebuilder:validation:Enum=Never;Always
 type PrivateKeyRotationPolicy string
 
 var (
 	// RotationPolicyNever means a private key will only be generated if one
 	// does not already exist in the target `spec.secretName`.
-	// If one does exists but it does not have the correct algorithm or size,
+	// If one does exist but it does not have the correct algorithm or size,
 	// a warning will be raised to await user intervention.
 	RotationPolicyNever PrivateKeyRotationPolicy = "Never"
 
@@ -311,24 +456,31 @@ type CertificateAdditionalOutputFormat struct {
 type X509Subject struct {
 	// Organizations to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	Organizations []string `json:"organizations,omitempty"`
 	// Countries to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	Countries []string `json:"countries,omitempty"`
 	// Organizational Units to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	OrganizationalUnits []string `json:"organizationalUnits,omitempty"`
 	// Cities to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	Localities []string `json:"localities,omitempty"`
 	// State/Provinces to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	Provinces []string `json:"provinces,omitempty"`
 	// Street addresses to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	StreetAddresses []string `json:"streetAddresses,omitempty"`
 	// Postal codes to be used on the Certificate.
 	// +optional
+	// +listType=atomic
 	PostalCodes []string `json:"postalCodes,omitempty"`
 	// Serial number to be used on the Certificate.
 	// +optional
@@ -349,22 +501,37 @@ type CertificateKeystores struct {
 	PKCS12 *PKCS12Keystore `json:"pkcs12,omitempty"`
 }
 
-// JKS configures options for storing a JKS keystore in the `spec.secretName`
-// Secret resource.
+// JKS configures options for storing a JKS keystore in the target secret.
+// Either PasswordSecretRef or Password must be provided.
 type JKSKeystore struct {
 	// Create enables JKS keystore creation for the Certificate.
 	// If true, a file named `keystore.jks` will be created in the target
 	// Secret resource, encrypted using the password stored in
-	// `passwordSecretRef`.
-	// The keystore file will only be updated upon re-issuance.
-	// A file named `truststore.jks` will also be created in the target
-	// Secret resource, encrypted using the password stored in
-	// `passwordSecretRef` containing the issuing Certificate Authority
+	// `passwordSecretRef` or `password`.
+	// The keystore file will be updated immediately.
+	// If the issuer provided a CA certificate, a file named `truststore.jks`
+	// will also be created in the target Secret resource, encrypted using the
+	// password stored in `passwordSecretRef`
+	// containing the issuing Certificate Authority
 	Create bool `json:"create"`
 
-	// PasswordSecretRef is a reference to a key in a Secret resource
+	// Alias specifies the alias of the key in the keystore, required by the JKS format.
+	// If not provided, the default alias `certificate` will be used.
+	// +optional
+	Alias *string `json:"alias,omitempty"`
+
+	// PasswordSecretRef is a reference to a non-empty key in a Secret resource
 	// containing the password used to encrypt the JKS keystore.
-	PasswordSecretRef cmmeta.SecretKeySelector `json:"passwordSecretRef"`
+	// Mutually exclusive with password.
+	// One of password or passwordSecretRef must provide a password with a non-zero length.
+	// +optional
+	PasswordSecretRef cmmeta.SecretKeySelector `json:"passwordSecretRef,omitempty"`
+
+	// Password provides a literal password used to encrypt the JKS keystore.
+	// Mutually exclusive with passwordSecretRef.
+	// One of password or passwordSecretRef must provide a password with a non-zero length.
+	// +optional
+	Password *string `json:"password,omitempty"` // #nosec G117 -- field is part of API spec and may contain a secret; not hardcoded
 }
 
 // PKCS12 configures options for storing a PKCS12 keystore in the
@@ -373,37 +540,127 @@ type PKCS12Keystore struct {
 	// Create enables PKCS12 keystore creation for the Certificate.
 	// If true, a file named `keystore.p12` will be created in the target
 	// Secret resource, encrypted using the password stored in
-	// `passwordSecretRef`.
-	// The keystore file will only be updated upon re-issuance.
-	// A file named `truststore.p12` will also be created in the target
-	// Secret resource, encrypted using the password stored in
-	// `passwordSecretRef` containing the issuing Certificate Authority
+	// `passwordSecretRef` or in `password`.
+	// The keystore file will be updated immediately.
+	// If the issuer provided a CA certificate, a file named `truststore.p12` will
+	// also be created in the target Secret resource, encrypted using the
+	// password stored in `passwordSecretRef` containing the issuing Certificate
+	// Authority
 	Create bool `json:"create"`
 
-	// PasswordSecretRef is a reference to a key in a Secret resource
-	// containing the password used to encrypt the PKCS12 keystore.
-	PasswordSecretRef cmmeta.SecretKeySelector `json:"passwordSecretRef"`
+	// Profile specifies the key and certificate encryption algorithms and the HMAC algorithm
+	// used to create the PKCS12 keystore. Default value is `LegacyRC2` for backward compatibility.
+	//
+	// If provided, allowed values are:
+	// `LegacyRC2`: Deprecated. Not supported by default in OpenSSL 3 or Java 20.
+	// `LegacyDES`: Less secure algorithm. Use this option for maximal compatibility.
+	// `Modern2023`: Secure algorithm. Use this option in case you have to always use secure algorithms
+	// (e.g., because of company policy). Please note that the security of the algorithm is not that important
+	// in reality, because the unencrypted certificate and private key are also stored in the Secret.
+	// `Modern2026`: Encodes PKCS#12 files using algorithms that are considered modern as of 2026.
+	// Private keys and certificates are encrypted using PBES2 with PBKDF2-HMAC-SHA-256 and AES-256-CBC.
+	// The MAC algorithm is PBMAC1 with PBKDF2-HMAC-SHA-256 and HMAC-SHA256.
+	// Files produced with this profile can be read by OpenSSL 3.4.0 and higher, Java 26 and higher,
+	// or with Java using compatible versions of Bouncy Castle. Meets FIPS 140-3 requirements.
+	// +optional
+	Profile PKCS12Profile `json:"profile,omitempty"`
+
+	// PasswordSecretRef is a reference to a non-empty key in a Secret resource
+	// containing the password used to encrypt the PKCS#12 keystore.
+	// Mutually exclusive with password.
+	// One of password or passwordSecretRef must provide a password with a non-zero length.
+	// +optional
+	PasswordSecretRef cmmeta.SecretKeySelector `json:"passwordSecretRef,omitempty"`
+
+	// Password provides a literal password used to encrypt the PKCS#12 keystore.
+	// Mutually exclusive with passwordSecretRef.
+	// One of password or passwordSecretRef must provide a password with a non-zero length.
+	// +optional
+	Password *string `json:"password,omitempty"` // #nosec G117 -- field is part of API spec and may contain a secret; not hardcoded
+}
+
+// +kubebuilder:validation:Enum=LegacyRC2;LegacyDES;Modern2023;Modern2026
+type PKCS12Profile string
+
+const (
+	// see: https://pkg.go.dev/software.sslmate.com/src/go-pkcs12#LegacyRC2
+	LegacyRC2PKCS12Profile PKCS12Profile = "LegacyRC2"
+
+	// see: https://pkg.go.dev/software.sslmate.com/src/go-pkcs12#LegacyDES
+	LegacyDESPKCS12Profile PKCS12Profile = "LegacyDES"
+
+	// see: https://pkg.go.dev/software.sslmate.com/src/go-pkcs12#Modern2023
+	Modern2023PKCS12Profile PKCS12Profile = "Modern2023"
+
+	// see: https://pkg.go.dev/software.sslmate.com/src/go-pkcs12#Modern2026
+	Modern2026PKCS12Profile PKCS12Profile = "Modern2026"
+)
+
+type CertificateRenewal struct {
+	// `policy` must be one of `Disabled`, `RenewBefore`.
+	// +kubebuilder:validation:Enum=RenewBefore;Disabled
+	Policy CertificateRenewalPolicy `json:"policy,omitempty"`
+
+	// `windows` mentions the behavior of when the renewal must happen.
+	// +listType=atomic
+	// +optional
+	Windows []CertificateRenewalWindows `json:"windows,omitempty"`
+}
+
+type CertificateRenewalPolicy string
+
+const (
+	CertificateRenewalPolicyRenewBefore CertificateRenewalPolicy = "RenewBefore"
+	CertificateRenewalPolicyDisabled    CertificateRenewalPolicy = "Disabled"
+)
+
+// CertificateRenewalWindows is the definition for renewal windows
+type CertificateRenewalWindows struct {
+	// `timezone` is IANA compliant timezone. For example America/Denver.
+	// If this field is not set, timezone is treated as UTC.
+	// +kubebuilder:validation:MinLength=1
+	// +optional
+	Timezone string `json:"timezone,omitempty"`
+
+	// `windowDuration` is how long the cron definition is active for.
+	// Value must be in units accepted by Go time.ParseDuration https://golang.org/pkg/time/#ParseDuration.
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	// +required
+	WindowDuration *metav1.Duration `json:"windowDuration,omitempty"`
+
+	// `cron` is a cron compliant string to allow when the renewal should be allowed. Format is as shown below:
+	// * * * * *
+	// | | | | |
+	// | | | | day of the week (0–6) (Sunday to Saturday;
+	// | | | month (1–12)             7 is also Sunday on some systems)
+	// | | day of the month (1–31)
+	// | hour (0–23)
+	// minute (0–59)
+	// +kubebuilder:validation:MinLength=1
+	// +required
+	Cron string `json:"cron,omitempty"`
 }
 
 // CertificateStatus defines the observed state of Certificate
 type CertificateStatus struct {
 	// List of status conditions to indicate the status of certificates.
 	// Known condition types are `Ready` and `Issuing`.
+	// +optional
 	// +listType=map
 	// +listMapKey=type
-	// +optional
 	Conditions []CertificateCondition `json:"conditions,omitempty"`
 
-	// LastFailureTime is the time as recorded by the Certificate controller
-	// of the most recent failure to complete a CertificateRequest for this
-	// Certificate resource.
-	// If set, cert-manager will not re-request another Certificate until
-	// 1 hour has elapsed from this time.
+	// LastFailureTime is set only if the latest issuance for this
+	// Certificate failed and contains the time of the failure. If an
+	// issuance has failed, the delay till the next issuance will be
+	// calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts -
+	// 1). If the latest issuance has succeeded this field will be unset.
 	// +optional
 	LastFailureTime *metav1.Time `json:"lastFailureTime,omitempty"`
 
 	// The time after which the certificate stored in the secret named
-	// by this resource in spec.secretName is valid.
+	// by this resource in `spec.secretName` is valid.
 	// +optional
 	NotBefore *metav1.Time `json:"notBefore,omitempty"`
 
@@ -451,9 +708,13 @@ type CertificateStatus struct {
 	// time.Hour * 2 ^ (failedIssuanceAttempts - 1).
 	// +optional
 	FailedIssuanceAttempts *int `json:"failedIssuanceAttempts,omitempty"`
+
+	// ACME stores information that is fetched from the ACME CA server.
+	// +optional
+	ACME *CertificateACMEStatus `json:"acme,omitempty"`
 }
 
-// CertificateCondition contains condition information for an Certificate.
+// CertificateCondition contains condition information for a Certificate.
 type CertificateCondition struct {
 	// Type of the condition, known values are (`Ready`, `Issuing`).
 	Type CertificateConditionType `json:"type"`
@@ -485,7 +746,7 @@ type CertificateCondition struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-// CertificateConditionType represents an Certificate condition value.
+// CertificateConditionType represents a Certificate condition value.
 type CertificateConditionType string
 
 const (
@@ -507,7 +768,7 @@ const (
 	//    `status.certificate` on the CertificateRequest.
 	//   * If no CertificateRequest resource exists for the current revision,
 	//     the options on the Certificate resource are compared against the
-	//     x509 data in the Secret, similar to what's done in earlier versions.
+	//     X.509 data in the Secret, similar to what's done in earlier versions.
 	//     If there is a mismatch, an issuance is triggered.
 	// This condition may also be added by external API consumers to trigger
 	// a re-issuance manually for any other reason.
@@ -526,4 +787,96 @@ type CertificateSecretTemplate struct {
 	// Labels is a key value map to be copied to the target Kubernetes Secret.
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// NameConstraints is a type to represent x509 NameConstraints
+type NameConstraints struct {
+	// if true then the name constraints are marked critical.
+	//
+	// +optional
+	Critical bool `json:"critical,omitempty"`
+	// Permitted contains the constraints in which the names must be located.
+	//
+	// +optional
+	Permitted *NameConstraintItem `json:"permitted,omitempty"`
+	// Excluded contains the constraints which must be disallowed. Any name matching a
+	// restriction in the excluded field is invalid regardless
+	// of information appearing in the permitted
+	//
+	// +optional
+	Excluded *NameConstraintItem `json:"excluded,omitempty"`
+}
+
+type NameConstraintItem struct {
+	// DNSDomains is a list of DNS domains that are permitted or excluded.
+	//
+	// +optional
+	// +listType=atomic
+	DNSDomains []string `json:"dnsDomains,omitempty"`
+	// IPRanges is a list of IP Ranges that are permitted or excluded.
+	// This should be a valid CIDR notation.
+	//
+	// +optional
+	// +listType=atomic
+	IPRanges []string `json:"ipRanges,omitempty"`
+	// EmailAddresses is a list of Email Addresses that are permitted or excluded.
+	//
+	// +optional
+	// +listType=atomic
+	EmailAddresses []string `json:"emailAddresses,omitempty"`
+	// URIDomains is a list of URI domains that are permitted or excluded.
+	//
+	// +optional
+	// +listType=atomic
+	URIDomains []string `json:"uriDomains,omitempty"`
+}
+
+type CertificateACMEStatus struct {
+	// ARI stores the ACME Renewal Information that is fetched from the ACME server
+	// in accordance with RFC 9773. This is only populated if the ARI feature gate is enabled.
+	//
+	// +optional
+	ARI *CertificateACMEARIStatus `json:"ari,omitempty"`
+}
+
+type CertificateACMEARIStatus struct {
+	// SuggestedWindow is the suggested renewal window as returned by the ACME server in accordance with RFC 9773.
+	//
+	// +optional
+	SuggestedWindow *ACMERenewalWindow `json:"suggestedWindow,omitempty"`
+	// ExplanationURL is a human-readable URL that may explain why the suggested window
+	// has its current value.
+	//
+	// +optional
+	ExplanationURL string `json:"explanationURL,omitempty"`
+	// LastChecked is the time at which the ACME server was last checked for renewal information.
+	//
+	// +optional
+	LastChecked *metav1.Time `json:"lastChecked,omitempty"`
+	// NextCheck is the time at which the ACME server will next be checked for renewal information.
+	//
+	// +optional
+	NextCheck *metav1.Time `json:"nextCheck,omitempty"`
+	// LastError is the last error encountered when checking the ACME server for renewal information, if any.
+	//
+	// +optional
+	LastError string `json:"lastError,omitempty"`
+
+	// CertID is the ARI CertID (RFC 9773) of the certificate this renewal information was
+	// fetched for. This is used to determine if we need to re-fetch the renewal information
+	// as changed cert id means that ARI fetched before is stale.
+	//
+	// +optional
+	CertID string `json:"certID,omitempty"`
+}
+
+type ACMERenewalWindow struct {
+	// Start is the start of the suggested renewal window.
+	//
+	// +required
+	Start *metav1.Time `json:"start"`
+	// End is the end of the suggested renewal window.
+	//
+	// +required
+	End *metav1.Time `json:"end"`
 }

@@ -143,7 +143,7 @@ func (p *Provider) certificateGenerateLetsencrypt(domains []string, opts structs
 			Namespace: p.Namespace,
 		},
 		Spec: cmapi.CertificateSpec{
-			IssuerRef: cmmeta.ObjectReference{
+			IssuerRef: cmmeta.IssuerReference{
 				Group: "cert-manager.io",
 				Kind:  "ClusterIssuer",
 				Name:  "letsencrypt",
