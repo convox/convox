@@ -75,7 +75,7 @@ var awsKnownParams = map[string]bool{
 	"imds_http_hop_limit": true, "imds_http_tokens": true,
 	"pod_security_standard": true, "pod_security_mode": true,
 	"imds_tags_enable": true, "internal_router": true, "contour_internal_tls": true,
-	"pod_imds_block_enabled": true, "network_policy_enable": true,
+	"pod_imds_block_enabled": true, "network_policy_enable": true, "build_imds_block_enabled": true,
 	"internet_gateway_id": true, "k8s_version": true,
 	"karpenter_ami_alias": true, "karpenter_arch": true, "karpenter_auth_mode": true,
 	"karpenter_build_capacity_types": true, "karpenter_build_consolidate_after": true,
@@ -223,6 +223,7 @@ var boolParams = map[string]bool{
 	"gpu_tag_enable":                    true,
 	"imds_tags_enable":                  true,
 	"pod_imds_block_enabled":            true,
+	"build_imds_block_enabled":          true,
 	"network_policy_enable":             true,
 	"internal_router":                   true,
 	"contour_internal_tls":              true,
@@ -392,6 +393,7 @@ var paramGroups = map[string]map[string]bool{
 		"imds_http_tokens":                    true,
 		"imds_tags_enable":                    true,
 		"pod_imds_block_enabled":              true,
+		"build_imds_block_enabled":            true, // dual-listed in build
 		"network_policy_enable":               true,
 		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
 		"karpenter_build_imds_tokens":         true, // dual-listed in build
@@ -527,6 +529,7 @@ var paramGroups = map[string]map[string]bool{
 		// v3 native (snake_case)
 		"additional_build_groups_config":          true,
 		"build_disable_convox_resolver":           true,
+		"build_imds_block_enabled":                true, // dual-listed in security
 		"build_node_enabled":                      true,
 		"build_node_min_count":                    true,
 		"build_node_minimal_role_enabled":         true, // dual-listed in security

@@ -84,6 +84,11 @@ Groups:
         type: boolean
         description: Blocks application pods from reaching the EC2 Instance Metadata
           Service (IMDS), preventing workloads from assuming node IAM credentials.
+      - name: build_imds_block_enabled
+        default: "false"
+        sideNote: "Turns on VPC CNI network policy enforcement for the cluster, which stays on after this is set back to false."
+        type: boolean
+        description: "Blocks build pods from reaching the EC2 instance metadata service, so Dockerfile steps cannot read node-role credentials. App pods are not affected; use &i pod_imds_block_enabled &i for those."
       - name: network_policy_enable
         default: "false"
         sideNote: "Blocks traffic between apps. Review before enabling on a rack running more than one app."
