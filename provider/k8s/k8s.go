@@ -106,6 +106,7 @@ type Provider struct {
 	RouterType                          string
 	ProxyProtocol                       bool
 	PodImdsBlockEnabled                 bool
+	BuildImdsBlockEnabled               bool
 	NetworkPolicyEnabled                bool
 	PodSecurityStandard                 string
 	PodSecurityMode                     string
@@ -258,6 +259,7 @@ func FromEnv() (*Provider, error) {
 		RouterType:                       common.CoalesceString(os.Getenv("ROUTER_TYPE"), "nginx"),
 		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
 		PodImdsBlockEnabled:              os.Getenv("POD_IMDS_BLOCK_ENABLED") == "true",
+		BuildImdsBlockEnabled:            os.Getenv("BUILD_IMDS_BLOCK_ENABLED") == "true",
 		NetworkPolicyEnabled:             os.Getenv("NETWORK_POLICY_ENABLED") == "true",
 		PodSecurityStandard:              os.Getenv("POD_SECURITY_STANDARD"),
 		PodSecurityMode:                  common.CoalesceString(os.Getenv("POD_SECURITY_MODE"), "warn"),

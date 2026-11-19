@@ -14,6 +14,7 @@ import (
 
 const (
 	imdsBlockPolicyName           = "convox-imds-block"
+	buildImdsBlockPolicyName      = "convox-build-imds-block"
 	podImdsBlockReconcileInterval = 2 * time.Minute
 )
 
@@ -39,7 +40,21 @@ func imdsBlockNetworkPolicy(namespace string) *networkingv1.NetworkPolicy {
 	}
 }
 
+func buildImdsBlockNetworkPolicy(namespace, rack string) *networkingv1.NetworkPolicy {
+	np := imdsBlockNetworkPolicy(namespace)
+	np.Name = buildImdsBlockPolicyName
+	np.Labels = map[string]string{"system": "convox", "rack": rack, "type": "build-imds-block"}
+	np.Spec.PodSelector = am.LabelSelector{MatchLabels: map[string]string{"service-type": "build"}}
+	return np
+}
+
 func (p *Provider) reconcilePodImdsBlock(ctx context.Context) error {
+	if !p.BuildImdsBlockEnabled {
+		if err := p.removeBuildImdsBlockPolicies(ctx); err != nil {
+			fmt.Printf("ns=pod_imds_block at=warn kind=reconcile_build rack=%s err=%q\n", p.Name, err)
+		}
+	}
+
 	nss, err := p.ListNamespacesFromInformer(fmt.Sprintf("system=convox,rack=%s,type=app", p.Name))
 	if err != nil {
 		return errors.WithStack(err)
@@ -76,6 +91,33 @@ func (p *Provider) removeImdsBlockPolicy(ctx context.Context, namespace string) 
 	err := p.Cluster.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, imdsBlockPolicyName, am.DeleteOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) ensureBuildImdsBlockPolicy(ctx context.Context, namespace string) error {
+	_, err := p.Cluster.NetworkingV1().NetworkPolicies(namespace).Create(ctx, buildImdsBlockNetworkPolicy(namespace, p.Name), am.CreateOptions{})
+	if err != nil && !k8serrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Provider) removeBuildImdsBlockPolicies(ctx context.Context) error {
+	nps, err := p.Cluster.NetworkingV1().NetworkPolicies("").List(ctx, am.ListOptions{
+		LabelSelector: fmt.Sprintf("system=convox,rack=%s,type=build-imds-block", p.Name),
+	})
+	if err != nil {
+		return err
+	}
+
+	for i := range nps.Items {
+		np := &nps.Items[i]
+		if err := p.Cluster.NetworkingV1().NetworkPolicies(np.Namespace).Delete(ctx, np.Name, am.DeleteOptions{}); err != nil && !k8serrors.IsNotFound(err) {
+			fmt.Printf("ns=pod_imds_block at=warn kind=reconcile_build rack=%s namespace=%s err=%q\n", p.Name, np.Namespace, err)
+		}
 	}
 
 	return nil

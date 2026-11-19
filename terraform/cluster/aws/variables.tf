@@ -119,6 +119,11 @@ variable "pod_imds_block_enabled" {
   default = false
 }
 
+variable "build_imds_block_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "network_policy_enable" {
   type    = bool
   default = false

@@ -12,6 +12,7 @@ locals {
     availability_zones                        = var.availability_zones
     aws_ebs_csi_driver_version                = var.aws_ebs_csi_driver_version
     build_disable_convox_resolver             = var.build_disable_convox_resolver
+    build_imds_block_enabled                  = var.build_imds_block_enabled
     build_node_enabled                        = var.build_node_enabled
     build_node_min_count                      = var.build_node_min_count
     build_node_minimal_role_enabled           = var.build_node_minimal_role_enabled
@@ -186,6 +187,7 @@ locals {
     availability_zones                        = ""
     aws_ebs_csi_driver_version                = "v1.67.2-eksbuild.1"
     build_disable_convox_resolver             = "false"
+    build_imds_block_enabled                  = "false"
     build_node_enabled                        = "false"
     build_node_min_count                      = "0"
     build_node_minimal_role_enabled           = "false"

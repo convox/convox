@@ -85,6 +85,7 @@ module "k8s" {
     ROUTER_TYPE                               = var.router_type
     PROXY_PROTOCOL                            = var.proxy_protocol
     POD_IMDS_BLOCK_ENABLED                    = var.pod_imds_block_enabled
+    BUILD_IMDS_BLOCK_ENABLED                  = var.build_imds_block_enabled
     NETWORK_POLICY_ENABLED                    = var.network_policy_enable
     POD_SECURITY_STANDARD                     = var.pod_security_standard
     POD_SECURITY_MODE                         = var.pod_security_mode
