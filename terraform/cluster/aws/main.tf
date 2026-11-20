@@ -67,6 +67,11 @@ locals {
 
 data "aws_availability_zones" "available" {
   state = "available"
+
+  filter {
+    name   = "zone-type"
+    values = ["availability-zone"]
+  }
 }
 
 data "aws_eks_cluster_auth" "cluster" {
