@@ -25,9 +25,6 @@ import (
 // exclusion. Emits a deprecation warning to stderr when the plaintext form is
 // used. Returns nil + nil error when no form is set (caller leaves
 // opts.SrcCredsPass unset; no source-creds path).
-//
-// Deprecation contract: 3.24.6 warns + continues; 3.25.0 will reject the
-// plaintext form. RFC 8594 deprecation pattern.
 func resolveSrcCredsPass(c *stdcli.Context) (*string, error) {
 	plain := c.String("src-creds-pass")
 	envName := c.String("src-creds-pass-env")
@@ -52,7 +49,7 @@ func resolveSrcCredsPass(c *stdcli.Context) (*string, error) {
 
 	if plain != "" {
 		// Pin by R3 (UX): exact text reviewed; do NOT alter wording without re-pinning.
-		fmt.Fprintln(c.Writer().Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead.")
 		return options.String(plain), nil
 	}
 
@@ -120,7 +117,7 @@ func init() {
 			flagApp,
 			stdcli.StringFlag("manifest", "m", "path to convox.yml manifest"),
 			stdcli.StringFlag("src-creds-user", "", "source registry username"),
-			stdcli.StringFlag("src-creds-pass", "", "source registry password (DEPRECATED — use --src-creds-pass-env or --src-creds-pass-stdin; will be rejected in 3.25.0)"),
+			stdcli.StringFlag("src-creds-pass", "", "source registry password (DEPRECATED, use --src-creds-pass-env or --src-creds-pass-stdin)"),
 			stdcli.StringFlag("src-creds-pass-env", "", "read source registry password from named environment variable"),
 			stdcli.BoolFlag("src-creds-pass-stdin", "", "read source registry password from stdin (single line)"),
 		},

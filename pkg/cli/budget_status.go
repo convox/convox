@@ -10,74 +10,69 @@ import (
 )
 
 type capStatus struct {
-	AtCap                 bool
-	AutoShutdown          bool
-	KedaServiceSet        map[string]bool
-	ArmedCountdownMinutes int
+	AtCap  bool
+	All    string
+	Tokens map[string]string
 }
 
 func budgetCapStatus(rack sdk.Interface, appName string, stderr io.Writer) (capStatus, error) {
-	cs, ok := budgetCapStatusBase(rack, appName, stderr)
-	if !ok {
-		return cs, nil
-	}
-	if ss, e := rack.ServiceList(appName); e == nil {
-		populateKedaServiceSet(&cs, ss)
-	} else {
-		fmt.Fprintf(stderr, "ns=cli_budget at=service-list-error err=%q\n", e)
-	}
-	return cs, nil
-}
-
-func budgetCapStatusWithServices(rack sdk.Interface, appName string, services structs.Services, stderr io.Writer) (capStatus, error) {
-	cs, ok := budgetCapStatusBase(rack, appName, stderr)
-	if !ok {
-		return cs, nil
-	}
-	populateKedaServiceSet(&cs, services)
-	return cs, nil
-}
-
-func budgetCapStatusBase(rack sdk.Interface, appName string, stderr io.Writer) (capStatus, bool) {
 	cfg, state, err := rack.AppBudgetGet(appName)
 	if err != nil {
 		if !isRackVersionGated(err) {
 			fmt.Fprintf(stderr, "ns=cli_budget at=fetch-error err=%q\n", err)
 		}
-		return capStatus{}, false
+		return capStatus{}, nil
 	}
-	if cfg == nil || state == nil || !state.CircuitBreakerTripped {
-		return capStatus{}, false
+	if cfg == nil {
+		return capStatus{}, nil
 	}
-	cs := capStatus{
-		AtCap:                 cfg.AtCapAction == structs.BudgetAtCapActionBlockNewDeploys || cfg.AtCapAction == structs.BudgetAtCapActionAutoShutdown,
-		AutoShutdown:          cfg.AtCapAction == structs.BudgetAtCapActionAutoShutdown,
-		ArmedCountdownMinutes: -1,
+	cs := capStatus{}
+	if state != nil && state.CircuitBreakerTripped {
+		cs.All = "at-cap"
 	}
-	if !cs.AtCap {
-		return capStatus{}, false
+	if cfg.AtCapAction == structs.BudgetAtCapActionAutoShutdown {
+		cs.Tokens = autoShutdownTokens(safeShutdownStateGetFromBudgetStatus(rack, appName, stderr), time.Now())
 	}
-	if !cs.AutoShutdown {
-		return cs, true
+	cs.AtCap = cs.All != "" || len(cs.Tokens) > 0
+	return cs, nil
+}
+
+func autoShutdownTokens(s *structs.AppBudgetShutdownState, now time.Time) map[string]string {
+	if s == nil || isSet(s.RestoredAt) || isSet(s.ExpiredAt) {
+		return nil
 	}
-	shutdownState := safeShutdownStateGetFromBudgetStatus(rack, appName, stderr)
-	if shutdownState != nil {
-		if shutdownState.ArmedAt != nil && !shutdownState.ArmedAt.IsZero() &&
-			(shutdownState.ShutdownAt == nil || shutdownState.ShutdownAt.IsZero()) {
-			notifyMin := shutdownState.NotifyBeforeMinutes
-			if notifyMin <= 0 {
-				notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
-			}
-			fireAt := shutdownState.ArmedAt.Add(time.Duration(notifyMin) * time.Minute)
-			remaining := time.Until(fireAt)
-			countdown := int(remaining.Minutes())
-			if countdown < 1 {
-				countdown = 1
-			}
-			cs.ArmedCountdownMinutes = countdown
+	tokens := map[string]string{}
+	if !isSet(s.ShutdownAt) {
+		if !isSet(s.ArmedAt) {
+			return nil
+		}
+		notifyMin := s.NotifyBeforeMinutes
+		if notifyMin <= 0 {
+			notifyMin = structs.BudgetDefaultNotifyBeforeMinutes
+		}
+		countdown := int(s.ArmedAt.Add(time.Duration(notifyMin) * time.Minute).Sub(now).Minutes())
+		if countdown < 1 {
+			countdown = 1
+		}
+		for _, svc := range s.Services {
+			tokens[svc.Name] = fmt.Sprintf("armed-%dm", countdown)
+		}
+		return tokens
+	}
+	for _, svc := range s.Services {
+		switch {
+		case !isSet(svc.ShutdownAt):
+		case svc.KedaScaledObject != nil:
+			tokens[svc.Name] = "at-cap-keda"
+		default:
+			tokens[svc.Name] = "at-cap-auto"
 		}
 	}
-	return cs, true
+	return tokens
+}
+
+func isSet(t *time.Time) bool {
+	return t != nil && !t.IsZero()
 }
 
 func safeShutdownStateGetFromBudgetStatus(rack sdk.Interface, app string, stderr io.Writer) (state *structs.AppBudgetShutdownState) {
@@ -95,40 +90,27 @@ func safeShutdownStateGetFromBudgetStatus(rack sdk.Interface, app string, stderr
 	return s
 }
 
-func populateKedaServiceSet(cs *capStatus, services structs.Services) {
-	cs.KedaServiceSet = make(map[string]bool, len(services))
-	for i := range services {
-		cs.KedaServiceSet[services[i].Name] = serviceHasKedaSurface(&services[i])
-	}
-}
-
 func serviceHasKedaSurface(s *structs.Service) bool {
 	return s != nil && s.Autoscale != nil && s.Autoscale.Enabled
 }
 
 func decorateStatusForBudgetCap(podStatus, serviceName string, cs capStatus) string {
-	if !cs.AtCap {
-		return podStatus
-	}
 	sub := capSubStateToken(serviceName, cs)
-	if podStatus == "" {
+	switch {
+	case sub == "":
+		return podStatus
+	case podStatus == "":
 		return sub
+	default:
+		return podStatus + " " + sub
 	}
-	return podStatus + " " + sub
 }
 
 func capSubStateToken(serviceName string, cs capStatus) string {
-	switch {
-	case cs.AutoShutdown && cs.ArmedCountdownMinutes > 0:
-		return fmt.Sprintf("armed-%dm", cs.ArmedCountdownMinutes)
-	case cs.KedaServiceSet[serviceName]:
-		return "at-cap-keda"
-	case cs.AutoShutdown:
-		return "at-cap-auto"
-	default:
-		return "at-cap"
+	if t, ok := cs.Tokens[serviceName]; ok {
+		return t
 	}
+	return cs.All
 }
 
-const kedaCapBypassBanner = "KEDA-managed services may scale despite block-new-deploys\n" +
-	"(v1 limitation; auto-shutdown closes gap in 3.24.6 — see release notes)"
+const kedaScalesAtCapBanner = "KEDA-managed services may scale despite block-new-deploys; auto-shutdown stops them at the cap"

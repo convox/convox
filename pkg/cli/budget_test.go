@@ -3,7 +3,6 @@ package cli_test
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -258,22 +257,32 @@ func TestBudgetSet_AppCostError_DoesNotBlock(t *testing.T) {
 	})
 }
 
-// TestBudgetReset_AckByFromEnv — legacy env-derivation path. Setting
-// $CONVOX_ACTOR populates ack_by; CLI passes through unchanged. Locks the
-// pre-existing CONVOX_ACTOR/USER/USERNAME fallback.
-func TestBudgetReset_AckByFromEnv(t *testing.T) {
-	prev := os.Getenv("CONVOX_ACTOR")
-	defer os.Setenv("CONVOX_ACTOR", prev)
-	require.NoError(t, os.Setenv("CONVOX_ACTOR", "alice"))
+func TestBudgetCommands_NoAckByByDefault(t *testing.T) {
+	t.Setenv("CONVOX_ACTOR", "alice")
+	t.Setenv("USER", "bob")
 
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("AppBudgetReset", "app1", "alice").Return(nil)
+		i.On("AppCost", "app1").Return(&structs.AppCost{App: "app1"}, nil)
+		i.On("AppBudgetSet", "app1", mock.AnythingOfType("structs.AppBudgetOptions"), "").Return(nil)
+		i.On("AppBudgetClear", "app1", "").Return(nil)
+		i.On("AppBudgetReset", "app1", "").Return(nil)
+		i.On("AppBudgetResetWithOptions", "app1", "", mock.AnythingOfType("structs.AppBudgetResetOptions")).Return(nil)
+		i.On("AppBudgetDismissRecoveryWithResult", "app1", "").
+			Return(&structs.AppBudgetDismissRecoveryResult{App: "app1", Status: structs.BudgetDismissRecoveryStatusDismissed}, nil)
 
-		res, err := testExecute(e, "budget reset app1 --force", nil)
-		require.NoError(t, err)
-		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
-		require.NotContains(t, res.Stderr, "DEPRECATED", "no explicit --ack-by → no deprecation warning")
-		require.NotContains(t, res.Stderr, "deprecated", "no explicit --ack-by → no deprecation warning")
+		for _, cmd := range []string{
+			"budget set app1 --monthly-cap 500",
+			"budget clear app1",
+			"budget reset app1 --force",
+			"budget reset app1 --force --force-clear-cooldown",
+			"budget dismiss-recovery app1",
+			"budget cap raise app1 --monthly-cap-usd 1000",
+		} {
+			res, err := testExecute(e, cmd, nil)
+			require.NoError(t, err, cmd)
+			require.Equal(t, 0, res.Code, "%s stderr: %s", cmd, res.Stderr)
+			require.NotContains(t, res.Stderr, "deprecated", cmd)
+		}
 	})
 }
 
@@ -288,7 +297,8 @@ func TestBudgetReset_ExplicitAckByFlag_PrintsDeprecationWarning(t *testing.T) {
 		require.Equal(t, 0, res.Code, "stderr: %s", res.Stderr)
 		require.Contains(t, res.Stderr, "deprecated", "explicit --ack-by must emit deprecation warning")
 		require.Contains(t, res.Stderr, "--ack-by", "deprecation warning must mention the flag name")
-		require.Contains(t, res.Stderr, "3.25.0", "deprecation warning must cite the cliff version")
+		require.Contains(t, res.Stderr, "the Rack records your authenticated identity")
+		require.NotContains(t, res.Stderr, "3.25.0")
 	})
 }
 
@@ -351,6 +361,8 @@ func TestBudgetSet_AutoShutdownActionPrintsWarning(t *testing.T) {
 		require.Contains(t, res.Stderr, "WARNING")
 		require.Contains(t, res.Stderr, "auto-shutdown")
 		require.Contains(t, res.Stderr, "simulate-shutdown")
+		require.Contains(t, res.Stderr, "Rack webhook")
+		require.NotContains(t, res.Stderr, "atCapWebhookUrl")
 	})
 }
 
@@ -587,7 +599,7 @@ func TestBudgetSimulateShutdown_OutputDoesNotReferenceUnimplementedCommand(t *te
 		require.NotContains(t, res.Stdout, "convox events", "simulate-shutdown must not cite unimplemented `convox events` subcommand")
 		require.NotContains(t, res.Stdout, "events --rack", "simulate-shutdown must not cite `events --rack` flag")
 		// Verify the replacement text is present so users have a real surface to look at.
-		require.Contains(t, res.Stdout, "atCapWebhookUrl", "simulate-shutdown must point at the real webhook surface")
+		require.Contains(t, res.Stdout, "Rack webhook deliveries", "simulate-shutdown must point at the real webhook surface")
 		require.Contains(t, res.Stdout, "rack log aggregation", "simulate-shutdown must also point at log aggregation as fallback")
 	})
 }

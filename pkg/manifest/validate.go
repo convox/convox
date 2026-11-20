@@ -514,12 +514,15 @@ func (m *Manifest) validateTimers() []error {
 	return errs
 }
 
-// validateBudget enforces the 11 cross-field rules on the manifest
-// budget block. 10 rules are HARD-FAIL; rule 3 (alertThresholdPercent
-// > 100) is WARN-only (printed to stderr, parse succeeds).
+// validateBudget enforces the cross-field rules on the manifest budget
+// block. Rule 3 and pricingAdjustment only print a warning to stderr.
 func (m *Manifest) validateBudget() []error {
 	b := m.Budget
 	errs := []error{}
+
+	if b.PricingAdjustment != 0 {
+		fmt.Fprintln(os.Stderr, "WARNING: budget.pricingAdjustment in convox.yml is not read; set it with convox budget set --pricing-adjustment")
+	}
 
 	// Skip the entire pass when no budget block is configured. This
 	// preserves backward compatibility -- manifests that never declare
@@ -543,12 +546,6 @@ func (m *Manifest) validateBudget() []error {
 
 	autoShutdown := b.AtCapAction == "auto-shutdown"
 
-	// Rule 1: refuse auto-shutdown without atCapWebhookUrl
-	if autoShutdown && strings.TrimSpace(b.AtCapWebhookUrl) == "" {
-		errs = append(errs, fmt.Errorf(
-			"budget.atCapAction %q requires budget.atCapWebhookUrl to be set; auto-shutdown silently killing services without notification is rejected by design",
-			"auto-shutdown"))
-	}
 	// Rule 2: refuse auto-shutdown without monthlyCapUsd > 0
 	if autoShutdown && !(b.MonthlyCapUsd > 0) {
 		errs = append(errs, fmt.Errorf(
