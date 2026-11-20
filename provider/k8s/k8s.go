@@ -469,7 +469,7 @@ func (p *Provider) Start() error {
 
 	go p.runPodImdsBlockReconciler(p.ctx)
 
-	if p.Provider == "aws" {
+	if rackMetricsSupported(p.Provider) {
 		go p.MetricScraper.Run(p.ctx)
 	}
 

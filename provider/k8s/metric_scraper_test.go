@@ -188,3 +188,19 @@ func TestMetricScraperOptions(t *testing.T) {
 
 	require.Equal(t, stored, m.samples)
 }
+
+func TestRackMetricsSupported(t *testing.T) {
+	for provider, want := range map[string]bool{
+		"aws":   true,
+		"gcp":   true,
+		"azure": true,
+		"do":    false,
+		"metal": false,
+		"local": false,
+		"k8s":   false,
+		"":      false,
+		"AWS":   false,
+	} {
+		require.Equal(t, want, rackMetricsSupported(provider), provider)
+	}
+}
