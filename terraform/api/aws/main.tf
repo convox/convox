@@ -71,6 +71,7 @@ module "k8s" {
     ECR_IMMUTABLE_TAGS_ENABLED                = var.ecr_immutable_tags_enabled
     ECR_SCAN_ON_PUSH_ENABLE                   = var.ecr_scan_on_push_enable
     APP_CLOUDWATCH_DISABLE                    = var.app_cloudwatch_disable
+    APP_RACK_URL_DISABLE                      = var.app_rack_url_disable
     CLOUDWATCH_DISABLE                        = var.cloudwatch_disable
     CLOUDWATCH_RETENTION_IN_DAYS              = var.cloudwatch_retention_in_days
     SUBNET_IDS                                = join(",", var.subnets)

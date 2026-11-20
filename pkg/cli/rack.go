@@ -39,7 +39,7 @@ var providerKnownParams = map[string]map[string]bool{
 var awsKnownParams = map[string]bool{
 	"access_log_retention_in_days": true, "additional_build_groups_config": true,
 	"additional_karpenter_nodepools_config": true, "additional_node_groups_config": true,
-	"api_feature_gates": true, "app_cloudwatch_disable": true, "availability_zones": true,
+	"api_feature_gates": true, "app_cloudwatch_disable": true, "app_rack_url_disable": true, "availability_zones": true,
 	"aws_ebs_csi_driver_version": true, "build_disable_convox_resolver": true,
 	"build_node_enabled": true, "build_node_minimal_role_enabled": true, "build_node_min_count": true,
 	"build_node_type": true, "buildkit_host_path_cache_enable": true,
@@ -130,8 +130,8 @@ var awsKnownParams = map[string]bool{
 }
 
 var gcpKnownParams = map[string]bool{
-	"additional_node_groups_config": true,
-	"buildkit_enabled":              true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
+	"additional_node_groups_config": true, "app_rack_url_disable": true,
+	"buildkit_enabled": true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"dcgm_scrape_interval": true, "docker_hub_password": true,
 	"docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
@@ -144,7 +144,7 @@ var gcpKnownParams = map[string]bool{
 }
 
 var azureKnownParams = map[string]bool{
-	"additional_build_groups_config": true, "additional_node_groups_config": true,
+	"additional_build_groups_config": true, "additional_node_groups_config": true, "app_rack_url_disable": true,
 	"azure_files_enable": true, "cert_duration": true, "cost_tracking_enable": true, "cost_tracking_history_days": true,
 	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true,
 	"fluentd_memory": true, "high_availability": true, "idle_timeout": true,
@@ -160,7 +160,7 @@ var azureKnownParams = map[string]bool{
 }
 
 var doKnownParams = map[string]bool{
-	"access_id": true, "buildkit_enabled": true, "cert_duration": true,
+	"access_id": true, "app_rack_url_disable": true, "buildkit_enabled": true, "cert_duration": true,
 	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"high_availability": true, "image": true, "k8s_version": true,
 	"name": true, "node_type": true, "rack_name": true, "region": true,
@@ -171,7 +171,7 @@ var doKnownParams = map[string]bool{
 }
 
 var metalKnownParams = map[string]bool{
-	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
+	"app_rack_url_disable": true, "docker_hub_password": true, "docker_hub_username": true, "domain": true,
 	"elasticsearch_disk": true, "fluentd_memory": true, "image": true, "name": true, "rack_name": true,
 	"registry_disk": true, "release": true, "rotate_api_password": true, "router_log_redact_params": true, "sync_tf_now": true,
 	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
@@ -197,6 +197,7 @@ var managedParams = map[string]bool{
 // Maintain in sync with terraform/{system,rack}/<provider>/variables.tf.
 var boolParams = map[string]bool{
 	"app_cloudwatch_disable":            true,
+	"app_rack_url_disable":              true,
 	"azure_files_enable":                true,
 	"build_disable_convox_resolver":     true,
 	"build_node_enabled":                true,
@@ -374,6 +375,7 @@ var paramGroups = map[string]map[string]bool{
 	"security": {
 		// v3 native (snake_case)
 		"access_id":                           true,
+		"app_rack_url_disable":                true,
 		"build_node_minimal_role_enabled":     true, // dual-listed in build
 		"disable_public_access":               true,
 		"docker_hub_password":                 true,
@@ -2748,6 +2750,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 		// Canonicalize to "true"/"false" for consistent vars.json storage.
 		params[k] = strconv.FormatBool(b)
+	}
+
+	if params["app_rack_url_disable"] == "true" {
+		fmt.Fprintf(os.Stderr, "WARNING: running app processes keep RACK_URL until each app's next deploy. Apps that call the rack API through RACK_URL lose access and need their own, set with 'convox env set'.\n")
 	}
 
 	if provider == "aws" {

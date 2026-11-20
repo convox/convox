@@ -3,6 +3,7 @@
 
 locals {
   telemetry_map = {
+    app_rack_url_disable     = var.app_rack_url_disable
     buildkit_enabled         = var.buildkit_enabled
     cert_duration            = var.cert_duration
     docker_hub_password      = var.docker_hub_password
@@ -29,6 +30,7 @@ locals {
   }
 
   telemetry_default_map = {
+    app_rack_url_disable     = "false"
     buildkit_enabled         = "false"
     cert_duration            = "2160h"
     docker_hub_password      = ""

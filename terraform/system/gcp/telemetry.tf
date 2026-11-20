@@ -4,6 +4,7 @@
 locals {
   telemetry_map = {
     additional_node_groups_config   = var.additional_node_groups_config
+    app_rack_url_disable            = var.app_rack_url_disable
     buildkit_enabled                = var.buildkit_enabled
     cert_duration                   = var.cert_duration
     cost_tracking_enable            = var.cost_tracking_enable
@@ -37,6 +38,7 @@ locals {
 
   telemetry_default_map = {
     additional_node_groups_config   = ""
+    app_rack_url_disable            = "false"
     buildkit_enabled                = "false"
     cert_duration                   = "2160h"
     cost_tracking_enable            = "false"

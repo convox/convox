@@ -26,6 +26,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  app_rack_url_disable      = var.app_rack_url_disable
   docker_hub_authentication = module.k8s.docker_hub_authentication
   domain                    = local.endpoint
   elasticsearch_disk        = var.elasticsearch_disk
