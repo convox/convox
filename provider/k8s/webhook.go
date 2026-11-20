@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	neturl "net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -18,9 +20,9 @@ import (
 
 // SSRF guard — applied at both create and dispatch time. Tests override
 // via SetWebhookSSRFValidatorForTest for loopback httptest URLs.
-var webhookSSRFValidator = func(raw string) error {
-	return validator.ValidateExternalURL(raw, nil)
-}
+var webhookSSRFValidator = (*Provider).webhookURLAllowed
+
+var webhookLookupIP validator.ResolveFunc = net.LookupIP
 
 // webhookSSRFLogged deduplicates SSRF block log lines (one per URL per pod lifetime).
 var webhookSSRFLogged sync.Map
@@ -140,7 +142,7 @@ func (p *Provider) webhookCreate(name, url string) error {
 	}
 
 	// SSRF guard — rejects internal/IMDS/loopback IPs; allows .svc.cluster.local.
-	if err := webhookSSRFValidator(url); err != nil {
+	if err := webhookSSRFValidator(p, url); err != nil {
 		return structs.ErrBadRequest("url: %s", err)
 	}
 
@@ -160,6 +162,38 @@ func (p *Provider) webhookCreate(name, url string) error {
 	}
 
 	return nil
+}
+
+func (p *Provider) webhookURLAllowed(raw string) error {
+	var allow func([]net.IP) bool
+	if u, err := neturl.Parse(raw); err == nil && u.Scheme == "https" && !p.ProxyProtocol {
+		allow = p.routerOnly
+	}
+	return validator.ValidateExternalURLAllowing(raw, webhookLookupIP, allow)
+}
+
+// routerOnly reports whether every address is the router Service ClusterIP the rack resolver answers rack hosts with.
+func (p *Provider) routerOnly(ips []net.IP) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), webhookConfigMapTimeout)
+	defer cancel()
+
+	s, err := p.Cluster.CoreV1().Services(p.Namespace).Get(ctx, "router", am.GetOptions{})
+	if err != nil {
+		return false
+	}
+
+	router := net.ParseIP(s.Spec.ClusterIP)
+	if router == nil {
+		return false
+	}
+
+	for _, ip := range ips {
+		if !ip.Equal(router) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p *Provider) webhookDelete(name string) error {
