@@ -72,7 +72,7 @@ resource "aws_subnet" "public" {
     Name = "${var.name} public ${count.index}"
     "kubernetes.io/cluster/${var.name}" : "shared"
     "kubernetes.io/role/elb" : "1"
-  }, var.karpenter_auth_mode ? { "karpenter.sh/discovery" = var.name } : {})
+  }, var.karpenter_auth_mode && !var.private ? { "karpenter.sh/discovery" = var.name } : {})
 
   timeouts {
     delete = "6h"
@@ -301,7 +301,7 @@ resource "aws_ec2_tag" "private_subnets_karpenter" {
 }
 
 resource "aws_ec2_tag" "public_subnets_karpenter" {
-  count       = var.karpenter_auth_mode ? length(var.public_subnets_ids) : 0
+  count       = var.karpenter_auth_mode && !var.private ? length(var.public_subnets_ids) : 0
   resource_id = var.public_subnets_ids[count.index]
   key         = "karpenter.sh/discovery"
   value       = var.name
