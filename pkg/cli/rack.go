@@ -116,6 +116,8 @@ var awsKnownParams = map[string]bool{
 	"region": true, "release": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
+	"sandbox_runtime_classes":  true,
+	"sandbox_storage_class":    true,
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
 	"seccomp_default_enabled": true,
 	"settings":                true, "ssl_ciphers": true,
@@ -389,6 +391,8 @@ var paramGroups = map[string]map[string]bool{
 		"imds_tags_enable":                    true,
 		"pod_imds_block_enabled":              true,
 		"network_policy_enable":               true,
+		"sandbox_runtime_classes":             true,
+		"sandbox_storage_class":               true,
 		"karpenter_build_imds_hop_limit":      true, // dual-listed in build
 		"karpenter_build_imds_tokens":         true, // dual-listed in build
 		"pod_security_standard":               true,

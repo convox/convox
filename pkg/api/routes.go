@@ -68,6 +68,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("POST", "/apps/{app}/services/{service}/processes", s.ProcessRun)
 	r.Route("SOCKET", "/apps/{app}/services/{service}/logs", s.ServiceLogs)
 	r.Route("DELETE", "/apps/{app}/processes/{pid}", s.ProcessStop)
+	r.Route("DELETE", "/apps/{app}/volumeclaims/{name}", s.ProcessVolumeClaimDelete)
 	r.Route("SOCKET", "/proxy/{host}/{port}", s.Proxy)
 	r.Route("POST", "/registries", s.RegistryAdd)
 	r.Route("GET", "/registries", s.RegistryList)

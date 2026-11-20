@@ -85,6 +85,7 @@ type Provider interface {
 	ProcessLogs(app, pid string, opts LogsOptions) (io.ReadCloser, error)
 	ProcessRun(app, service string, opts ProcessRunOptions) (*Process, error)
 	ProcessStop(app, pid string) error
+	ProcessVolumeClaimDelete(app, name string) error
 
 	Proxy(host string, port int, rw io.ReadWriter, opts ProxyOptions) error
 

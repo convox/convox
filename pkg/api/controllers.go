@@ -1488,6 +1488,22 @@ func (s *Server) ProcessStop(c *stdapi.Context) error {
 	return c.RenderOK()
 }
 
+func (s *Server) ProcessVolumeClaimDelete(c *stdapi.Context) error {
+	if err := s.hook("ProcessVolumeClaimDeleteValidate", c); err != nil {
+		return err
+	}
+
+	app := c.Var("app")
+	name := c.Var("name")
+
+	err := s.provider(c).WithContext(contextFrom(c)).ProcessVolumeClaimDelete(app, name)
+	if err != nil {
+		return err
+	}
+
+	return c.RenderOK()
+}
+
 func (s *Server) Proxy(c *stdapi.Context) error {
 	if err := s.hook("ProxyValidate", c); err != nil {
 		return err

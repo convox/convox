@@ -86,6 +86,8 @@ module "api" {
   proxy_protocol                            = var.proxy_protocol
   pod_imds_block_enabled                    = var.pod_imds_block_enabled
   network_policy_enable                     = var.network_policy_enable
+  sandbox_runtime_classes                   = var.sandbox_runtime_classes
+  sandbox_storage_class                     = var.sandbox_storage_class
   contour_internal_tls                      = var.contour_internal_tls
 }
 

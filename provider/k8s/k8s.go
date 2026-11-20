@@ -107,6 +107,8 @@ type Provider struct {
 	ProxyProtocol                       bool
 	PodImdsBlockEnabled                 bool
 	NetworkPolicyEnabled                bool
+	SandboxRuntimeClasses               []string
+	SandboxStorageClass                 string
 	PodSecurityStandard                 string
 	PodSecurityMode                     string
 	ContourInternalTLS                  bool
@@ -259,6 +261,8 @@ func FromEnv() (*Provider, error) {
 		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
 		PodImdsBlockEnabled:              os.Getenv("POD_IMDS_BLOCK_ENABLED") == "true",
 		NetworkPolicyEnabled:             os.Getenv("NETWORK_POLICY_ENABLED") == "true",
+		SandboxRuntimeClasses:            splitCSV(os.Getenv("SANDBOX_RUNTIME_CLASSES")),
+		SandboxStorageClass:              strings.TrimSpace(os.Getenv("SANDBOX_STORAGE_CLASS")),
 		PodSecurityStandard:              os.Getenv("POD_SECURITY_STANDARD"),
 		PodSecurityMode:                  common.CoalesceString(os.Getenv("POD_SECURITY_MODE"), "warn"),
 		ContourInternalTLS:               os.Getenv("CONTOUR_INTERNAL_TLS") == "true",
