@@ -9,15 +9,15 @@ metadata:
   labels:
     system: convox
     {{ range keyValue $.Service.Labels }}
-    {{.Key}}: "{{.Value}}"
+    {{ yamlScalar .Key }}: {{ yamlQuote .Value }}
     {{ end }}
 spec:
   accessModes:
-    - {{.AccessMode}}
+    - {{ yamlScalar .AccessMode }}
   storageClassName: filestore-rwx
   volumeMode: Filesystem
   resources:
     requests:
-      storage: {{ if .Capacity }}{{.Capacity}}{{ else }}1Ti{{ end }}
+      storage: {{ if .Capacity }}{{ yamlScalar .Capacity }}{{ else }}1Ti{{ end }}
 {{ end }}
 {{ end }}

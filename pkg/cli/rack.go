@@ -224,6 +224,7 @@ var boolParams = map[string]bool{
 	"eks_control_plane_private_subnets": true,
 	"enable_private_access":             true,
 	"fast_image_pull_enable":            true,
+	"filestore_enable":                  true,
 	"fluentd_disable":                   true,
 	"gpu_observability_enable":          true,
 	"gpu_tag_enable":                    true,

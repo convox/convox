@@ -142,6 +142,11 @@ services:
       - emptyDir:
           id: scratch
           mountPath: "/scratch\n"
+      - gcpFilestore:
+          id: shared
+          accessMode: ReadOnlyMany
+          mountPath: "/mnt/shared dir"
+          capacity: 2560Gi
     configMounts:
       - id: cfg1
         dir: "/etc/my app"
@@ -156,6 +161,10 @@ services:
         - emptyDir:
             id: cache
             mountPath: "/var/cache dir"
+        - gcpFilestore:
+            id: shared
+            accessMode: ReadOnlyMany
+            mountPath: "/mnt/shared dir"
       configMounts:
         - id: cfg1
           dir: "/etc/my app"

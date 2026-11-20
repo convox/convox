@@ -1654,3 +1654,35 @@ func TestReleaseTemplateFilestore(t *testing.T) {
 	require.Contains(t, rendered, "- ReadWriteMany")
 	require.Contains(t, rendered, "storage: 2560Gi")
 }
+
+func TestReleaseTemplateFilestoreLabels(t *testing.T) {
+	p, params := gpuTemplateFixture(t, `services:
+  web:
+    labels:
+      note: 'say "hi": now'
+    volumeOptions:
+      - gcpFilestore:
+          id: shared
+          accessMode: ReadWriteMany
+          mountPath: /mnt/shared
+`)
+	p.FilestoreEnabled = "true"
+	a, ok := params["App"].(*structs.App)
+	require.True(t, ok)
+	s, ok := params["Service"].(manifest.Service)
+	require.True(t, ok)
+
+	data, err := p.releaseTemplateFilestore(a, &s)
+	require.NoError(t, err)
+
+	var pvc struct {
+		Metadata struct {
+			Labels map[string]string
+		}
+	}
+	dec := yaml.NewDecoder(strings.NewReader(string(data)))
+	for pvc.Metadata.Labels == nil {
+		require.NoError(t, dec.Decode(&pvc))
+	}
+	require.Equal(t, `say "hi": now`, pvc.Metadata.Labels["note"])
+}

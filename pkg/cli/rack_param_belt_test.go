@@ -157,9 +157,8 @@ func TestClearableMatchesPreserveEmpty(t *testing.T) {
 // boolParamsUntypedAllowlist enumerates boolParams entries that
 // TestBoolParamsHaveTFType (AWS-scoped) skips. Two reasons can land an
 // entry here:
-//   - "azure_files_enable": Azure-only variable, not declared in
-//     terraform/system/aws/variables.tf at all. Type-correctness in
-//     terraform/system/azure/variables.tf is out of scope for this test.
+//   - "azure_files_enable", "filestore_enable": declared only in the Azure
+//     and GCP variables.tf, which this test does not parse.
 //   - "build_disable_convox_resolver": declared in aws/ but intentionally
 //     untyped because adding type=bool today would trigger the TF
 //     state-fingertrap on downgrade for users with non-canonical bool
@@ -171,6 +170,7 @@ func TestClearableMatchesPreserveEmpty(t *testing.T) {
 var boolParamsUntypedAllowlist = map[string]bool{
 	"azure_files_enable":            true,
 	"build_disable_convox_resolver": true,
+	"filestore_enable":              true,
 }
 
 // TestBoolParamsHaveTFType asserts every boolParams entry has type=bool in
@@ -179,7 +179,7 @@ var boolParamsUntypedAllowlist = map[string]bool{
 // that must pass through the AWS rack module without TF type errors.
 // Other providers' variables.tf are not parsed here.
 func TestBoolParamsHaveTFType(t *testing.T) {
-	if got, want := len(boolParamsUntypedAllowlist), 2; got != want {
+	if got, want := len(boolParamsUntypedAllowlist), 3; got != want {
 		t.Fatalf("boolParamsUntypedAllowlist has %d entries; expected exactly %d. "+
 			"Adding an entry is an architectural decision — review the spec "+
 			"reasoning. Removing one means upgrading the TF variable to type=bool.",

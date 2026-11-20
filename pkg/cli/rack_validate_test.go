@@ -639,6 +639,23 @@ func TestValidateAndMutateParams_BoolParam_AzureFilesEnable(t *testing.T) {
 	}
 }
 
+func TestValidateAndMutateParams_BoolParam_FilestoreEnable(t *testing.T) {
+	params := map[string]string{"filestore_enable": "True"}
+	if err := validateAndMutateParams(params, "gcp", map[string]string{}, false); err != nil {
+		t.Fatalf("filestore_enable=True should pass on gcp, got: %v", err)
+	}
+	if params["filestore_enable"] != "true" {
+		t.Errorf("filestore_enable=True should canonicalize to %q, got %q", "true", params["filestore_enable"])
+	}
+	err := validateAndMutateParams(map[string]string{"filestore_enable": "yes"}, "gcp", map[string]string{}, false)
+	if err == nil {
+		t.Fatal("filestore_enable=yes should be rejected on gcp")
+	}
+	if !strings.Contains(err.Error(), "must be 'true' or 'false'") {
+		t.Errorf("error %q should mention \"must be 'true' or 'false'\"", err.Error())
+	}
+}
+
 func TestValidateAndMutateParams_BoolParam_KarpenterEnabledStillUsesExistingValidator(t *testing.T) {
 	// karpenter_enabled is type=string in aws/system but has its own
 	// validation block above the bool sweep. Verify the existing message

@@ -87,6 +87,7 @@ func goldenCases(p *Provider, m *manifest.Manifest, a *structs.App) []goldenCase
 		cs = append(cs,
 			goldenCase{"efs " + s.Name, "app/efs", map[string]interface{}{"App": a, "Namespace": ns, "Rack": "rack", "Service": se}},
 			goldenCase{"azurefiles " + s.Name, "app/azurefiles", map[string]interface{}{"App": a, "Namespace": ns, "Rack": "rack", "Service": &se}},
+			goldenCase{"filestore " + s.Name, "app/filestore", map[string]interface{}{"App": a, "Namespace": ns, "Rack": "rack", "Service": &se}},
 		)
 
 		env := map[string]string{}
