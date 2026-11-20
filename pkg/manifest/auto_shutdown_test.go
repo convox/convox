@@ -51,12 +51,8 @@ func TestParseAutoShutdownManifest_ProtectedSchema_Succeeds(t *testing.T) {
 	require.NoError(t, loadFixture(t, "auto-shutdown-protected.yml"))
 }
 
-// TestParseAutoShutdownManifest_NoWebhookUrl_Rule1_RejectsHardFail
-// verifies rule 1: missing atCapWebhookUrl rejects.
-func TestParseAutoShutdownManifest_NoWebhookUrl_Rule1_RejectsHardFail(t *testing.T) {
-	err := loadFixture(t, "auto-shutdown-invalid-rule1.yml")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "requires budget.atCapWebhookUrl")
+func TestParseAutoShutdownManifest_NoWebhookUrl_Succeeds(t *testing.T) {
+	require.NoError(t, loadFixture(t, "auto-shutdown-no-webhook-url.yml"))
 }
 
 // TestParseAutoShutdownManifest_NoMonthlyCap_Rule2_RejectsHardFail
@@ -174,4 +170,25 @@ func TestParseAutoShutdownManifest_NoBudgetBlock_Succeeds(t *testing.T) {
 	m, err := manifest.Load([]byte(yamlBody), map[string]string{})
 	require.NoError(t, err)
 	require.NoError(t, m.Validate())
+}
+
+func TestValidateBudget_PricingAdjustmentWarns(t *testing.T) {
+	for _, body := range []string{
+		"services:\n  api:\n    image: example/api:latest\nbudget:\n  pricingAdjustment: 0.8\n",
+		"services:\n  api:\n    image: example/api:latest\nbudget:\n  monthlyCapUsd: 100\n  pricingAdjustment: 9\n",
+	} {
+		m, err := manifest.Load([]byte(body), map[string]string{})
+		require.NoError(t, err)
+		var verr error
+		stderr := captureStderr(t, func() { verr = m.Validate() })
+		require.NoError(t, verr)
+		require.Contains(t, stderr, "WARNING: budget.pricingAdjustment in convox.yml is not read; set it with convox budget set --pricing-adjustment")
+	}
+}
+
+func TestValidateBudget_NoPricingAdjustmentNoWarning(t *testing.T) {
+	m, err := manifest.Load([]byte("services:\n  api:\n    image: example/api:latest\nbudget:\n  monthlyCapUsd: 100\n"), map[string]string{})
+	require.NoError(t, err)
+	stderr := captureStderr(t, func() { require.NoError(t, m.Validate()) })
+	require.NotContains(t, stderr, "pricingAdjustment")
 }

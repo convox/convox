@@ -227,8 +227,7 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 		}
 
 		// budgetCapStatus is best-effort; errors are logged inside the helper.
-		// Use WithServices variant since the watch closure already has ss.
-		cs, _ := budgetCapStatusWithServices(rack, app(c), ss, c.Writer().Stderr)
+		cs, _ := budgetCapStatus(rack, app(c), c.Writer().Stderr)
 
 		// Column-position contract: positions 1-6 (SERVICE, DESIRED, RUNNING,
 		// CPU, MEMORY, GPU) match 3.24.5 exactly so user scripts parsing
@@ -269,18 +268,7 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 			if s.ColdStart != nil && *s.ColdStart {
 				status = "COLD (~2-5m first req)"
 			}
-			// Append at-cap* sub-state when budget cap state is true.
-			// Short forms only here: long forms (e.g. `at-cap (keda-managed)`)
-			// are reserved for `convox budget show` banner per R3.
-			if cs.AtCap {
-				sub := capSubStateToken(s.Name, cs)
-				if status == "" {
-					status = sub
-				} else {
-					status = status + " " + sub
-				}
-			}
-			row = append(row, status)
+			row = append(row, decorateStatusForBudgetCap(status, s.Name, cs))
 
 			t.AddRow(row...)
 		}
