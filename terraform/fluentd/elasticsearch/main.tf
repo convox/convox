@@ -15,7 +15,7 @@ module "k8s" {
 
   cluster        = var.cluster
   fluentd_memory = var.fluentd_memory
-  image          = "convox/fluentd:1.19.3-1-all@sha256:c0f6a13887bfdfc5ea18d7a58addc42e860cebac51ba352a7c71045503581eea"
+  image          = "convox/fluentd:1.19.4-all@sha256:759445acf1e8d9137306e87771494e2b83c80155290b9709266434b05f2f4bf2"
   namespace      = var.namespace
   rack           = var.rack
 
