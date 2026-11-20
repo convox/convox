@@ -47,6 +47,10 @@ func NewMetricScraperClient(cluster kubernetes.Interface, metrics metricsclients
 	}
 }
 
+func rackMetricsSupported(provider string) bool {
+	return provider == "aws" || provider == "azure" || provider == "gcp"
+}
+
 func (m *MetricScraperClient) SetProvider(p *Provider) {
 	m.provider = p
 }
