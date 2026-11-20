@@ -92,7 +92,7 @@ func machineRangeScale(rack sdk.Interface, app, service string, opts structs.Ser
 
 	for i := range ss {
 		if ss[i].Name == service && (ss[i].TriggersOverrideActive == nil || !*ss[i].TriggersOverrideActive) {
-			return fmt.Errorf("--max on Cloud machines needs a cpu or memory trigger; set the range with convox cloud services triggers enable %s --min <count> --max <count> --cpu <percent>", service)
+			return fmt.Errorf("--max on Cloud machines needs a cpu or memory trigger; set the range with convox cloud services triggers enable %s --min <count> --max <count> --cpu <percent> -a %s -i %s", service, app, common.CloudMachine(rack))
 		}
 	}
 

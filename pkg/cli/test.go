@@ -87,7 +87,7 @@ func Test(rack sdk.Interface, c *stdcli.Context) error {
 
 		code, err := rack.ProcessExec(app(c), ps.Id, s.Test, c, eopts)
 		if err != nil {
-			return execExitError(err, "This test's process has been stopped.")
+			return execExitError(rack, err, "This test's process has been stopped.")
 		}
 
 		if code != 0 {

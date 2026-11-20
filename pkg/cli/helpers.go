@@ -72,9 +72,13 @@ func executableName() string {
 
 // execExitError expands a missing exit status. Many things can cause one and the
 // client cannot tell them apart, so it points at the output instead of guessing.
-func execExitError(err error, detail string) error {
+func execExitError(rack sdk.Interface, err error, detail string) error {
 	if !errors.Is(err, sdk.ErrExecIncomplete) {
 		return err
+	}
+
+	if common.CloudMachine(rack) != "" {
+		err = errors.New("no exit status was reported for this command")
 	}
 
 	return fmt.Errorf("%w, so it may not have finished.\n       Check the output above for a reason. %s\n       A command that must gate a deploy should write its own success marker to the output for the caller to check", err, detail)

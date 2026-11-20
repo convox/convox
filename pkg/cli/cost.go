@@ -79,11 +79,18 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 	if format == "json" {
 		return printCostJSON(c, cost)
 	}
+	if !cost.TrackingEnabled {
+		if common.CloudMachine(rack) != "" {
+			fmt.Fprintln(c.Writer(), "Cost tracking is disabled. Values shown are the most-recent persisted snapshot and may be empty or stale.")
+		} else {
+			fmt.Fprintln(c.Writer(), trackingDisabledNotice)
+		}
+	}
 	if cost.RangeStart != "" {
 		return printCostRange(c, appName, cost)
 	}
 	if c.Bool("aggregate") {
-		return printCostAggregate(c, appName, cost)
+		return printCostAggregateTable(c, appName, cost)
 	}
 	return printCostBreakdown(c, cost)
 }
@@ -154,9 +161,6 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 	if len(cost.VariantBreakdown) > 0 {
 		return printCostVariantBreakdown(c, cost)
 	}
-	if !cost.TrackingEnabled {
-		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
-	}
 	t := c.Table("SERVICE", "GPU-HOURS", "CPU-HOURS", "MEM-GB-HOURS", "INSTANCE", "SPEND-USD")
 	sawEmDash := false
 	for _, line := range cost.Breakdown {
@@ -183,9 +187,6 @@ func printCostBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 }
 
 func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
-	if !cost.TrackingEnabled {
-		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
-	}
 	t := c.Table("SERVICE", "INSTANCE", "CAPACITY", "ACTIVE-REPLICAS", "SPEND-USD")
 	sawEmDash := false
 	var total float64
@@ -220,9 +221,6 @@ func printCostVariantBreakdown(c *stdcli.Context, cost *structs.AppCost) error {
 }
 
 func printCostRange(c *stdcli.Context, appName string, cost *structs.AppCost) error {
-	if !cost.TrackingEnabled {
-		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
-	}
 	fmt.Fprintf(c.Writer(), "Range: %s to %s (UTC)\n", cost.RangeStart, cost.RangeEnd)
 	switch {
 	case cost.HistoryStart == "":
@@ -251,13 +249,6 @@ func printCostRange(c *stdcli.Context, appName string, cost *structs.AppCost) er
 		fmt.Fprintln(c.Writer(), lowSpendFootnote)
 	}
 	return nil
-}
-
-func printCostAggregate(c *stdcli.Context, appName string, cost *structs.AppCost) error {
-	if !cost.TrackingEnabled {
-		fmt.Fprintln(c.Writer(), trackingDisabledNotice)
-	}
-	return printCostAggregateTable(c, appName, cost)
 }
 
 func printCostAggregateTable(c *stdcli.Context, appName string, cost *structs.AppCost) error {
