@@ -63,13 +63,24 @@ func (p *Provider) reconcilePodImdsBlock(ctx context.Context) error {
 	return nil
 }
 
-func (p *Provider) ensureImdsBlockPolicy(ctx context.Context, namespace string) error {
-	_, err := p.Cluster.NetworkingV1().NetworkPolicies(namespace).Create(ctx, imdsBlockNetworkPolicy(namespace), am.CreateOptions{})
-	if err != nil && !k8serrors.IsAlreadyExists(err) {
-		return err
+// imdsBlockPolicyFor leaves sandbox pods out when network policies are on: allowed egress adds up across
+// policies, so this policy's 0.0.0.0/0 would undo their stricter sandbox egress, which already denies 169.254/16.
+func (p *Provider) imdsBlockPolicyFor(namespace string) *networkingv1.NetworkPolicy {
+	np := imdsBlockNetworkPolicy(namespace)
+	if p.NetworkPolicyEnabled {
+		np.Spec.PodSelector = am.LabelSelector{
+			MatchExpressions: []am.LabelSelectorRequirement{{
+				Key:      SandboxLabel,
+				Operator: am.LabelSelectorOpDoesNotExist,
+			}},
+		}
 	}
+	return np
+}
 
-	return nil
+func (p *Provider) ensureImdsBlockPolicy(ctx context.Context, namespace string) error {
+	_, err := p.ensureNetworkPolicy(ctx, p.imdsBlockPolicyFor(namespace))
+	return err
 }
 
 func (p *Provider) removeImdsBlockPolicy(ctx context.Context, namespace string) error {

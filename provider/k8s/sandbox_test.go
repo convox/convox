@@ -282,3 +282,37 @@ func TestSplitCSV(t *testing.T) {
 	assert.Equal(t, []string{"gvisor"}, splitCSV("gvisor"))
 	assert.Equal(t, []string{"gvisor", "kata"}, splitCSV(" gvisor , ,kata,"))
 }
+
+func TestImdsBlockPolicy_ExcludesSandboxPodsWhenNetworkPolicyEnabled(t *testing.T) {
+	p := &Provider{NetworkPolicyEnabled: true}
+
+	np := p.imdsBlockPolicyFor("app-a")
+
+	require.Len(t, np.Spec.PodSelector.MatchExpressions, 1)
+	assert.Equal(t, SandboxLabel, np.Spec.PodSelector.MatchExpressions[0].Key)
+	assert.Equal(t, am.LabelSelectorOpDoesNotExist, np.Spec.PodSelector.MatchExpressions[0].Operator)
+	assert.Equal(t, imdsBlockNetworkPolicy("app-a").Spec.Egress, np.Spec.Egress)
+}
+
+func TestImdsBlockPolicy_SelectsAllPodsWhenNetworkPolicyDisabled(t *testing.T) {
+	p := &Provider{NetworkPolicyEnabled: false}
+
+	np := p.imdsBlockPolicyFor("app-a")
+
+	assert.Empty(t, np.Spec.PodSelector.MatchLabels)
+	assert.Empty(t, np.Spec.PodSelector.MatchExpressions)
+}
+
+func TestReconcilePodImdsBlock_UpdatesExistingPolicyToExcludeSandboxPods(t *testing.T) {
+	cs := fake.NewSimpleClientset(newAppNamespace("app-a", "rack1"))
+	_, err := cs.NetworkingV1().NetworkPolicies("app-a").Create(context.Background(), imdsBlockNetworkPolicy("app-a"), am.CreateOptions{})
+	require.NoError(t, err)
+
+	p := &Provider{Cluster: cs, Name: "rack1", PodImdsBlockEnabled: true, NetworkPolicyEnabled: true}
+	require.NoError(t, p.reconcilePodImdsBlock(context.Background()))
+
+	got, err := cs.NetworkingV1().NetworkPolicies("app-a").Get(context.Background(), imdsBlockPolicyName, am.GetOptions{})
+	require.NoError(t, err)
+	require.Len(t, got.Spec.PodSelector.MatchExpressions, 1)
+	assert.Equal(t, SandboxLabel, got.Spec.PodSelector.MatchExpressions[0].Key)
+}
