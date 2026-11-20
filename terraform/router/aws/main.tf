@@ -15,6 +15,15 @@ locals {
     "service.beta.kubernetes.io/aws-load-balancer-security-groups" = local.nlb_security_group
   }
 
+  lb_names = {
+    router          = "router-${var.name}"
+    router_internal = "router-internal-${var.name}"
+    router_extra    = "router-extra-${var.name}"
+  }
+  lb_name_annotations = {
+    for k, v in local.lb_names : k => length(v) <= 32 ? { "service.beta.kubernetes.io/aws-load-balancer-name" = v } : {}
+  }
+
   envoy_selector = {
     "app.kubernetes.io/component" = "envoy"
     "app.kubernetes.io/instance"  = "contour"
@@ -134,7 +143,6 @@ resource "kubernetes_service" "router_extra" {
     name      = "router-extra"
 
     annotations = merge({
-      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-extra-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
@@ -142,7 +150,7 @@ resource "kubernetes_service" "router_extra" {
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
       "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
-    }, local.nlb_security_group_annotation)
+    }, local.nlb_security_group_annotation, local.lb_name_annotations["router_extra"])
   }
 
   spec {
@@ -184,7 +192,6 @@ resource "kubernetes_service" "router" {
     name      = "router"
 
     annotations = merge({
-      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-${var.name}"
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
@@ -192,7 +199,7 @@ resource "kubernetes_service" "router" {
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
       "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = var.proxy_protocol ? "proxy_protocol_v2.enabled=true" : "proxy_protocol_v2.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
-    }, local.nlb_security_group_annotation)
+    }, local.nlb_security_group_annotation, local.lb_name_annotations["router"])
   }
 
   spec {
@@ -237,8 +244,7 @@ resource "kubernetes_service" "router-internal" {
     namespace = var.namespace
     name      = "router-internal"
 
-    annotations = {
-      "service.beta.kubernetes.io/aws-load-balancer-name"                                = "router-internal-${var.name}"
+    annotations = merge({
       "service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout"             = "${var.idle_timeout}"
       "service.beta.kubernetes.io/aws-load-balancer-type"                                = "nlb"
       "service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags"            = join(",", [for key, value in local.tags : "${key}=${value}"])
@@ -247,7 +253,7 @@ resource "kubernetes_service" "router-internal" {
       "service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules" = "true"
       "service.beta.kubernetes.io/aws-load-balancer-target-group-attributes"             = "preserve_client_ip.enabled=false"
       "convox.io/dependency"                                                             = var.lbc_helm_id
-    }
+    }, local.lb_name_annotations["router_internal"])
   }
 
   spec {
