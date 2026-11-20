@@ -3469,6 +3469,9 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	var parts []string
 	if runtime != "" {
 		parts = strings.Split(name, "/")
+		if len(parts) != 2 {
+			return fmt.Errorf("rack name must be <organization>/<name> with --runtime")
+		}
 		name = parts[1]
 	}
 
@@ -3509,7 +3512,7 @@ func RackInstall(_ sdk.Interface, c *stdcli.Context) error {
 	}
 
 	if _, err := rack.Current(c); err != nil {
-		if _, err := rack.Switch(c, name); err != nil {
+		if _, err := rack.Switch(c, name); err != nil && runtime == "" {
 			return err
 		}
 	}
