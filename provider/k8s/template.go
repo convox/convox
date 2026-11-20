@@ -130,6 +130,9 @@ type kvItem struct {
 
 func (p *Provider) templateHelpers() template.FuncMap {
 	return template.FuncMap{
+		"azureSpot": func(labels map[string]string) bool {
+			return len(p.azureSpotTolerations(labels)) > 0
+		},
 		"base64": func(s string) string {
 			return string(base64.StdEncoding.EncodeToString([]byte(s)))
 		},

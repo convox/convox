@@ -1544,3 +1544,50 @@ func TestRenderTemplateCertManager(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderAzureSpotToleration(t *testing.T) {
+	spot := map[string]interface{}{"key": "kubernetes.azure.com/scalesetpriority", "operator": "Equal", "value": "spot", "effect": "NoSchedule"}
+	node := map[string]interface{}{"key": "dedicated-node", "operator": "Equal", "value": "spot", "effect": "NoSchedule"}
+
+	src := func(labels string) string {
+		return `services:
+  web:
+    build: .
+` + labels + `timers:
+  nightly:
+    schedule: "0 0 * * ? *"
+    command: "echo hi"
+    service: web
+`
+	}
+	label := "    nodeSelectorLabels:\n      convox.io/label: spot\n"
+	spotKey := "    nodeSelectorLabels:\n      kubernetes.azure.com/scalesetpriority: spot\n"
+
+	for name, tc := range map[string]struct {
+		provider string
+		labels   string
+		want     interface{}
+	}{
+		"Label":         {"azure", label, []interface{}{node, spot}},
+		"SpotKey":       {"azure", spotKey, []interface{}{spot}},
+		"Unpinned":      {"azure", "", nil},
+		"OtherProvider": {"", label, []interface{}{node}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, r := range []struct {
+				template, kind, name string
+				path                 []string
+			}{
+				{"app/service", "Deployment", "web", []string{"spec", "template", "spec"}},
+				{"app/timer", "CronJob", "timer-nightly", []string{"spec", "jobTemplate", "spec", "template", "spec"}},
+			} {
+				p, params := gpuTemplateFixture(t, src(tc.labels))
+				p.Provider = tc.provider
+				data, err := p.RenderTemplate(r.template, params)
+				require.NoError(t, err)
+				doc := findRenderedDocument(t, splitYamlDocuments(t, string(data)), r.kind, r.name)
+				require.Equal(t, tc.want, nestedMap(t, doc, r.path...)["tolerations"], r.template)
+			}
+		})
+	}
+}

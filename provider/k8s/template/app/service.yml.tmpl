@@ -199,7 +199,8 @@ spec:
         {{ end }}
       {{ end }}
       {{ $hasGpu := gt .Service.Scale.Gpu.Count 0 }}
-      {{ if or $hasDedicatedNode $hasGpu }}
+      {{ $hasAzureSpot := azureSpot .Service.NodeSelectorLabels }}
+      {{ if or $hasDedicatedNode $hasGpu $hasAzureSpot }}
       tolerations:
         {{ if $hasDedicatedNode }}
         {{ range keyValue .Service.NodeSelectorLabels }}
@@ -215,6 +216,12 @@ spec:
         - key: {{ gpuResourceKey .Service.Scale.Gpu.Vendor }}
           operator: Exists
           effect: NoSchedule
+        {{ end }}
+        {{ if $hasAzureSpot }}
+        - key: "kubernetes.azure.com/scalesetpriority"
+          operator: "Equal"
+          value: "spot"
+          effect: "NoSchedule"
         {{ end }}
       {{ end }}
       {{ if .Service.DisableHostUsers }}
