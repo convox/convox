@@ -24,6 +24,7 @@ module "api" {
   }
 
   access_id                 = var.access_id
+  app_rack_url_disable      = var.app_rack_url_disable
   buildkit_enabled          = var.buildkit_enabled
   cluster                   = var.cluster
   docker_hub_authentication = module.k8s.docker_hub_authentication

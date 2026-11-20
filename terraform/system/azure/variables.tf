@@ -8,6 +8,11 @@ variable "additional_node_groups_config" {
   default = ""
 }
 
+variable "app_rack_url_disable" {
+  type    = bool
+  default = false
+}
+
 variable "cert_duration" {
   default = "2160h"
   type    = string

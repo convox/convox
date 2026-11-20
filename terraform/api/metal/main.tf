@@ -53,14 +53,15 @@ module "k8s" {
   }
 
   env = {
-    CERT_MANAGER       = "true"
-    ELASTIC_URL        = module.elasticsearch.url
-    ELASTICSEARCH_DISK = var.elasticsearch_disk
-    PROVIDER           = "metal"
-    REGISTRY           = "registry.${var.domain}"
-    RESOLVER           = var.resolver
-    ROUTER             = var.router
-    SECRET             = var.secret
+    APP_RACK_URL_DISABLE = var.app_rack_url_disable
+    CERT_MANAGER         = "true"
+    ELASTIC_URL          = module.elasticsearch.url
+    ELASTICSEARCH_DISK   = var.elasticsearch_disk
+    PROVIDER             = "metal"
+    REGISTRY             = "registry.${var.domain}"
+    RESOLVER             = var.resolver
+    ROUTER               = var.router
+    SECRET               = var.secret
   }
 
   volumes = {

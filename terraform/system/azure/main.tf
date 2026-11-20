@@ -70,6 +70,7 @@ module "rack" {
     kubernetes = kubernetes
   }
 
+  app_rack_url_disable                 = var.app_rack_url_disable
   cluster                              = module.cluster.id
   azure_files_enable                   = module.cluster.azure_files_enable
   cost_tracking_enable                 = var.cost_tracking_enable
