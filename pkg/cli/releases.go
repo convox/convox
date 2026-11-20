@@ -225,6 +225,9 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 
 		if err := common.WaitForAppRunning(rack, app); err != nil {
 			if errors.Is(err, common.ErrRolloutFailed) {
+				if m := common.CloudMachine(rack); m != "" {
+					return fmt.Errorf("release %s for %s was not promoted, another rollout failed while it waited\n  convox cloud ps -a %s -i %s", id, app, app, m)
+				}
 				return fmt.Errorf("release %s for %s was not promoted, another rollout failed while it waited\n  convox deploy-debug -a %s", id, app, app)
 			}
 			return err
@@ -265,20 +268,23 @@ func releasePromote(rack sdk.Interface, c *stdcli.Context, app, id string, force
 		return err
 	}
 
-	if err := promoteResult(app, id, previous, a.Release); err != nil {
+	if err := promoteResult(rack, app, id, previous, a.Release); err != nil {
 		return err
 	}
 
 	return c.OK()
 }
 
-func promoteResult(app, id, previous, current string) error {
+func promoteResult(rack sdk.Interface, app, id, previous, current string) error {
 	switch current {
 	case id:
 		return nil
 	case previous, "":
-		return common.RolloutFailedError(app)
+		return common.RolloutFailedError(rack, app)
 	default:
+		if m := common.CloudMachine(rack); m != "" {
+			return fmt.Errorf("release %s for %s was superseded by %s\n  convox cloud releases info %s -a %s -i %s", id, app, current, current, app, m)
+		}
 		return fmt.Errorf("release %s for %s was superseded by %s\n  convox releases info %s -a %s", id, app, current, current, app)
 	}
 }
@@ -337,7 +343,7 @@ func ReleasesRollback(rack sdk.Interface, c *stdcli.Context) error {
 		return err
 	}
 
-	if err := promoteResult(app(c), rn.Id, previous, a.Release); err != nil {
+	if err := promoteResult(rack, app(c), rn.Id, previous, a.Release); err != nil {
 		return err
 	}
 

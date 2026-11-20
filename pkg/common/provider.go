@@ -262,16 +262,28 @@ func WaitForAppRunningContext(ctx context.Context, p structs.Provider, app strin
 		}
 
 		if a.Status == "rollback" {
-			waitError = RolloutFailedError(app)
+			waitError = RolloutFailedError(p, app)
 		}
 
 		return a.Status == "running", waitError
 	})
 	if errors.Is(err, ErrWaitTimeout) {
+		if m := CloudMachine(p); m != "" {
+			return fmt.Errorf("%s did not reach a running state within 35m, it may still be rolling out\n  convox cloud ps -a %s -i %s\n  convox cloud apps cancel -a %s -i %s", app, app, m, app, m)
+		}
 		return fmt.Errorf("%s did not reach a running state within 35m, the rack may still be rolling out\n  convox deploy-debug -a %s\n  convox apps cancel -a %s", app, app, app)
 	}
 
 	return err
+}
+
+// CloudMachine returns the Cloud machine p targets, or "" for a rack.
+func CloudMachine(p structs.Provider) string {
+	if m, ok := p.(interface{ CloudMachine() string }); ok {
+		return m.CloudMachine()
+	}
+
+	return ""
 }
 
 // ErrRolloutFailed is wrapped by every RolloutFailedError.
@@ -279,7 +291,11 @@ var ErrRolloutFailed = errors.New("rollout failed")
 
 // RolloutFailedError names the app and where to look, rather than the bare
 // "rollback" every failure path used to print.
-func RolloutFailedError(app string) error {
+func RolloutFailedError(p structs.Provider, app string) error {
+	if m := CloudMachine(p); m != "" {
+		return fmt.Errorf("%w for %s, the previous release was restored\n  convox cloud ps -a %s -i %s", ErrRolloutFailed, app, app, m)
+	}
+
 	return fmt.Errorf("%w for %s, the previous release was restored\n  convox deploy-debug -a %s", ErrRolloutFailed, app, app)
 }
 

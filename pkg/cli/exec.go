@@ -38,7 +38,7 @@ func Exec(rack sdk.Interface, c *stdcli.Context) error {
 
 	code, err := rack.ProcessExec(app(c), pid, command, c, opts)
 	if err != nil {
-		return execExitError(err, "The command may still be running in the target process, so retrying could run it twice.")
+		return execExitError(rack, err, "The command may still be running in the target process, so retrying could run it twice.")
 	}
 
 	return stdcli.Exit(code)

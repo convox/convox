@@ -105,7 +105,7 @@ func Run(rack sdk.Interface, c *stdcli.Context) error {
 
 	code, err := rack.ProcessExec(app(c), ps.Id, command, c, eopts)
 	if err != nil {
-		return execExitError(err, "This run's process has been stopped.")
+		return execExitError(rack, err, "This run's process has been stopped.")
 	}
 
 	return stdcli.Exit(code)
@@ -149,6 +149,11 @@ func runDetached(rack sdk.Interface, c *stdcli.Context, service string, opts *st
 	}
 
 	if !wait {
+		if m := common.CloudMachine(rack); m != "" {
+			fmt.Fprintf(c.Writer().Stderr, "  convox cloud ps stop %s -a %s -i %s\n", ps.Id, app(c), m)
+			return nil
+		}
+
 		fmt.Fprintf(c.Writer().Stderr, "  convox logs -a %s\n  convox ps stop %s -a %s\n", app(c), ps.Id, app(c))
 
 		return nil
@@ -236,12 +241,18 @@ func waitForProcessExit(rack sdk.Interface, c *stdcli.Context, pid string, timeo
 		return true, nil
 	})
 	if err != nil && done == nil {
+		if m := common.CloudMachine(rack); m != "" {
+			return fmt.Errorf("could not confirm the outcome of process %s: %s\n       convox cloud ps info %s -a %s -i %s", pid, err, pid, app(c), m)
+		}
 		return fmt.Errorf("could not confirm the outcome of process %s: %s\n       convox ps info %s -a %s", pid, err, pid, app(c))
 	}
 
 	follow(true)
 
 	if done.ExitCode == nil {
+		if common.CloudMachine(rack) != "" {
+			return fmt.Errorf("process %s ended with status %s without an exit status.\n       It may have been stopped before its command ran", pid, done.Status)
+		}
 		return fmt.Errorf("process %s ended with status %s but the rack did not report an exit status.\n       It may have been stopped before its command ran, or the rack may predate the release that reports one", pid, done.Status)
 	}
 
