@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +29,7 @@ func init() {
 			stdcli.IntFlag("alert-at", "", "alert threshold percent (default 80)"),
 			stdcli.StringFlag("at-cap-action", "", "action at cap: alert-only (default), block-new-deploys, or auto-shutdown"),
 			stdcli.StringFlag("pricing-adjustment", "", "price multiplier, e.g. 0.7 for 30% EDP discount (default 1.0)"),
-			stdcli.StringFlag("ack-by", "", "DEPRECATED: ack_by is now derived from your JWT identity; flag will be rejected in 3.25.0"),
+			stdcli.StringFlag("ack-by", "", "DEPRECATED: the Rack records your authenticated identity; this overrides it"),
 		},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
@@ -39,7 +38,7 @@ func init() {
 	register("budget clear", "remove the app's budget config", BudgetClear, stdcli.CommandOptions{
 		Flags: []stdcli.Flag{
 			flagRack,
-			stdcli.StringFlag("ack-by", "", "DEPRECATED: ack_by is now derived from your JWT identity; flag will be rejected in 3.25.0"),
+			stdcli.StringFlag("ack-by", "", "DEPRECATED: the Rack records your authenticated identity; this overrides it"),
 		},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
@@ -50,7 +49,7 @@ func init() {
 			flagRack,
 			stdcli.BoolFlag("force", "f", "skip interactive confirmation"),
 			stdcli.BoolFlag("force-clear-cooldown", "", "also clear the 24h auto-restore flap cooldown (Admin role required)"),
-			stdcli.StringFlag("ack-by", "", "DEPRECATED: ack_by is now derived from your JWT identity; flag will be rejected in 3.25.0"),
+			stdcli.StringFlag("ack-by", "", "DEPRECATED: the Rack records your authenticated identity; this overrides it"),
 		},
 		Usage:    "<app>",
 		Validate: stdcli.Args(1),
@@ -97,7 +96,7 @@ func BudgetShow(rack sdk.Interface, c *stdcli.Context) error {
 		if ss, e := rack.ServiceList(app); e == nil {
 			for i := range ss {
 				if serviceHasKedaSurface(&ss[i]) {
-					fmt.Fprintln(c.Writer(), kedaCapBypassBanner)
+					fmt.Fprintln(c.Writer(), kedaScalesAtCapBanner)
 					break
 				}
 			}
@@ -199,7 +198,7 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 			if action == structs.BudgetAtCapActionAutoShutdown {
 				fmt.Fprintln(c.Writer().Stderr,
 					"WARNING: auto-shutdown will scale eligible services to 0 replicas at cap breach. "+
-						"Verify your atCapWebhookUrl is configured (configured in convox.yml budget block) and your team is paged on :armed events. "+
+						"Make sure a Rack webhook or a Console integration receives app:budget:auto-shutdown events so your team is paged on :armed. "+
 						"Run 'convox budget simulate-shutdown <app>' to validate the configuration.")
 				fmt.Fprintln(c.Writer().Stderr,
 					"NOTE: services with KEDA idleReplicaCount: 0 will return to KEDA-driven scaling at restore "+
@@ -237,16 +236,13 @@ func BudgetSet(rack sdk.Interface, c *stdcli.Context) error {
 
 	ackBy := c.String("ack-by")
 	explicit := ackBy != ""
-	if !explicit {
-		ackBy = currentActorIdentifier()
-	}
 
 	c.Startf("Setting budget for <app>%s</app>", app)
 	if err := rack.AppBudgetSet(app, opts, ackBy); err != nil {
 		return wrapVersionGate(err, "budget caps")
 	}
 	if explicit {
-		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; ack_by is now derived from your JWT identity. Flag will be rejected in 3.25.0.")
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; without it the Rack records your authenticated identity.")
 	}
 	return c.OK()
 }
@@ -256,16 +252,13 @@ func BudgetClear(rack sdk.Interface, c *stdcli.Context) error {
 
 	ackBy := c.String("ack-by")
 	explicit := ackBy != ""
-	if !explicit {
-		ackBy = currentActorIdentifier()
-	}
 
 	c.Startf("Clearing budget for <app>%s</app>", app)
 	if err := rack.AppBudgetClear(app, ackBy); err != nil {
 		return wrapVersionGate(err, "budget caps")
 	}
 	if explicit {
-		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; ack_by is now derived from your JWT identity. Flag will be rejected in 3.25.0.")
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; without it the Rack records your authenticated identity.")
 	}
 	return c.OK()
 }
@@ -288,9 +281,6 @@ func BudgetReset(rack sdk.Interface, c *stdcli.Context) error {
 
 	ackBy := c.String("ack-by")
 	explicit := ackBy != ""
-	if !explicit {
-		ackBy = currentActorIdentifier()
-	}
 
 	c.Startf("Resetting budget for <app>%s</app>", app)
 	if c.Bool("force-clear-cooldown") {
@@ -303,7 +293,7 @@ func BudgetReset(rack sdk.Interface, c *stdcli.Context) error {
 		}
 	}
 	if explicit {
-		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; ack_by is now derived from your JWT identity. Flag will be rejected in 3.25.0.")
+		fmt.Fprintln(c.Writer().Stderr, "WARNING: --ack-by is deprecated; without it the Rack records your authenticated identity.")
 	}
 	return c.OK()
 }
@@ -320,15 +310,6 @@ func safeShutdownStateGet(rack sdk.Interface, app string) (state *structs.AppBud
 		return nil
 	}
 	return s
-}
-
-func currentActorIdentifier() string {
-	for _, env := range []string{"CONVOX_ACTOR", "USER", "USERNAME"} {
-		if v := os.Getenv(env); v != "" {
-			return v
-		}
-	}
-	return "cli"
 }
 
 func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
@@ -375,7 +356,7 @@ func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "Estimated savings: $%.2f/hr\n\n", res.EstimatedCostSavedUsdPerHour)
 	fmt.Fprintln(w, "Webhook payload sent (dry_run=true):")
-	fmt.Fprintln(w, "  See app:budget:auto-shutdown:simulated event in your atCapWebhookUrl webhook delivery and rack log aggregation")
+	fmt.Fprintln(w, "  See app:budget:auto-shutdown:simulated event in your Rack webhook deliveries and rack log aggregation")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Status: SIMULATION COMPLETE. No changes made.")
 	return nil
@@ -383,8 +364,7 @@ func BudgetSimulateShutdown(rack sdk.Interface, c *stdcli.Context) error {
 
 func BudgetDismissRecovery(rack sdk.Interface, c *stdcli.Context) error {
 	app := c.Arg(0)
-	ackBy := currentActorIdentifier()
-	res, err := rack.AppBudgetDismissRecoveryWithResult(app, ackBy)
+	res, err := rack.AppBudgetDismissRecoveryWithResult(app, "")
 	if err != nil {
 		return wrapVersionGate(err, "budget dismiss-recovery")
 	}
@@ -433,10 +413,8 @@ func BudgetCapRaise(rack sdk.Interface, c *stdcli.Context) error {
 			capVal, cost.SpendUsd)
 	}
 
-	ackBy := currentActorIdentifier()
-
 	c.Startf("Raising monthly cap for <app>%s</app>", app)
-	if err := rack.AppBudgetSet(app, opts, ackBy); err != nil {
+	if err := rack.AppBudgetSet(app, opts, ""); err != nil {
 		return wrapVersionGate(err, "budget caps")
 	}
 	return c.OK()
