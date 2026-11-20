@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	ac "k8s.io/api/core/v1"
+	ae "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -144,7 +145,7 @@ func TestBudgetEnforcementReleasePromoteBlocked(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -1279,7 +1280,7 @@ func TestBreakerReader_CostTrackingEnabledFalse_ReturnsFalse_StaleAnnotationIgno
 	t.Setenv("COST_TRACKING_ENABLE", "")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -1319,7 +1320,7 @@ func TestBreakerReader_CostTrackingEnabledExplicitlyFalse_StaleAnnotationIgnored
 	t.Setenv("COST_TRACKING_ENABLE", "false")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -1354,7 +1355,7 @@ func TestBreakerReader_CostTrackingEnabledTrue_TrippedStateBlocks(t *testing.T) 
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -1379,7 +1380,7 @@ func TestBreakerReader_CostTrackingEnabledTrue_NotTrippedAllows(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -1413,7 +1414,7 @@ func TestBreakerReader_CostTrackingEnabledTrue_NoStateAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "true")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		var err error
 		func() {
@@ -1439,7 +1440,7 @@ func TestBreakerReader_CostTrackingDisabled_NoStateAnnotation(t *testing.T) {
 	t.Setenv("COST_TRACKING_ENABLE", "false")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		var err error
 		func() {
@@ -1557,7 +1558,7 @@ func TestBudgetCircuitBreaker_CostTrackingDisabled_StaleAnnotationIgnored(t *tes
 	t.Setenv("COST_TRACKING_ENABLE", "")
 	testProvider(t, func(p *k8s.Provider) {
 		kk, _ := p.Cluster.(*fake.Clientset)
-		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		require.NoError(t, appCreateAtRelease(kk, "release0"))
 
 		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
 			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
@@ -3512,4 +3513,186 @@ func TestBudgetAccumulator_ElapsedChargedAtMostOneHour(t *testing.T) {
 		variants += v
 	}
 	assert.InDelta(t, threeHours.PerServiceSpendUsd["web"], variants, 0.0001)
+}
+
+func TestBudgetBreaker_RepromoteCurrentReleaseNotBlocked(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreateAtRelease(kk, "release1"))
+		writeConfig(t, kk, "rack1-app1", &structs.AppBudget{
+			MonthlyCapUsd: 500, AlertThresholdPercent: 80, AtCapAction: "block-new-deploys", PricingAdjustment: 1,
+		})
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{CurrentMonthSpendUsd: 501, CircuitBreakerTripped: true})
+
+		requireNot409(t, func() error { return p.ReleasePromote("app1", "release1", structs.ReleasePromoteOptions{}) })
+		requireNot409(t, func() error { return p.AppUpdate("app1", structs.AppUpdateOptions{Lock: options.Bool(true)}) })
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, "true", ns.Annotations["convox.com/lock"])
+	})
+}
+
+func requireNot409(t *testing.T, fn func() error) {
+	t.Helper()
+	var err error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = nil
+			}
+		}()
+		err = fn()
+	}()
+	var httpErr *structs.HttpError
+	if errors.As(err, &httpErr) && httpErr.Code() == 409 {
+		t.Fatalf("re-promote of the current release must not 409; got: %v", err)
+	}
+}
+
+func appCreateAtRelease(c *fake.Clientset, release string) error {
+	return appCreateWithAnnotation(c, "rack1", "app1", map[string]string{
+		"convox.com/app-status":  "running",
+		"convox.com/app-release": release,
+	})
+}
+
+func TestAppBudgetSet_AdjustmentOnlyStoredWithoutConfig(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		conflicts := 0
+		kk.PrependReactor("update", "namespaces", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			if conflicts == 0 {
+				conflicts++
+				return true, nil, ae.NewConflict(ac.Resource("namespaces"), "rack1-app1", fmt.Errorf("conflict"))
+			}
+			return false, nil, nil
+		})
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{PricingAdjustment: strPtr("0.8")}, "test"))
+		assert.Equal(t, 1, conflicts)
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		assert.Equal(t, "0.8", ns.Annotations[structs.BudgetPricingAdjustmentAnnotation])
+		assert.NotContains(t, ns.Annotations, structs.BudgetConfigAnnotation)
+
+		cfg, _, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		assert.Nil(t, cfg)
+
+		cost, err := p.AppCost("app1")
+		require.NoError(t, err)
+		assert.Equal(t, 0.8, cost.PricingAdjustment)
+	})
+}
+
+func TestAppBudgetSet_AdjustmentOnlyOutOfRangeRefused(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		for _, v := range []string{"0.05", "2", "NaN", "abc"} {
+			err := p.AppBudgetSet("app1", structs.AppBudgetOptions{PricingAdjustment: strPtr(v)}, "test")
+			require.Error(t, err, v)
+			assert.Contains(t, err.Error(), "pricing-adjustment", v)
+		}
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		assert.NotContains(t, ns.Annotations, structs.BudgetPricingAdjustmentAnnotation)
+	})
+}
+
+func TestAppBudgetSet_FirstCapFoldsAdjustment(t *testing.T) {
+	t.Setenv("COST_TRACKING_ENABLE", "true")
+	for name, tc := range map[string]struct {
+		adjustment *string
+		want       float64
+	}{
+		"options omit it": {nil, 0.8},
+		"options set it":  {strPtr("1"), 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				kk, _ := p.Cluster.(*fake.Clientset)
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+				require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{PricingAdjustment: strPtr("0.8")}, "test"))
+				require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{MonthlyCapUsd: strPtr("500"), PricingAdjustment: tc.adjustment}, "test"))
+
+				cfg, _, err := p.AppBudgetGet("app1")
+				require.NoError(t, err)
+				require.NotNil(t, cfg)
+				assert.Equal(t, tc.want, cfg.PricingAdjustment)
+				assert.Equal(t, 500.0, cfg.MonthlyCapUsd)
+
+				ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+				require.NoError(t, err)
+				assert.NotContains(t, ns.Annotations, structs.BudgetPricingAdjustmentAnnotation)
+			})
+		})
+	}
+}
+
+func TestAppBudgetClear_RemovesAdjustmentOnly(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		require.NoError(t, p.AppBudgetSet("app1", structs.AppBudgetOptions{PricingAdjustment: strPtr("0.8")}, "test"))
+		require.NoError(t, p.AppBudgetClear("app1", "test"))
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		assert.NotContains(t, ns.Annotations, structs.BudgetPricingAdjustmentAnnotation)
+
+		cost, err := p.AppCost("app1")
+		require.NoError(t, err)
+		assert.Equal(t, 1.0, cost.PricingAdjustment)
+	})
+}
+
+func TestBudgetAccumulator_AppliesAdjustmentWithoutConfig(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		kk, _ := p.Cluster.(*fake.Clientset)
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+		patchAnnotation(t, kk, "rack1-app1", structs.BudgetPricingAdjustmentAnnotation, "0.5")
+
+		frozen := time.Date(2026, 4, 15, 12, 0, 0, 0, time.UTC)
+		writeState(t, kk, "rack1-app1", &structs.AppBudgetState{
+			MonthStart:            startOfApril(),
+			CurrentMonthSpendAsOf: frozen.Add(-1 * time.Hour),
+		})
+		_, err := kk.CoreV1().Nodes().Create(context.TODO(), &ac.Node{
+			ObjectMeta: am.ObjectMeta{Name: "node1", Labels: map[string]string{"node.kubernetes.io/instance-type": "m5.large"}},
+			Status: ac.NodeStatus{Allocatable: ac.ResourceList{
+				ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+				ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+			}},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+		_, err = kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+			ObjectMeta: am.ObjectMeta{Name: "p1"},
+			Spec: ac.PodSpec{NodeName: "node1", Containers: []ac.Container{{
+				Name: "web",
+				Resources: ac.ResourceRequirements{Requests: ac.ResourceList{
+					ac.ResourceCPU:    *resource.NewMilliQuantity(2000, resource.DecimalSI),
+					ac.ResourceMemory: *resource.NewQuantity(8<<30, resource.BinarySI),
+				}},
+			}}},
+			Status: ac.PodStatus{Phase: ac.PodRunning},
+		}, am.CreateOptions{})
+		require.NoError(t, err)
+
+		require.NoError(t, k8s.AccumulateBudgetAppForTest(p, "app1", frozen))
+
+		_, state, err := p.AppBudgetGet("app1")
+		require.NoError(t, err)
+		require.NotNil(t, state)
+		assert.InDelta(t, 0.048, state.CurrentMonthSpendUsd, 0.001)
+	})
 }

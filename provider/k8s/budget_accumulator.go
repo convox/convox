@@ -85,8 +85,10 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		}
 
 		cfg, _ := readBudgetConfigAnnotation(ns.Annotations)
+		adjustmentOnly := cfg == nil && opts.PricingAdjustment != nil &&
+			opts.MonthlyCapUsd == nil && opts.AlertThresholdPercent == nil && opts.AtCapAction == nil
 		if cfg == nil {
-			cfg = &structs.AppBudget{}
+			cfg = &structs.AppBudget{PricingAdjustment: storedPricingAdjustment(ns.Annotations)}
 		}
 		prev = *cfg
 		if err := applyBudgetOptions(cfg, opts); err != nil {
@@ -95,9 +97,15 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 		if opts.MonthlyCapUsd != nil {
 			cfg.LastCapMutationBy = ackBy
 		}
-		cfg.ApplyDefaults()
-		if err := cfg.Validate(); err != nil {
-			return errors.WithStack(structs.ErrBadRequest("%s", err.Error()))
+		if adjustmentOnly {
+			if err := structs.ValidatePricingAdjustment(cfg.PricingAdjustment); err != nil {
+				return errors.WithStack(structs.ErrBadRequest("%s", err.Error()))
+			}
+		} else {
+			cfg.ApplyDefaults()
+			if err := cfg.Validate(); err != nil {
+				return errors.WithStack(structs.ErrBadRequest("%s", err.Error()))
+			}
 		}
 		final = *cfg
 
@@ -130,15 +138,19 @@ func (p *Provider) AppBudgetSet(app string, opts structs.AppBudgetOptions, ackBy
 			}
 		}
 
-		data, err := json.Marshal(cfg)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
 		if ns.Annotations == nil {
 			ns.Annotations = map[string]string{}
 		}
-		ns.Annotations[structs.BudgetConfigAnnotation] = string(data)
+		if adjustmentOnly {
+			ns.Annotations[structs.BudgetPricingAdjustmentAnnotation] = strconv.FormatFloat(cfg.PricingAdjustment, 'f', -1, 64)
+		} else {
+			data, err := json.Marshal(cfg)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			ns.Annotations[structs.BudgetConfigAnnotation] = string(data)
+			delete(ns.Annotations, structs.BudgetPricingAdjustmentAnnotation)
+		}
 
 		if stateChanged {
 			stateData, err := json.Marshal(state)
@@ -221,7 +233,8 @@ func (p *Provider) AppBudgetClear(app string, ackBy string) error {
 		}
 		_, hasCfg := ns.Annotations[structs.BudgetConfigAnnotation]
 		_, hasState := ns.Annotations[structs.BudgetStateAnnotation]
-		if !hasCfg && !hasState {
+		_, hasAdjustment := ns.Annotations[structs.BudgetPricingAdjustmentAnnotation]
+		if !hasCfg && !hasState && !hasAdjustment {
 			return nil
 		}
 
@@ -230,6 +243,7 @@ func (p *Provider) AppBudgetClear(app string, ackBy string) error {
 
 		delete(ns.Annotations, structs.BudgetConfigAnnotation)
 		delete(ns.Annotations, structs.BudgetStateAnnotation)
+		delete(ns.Annotations, structs.BudgetPricingAdjustmentAnnotation)
 
 		if _, err := p.Cluster.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{}); err != nil {
 			if ae.IsConflict(err) {
@@ -403,10 +417,7 @@ func (p *Provider) AppCost(app string) (*structs.AppCost, error) {
 		state = &structs.AppBudgetState{MonthStart: startOfMonth(time.Now().UTC())}
 	}
 
-	adjustment := 1.0
-	if cfg != nil && cfg.PricingAdjustment > 0 {
-		adjustment = cfg.PricingAdjustment
-	}
+	adjustment := budgetPricingAdjustment(ns.Annotations, cfg)
 
 	return &structs.AppCost{
 		App:                 app,
@@ -518,6 +529,24 @@ func applyBudgetOptions(dst *structs.AppBudget, opts structs.AppBudgetOptions) e
 		dst.PricingAdjustment = v
 	}
 	return nil
+}
+
+func storedPricingAdjustment(ann map[string]string) float64 {
+	v, err := strconv.ParseFloat(ann[structs.BudgetPricingAdjustmentAnnotation], 64)
+	if err != nil || structs.ValidatePricingAdjustment(v) != nil {
+		return 0
+	}
+	return v
+}
+
+func budgetPricingAdjustment(ann map[string]string, cfg *structs.AppBudget) float64 {
+	if cfg != nil && cfg.PricingAdjustment > 0 {
+		return cfg.PricingAdjustment
+	}
+	if v := storedPricingAdjustment(ann); v > 0 {
+		return v
+	}
+	return 1.0
 }
 
 func readBudgetConfigAnnotation(ann map[string]string) (*structs.AppBudget, error) {
@@ -677,10 +706,7 @@ func (p *Provider) accumulateBudgetApp(ctx context.Context, app string, now time
 			state = &structs.AppBudgetState{MonthStart: startOfMonth(now), CurrentMonthSpendAsOf: now}
 		}
 
-		adjustment := 1.0
-		if cfg != nil && cfg.PricingAdjustment > 0 {
-			adjustment = cfg.PricingAdjustment
-		}
+		adjustment := budgetPricingAdjustment(ns.Annotations, cfg)
 		lastTick := state.CurrentMonthSpendAsOf
 		delta, perSvc, perSvcInst, perSvcVariant, perSvcVariantPods, warnings, err := p.computeBudgetDelta(ctx, app, lastTick, now, adjustment)
 		if err != nil {

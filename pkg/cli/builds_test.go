@@ -711,7 +711,8 @@ func TestBuildsImportImage_PlaintextSrcCredsPass_EmitsDeprecationWarning(t *test
 		require.Equal(t, "secret789", *captured.SrcCredsPass)
 		// Pinned warning text — locks R3 UX wording in source. Any future PR that
 		// changes the wording must update this assertion.
-		require.Contains(t, res.Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead. Plaintext form will be rejected in 3.25.0.")
+		require.Contains(t, res.Stderr, "WARNING: --src-creds-pass=<plaintext> exposes credentials via process listings. Use --src-creds-pass-env <NAME> or --src-creds-pass-stdin instead.")
+		require.NotContains(t, res.Stderr, "3.25.0")
 	})
 }
 

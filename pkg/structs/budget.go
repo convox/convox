@@ -21,6 +21,8 @@ const (
 	BudgetStateAnnotation  = "convox.com/budget-state"
 	BudgetConfigAnnotation = "convox.com/budget-config"
 
+	BudgetPricingAdjustmentAnnotation = "convox.com/budget-pricing-adjustment"
+
 	BudgetShutdownStateAnnotation           = "convox.com/budget-shutdown-state"
 	BudgetFlapSuppressedUntilAnnotation     = "convox.com/budget-flap-suppressed-until"
 	BudgetRecoveryBannerDismissedAnnotation = "convox.com/budget-recovery-banner-dismissed"
@@ -164,10 +166,14 @@ func (b *AppBudget) Validate() error {
 		return fmt.Errorf("at-cap-action must be %q, %q, or %q",
 			BudgetAtCapActionAlertOnly, BudgetAtCapActionBlockNewDeploys, BudgetAtCapActionAutoShutdown)
 	}
-	if math.IsNaN(b.PricingAdjustment) || math.IsInf(b.PricingAdjustment, 0) {
+	return ValidatePricingAdjustment(b.PricingAdjustment)
+}
+
+func ValidatePricingAdjustment(v float64) error {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
 		return fmt.Errorf("pricing-adjustment must be a finite number")
 	}
-	if b.PricingAdjustment < BudgetPricingAdjustmentMin || b.PricingAdjustment > BudgetPricingAdjustmentMax {
+	if v < BudgetPricingAdjustmentMin || v > BudgetPricingAdjustmentMax {
 		return fmt.Errorf("pricing-adjustment must be between %.1f and %.1f", BudgetPricingAdjustmentMin, BudgetPricingAdjustmentMax)
 	}
 	return nil

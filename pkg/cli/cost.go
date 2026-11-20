@@ -60,7 +60,7 @@ func Cost(rack sdk.Interface, c *stdcli.Context) error {
 	}
 	if err != nil {
 		if isRackVersionGated(err) {
-			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
+			return fmt.Errorf("cost tracking requires rack version 3.24.6 or later on AWS, 3.25.1 on Azure, or 3.25.9 on GCP (V2 racks use a separate cost-tracking surface). See https://docs.convox.com/management/cost-tracking")
 		}
 		return fmt.Errorf("failed to fetch cost for app %s: %v", appName, err)
 	}
