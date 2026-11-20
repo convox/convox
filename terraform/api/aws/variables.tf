@@ -113,6 +113,11 @@ variable "app_cloudwatch_disable" {
   default = false
 }
 
+variable "app_rack_url_disable" {
+  type    = bool
+  default = false
+}
+
 variable "cloudwatch_disable" {
   type    = bool
   default = false

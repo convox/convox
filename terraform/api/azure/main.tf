@@ -73,6 +73,7 @@ module "k8s" {
   }
 
   env = {
+    APP_RACK_URL_DISABLE                 = var.app_rack_url_disable
     AZURE_CLIENT_ID                      = azuread_service_principal.api.client_id
     AZURE_CLIENT_SECRET                  = azuread_service_principal_password.api.value
     AZURE_FILES_ENABLED                  = tostring(var.azure_files_enable)

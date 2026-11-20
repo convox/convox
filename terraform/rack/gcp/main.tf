@@ -23,6 +23,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  app_rack_url_disable       = var.app_rack_url_disable
   buildkit_enabled           = var.buildkit_enabled
   cluster                    = var.cluster
   cost_tracking_enable       = var.cost_tracking_enable

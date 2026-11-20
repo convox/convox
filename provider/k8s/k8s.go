@@ -62,6 +62,7 @@ const (
 
 type Provider struct {
 	Atom                                atom.Interface
+	AppRackURLDisable                   bool
 	BuildkitEnabled                     string
 	BuildNodeEnabled                    string
 	CertManager                         bool
@@ -226,6 +227,7 @@ func FromEnv() (*Provider, error) {
 
 	p := &Provider{
 		Atom:                             ac,
+		AppRackURLDisable:                os.Getenv("APP_RACK_URL_DISABLE") == "true",
 		BuildkitEnabled:                  "true",
 		BuildNodeEnabled:                 os.Getenv("BUILD_NODE_ENABLED"),
 		BuildDisableResolver:             os.Getenv("BUILD_DISABLE_CONVOX_RESOLVER") == "true",

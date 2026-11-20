@@ -1,3 +1,8 @@
+variable "app_rack_url_disable" {
+  type    = bool
+  default = false
+}
+
 variable "buildkit_enabled" {
   default = false
 }

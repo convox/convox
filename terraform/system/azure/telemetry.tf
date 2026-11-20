@@ -5,6 +5,7 @@ locals {
   telemetry_map = {
     additional_build_groups_config       = var.additional_build_groups_config
     additional_node_groups_config        = var.additional_node_groups_config
+    app_rack_url_disable                 = var.app_rack_url_disable
     azure_files_enable                   = var.azure_files_enable
     cert_duration                        = var.cert_duration
     cost_tracking_enable                 = var.cost_tracking_enable
@@ -46,6 +47,7 @@ locals {
   telemetry_default_map = {
     additional_build_groups_config       = ""
     additional_node_groups_config        = ""
+    app_rack_url_disable                 = "false"
     azure_files_enable                   = "false"
     cert_duration                        = "2160h"
     cost_tracking_enable                 = "false"

@@ -3,6 +3,7 @@
 
 locals {
   telemetry_map = {
+    app_rack_url_disable     = var.app_rack_url_disable
     docker_hub_password      = var.docker_hub_password
     docker_hub_username      = var.docker_hub_username
     domain                   = var.domain
@@ -21,6 +22,7 @@ locals {
   }
 
   telemetry_default_map = {
+    app_rack_url_disable     = "false"
     docker_hub_password      = ""
     docker_hub_username      = ""
     domain                   = ""

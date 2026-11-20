@@ -17,6 +17,11 @@ Groups:
   - name: Security & Compliance
     order: 2
     params:
+      - name: app_rack_url_disable
+        default: "false"
+        sideNote: "Running processes keep RACK_URL until each app's next deploy."
+        type: boolean
+        description: "Stops the rack from adding &i RACK_URL &i, which carries the rack API password, to app processes. Apps that call the rack API need their own &i RACK_URL &i, set with &i convox env set &i."
       - name: cert_duration
         default: 2160h
         type: string

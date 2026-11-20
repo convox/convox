@@ -23,6 +23,7 @@ module "api" {
     kubernetes = kubernetes
   }
 
+  app_rack_url_disable                 = var.app_rack_url_disable
   cluster                              = var.cluster
   azure_files_enable                   = var.azure_files_enable
   cost_tracking_enable                 = var.cost_tracking_enable

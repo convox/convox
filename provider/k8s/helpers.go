@@ -134,10 +134,14 @@ func (p *Provider) systemEnvironment() map[string]string {
 	if p.FeatureGates[options.FeatureGateSystemEnvDisable] {
 		return map[string]string{}
 	}
-	return map[string]string{
-		"RACK":     p.Name,
-		"RACK_URL": fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace),
+
+	env := map[string]string{"RACK": p.Name}
+
+	if !p.AppRackURLDisable {
+		env["RACK_URL"] = fmt.Sprintf("https://convox:%s@api.%s.svc.cluster.local:5443", p.Password, p.Namespace)
 	}
+
+	return env
 }
 
 func (*Provider) volumeFrom(app, service, v string) string {

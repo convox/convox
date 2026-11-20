@@ -1,3 +1,8 @@
+variable "app_rack_url_disable" {
+  type    = bool
+  default = false
+}
+
 variable "docker_hub_authentication" {
   type = string
 }
