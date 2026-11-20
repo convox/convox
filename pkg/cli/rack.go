@@ -3907,6 +3907,15 @@ func RackUpdate(_ sdk.Interface, c *stdcli.Context) error {
 	newVersion := c.Arg(0)
 	force, _ := c.Value("force").(bool)
 
+	if !force && s.Provider == "aws" {
+		if route := rackUpdateRoute(currentVersion, newVersion); route != nil {
+			return fmt.Errorf(
+				"cannot update directly from %s to %s, the Terraform plan fails on that jump\n"+
+					"  update to each version in order, starting each one after the previous update finishes: %s",
+				currentVersion, newVersion, strings.Join(route, ", "))
+		}
+	}
+
 	// disable downgrabe from minor version for v3 rack
 	if strings.HasPrefix(currentVersion, "3.") && strings.HasPrefix(newVersion, "3.") &&
 		!strings.Contains(currentVersion, "rc") && !strings.Contains(newVersion, "rc") {
