@@ -1077,6 +1077,69 @@ func TestRackUpdateForce(t *testing.T) {
 	})
 }
 
+func TestRackUpdateRequiredIntermediate(t *testing.T) {
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Provider: "aws", Version: "3.24.9"}, nil)
+
+		res, err := testExecute(e, "rack update 3.25.14", nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{
+			"ERROR: cannot update directly from 3.24.9 to 3.25.14, the Terraform plan fails on that jump",
+			"  update to each version in order, starting each one after the previous update finishes: 3.25.12, 3.25.14",
+		})
+		res.RequireStdout(t, []string{""})
+	})
+}
+
+func TestRackUpdateRequiredIntermediateAllowed(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Provider: "aws", Version: "3.24.9"}, nil)
+		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("3.25.12"), Force: options.Bool(false)}).Return(nil)
+
+		res, err := testExecute(e, "rack update 3.25.12", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Updating to 3.25.12... OK"})
+	})
+}
+
+func TestRackUpdateRequiredIntermediateForce(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Provider: "aws", Version: "3.24.9"}, nil)
+		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("3.25.14"), Force: options.Bool(true)}).Return(nil)
+
+		res, err := testExecute(e, "rack update 3.25.14 --force", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Updating to 3.25.14... OK"})
+	})
+}
+
+func TestRackUpdateRequiredIntermediateNonAWS(t *testing.T) {
+	prev := cli.IsTerminalFn
+	cli.IsTerminalFn = func(_ *stdcli.Context) bool { return false }
+	t.Cleanup(func() { cli.IsTerminalFn = prev })
+
+	testClientWait(t, 50*time.Millisecond, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("SystemGet").Return(&structs.System{Provider: "gcp", Version: "3.24.9"}, nil)
+		i.On("SystemUpdate", structs.SystemUpdateOptions{Version: options.String("3.25.14"), Force: options.Bool(false)}).Return(nil)
+
+		res, err := testExecute(e, "rack update 3.25.14", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStdout(t, []string{"Updating to 3.25.14... OK"})
+	})
+}
+
 func TestRackParamsDefaultPipe(t *testing.T) {
 	// Default test harness: IsTerminalFn wraps c.Writer().IsTerminal() which
 	// returns false for *bytes.Buffer. Result: shouldMask=false, pipe-bypass.
