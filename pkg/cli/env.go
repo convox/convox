@@ -420,6 +420,9 @@ func EnvMask(rack sdk.Interface, c *stdcli.Context) error {
 func EnvMaskSet(rack sdk.Interface, c *stdcli.Context) error {
 	for _, arg := range c.Args {
 		if strings.Contains(arg, "=") {
+			if m := common.CloudMachine(rack); m != "" {
+				return fmt.Errorf("use `convox cloud env set KEY=VALUE -a %s -i %s` to set env values. `convox cloud env mask set` takes key names only", app(c), m)
+			}
 			return fmt.Errorf("use `convox env set KEY=VALUE` to set env values. `convox env mask set` takes key names only")
 		}
 		if !envKeyPattern.MatchString(arg) {

@@ -210,21 +210,26 @@ func checkPendingEnvDrop(rack sdk.Interface, c *stdcli.Context, appName string) 
 	sort.Strings(dropped)
 
 	if !c.Bool("force") {
+		cmd, example := "convox", fmt.Sprintf("convox env set %s=... --promote", dropped[0])
+		if m := common.CloudMachine(rack); m != "" {
+			cmd, example = "convox cloud", fmt.Sprintf("convox cloud env set %s=... --promote -a %s -i %s", dropped[0], appName, m)
+		}
+
 		if os.Getenv("CONVOX_ENV_DROP_GUARD") == "strict" {
 			return fmt.Errorf("this build will drop env var(s) that are set in your running release %s: %s\n\n"+
-				"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+				"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `%s env set` or `%s env unset` without --promote.\n\n"+
 				"To keep them, set them again with --promote before deploying, for example:\n"+
-				"    convox env set %s=... --promote\n\n"+
+				"    %s\n\n"+
 				"If you meant to drop these vars, or you believe this is a false alarm, re-run with --force",
-				a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+				a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, cmd, cmd, example)
 		}
 
 		fmt.Fprintf(c.Writer().Stderr, "WARNING: this build will drop env var(s) that are set in your running release %s: %s\n\n"+
-			"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `convox env set` or `convox env unset` without --promote.\n\n"+
+			"These vars are present in the running release (%s) but missing from the latest release (%s), which is what a new build inherits from. This usually happens after `%s env set` or `%s env unset` without --promote.\n\n"+
 			"To keep them, set them again with --promote before deploying, for example:\n"+
-			"    convox env set %s=... --promote\n\n"+
+			"    %s\n\n"+
 			"If this drop is intentional, pass --force to reduce this to a one-line notice. To make this check blocking, set CONVOX_ENV_DROP_GUARD=strict.\n",
-			a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, dropped[0])
+			a.Release, strings.Join(dropped, ", "), a.Release, newest.Id, cmd, cmd, example)
 
 		return nil
 	}
@@ -343,6 +348,9 @@ func build(rack sdk.Interface, c *stdcli.Context, development bool) (*structs.Bu
 	for {
 		select {
 		case <-buildTimeout:
+			if m := common.CloudMachine(rack); m != "" {
+				return nil, fmt.Errorf("build %s timed out after 60 minutes (status: %s). Check: convox cloud builds info %s -a %s -i %s", b.Id, b.Status, b.Id, app(c), m)
+			}
 			return nil, fmt.Errorf("build %s timed out after 60 minutes (status: %s). Check: convox builds info %s", b.Id, b.Status, b.Id)
 		case <-tick.C:
 			b, err = rack.BuildGet(app(c), b.Id)
@@ -660,12 +668,18 @@ func BuildsImportImage(rack sdk.Interface, c *stdcli.Context) error {
 	for {
 		select {
 		case <-deadline:
+			if m := common.CloudMachine(rack); m != "" {
+				return fmt.Errorf("import %s timed out after 2 hours; check: convox cloud builds info %s -a %s -i %s", b.Id, b.Id, app(c), m)
+			}
 			return fmt.Errorf("import %s timed out after 2 hours; check: convox builds info %s", b.Id, b.Id)
 		case <-tick.C:
 			cur, err := rack.BuildGet(app(c), b.Id)
 			if err != nil {
 				consecutiveFails++
 				if consecutiveFails > 5 {
+					if m := common.CloudMachine(rack); m != "" {
+						return fmt.Errorf("build %s is still running; check: convox cloud builds info %s -a %s -i %s (last poll error: %w)", b.Id, b.Id, app(c), m, err)
+					}
 					return fmt.Errorf("build %s still running on rack; check: convox builds info %s (last poll error: %w)", b.Id, b.Id, err)
 				}
 				continue

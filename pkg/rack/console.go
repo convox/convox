@@ -119,7 +119,7 @@ func CurrentConsoleClientWithMachine(c *stdcli.Context, machine string) (*consol
 	if mid == "" {
 		return nil, fmt.Errorf("no machine found matching '%s'", machine)
 	}
-	cc.SetMachine(mid)
+	cc.SetMachine(mid, machine)
 
 	mBytes, err := json.Marshal(mList)
 	if err != nil {

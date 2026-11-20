@@ -7,6 +7,7 @@ import (
 type Client struct {
 	*sdk.Client
 	handler Handler
+	machine string
 }
 
 type Handler interface {
@@ -33,6 +34,12 @@ func NewClient(endpoint string, rack string, handler Handler) (*Client, error) {
 	return cl, nil
 }
 
-func (c *Client) SetMachine(id string) {
+func (c *Client) SetMachine(id, name string) {
 	c.Client.MachineID = id
+	c.machine = name
+}
+
+// CloudMachine returns the machine name as the user gave it, or "" when not on a machine.
+func (c *Client) CloudMachine() string {
+	return c.machine
 }
