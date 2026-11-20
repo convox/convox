@@ -4,6 +4,7 @@ package validator
 import (
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 )
@@ -12,6 +13,8 @@ const InClusterSuffix = ".svc.cluster.local"
 
 var cgnatBlock = mustCIDR("100.64.0.0/10") // RFC 6598 (CGNAT)
 var ipv6ULA = mustCIDR("fc00::/7")         // RFC 4193 (ULA)
+
+var errNonRoutable = fmt.Errorf("URL resolves to a non-routable address; for an in-cluster target, use a *%s hostname", InClusterSuffix)
 
 func mustCIDR(s string) *net.IPNet {
 	_, n, err := net.ParseCIDR(s)
@@ -44,6 +47,11 @@ type ResolveFunc func(host string) ([]net.IP, error)
 // ValidateExternalURL rejects URLs targeting internal/non-routable IPs.
 // Pass net.LookupIP for resolveHost in production; nil defaults to it.
 func ValidateExternalURL(raw string, resolveHost ResolveFunc) error {
+	return ValidateExternalURLAllowing(raw, resolveHost, nil)
+}
+
+// ValidateExternalURLAllowing is ValidateExternalURL, except that a hostname whose resolved addresses include a blocked one passes when allow returns true for the full answer.
+func ValidateExternalURLAllowing(raw string, resolveHost ResolveFunc, allow func([]net.IP) bool) error {
 	if raw == "" {
 		return nil
 	}
@@ -66,7 +74,7 @@ func ValidateExternalURL(raw string, resolveHost ResolveFunc) error {
 	host := parsed.Hostname()
 
 	if strings.EqualFold(host, "localhost") {
-		return fmt.Errorf("URL resolves to a non-routable address; if you intended an in-cluster Prometheus, use a *%s hostname", InClusterSuffix)
+		return errNonRoutable
 	}
 
 	// dot-prefixed suffix prevents attacker-registered domains matching (DNS rebinding)
@@ -74,9 +82,9 @@ func ValidateExternalURL(raw string, resolveHost ResolveFunc) error {
 		return nil
 	}
 
-	if ip := net.ParseIP(host); ip != nil {
-		if IsBlockedIP(ip) {
-			return fmt.Errorf("URL resolves to a non-routable address; if you intended an in-cluster Prometheus, use a *%s hostname", InClusterSuffix)
+	if addr, err := netip.ParseAddr(host); err == nil {
+		if IsBlockedIP(net.IP(addr.AsSlice())) {
+			return errNonRoutable
 		}
 		return nil
 	}
@@ -91,7 +99,10 @@ func ValidateExternalURL(raw string, resolveHost ResolveFunc) error {
 	}
 	for _, ip := range ips {
 		if IsBlockedIP(ip) {
-			return fmt.Errorf("URL resolves to a non-routable address; if you intended an in-cluster Prometheus, use a *%s hostname", InClusterSuffix)
+			if allow != nil && allow(ips) {
+				return nil
+			}
+			return errNonRoutable
 		}
 	}
 	return nil
