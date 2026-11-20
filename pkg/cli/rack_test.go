@@ -2,6 +2,9 @@ package cli_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +19,7 @@ import (
 	"github.com/convox/convox/pkg/rack"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdcli"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -290,6 +294,68 @@ func TestRackInstallNoTerraform(t *testing.T) {
 		res.RequireStdout(t, []string{""})
 
 		me.AssertExpectations(t)
+	})
+}
+
+func testConsoleRackInstall(t *testing.T, e *cli.Engine, racks string) {
+	r := mux.NewRouter()
+
+	r.HandleFunc("/racks", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, racks)
+	}).Methods("GET")
+
+	r.HandleFunc("/racks/org1/rack1/install", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"name":"rack1","organization":"org1","status":"installing"}`)
+	}).Methods("POST")
+
+	ts := httptest.NewTLSServer(r)
+	t.Cleanup(ts.Close)
+
+	tsu, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(filepath.Join(e.Settings, "console"), []byte(tsu.Host), 0600))
+	require.NoError(t, os.Remove(filepath.Join(e.Settings, "current")))
+}
+
+func TestRackInstallConsoleNotListed(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testConsoleRackInstall(t, e, `[]`)
+
+		res, err := testExecute(e, "rack install aws org1/rack1 --runtime r1 region=us-east-1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"Convox Rack installation initiated. Check the progress on the Console Racks page if desired. "})
+	})
+}
+
+func TestRackInstallConsoleSwitch(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		testConsoleRackInstall(t, e, `[{"name":"rack1","organization":{"name":"org1"},"status":"installing"}]`)
+
+		res, err := testExecute(e, "rack install aws org1/rack1 --runtime r1 region=us-east-1", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+
+		res, err = testExecute(e, "switch", nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, res.Code)
+		res.RequireStderr(t, []string{""})
+		res.RequireStdout(t, []string{"org1/rack1"})
+	})
+}
+
+func TestRackInstallRuntimeName(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		for _, name := range []string{"rack1", "org1/rack1/extra"} {
+			res, err := testExecute(e, "rack install aws "+name+" --runtime r1 region=us-east-1", nil)
+			require.NoError(t, err)
+			require.Equal(t, 1, res.Code)
+			res.RequireStderr(t, []string{"ERROR: rack name must be <organization>/<name> with --runtime"})
+			res.RequireStdout(t, []string{""})
+		}
 	})
 }
 
