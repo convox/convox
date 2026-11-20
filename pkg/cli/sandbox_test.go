@@ -87,7 +87,7 @@ func expectKeygen(me *mockstdcli.Executor) {
 		Run(func(args mock.Arguments) {
 			key := args.String(9)
 			_ = os.WriteFile(key, []byte("PRIVATE"), 0o600)
-			_ = os.WriteFile(key+".pub", []byte("ssh-ed25519 AAAA convox-sandbox\n"), 0o644)
+			_ = os.WriteFile(key+".pub", []byte("ssh-ed25519 AAAA convox-sandbox\n"), 0o600)
 		}).Return([]byte{}, nil).Once()
 }
 
@@ -128,7 +128,9 @@ func TestSandboxSSH(t *testing.T) {
 		me.On("Terminal", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Run(func(args mock.Arguments) {
 				for _, a := range args {
-					sshArgs = append(sshArgs, a.(string))
+					s, ok := a.(string)
+					require.True(t, ok)
+					sshArgs = append(sshArgs, s)
 				}
 			}).Return(nil).Once()
 		e.Executor = me

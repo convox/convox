@@ -75,7 +75,7 @@ func parseSandboxVolumeClaims(raw string) ([]SandboxVolumeClaim, error) {
 	return claims, nil
 }
 
-func (p *Provider) ensureSandboxVolumeClaim(ctx context.Context, namespace, sandboxID string, c SandboxVolumeClaim) error {
+func (p *Provider) ensureSandboxVolumeClaim(ctx context.Context, namespace, sandboxID string, c *SandboxVolumeClaim) error {
 	pvcs := p.Cluster.CoreV1().PersistentVolumeClaims(namespace)
 
 	existing, err := pvcs.Get(ctx, c.Name, am.GetOptions{})
@@ -122,7 +122,7 @@ func (p *Provider) ensureSandboxVolumeClaim(ctx context.Context, namespace, sand
 	return nil
 }
 
-func applySandboxVolumeClaim(s *ac.PodSpec, c SandboxVolumeClaim) error {
+func applySandboxVolumeClaim(s *ac.PodSpec, c *SandboxVolumeClaim) error {
 	if len(s.Containers) == 0 {
 		return fmt.Errorf("pod spec has no containers")
 	}

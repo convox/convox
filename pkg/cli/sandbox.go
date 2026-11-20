@@ -84,6 +84,9 @@ func SandboxProxy(_ sdk.Interface, c *stdcli.Context) error {
 
 	dialer := websocket.Dialer{HandshakeTimeout: 30 * time.Second, Proxy: http.ProxyFromEnvironment}
 	ws, res, err := dialer.Dial(u.String(), http.Header{"X-Convox-Ssh-Token": {token}})
+	if res != nil && res.Body != nil {
+		defer res.Body.Close()
+	}
 	if err != nil {
 		if res != nil {
 			return sandboxResponseError(res)

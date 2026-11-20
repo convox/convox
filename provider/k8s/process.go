@@ -606,7 +606,8 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		labels[SandboxEgressLabel] = "restricted"
 	}
 
-	for _, vc := range volumeClaims {
+	for i := range volumeClaims {
+		vc := &volumeClaims[i]
 		if err := p.ensureSandboxVolumeClaim(context.TODO(), createNs, labels[SandboxIDLabel], vc); err != nil {
 			return nil, err
 		}

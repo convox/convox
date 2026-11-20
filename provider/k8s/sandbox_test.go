@@ -24,7 +24,9 @@ const sandboxHostApp = "sandboxes"
 func sandboxHostProvider(t *testing.T) (*Provider, *fake.Clientset) {
 	t.Helper()
 	p, kk, _ := minimalProvider(t)
-	p.Atom.(*atom.MockInterface).On("Status", "rack1-"+sandboxHostApp, "app").Return("Running", "", nil)
+	ma, ok := p.Atom.(*atom.MockInterface)
+	require.True(t, ok)
+	ma.On("Status", "rack1-"+sandboxHostApp, "app").Return("Running", "", nil)
 	createAppNamespace(t, kk, "rack1", sandboxHostApp)
 	return p, kk
 }
