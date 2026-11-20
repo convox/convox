@@ -287,6 +287,16 @@ variable "network_policy_enable" {
   default = false
 }
 
+variable "sandbox_runtime_classes" {
+  type    = string
+  default = ""
+}
+
+variable "sandbox_storage_class" {
+  type    = string
+  default = ""
+}
+
 variable "system_readonly_rootfs_enabled" {
   type    = bool
   default = false

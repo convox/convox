@@ -1722,6 +1722,20 @@ func (_m *Interface) ProcessStop(app string, pid string) error {
 	return r0
 }
 
+// ProcessVolumeClaimDelete provides a mock function with given fields: app, name
+func (_m *Interface) ProcessVolumeClaimDelete(app string, name string) error {
+	ret := _m.Called(app, name)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(app, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // Proxy provides a mock function with given fields: host, port, rw, opts
 func (_m *Interface) Proxy(host string, port int, rw io.ReadWriter, opts structs.ProxyOptions) error {
 	ret := _m.Called(host, port, rw, opts)

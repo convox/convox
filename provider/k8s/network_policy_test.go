@@ -103,7 +103,8 @@ func TestNetworkIsolationPolicy_NoTid(t *testing.T) {
 	assert.Equal(t, networkingv1.PolicyTypeIngress, np.Spec.PolicyTypes[0])
 	assert.Empty(t, np.Spec.Egress)
 	assert.Empty(t, np.Spec.PodSelector.MatchLabels)
-	assert.Empty(t, np.Spec.PodSelector.MatchExpressions)
+	assert.Equal(t, []am.LabelSelectorRequirement{{Key: SandboxLabel, Operator: am.LabelSelectorOpDoesNotExist}},
+		np.Spec.PodSelector.MatchExpressions, "sandbox pods must stay outside the same-namespace allow")
 
 	require.Len(t, np.Spec.Ingress, 1)
 	assert.Empty(t, np.Spec.Ingress[0].Ports)

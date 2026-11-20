@@ -83,6 +83,10 @@ type ProcessRunOptions struct {
 	NodeAffinity        *string `flag:"node-affinity" header:"Node-Affinity"`
 	Tolerations         *string `flag:"tolerations" header:"Run-Tolerations"`
 	Retain              *int    `header:"Retain"`
+	EphemeralStorage    *int    `header:"Ephemeral-Storage"`
+	RuntimeClass        *string `header:"Runtime-Class"`
+	VolumeClaims        *string `header:"Volume-Claims"`
+	NetworkEgress       *string `header:"Network-Egress"`
 
 	IsBuild   bool
 	BuildArch *string

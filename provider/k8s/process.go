@@ -535,6 +535,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		reserved := map[string]bool{
 			"app": true, "rack": true, "service": true, "system": true,
 			"type": true, "name": true, "release": true, "service-type": true,
+			SandboxEgressLabel: true,
 		}
 		kv, err := parseRunKV(*opts.Labels)
 		if err != nil {
@@ -544,6 +545,9 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 			if reserved[k] {
 				return nil, structs.ErrBadRequest("label key %q is reserved by convox", k)
 			}
+			if k == SandboxLabel && v != "true" {
+				return nil, structs.ErrBadRequest("label %s can only be \"true\"", SandboxLabel)
+			}
 			if msgs := content.IsLabelKey(k); len(msgs) > 0 {
 				return nil, structs.ErrBadRequest("invalid label key %q: %s", k, strings.Join(msgs, "; "))
 			}
@@ -551,6 +555,63 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 				return nil, structs.ErrBadRequest("invalid label value %q: %s", v, strings.Join(msgs, "; "))
 			}
 			labels[k] = v
+		}
+	}
+
+	sandboxRun := !opts.IsBuild && labels[SandboxLabel] == "true"
+
+	var volumeClaims []SandboxVolumeClaim
+	if opts.VolumeClaims != nil && strings.TrimSpace(*opts.VolumeClaims) != "" {
+		if !sandboxRun {
+			return nil, structs.ErrBadRequest("volume claims are only supported for sandbox processes")
+		}
+		if labels[SandboxIDLabel] == "" {
+			return nil, structs.ErrBadRequest("volume claims need the %s label", SandboxIDLabel)
+		}
+		vc, err := parseSandboxVolumeClaims(*opts.VolumeClaims)
+		if err != nil {
+			return nil, err
+		}
+		volumeClaims = vc
+	}
+
+	var egress *SandboxNetworkEgress
+	if opts.NetworkEgress != nil && strings.TrimSpace(*opts.NetworkEgress) != "" {
+		if !sandboxRun {
+			return nil, structs.ErrBadRequest("network egress limits are only supported for sandbox processes")
+		}
+		if !p.NetworkPolicyEnabled {
+			return nil, structs.ErrBadRequest("network egress limits need network_policy_enable on the rack")
+		}
+		if labels[SandboxIDLabel] == "" {
+			return nil, structs.ErrBadRequest("network egress limits need the %s label", SandboxIDLabel)
+		}
+		e, err := parseSandboxNetworkEgress(*opts.NetworkEgress)
+		if err != nil {
+			return nil, err
+		}
+		egress = e
+	}
+
+	if sandboxRun {
+		if err := p.prepareSandboxNamespace(context.TODO(), createNs); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	if egress != nil {
+		if err := p.ensureSandboxNetworkPolicy(context.TODO(), sandboxNetworkPolicy(createNs, labels[SandboxIDLabel], egress), time.Now()); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		labels[SandboxEgressLabel] = "restricted"
+	}
+
+	for _, vc := range volumeClaims {
+		if err := p.ensureSandboxVolumeClaim(context.TODO(), createNs, labels[SandboxIDLabel], vc); err != nil {
+			return nil, err
+		}
+		if err := applySandboxVolumeClaim(s, vc); err != nil {
+			return nil, errors.WithStack(err)
 		}
 	}
 
@@ -998,6 +1059,28 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 			s.Containers[0].Resources.Limits = ac.ResourceList{}
 		}
 		s.Containers[0].Resources.Limits["memory"] = s.Containers[0].Resources.Requests["memory"]
+	}
+
+	if opts.EphemeralStorage != nil {
+		if *opts.EphemeralStorage <= 0 {
+			return nil, structs.ErrBadRequest("ephemeral storage must be a positive number of MiB")
+		}
+		qty := resource.MustParse(fmt.Sprintf("%dMi", *opts.EphemeralStorage))
+		if s.Containers[0].Resources.Requests == nil {
+			s.Containers[0].Resources.Requests = ac.ResourceList{}
+		}
+		if s.Containers[0].Resources.Limits == nil {
+			s.Containers[0].Resources.Limits = ac.ResourceList{}
+		}
+		s.Containers[0].Resources.Requests[ac.ResourceEphemeralStorage] = qty
+		s.Containers[0].Resources.Limits[ac.ResourceEphemeralStorage] = qty
+	}
+
+	if opts.RuntimeClass != nil && *opts.RuntimeClass != "" {
+		if !p.runtimeClassAllowed(*opts.RuntimeClass) {
+			return nil, structs.ErrBadRequest("runtime class %q is not enabled on this rack", *opts.RuntimeClass)
+		}
+		s.RuntimeClassName = opts.RuntimeClass
 	}
 
 	if opts.NodeLabels != nil {

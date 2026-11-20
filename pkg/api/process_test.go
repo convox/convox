@@ -298,3 +298,50 @@ func TestProcessStopError(t *testing.T) {
 		require.EqualError(t, err, "err1")
 	})
 }
+
+func TestProcessRunVolumeClaimsHeader(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		p1 := fxProcess
+		p2 := structs.Process{}
+		claims := `[{"name":"sbx-1","size":"10Gi","mountPath":"/home/convox"}]`
+		opts := structs.ProcessRunOptions{VolumeClaims: options.String(claims)}
+		ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{"Volume-Claims": claims}}
+		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)
+		err := c.Post("/apps/app1/services/service1/processes", ro, &p2)
+		require.NoError(t, err)
+		require.Equal(t, p1, p2)
+	})
+}
+
+func TestProcessRunNetworkEgressHeader(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		a1 := fxApp
+		p.On("AppGet", "app1").Return(&a1, nil)
+		p1 := fxProcess
+		p2 := structs.Process{}
+		opts := structs.ProcessRunOptions{NetworkEgress: options.String("8.8.8.0/24,1.1.1.1/32")}
+		ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{"Network-Egress": "8.8.8.0/24,1.1.1.1/32"}}
+		p.On("ProcessRun", "app1", "service1", opts).Return(&p1, nil)
+		err := c.Post("/apps/app1/services/service1/processes", ro, &p2)
+		require.NoError(t, err)
+		require.Equal(t, p1, p2)
+	})
+}
+
+func TestProcessVolumeClaimDelete(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		p.On("ProcessVolumeClaimDelete", "app1", "sbx-1").Return(nil)
+		err := c.Delete("/apps/app1/volumeclaims/sbx-1", stdsdk.RequestOptions{}, nil)
+		require.NoError(t, err)
+	})
+}
+
+func TestProcessVolumeClaimDeleteError(t *testing.T) {
+	testServer(t, func(c *stdsdk.Client, p *structs.MockProvider) {
+		p.On("ProcessVolumeClaimDelete", "app1", "sbx-1").Return(fmt.Errorf("err1"))
+		err := c.Delete("/apps/app1/volumeclaims/sbx-1", stdsdk.RequestOptions{}, nil)
+		require.EqualError(t, err, "err1")
+	})
+}

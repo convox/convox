@@ -59,6 +59,7 @@ func init() {
 	routes["ProcessLogs"] = "SOCKET /apps/{app}/processes/{pid}/logs"
 	routes["ProcessRun"] = "POST /apps/{app}/services/{service}/processes"
 	routes["ProcessStop"] = "DELETE /apps/{app}/processes/{pid}"
+	routes["ProcessVolumeClaimDelete"] = "DELETE /apps/{app}/volumeclaims/{name}"
 	routes["Proxy"] = "SOCKET /proxy/{host}/{port}"
 	routes["ReleaseCreate"] = "POST /apps/{app}/releases"
 	routes["ReleaseGet"] = "GET /apps/{app}/releases/{id}"

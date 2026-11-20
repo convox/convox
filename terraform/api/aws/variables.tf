@@ -285,6 +285,14 @@ variable "network_policy_enable" {
   default = false
 }
 
+variable "sandbox_runtime_classes" {
+  default = ""
+}
+
+variable "sandbox_storage_class" {
+  default = ""
+}
+
 variable "contour_internal_tls" {
   default = true
 }

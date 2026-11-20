@@ -86,6 +86,8 @@ module "k8s" {
     PROXY_PROTOCOL                            = var.proxy_protocol
     POD_IMDS_BLOCK_ENABLED                    = var.pod_imds_block_enabled
     NETWORK_POLICY_ENABLED                    = var.network_policy_enable
+    SANDBOX_RUNTIME_CLASSES                   = var.sandbox_runtime_classes
+    SANDBOX_STORAGE_CLASS                     = var.sandbox_storage_class
     POD_SECURITY_STANDARD                     = var.pod_security_standard
     POD_SECURITY_MODE                         = var.pod_security_mode
     CONTOUR_INTERNAL_TLS                      = var.contour_internal_tls

@@ -13,11 +13,14 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
 	networkIsolationPolicyName     = "convox-network-isolation"
+	sandboxIngressPolicyName       = "convox-sandbox-ingress"
+	sandboxEgressPolicyName        = "convox-sandbox-egress"
 	networkPolicyReconcileInterval = 2 * time.Minute
 
 	balancerTargetTypeAnnotation      = "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type"
@@ -26,6 +29,16 @@ const (
 	// The VPC CNI agent keeps 24 port entries per source address, and each peer address also carries its own catch-all.
 	balancerPolicyPortLimit = 23
 )
+
+// sandboxEgressDeniedCIDRs keeps sandbox pods off the VPC, pod and service networks, link-local
+// metadata endpoints, and CGNAT space some CNIs use for pods.
+var sandboxEgressDeniedCIDRs = []string{
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"100.64.0.0/10",
+	"169.254.0.0/16",
+}
 
 func networkIsolationPolicy(namespace, systemNamespace, rack, tid string) *networkingv1.NetworkPolicy {
 	peers := []networkingv1.NetworkPolicyPeer{
@@ -54,7 +67,14 @@ func networkIsolationPolicy(namespace, systemNamespace, rack, tid string) *netwo
 			Labels:    map[string]string{"system": "convox"},
 		},
 		Spec: networkingv1.NetworkPolicySpec{
-			PodSelector: am.LabelSelector{},
+			// Policies are additive, so sandbox pods must be outside this same-namespace allow
+			// for convox-sandbox-ingress to isolate them.
+			PodSelector: am.LabelSelector{
+				MatchExpressions: []am.LabelSelectorRequirement{{
+					Key:      SandboxLabel,
+					Operator: am.LabelSelectorOpDoesNotExist,
+				}},
+			},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 			Ingress:     []networkingv1.NetworkPolicyIngressRule{{From: peers}},
 		},
@@ -79,6 +99,70 @@ func balancerNetworkPolicy(isolation *networkingv1.NetworkPolicy, s *corev1.Serv
 			PodSelector: am.LabelSelector{MatchLabels: s.Spec.Selector},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 			Ingress:     append(append([]networkingv1.NetworkPolicyIngressRule{}, isolation.Spec.Ingress...), networkingv1.NetworkPolicyIngressRule{Ports: ports}),
+		},
+	}
+}
+
+func sandboxPodSelector() am.LabelSelector {
+	return am.LabelSelector{MatchLabels: map[string]string{SandboxLabel: "true"}}
+}
+
+// sandboxSharedEgressSelector leaves out pods with their own egress limit: allowed egress adds up across
+// policies, so a restricted pod must not also match the shared one.
+func sandboxSharedEgressSelector() am.LabelSelector {
+	sel := sandboxPodSelector()
+	sel.MatchExpressions = []am.LabelSelectorRequirement{{Key: SandboxEgressLabel, Operator: am.LabelSelectorOpDoesNotExist}}
+	return sel
+}
+
+// sandboxIngressPolicy denies all ingress to sandbox pods and is also their egress baseline: with Egress among
+// its types and no egress rules, a sandbox pod reaches nothing unless another policy allows it. A restricted
+// pod whose own policy is missing therefore has no network instead of an open one.
+func sandboxIngressPolicy(namespace string) *networkingv1.NetworkPolicy {
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: am.ObjectMeta{
+			Name:      sandboxIngressPolicyName,
+			Namespace: namespace,
+			Labels:    map[string]string{"system": "convox"},
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: sandboxPodSelector(),
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+		},
+	}
+}
+
+func sandboxEgressPolicy(namespace string) *networkingv1.NetworkPolicy {
+	udp := corev1.ProtocolUDP
+	tcp := corev1.ProtocolTCP
+	dns := intstr.FromInt32(53)
+
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: am.ObjectMeta{
+			Name:      sandboxEgressPolicyName,
+			Namespace: namespace,
+			Labels:    map[string]string{"system": "convox"},
+		},
+		Spec: networkingv1.NetworkPolicySpec{
+			PodSelector: sandboxSharedEgressSelector(),
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					To: []networkingv1.NetworkPolicyPeer{{
+						NamespaceSelector: &am.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
+						PodSelector:       &am.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}},
+					}},
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Protocol: &udp, Port: &dns},
+						{Protocol: &tcp, Port: &dns},
+					},
+				},
+				{
+					To: []networkingv1.NetworkPolicyPeer{{
+						IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0", Except: append([]string{}, sandboxEgressDeniedCIDRs...)},
+					}},
+				},
+			},
 		},
 	}
 }
@@ -149,7 +233,8 @@ func (p *Provider) reconcileNetworkPolicy(ctx context.Context, namespace string)
 	for i := range nss.Items {
 		ns := nss.Items[i].Name
 
-		if rerr := p.reconcileNetworkPolicyNamespace(ctx, ns, nss.Items[i].Labels["tid"]); rerr != nil {
+		nsLabels := nss.Items[i].Labels
+		if rerr := p.reconcileNetworkPolicyNamespace(ctx, ns, nsLabels["tid"], nsLabels[SandboxLabel] == "true"); rerr != nil {
 			fmt.Printf("ns=network_policy at=warn kind=reconcile rack=%s namespace=%s err=%q\n", p.Name, ns, rerr)
 		}
 	}
@@ -157,9 +242,26 @@ func (p *Provider) reconcileNetworkPolicy(ctx context.Context, namespace string)
 	return nil
 }
 
-func (p *Provider) reconcileNetworkPolicyNamespace(ctx context.Context, namespace, tid string) error {
+func (p *Provider) reconcileNetworkPolicyNamespace(ctx context.Context, namespace, tid string, sandbox bool) error {
 	if !p.NetworkPolicyEnabled {
+		if sandbox {
+			if err := p.removeSandboxNetworkPolicies(ctx, namespace); err != nil {
+				return err
+			}
+			if err := p.removeAllSandboxNetworkPolicies(ctx, namespace); err != nil {
+				return err
+			}
+		}
 		return p.removeNetworkIsolationPolicy(ctx, namespace)
+	}
+
+	if sandbox {
+		if err := p.ensureSandboxNetworkPolicies(ctx, namespace); err != nil {
+			return err
+		}
+		if err := p.removeOrphanSandboxNetworkPolicies(ctx, namespace, time.Now()); err != nil {
+			return err
+		}
 	}
 
 	ss, err := p.Cluster.CoreV1().Services(namespace).List(ctx, am.ListOptions{LabelSelector: "type=balancer"})
@@ -238,6 +340,42 @@ func (p *Provider) reconcileBalancerPolicies(ctx context.Context, isolation *net
 	}
 
 	return nil
+}
+
+func (p *Provider) ensureSandboxNetworkPolicies(ctx context.Context, namespace string) error {
+	if _, err := p.ensureNetworkPolicy(ctx, sandboxIngressPolicy(namespace)); err != nil {
+		return err
+	}
+	_, err := p.ensureNetworkPolicy(ctx, sandboxEgressPolicy(namespace))
+	return err
+}
+
+func (p *Provider) removeSandboxNetworkPolicies(ctx context.Context, namespace string) error {
+	for _, name := range []string{sandboxIngressPolicyName, sandboxEgressPolicyName} {
+		err := p.Cluster.NetworkingV1().NetworkPolicies(namespace).Delete(ctx, name, am.DeleteOptions{})
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// prepareSandboxNamespace marks a namespace as hosting sandboxes and applies its policies before
+// the first sandbox pod is created, so no pod waits for the next reconcile tick to be isolated.
+func (p *Provider) prepareSandboxNamespace(ctx context.Context, namespace string) error {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, namespace, am.GetOptions{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if ns.Labels[SandboxLabel] != "true" {
+		patch := []byte(fmt.Sprintf(`{"metadata":{"labels":{%q:"true"}}}`, SandboxLabel))
+		if _, err := p.Cluster.CoreV1().Namespaces().Patch(ctx, namespace, types.MergePatchType, patch, am.PatchOptions{}); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return p.reconcileNetworkPolicyNamespace(ctx, namespace, ns.Labels["tid"], true)
 }
 
 func (p *Provider) ensureNetworkPolicy(ctx context.Context, np *networkingv1.NetworkPolicy) (*networkingv1.NetworkPolicy, error) {

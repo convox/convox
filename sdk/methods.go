@@ -857,6 +857,16 @@ func (c *Client) ProcessStop(app, pid string) error {
 	return err
 }
 
+func (c *Client) ProcessVolumeClaimDelete(app, name string) error {
+	var err error
+
+	ro := stdsdk.RequestOptions{Headers: stdsdk.Headers{}, Params: stdsdk.Params{}, Query: stdsdk.Query{}}
+
+	err = c.Delete(fmt.Sprintf("/apps/%s/volumeclaims/%s", app, name), ro, nil)
+
+	return err
+}
+
 func (c *Client) Proxy(host string, port int, rw io.ReadWriter, opts structs.ProxyOptions) error {
 	var err error
 
