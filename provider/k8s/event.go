@@ -143,7 +143,7 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 		if timeout <= 0 {
 			timeout = defaultWebhookTimeout
 		}
-		go dispatchWebhookSafely(e.URL, msg, signingKeys, timeout)
+		go p.dispatchWebhookSafely(e.URL, msg, signingKeys, timeout)
 	}
 
 	return nil
@@ -151,7 +151,7 @@ func (p *Provider) EventSend(action string, opts structs.EventSendOptions) error
 
 // dispatchWebhookSafely wraps dispatch in panic recovery so a bad receiver
 // cannot crash the api pod. Logs are host-only redacted.
-func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
+func (p *Provider) dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Printf("ns=event_dispatch at=recover url_host=%s panic=%q\n", redactURLHost(url), r)
@@ -159,7 +159,7 @@ func dispatchWebhookSafely(url string, body []byte, signingKeys [][]byte, timeou
 	}()
 
 	// SSRF guard — also catches pre-3.24.6 configmap entries with internal IPs.
-	if err := webhookSSRFValidator(url); err != nil {
+	if err := webhookSSRFValidator(p, url); err != nil {
 		if _, loaded := webhookSSRFLogged.LoadOrStore(url, true); !loaded {
 			fmt.Printf("ns=event_dispatch at=ssrf_blocked url_host=%s reason=%q\n",
 				redactURLHost(url), err.Error())

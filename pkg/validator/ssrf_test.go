@@ -268,3 +268,62 @@ func TestIsBlockedIP_PublicAccepts(t *testing.T) {
 		t.Errorf("IsBlockedIP(nil) should return false")
 	}
 }
+
+func TestValidateExternalURLAllowing(t *testing.T) {
+	r := newStubResolver()
+	r.answers["hairpin.example.com"] = []net.IP{ip("172.20.159.27")}
+	r.answers["mixed.example.com"] = []net.IP{ip("172.20.159.27"), ip("203.0.113.5")}
+	r.answers["public.example.com"] = []net.IP{ip("203.0.113.5")}
+	r.errs["nxdomain.example.com"] = errors.New("no such host")
+	r.answers["::ffff:172.20.159.27%eth0"] = []net.IP{ip("172.20.159.27")}
+
+	cases := []struct {
+		name       string
+		raw        string
+		allow      bool
+		wantErr    string
+		wantCalled []net.IP
+	}{
+		{"allowed_private_answer", "https://hairpin.example.com/x", true, "", []net.IP{ip("172.20.159.27")}},
+		{"allow_gets_full_answer", "https://mixed.example.com/x", true, "", []net.IP{ip("172.20.159.27"), ip("203.0.113.5")}},
+		{"allow_false_refuses", "https://hairpin.example.com/x", false, "non-routable", []net.IP{ip("172.20.159.27")}},
+		{"public_answer_skips_allow", "https://public.example.com/x", false, "", nil},
+		{"ip_literal_skips_allow", "https://172.20.159.27/x", true, "non-routable", nil},
+		{"zoned_literal_skips_allow", "https://[::ffff:172.20.159.27%25eth0]/x", true, "non-routable", nil},
+		{"localhost_skips_allow", "https://localhost/x", true, "non-routable", nil},
+		{"in_cluster_skips_allow", "https://web.app.svc.cluster.local/x", false, "", nil},
+		{"resolution_error_skips_allow", "https://nxdomain.example.com/x", true, "did not resolve", nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var called []net.IP
+			allow := func(ips []net.IP) bool {
+				called = ips
+				return c.allow
+			}
+			err := validator.ValidateExternalURLAllowing(c.raw, r.resolve, allow)
+			if c.wantErr == "" && err != nil {
+				t.Fatalf("expected accept, got %v", err)
+			}
+			if c.wantErr != "" && (err == nil || !strings.Contains(err.Error(), c.wantErr)) {
+				t.Fatalf("expected error containing %q, got %v", c.wantErr, err)
+			}
+			if len(called) != len(c.wantCalled) {
+				t.Fatalf("allow called with %v, want %v", called, c.wantCalled)
+			}
+			for i := range called {
+				if !called[i].Equal(c.wantCalled[i]) {
+					t.Fatalf("allow called with %v, want %v", called, c.wantCalled)
+				}
+			}
+		})
+	}
+
+	err := validator.ValidateExternalURLAllowing("https://hairpin.example.com/x", r.resolve, nil)
+	if err == nil || !strings.Contains(err.Error(), "non-routable") {
+		t.Fatalf("nil allow must refuse, got %v", err)
+	}
+	if strings.Contains(err.Error(), "Prometheus") || !strings.Contains(err.Error(), validator.InClusterSuffix) {
+		t.Errorf("unexpected non-routable message %q", err.Error())
+	}
+}

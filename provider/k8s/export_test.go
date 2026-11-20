@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -229,14 +230,14 @@ func DispatchWebhookForTest(url string, body []byte) error {
 // signingKeys arg is variadic so existing unsigned call sites keep
 // working with no source change. Test-only.
 func DispatchWebhookSafelyForTest(url string, body []byte, signingKeys ...[]byte) {
-	dispatchWebhookSafely(url, body, signingKeys, webhookClientTimeout)
+	(&Provider{}).dispatchWebhookSafely(url, body, signingKeys, webhookClientTimeout)
 }
 
 // DispatchWebhookSafelyWithTimeoutForTest is the per-URL timeout entry
 // point. Tests that exercise the JSON-encoded receiver config form pass
 // an explicit timeout here. Test-only.
 func DispatchWebhookSafelyWithTimeoutForTest(url string, body []byte, signingKeys [][]byte, timeout time.Duration) {
-	dispatchWebhookSafely(url, body, signingKeys, timeout)
+	(&Provider{}).dispatchWebhookSafely(url, body, signingKeys, timeout)
 }
 
 // RedactURLHostForTest exposes the host-only URL redactor so tests can
@@ -288,13 +289,13 @@ func SetDispatchWebhookSignedFnForTest(fn func(url string, body []byte, signingK
 // restore function. Test-only; production callers MUST NOT touch this
 // hook.
 //
-// The default validator (validator.ValidateExternalURL with nil resolver)
-// rejects RFC 1918, loopback, link-local (incl. IMDS), CGNAT, IPv6 ULA,
-// unspecified, and the "localhost" reserved name. The .svc.cluster.local
-// suffix is allow-listed.
+// The default validator ((*Provider).webhookURLAllowed) rejects RFC 1918,
+// loopback, link-local (incl. IMDS), CGNAT, IPv6 ULA, unspecified, and the
+// "localhost" reserved name, except an https name that resolves only to the
+// router Service ClusterIP. The .svc.cluster.local suffix is allow-listed.
 func SetWebhookSSRFValidatorForTest(fn func(url string) error) func() {
 	prev := webhookSSRFValidator
-	webhookSSRFValidator = fn
+	webhookSSRFValidator = func(_ *Provider, raw string) error { return fn(raw) }
 	// Reset the per-URL log dedup so a new test doesn't observe a stale
 	// "already logged" entry from a previous test in the same package.
 	webhookSSRFLogged = sync.Map{}
@@ -302,6 +303,26 @@ func SetWebhookSSRFValidatorForTest(fn func(url string) error) func() {
 		webhookSSRFValidator = prev
 		webhookSSRFLogged = sync.Map{}
 	}
+}
+
+// UseDefaultWebhookSSRFValidatorForTest reinstalls the production webhook
+// guard over the permissive one TestMain sets. Returns a restore function.
+func UseDefaultWebhookSSRFValidatorForTest() func() {
+	prev := webhookSSRFValidator
+	webhookSSRFValidator = (*Provider).webhookURLAllowed
+	webhookSSRFLogged = sync.Map{}
+	return func() {
+		webhookSSRFValidator = prev
+		webhookSSRFLogged = sync.Map{}
+	}
+}
+
+// SetWebhookLookupIPForTest swaps the DNS lookup the default webhook guard
+// uses. Returns a restore function.
+func SetWebhookLookupIPForTest(fn func(host string) ([]net.IP, error)) func() {
+	prev := webhookLookupIP
+	webhookLookupIP = fn
+	return func() { webhookLookupIP = prev }
 }
 
 // ResetWebhookSSRFLoggedForTest clears the per-URL "already-logged"
