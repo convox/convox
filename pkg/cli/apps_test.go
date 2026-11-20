@@ -3,6 +3,7 @@ package cli_test
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -171,7 +172,28 @@ func TestAppsDeleteError(t *testing.T) {
 
 func TestAppsExport(t *testing.T) {
 	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
-		i.On("AppGet", "app1").Return(fxApp(), nil)
+		a := fxApp()
+		a.Parameters = map[string]string{
+			"ParamFoo":                              "value1",
+			"ParamOther":                            "value2",
+			"Rack":                                  "rack0",
+			"LogBucket":                             "bucket0",
+			"ResourcePassword":                      "password0",
+			"ParamPassword":                         "password1",
+			"Release":                               "RAPP0",
+			"Subnets":                               "subnet-0",
+			"SubnetsPrivate":                        "subnet-1",
+			"ELBLogBucket":                          "bucket1",
+			"LogDriver":                             "Syslog",
+			"SyslogDestination":                     "tcp+tls://logs.example.org:1234",
+			"SyslogFormat":                          "rfc3164",
+			"Private":                               "Yes",
+			"PlaceLambdaInVpc":                      "Yes",
+			"EnableContainerReadonlyRootFilesystem": "Yes",
+			"ECSExec":                               "Yes",
+		}
+		i.On("SystemGet").Return(&structs.System{Version: "3.26.1"}, nil)
+		i.On("AppGet", "app1").Return(a, nil)
 		i.On("ReleaseGet", "app1", "release1").Return(fxRelease(), nil)
 		bdata, err := os.ReadFile("testdata/build.tgz")
 		require.NoError(t, err)
@@ -221,6 +243,75 @@ func TestAppsExport(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, bdata, data)
 	})
+}
+
+func TestAppsExportV2Rack(t *testing.T) {
+	for name, tc := range map[string]struct {
+		resources structs.Resources
+		err       error
+		stderr    string
+	}{
+		"resources":  {structs.Resources{*fxResource()}, nil, "WARNING: resource data is not exported from V2 racks"},
+		"list error": {nil, fmt.Errorf("no release for app: app1"), ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				i.On("SystemGet").Return(fxSystem(), nil)
+				i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2", Status: "running"}, nil)
+				i.On("ResourceList", "app1").Return(tc.resources, tc.err)
+
+				tmp := t.TempDir()
+
+				res, err := testExecute(e, fmt.Sprintf("apps export -a app1 -f %s/app.tgz", tmp), nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{tc.stderr})
+				res.RequireStdout(t, []string{
+					"Exporting app app1... OK",
+					"Packaging export... OK",
+				})
+				i.AssertNotCalled(t, "ResourceExport", mock.Anything, mock.Anything)
+
+				_, err = os.Stat(filepath.Join(tmp, "app.tgz"))
+				require.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestAppsExportV3Resources(t *testing.T) {
+	for name, tc := range map[string]struct {
+		harness func(*testing.T, func(*cli.Engine, *mocksdk.Interface))
+		system  *structs.System
+		err     error
+	}{
+		"dev rack":     {testClient, &structs.System{Version: "dev"}, nil},
+		"system error": {testClient, nil, fmt.Errorf("forbidden")},
+		"machine":      {testMachine, nil, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			tc.harness(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				if tc.system != nil || tc.err != nil {
+					i.On("SystemGet").Return(tc.system, tc.err)
+				}
+				i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2", Status: "running"}, nil)
+				i.On("ResourceList", "app1").Return(structs.Resources{*fxResource()}, nil)
+				i.On("ResourceExport", "app1", "resource1").Return(io.NopCloser(bytes.NewBufferString("resourcedata")), nil)
+
+				tmp := t.TempDir()
+
+				res, err := testExecute(e, fmt.Sprintf("apps export -a app1 -f %s/app.tgz", tmp), nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{""})
+				res.RequireStdout(t, []string{
+					"Exporting app app1... OK",
+					"Exporting resource resource1... OK",
+					"Packaging export... OK",
+				})
+			})
+		})
+	}
 }
 
 func TestAppsImport(t *testing.T) {
@@ -373,6 +464,72 @@ func TestAppsImportNoResources(t *testing.T) {
 			"Updating parameters... OK",
 		})
 	})
+}
+
+func TestAppsImportRackParams(t *testing.T) {
+	rackParams := map[string]string{
+		"Rack":                                  "rack0",
+		"LogBucket":                             "bucket0",
+		"ResourcePassword":                      "password0",
+		"ParamPassword":                         "password1",
+		"Release":                               "RAPP0",
+		"Subnets":                               "subnet-0",
+		"SubnetsPrivate":                        "subnet-1",
+		"ELBLogBucket":                          "bucket1",
+		"LogDriver":                             "Syslog",
+		"SyslogDestination":                     "tcp+tls://logs.example.org:1234",
+		"SyslogFormat":                          "rfc3164",
+		"Private":                               "Yes",
+		"PlaceLambdaInVpc":                      "Yes",
+		"EnableContainerReadonlyRootFilesystem": "Yes",
+		"ECSExec":                               "Yes",
+	}
+
+	for name, tc := range map[string]struct {
+		generation string
+		params     map[string]string
+		update     map[string]string
+		gets       int
+		stdout     []string
+	}{
+		"rack params only":   {"2", nil, nil, 2, []string{"Creating app app1... OK"}},
+		"same params":        {"2", map[string]string{"ParamFoo": "value1"}, nil, 3, []string{"Creating app app1... OK"}},
+		"changed params":     {"2", map[string]string{"ParamFoo": "changed"}, map[string]string{"ParamFoo": "changed"}, 5, []string{"Creating app app1... OK", "Updating parameters... OK"}},
+		"gen1 keeps Private": {"1", nil, map[string]string{"Private": "Yes"}, 5, []string{"Creating app app1... OK", "Updating parameters... OK"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+				params := map[string]string{}
+				for k, v := range rackParams {
+					params[k] = v
+				}
+				for k, v := range tc.params {
+					params[k] = v
+				}
+
+				dir := t.TempDir()
+				data, err := json.Marshal(structs.App{Generation: tc.generation, Parameters: params})
+				require.NoError(t, err)
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "app.json"), data, 0600))
+				tgz, err := common.Tarball(dir)
+				require.NoError(t, err)
+				file := filepath.Join(t.TempDir(), "app.tgz")
+				require.NoError(t, os.WriteFile(file, tgz, 0600))
+
+				i.On("AppCreate", "app1", structs.AppCreateOptions{Generation: options.String(tc.generation)}).Return(fxApp(), nil)
+				i.On("AppGet", "app1").Return(fxApp(), nil).Times(tc.gets)
+				if tc.update != nil {
+					i.On("AppUpdate", "app1", structs.AppUpdateOptions{Parameters: tc.update}).Return(nil)
+				}
+
+				res, err := testExecute(e, fmt.Sprintf("apps import -a app1 -f %s", file), nil)
+				require.NoError(t, err)
+				require.Equal(t, 0, res.Code)
+				res.RequireStderr(t, []string{""})
+				res.RequireStdout(t, tc.stdout)
+			})
+		})
+	}
 }
 
 func TestAppsInfo(t *testing.T) {

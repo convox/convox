@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/convox/convox/pkg/common"
@@ -16,6 +17,12 @@ import (
 	"github.com/convox/convox/sdk"
 	"github.com/convox/stdcli"
 )
+
+var rackAppParams = []string{
+	"Rack", "LogBucket", "ResourcePassword", "ParamPassword",
+	"Release", "Subnets", "SubnetsPrivate", "ELBLogBucket",
+	"LogDriver", "SyslogDestination", "SyslogFormat", "Private", "PlaceLambdaInVpc", "EnableContainerReadonlyRootFilesystem", "ECSExec",
+}
 
 func init() {
 	register("apps", "list apps", watch(Apps), stdcli.CommandOptions{
@@ -389,6 +396,8 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 		}
 	}
 
+	stripRackAppParams(a)
+
 	data, err := json.Marshal(a)
 	if err != nil {
 		return err
@@ -432,7 +441,12 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 	}
 
 	rs, err := rack.ResourceList(app)
-	if err != nil {
+	if isV2Rack(rack) {
+		if len(rs) > 0 {
+			fmt.Fprintln(c.Writer().Stderr, "WARNING: resource data is not exported from V2 racks")
+		}
+		rs = nil
+	} else if err != nil {
 		return err
 	}
 
@@ -503,6 +517,8 @@ func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) e
 	if err := json.Unmarshal(data, &a); err != nil {
 		return err
 	}
+
+	stripRackAppParams(&a)
 
 	c.Startf("Creating app <app>%s</app>", app)
 
@@ -634,4 +650,24 @@ func appImport(rack sdk.Interface, c *stdcli.Context, app string, r io.Reader) e
 	}
 
 	return nil
+}
+
+func stripRackAppParams(a *structs.App) {
+	for _, k := range rackAppParams {
+		// a gen1 promote never resets Private from the rack
+		if k == "Private" && a.Generation == "1" {
+			continue
+		}
+		delete(a.Parameters, k)
+	}
+}
+
+func isV2Rack(rack sdk.Interface) bool {
+	s, err := rackSystem(rack)
+	if err != nil {
+		return false
+	}
+
+	_, err = strconv.ParseUint(s.Version, 10, 64)
+	return err == nil
 }
