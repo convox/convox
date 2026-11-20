@@ -318,7 +318,7 @@ func TestProcessRun_BuildIgnoresNodeSelectorLabels(t *testing.T) {
 	// Build pods should NOT inherit nodeSelectorLabels affinity
 	// (the isBuild check in podSpecFromService skips the manifest lookup)
 	require.Nil(t, spec.Affinity)
-	require.Empty(t, spec.Tolerations)
+	require.Equal(t, []ac.Toleration{{Key: "dedicated", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}}, spec.Tolerations)
 }
 
 func TestProcessRun_BuildKeepsNodeLabelsToleration(t *testing.T) {
