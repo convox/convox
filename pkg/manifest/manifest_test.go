@@ -1503,6 +1503,15 @@ func TestServiceGcpFilestoreIds(t *testing.T) {
           mountPath: /data`,
 			wantErr: "initContainer gcpFilestore id other is not declared in volumeOptions",
 		},
+		{
+			name:    "service name and id fit the claim name",
+			service: "volumeOptions:\n      - gcpFilestore:\n          id: " + strings.Repeat("a", 49) + "\n          accessMode: ReadWriteMany\n          mountPath: /data",
+		},
+		{
+			name:    "service name and id too long for the claim name",
+			service: "volumeOptions:\n      - gcpFilestore:\n          id: " + strings.Repeat("a", 50) + "\n          accessMode: ReadWriteMany\n          mountPath: /data",
+			wantErr: "service web: gcpFilestore id " + strings.Repeat("a", 50) + " is too long, the service name and id together must be 52 characters or fewer",
+		},
 	}
 
 	for _, tt := range tests {

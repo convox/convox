@@ -415,6 +415,31 @@ spec:
 null
 # azurefiles web
 null
+# filestore web
+null
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    true: "off"
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    system: convox
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: filestore-web-shared
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadOnlyMany
+  resources:
+    requests:
+      storage: 2560Gi
+  storageClassName: filestore-rwx
+  volumeMode: Filesystem
 # service web
 apiVersion: v1
 data:
@@ -753,6 +778,9 @@ spec:
           name: ed-tmp2
         - mountPath: /scratch
           name: ed-scratch
+        - mountPath: /mnt/shared dir
+          name: filestore-shared
+          readOnly: true
       dnsConfig:
         nameservers:
         - 10.0.0.10
@@ -818,6 +846,9 @@ spec:
         volumeMounts:
         - mountPath: /var/cache dir
           name: ed-cache
+        - mountPath: /mnt/shared dir
+          name: filestore-shared
+          readOnly: true
         - mountPath: /etc/my app/app config.json
           name: cfg-cfg1
           subPath: app config.json
@@ -842,6 +873,9 @@ spec:
         name: ed-tmp2
       - emptyDir: {}
         name: ed-scratch
+      - name: filestore-shared
+        persistentVolumeClaim:
+          claimName: filestore-web-shared
       - name: cfg-cfg1
         secret:
           items:
@@ -1075,6 +1109,8 @@ spec:
 # efs db
 null
 # azurefiles db
+null
+# filestore db
 null
 # service db
 apiVersion: v1
@@ -1420,6 +1456,8 @@ spec:
 null
 # azurefiles agent
 null
+# filestore agent
+null
 # service agent
 apiVersion: v1
 data:
@@ -1717,6 +1755,8 @@ spec:
 # efs single
 null
 # azurefiles single
+null
+# filestore single
 null
 # service single
 apiVersion: v1
@@ -2086,6 +2126,9 @@ spec:
               name: ed-tmp2
             - mountPath: /scratch
               name: ed-scratch
+            - mountPath: /mnt/shared dir
+              name: filestore-shared
+              readOnly: true
           dnsConfig:
             nameservers:
             - 10.0.0.10
@@ -2121,6 +2164,9 @@ spec:
             name: ed-tmp2
           - emptyDir: {}
             name: ed-scratch
+          - name: filestore-shared
+            persistentVolumeClaim:
+              claimName: filestore-web-shared
           - name: cfg-cfg1
             secret:
               items:
@@ -2318,6 +2364,9 @@ spec:
               name: ed-tmp2
             - mountPath: /scratch
               name: ed-scratch
+            - mountPath: /mnt/shared dir
+              name: filestore-shared
+              readOnly: true
           dnsConfig:
             nameservers:
             - 10.0.0.10
@@ -2353,6 +2402,9 @@ spec:
             name: ed-tmp2
           - emptyDir: {}
             name: ed-scratch
+          - name: filestore-shared
+            persistentVolumeClaim:
+              claimName: filestore-web-shared
           - name: cfg-cfg1
             secret:
               items:
@@ -3536,6 +3588,35 @@ null
 ---
 null
 ---
+null
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    true: "off"
+    app: myapp
+    app.kubernetes.io/name: web
+    enabled: "true"
+    flag: "yes"
+    provider: k8s
+    rack: rack
+    release: RABCDEF
+    system: convox
+    team: platform
+    tier: "1"
+    version: "1.0"
+  name: filestore-web-shared
+  namespace: rack-myapp
+spec:
+  accessModes:
+  - ReadOnlyMany
+  resources:
+    requests:
+      storage: 2560Gi
+  storageClassName: filestore-rwx
+  volumeMode: Filesystem
+---
 apiVersion: v1
 data:
   true: eWVz
@@ -3887,6 +3968,9 @@ spec:
           name: ed-tmp2
         - mountPath: /scratch
           name: ed-scratch
+        - mountPath: /mnt/shared dir
+          name: filestore-shared
+          readOnly: true
       dnsConfig:
         nameservers:
         - 10.0.0.10
@@ -3952,6 +4036,9 @@ spec:
         volumeMounts:
         - mountPath: /var/cache dir
           name: ed-cache
+        - mountPath: /mnt/shared dir
+          name: filestore-shared
+          readOnly: true
         - mountPath: /etc/my app/app config.json
           name: cfg-cfg1
           subPath: app config.json
@@ -3976,6 +4063,9 @@ spec:
         name: ed-tmp2
       - emptyDir: {}
         name: ed-scratch
+      - name: filestore-shared
+        persistentVolumeClaim:
+          claimName: filestore-web-shared
       - name: cfg-cfg1
         secret:
           items:
@@ -4225,6 +4315,8 @@ spec:
   usages:
   - digital signature
   - key encipherment
+---
+null
 ---
 null
 ---
@@ -4604,6 +4696,8 @@ null
 ---
 null
 ---
+null
+---
 apiVersion: v1
 data:
   true: MQ==
@@ -4925,6 +5019,8 @@ spec:
   usages:
   - digital signature
   - key encipherment
+---
+null
 ---
 null
 ---
@@ -5324,6 +5420,9 @@ spec:
               name: ed-tmp2
             - mountPath: /scratch
               name: ed-scratch
+            - mountPath: /mnt/shared dir
+              name: filestore-shared
+              readOnly: true
           dnsConfig:
             nameservers:
             - 10.0.0.10
@@ -5359,6 +5458,9 @@ spec:
             name: ed-tmp2
           - emptyDir: {}
             name: ed-scratch
+          - name: filestore-shared
+            persistentVolumeClaim:
+              claimName: filestore-web-shared
           - name: cfg-cfg1
             secret:
               items:
@@ -5567,6 +5669,9 @@ spec:
               name: ed-tmp2
             - mountPath: /scratch
               name: ed-scratch
+            - mountPath: /mnt/shared dir
+              name: filestore-shared
+              readOnly: true
           dnsConfig:
             nameservers:
             - 10.0.0.10
@@ -5602,6 +5707,9 @@ spec:
             name: ed-tmp2
           - emptyDir: {}
             name: ed-scratch
+          - name: filestore-shared
+            persistentVolumeClaim:
+              claimName: filestore-web-shared
           - name: cfg-cfg1
             secret:
               items:

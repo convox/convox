@@ -28,9 +28,13 @@ resource "google_container_cluster" "rack" {
 
   ip_allocation_policy {}
 
-  addons_config {
-    gcp_filestore_csi_driver_config {
-      enabled = var.filestore_enable
+  dynamic "addons_config" {
+    for_each = var.filestore_enable ? [1] : []
+
+    content {
+      gcp_filestore_csi_driver_config {
+        enabled = true
+      }
     }
   }
 
