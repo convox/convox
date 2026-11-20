@@ -658,6 +658,9 @@ func validateReleaseIdentifiers(m *manifest.Manifest) error {
 			if vo.AzureFiles != nil {
 				fs = append(fs, field{"volume id", vo.AzureFiles.Id})
 			}
+			if vo.GcpFilestore != nil {
+				fs = append(fs, field{"volume id", vo.GcpFilestore.Id})
+			}
 			if vo.PersistentVolumeClaim != nil {
 				fs = append(fs, field{"volume id", vo.PersistentVolumeClaim.Id})
 			}
@@ -1224,6 +1227,15 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 			items = append(items, afdata)
 		}
 
+		// gcp filestore
+		fsdata, err := p.releaseTemplateFilestore(a, &ss[i])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if fsdata != nil {
+			items = append(items, fsdata)
+		}
+
 		s := ss[i]
 		min := s.Deployment.Minimum
 		max := s.Deployment.Maximum
@@ -1588,6 +1600,39 @@ func (p *Provider) releaseTemplateAzureFiles(a *structs.App, s *manifest.Service
 	}
 
 	data, err := p.RenderTemplate("app/azurefiles", params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return data, nil
+}
+
+func (p *Provider) releaseTemplateFilestore(a *structs.App, s *manifest.Service) ([]byte, error) {
+	hasFilestore := false
+	for i := range s.VolumeOptions {
+		if s.VolumeOptions[i].GcpFilestore != nil {
+			hasFilestore = true
+			if p.FilestoreEnabled != "true" {
+				return nil, structs.ErrBadRequest("gcpFilestore volumes require the filestore_enable rack parameter")
+			}
+		}
+		if err := s.VolumeOptions[i].Validate(); err != nil {
+			return nil, err
+		}
+	}
+
+	if !hasFilestore {
+		return nil, nil
+	}
+
+	params := map[string]interface{}{
+		"App":       a,
+		"Namespace": p.AppNamespace(a.Name),
+		"Rack":      p.Name,
+		"Service":   s,
+	}
+
+	data, err := p.RenderTemplate("app/filestore", params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

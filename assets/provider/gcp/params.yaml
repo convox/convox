@@ -34,6 +34,12 @@ Groups:
   - name: Performance & Scaling
     order: 4
     params:
+      - name: filestore_enable
+        default: "false"
+        type: boolean
+        description: Enable Google Cloud Filestore NFS volumes for shared persistent
+          storage across service replicas. Enables the GKE Filestore CSI driver and
+          creates an NFS StorageClass.
       - name: node_type
         default: n1-standard-2
         type: string

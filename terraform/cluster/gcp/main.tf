@@ -28,6 +28,16 @@ resource "google_container_cluster" "rack" {
 
   ip_allocation_policy {}
 
+  dynamic "addons_config" {
+    for_each = var.filestore_enable ? [1] : []
+
+    content {
+      gcp_filestore_csi_driver_config {
+        enabled = true
+      }
+    }
+  }
+
   master_auth {
     client_certificate_config {
       issue_client_certificate = true
