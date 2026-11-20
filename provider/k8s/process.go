@@ -430,7 +430,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	}
 
 	ans := map[string]string{}
-	if service == "build" {
+	if opts.IsBuild {
 		for idx := 0; idx < len(s.Containers); idx++ {
 			s.Containers[idx].SecurityContext = &ac.SecurityContext{SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}}
 			if opts.Privileged != nil && *opts.Privileged {
