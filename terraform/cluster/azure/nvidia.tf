@@ -71,6 +71,11 @@ resource "helm_release" "nvidia_device_plugin" {
           value    = "gpu"
           operator = "Equal"
           effect   = "NoSchedule"
+        },
+        {
+          key      = "kubernetes.azure.com/scalesetpriority"
+          operator = "Exists"
+          effect   = "NoSchedule"
         }
       ]
     })

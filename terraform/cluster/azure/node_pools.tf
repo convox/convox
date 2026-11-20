@@ -110,12 +110,14 @@ resource "azurerm_kubernetes_cluster_node_pool" "build_additional" {
 
   node_labels = merge(
     { "convox-build" = "true" },
-    each.value.label != null ? { "convox.io/label" = each.value.label } : { "convox.io/label" = "custom-build" }
+    each.value.label != null ? { "convox.io/label" = each.value.label } : { "convox.io/label" = "custom-build" },
+    each.value.priority == "Spot" ? { "kubernetes.azure.com/scalesetpriority" = "spot" } : {}
   )
 
-  node_taints = [
-    "dedicated=build:NoSchedule",
-  ]
+  node_taints = concat(
+    ["dedicated=build:NoSchedule"],
+    each.value.priority == "Spot" ? ["kubernetes.azure.com/scalesetpriority=spot:NoSchedule"] : []
+  )
 
   tags = length(each.value.tags) > 0 ? each.value.tags : null
 
