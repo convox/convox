@@ -752,6 +752,8 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 				})
 			}
 		}
+
+		ps.Tolerations = append(ps.Tolerations, p.azureSpotTolerations(nodeSelectorLabels)...)
 	}
 
 	if !isBuild {
@@ -899,6 +901,20 @@ func parseRunTolerations(csv string) ([]ac.Toleration, error) {
 	return tols, nil
 }
 
+const azureSpotKey = "kubernetes.azure.com/scalesetpriority"
+
+func (p *Provider) azureSpotTolerations(labels map[string]string) []ac.Toleration {
+	if p.Provider != "azure" {
+		return nil
+	}
+	for _, k := range []string{"convox.io/label", NodePoolLabel, azureSpotKey} {
+		if _, ok := labels[k]; ok {
+			return []ac.Toleration{{Key: azureSpotKey, Operator: ac.TolerationOpEqual, Value: "spot", Effect: ac.TaintEffectNoSchedule}}
+		}
+	}
+	return nil
+}
+
 func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.ProcessRunOptions) (*ac.PodSpec, error) { //nolint:gocritic // by-value opts matches ProcessRun and sibling helpers
 	s, err := p.podSpecFromService(app, service, common.DefaultString(opts.Release, ""), opts.IsBuild)
 	if err != nil {
@@ -1009,6 +1025,7 @@ func (p *Provider) podSpecFromRunOptions(app, service, ns string, opts structs.P
 			Operator: ac.TolerationOpExists,
 			Effect:   ac.TaintEffectNoSchedule,
 		})
+		s.Tolerations = append(s.Tolerations, p.azureSpotTolerations(s.NodeSelector)...)
 	}
 
 	if opts.Gpu != nil && *opts.Gpu > 0 {

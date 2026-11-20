@@ -413,3 +413,59 @@ func TestProcessRun_NodeLabelsAcceptsKnownAndUnrelatedLabels(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessRun_AzureSpotToleration(t *testing.T) {
+	spot := ac.Toleration{Key: "kubernetes.azure.com/scalesetpriority", Operator: ac.TolerationOpEqual, Value: "spot", Effect: ac.TaintEffectNoSchedule}
+	dedicated := ac.Toleration{Key: "dedicated", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+	anyNode := ac.Toleration{Key: "dedicated-node", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+	node := func(v string) ac.Toleration {
+		return ac.Toleration{Key: "dedicated-node", Operator: ac.TolerationOpEqual, Value: v, Effect: ac.TaintEffectNoSchedule}
+	}
+
+	manifest := manifestWithNodeSelectors + `  spot-worker:
+    build: .
+    nodeSelectorLabels:
+      kubernetes.azure.com/scalesetpriority: spot
+`
+
+	for name, tc := range map[string]struct {
+		provider   string
+		service    string
+		nodeLabels *string
+		want       []ac.Toleration
+	}{
+		"InheritedLabel":       {"azure", "labeled-worker", nil, []ac.Toleration{node("special"), spot}},
+		"InheritedNodePool":    {"azure", "gpu-worker", nil, []ac.Toleration{node("gpu"), spot}},
+		"InheritedSpotKey":     {"azure", "spot-worker", nil, []ac.Toleration{spot}},
+		"InheritedCustomLabel": {"azure", "custom-label-worker", nil, nil},
+		"Unpinned":             {"azure", "web", nil, nil},
+		"NodeLabelsLabel":      {"azure", "web", options.String("convox.io/label=spot"), []ac.Toleration{anyNode, spot}},
+		"NodeLabelsArch":       {"azure", "web", options.String("kubernetes.io/arch=amd64"), []ac.Toleration{anyNode}},
+		"BuildLabels":          {"azure", "build", options.String("convox.io/label=spotbuild"), []ac.Toleration{anyNode, spot, dedicated}},
+		"BuildNoLabels":        {"azure", "build", nil, []ac.Toleration{dedicated}},
+		"OtherProviderLabel":   {"aws", "labeled-worker", nil, []ac.Toleration{node("special")}},
+		"OtherProviderNodes":   {"aws", "web", options.String("convox.io/label=spot"), []ac.Toleration{anyNode}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, kk, kc := minimalProvider(t)
+			p.Provider = tc.provider
+			createAppNamespace(t, kk, "rack1", "app1")
+			createBuild(t, kc, "rack1-app1", "build1")
+			createRelease(t, kc, "rack1-app1", "rel1", manifest)
+
+			opts := structs.ProcessRunOptions{Release: options.String("rel1"), NodeLabels: tc.nodeLabels}
+			if tc.service == "build" {
+				opts.Command = options.String("build")
+				opts.IsBuild = true
+			}
+
+			spec := runAndGetPodSpec(t, p, kk, "app1", tc.service, opts)
+
+			if tc.want == nil {
+				require.Empty(t, spec.Tolerations)
+				return
+			}
+			require.Equal(t, tc.want, spec.Tolerations)
+		})
+	}
+}
