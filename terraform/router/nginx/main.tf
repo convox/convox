@@ -7,6 +7,8 @@ locals {
     for item in split(",", local.additional_config_str) :
     split("=", item)[0] => split("=", item)[1]
   } : {}
+
+  topology_spread_keys = contains(["aws", "azure", "gcp"], var.cloud_provider) ? ["topology.kubernetes.io/zone", "kubernetes.io/hostname"] : []
 }
 
 resource "kubernetes_config_map" "nginx-configuration" {
@@ -295,6 +297,22 @@ resource "kubernetes_deployment" "ingress-nginx" {
           }
         }
 
+        dynamic "topology_spread_constraint" {
+          for_each = local.topology_spread_keys
+          content {
+            max_skew           = 1
+            topology_key       = topology_spread_constraint.value
+            when_unsatisfiable = "ScheduleAnyway"
+            match_label_keys   = ["pod-template-hash"]
+            label_selector {
+              match_labels = {
+                system  = "convox"
+                service = "ingress-nginx"
+              }
+            }
+          }
+        }
+
         container {
           name  = "system"
           image = local.nginx_image
@@ -498,6 +516,22 @@ resource "kubernetes_deployment" "ingress-nginx-internal" {
           for_each = var.docker_hub_authentication != "NULL" ? [var.docker_hub_authentication] : []
           content {
             name = var.docker_hub_authentication
+          }
+        }
+
+        dynamic "topology_spread_constraint" {
+          for_each = local.topology_spread_keys
+          content {
+            max_skew           = 1
+            topology_key       = topology_spread_constraint.value
+            when_unsatisfiable = "ScheduleAnyway"
+            match_label_keys   = ["pod-template-hash"]
+            label_selector {
+              match_labels = {
+                system  = "convox"
+                service = "ingress-nginx-internal"
+              }
+            }
           }
         }
 

@@ -12,6 +12,7 @@ module "nginx" {
     kubernetes = kubernetes
   }
 
+  cloud_provider            = "azure"
   docker_hub_authentication = var.docker_hub_authentication
   namespace                 = var.namespace
   nginx_image               = var.nginx_image
