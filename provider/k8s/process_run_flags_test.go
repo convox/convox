@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/convox/convox/pkg/options"
@@ -396,4 +397,64 @@ func TestProcessRun_RetainBeatsCollidingAnnotation(t *testing.T) {
 		Annotations: options.String(AnnotationProcessRetain + "=99999"),
 	})
 	require.Equal(t, "120", pod.Annotations[AnnotationProcessRetain])
+}
+
+const manifestBuildService = `services:
+  build:
+    build: .
+    securityContext:
+      readOnlyRootFilesystem: true
+`
+
+func TestProcessRun_BuildPodSettingsOnlyForBuilds(t *testing.T) {
+	t.Setenv("BUILDKIT_HOST_PATH_CACHE_ENABLE", "true")
+
+	buildAffinity := &ac.Affinity{NodeAffinity: &ac.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{NodeSelectorTerms: []ac.NodeSelectorTerm{{
+			MatchExpressions: []ac.NodeSelectorRequirement{{Key: "convox-build", Operator: ac.NodeSelectorOpIn, Values: []string{"true"}}},
+		}}},
+	}}
+	dedicated := ac.Toleration{Key: "dedicated", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+
+	for name, tc := range map[string]struct {
+		isBuild     bool
+		sc          *ac.SecurityContext
+		apparmor    string
+		affinity    *ac.Affinity
+		tolerations []ac.Toleration
+		cache       bool
+	}{
+		"Run": {
+			sc: &ac.SecurityContext{ReadOnlyRootFilesystem: options.Bool(true)},
+		},
+		"Build": {
+			isBuild:     true,
+			sc:          &ac.SecurityContext{Privileged: options.Bool(true), SeccompProfile: &ac.SeccompProfile{Type: ac.SeccompProfileTypeUnconfined}},
+			apparmor:    "unconfined",
+			affinity:    buildAffinity,
+			tolerations: []ac.Toleration{dedicated},
+			cache:       true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, kk, kc := minimalProvider(t)
+			p.BuildNodeEnabled = "true"
+			createAppNamespace(t, kk, "rack1", "app1")
+			createBuild(t, kc, "rack1-app1", "build1")
+			createRelease(t, kc, "rack1-app1", "rel1", manifestBuildService)
+
+			pod := runAndGetPod(t, p, kk, "app1", "build", structs.ProcessRunOptions{
+				Release:    options.String("rel1"),
+				Command:    options.String("build"),
+				Privileged: options.Bool(true),
+				IsBuild:    tc.isBuild,
+			})
+
+			require.Equal(t, tc.sc, pod.Spec.Containers[0].SecurityContext)
+			require.Equal(t, tc.apparmor, pod.Annotations["container.apparmor.security.beta.kubernetes.io/app1"])
+			require.Equal(t, tc.affinity, pod.Spec.Affinity)
+			require.Equal(t, tc.tolerations, pod.Spec.Tolerations)
+			require.Equal(t, tc.cache, slices.ContainsFunc(pod.Spec.Volumes, func(v ac.Volume) bool { return v.Name == "buildkit-cache" }))
+		})
+	}
 }
