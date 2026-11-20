@@ -74,6 +74,7 @@ var renderedKinds = map[string][]string{
 	"app/ca":               {"ConfigMap"},
 	"app/certificate":      {"Certificate"},
 	"app/efs":              {"PersistentVolume", "PersistentVolumeClaim"},
+	"app/filestore":        {"PersistentVolumeClaim"},
 	"app/httpproxy":        {"HTTPProxy"},
 	"app/ingress":          {"Ingress"},
 	"app/ingress-internal": {"Ingress"},

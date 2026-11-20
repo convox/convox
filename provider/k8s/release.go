@@ -664,6 +664,9 @@ func validateReleaseIdentifiers(m *manifest.Manifest) error {
 			if vo.AzureFiles != nil {
 				fs = append(fs, field{"volume id", vo.AzureFiles.Id})
 			}
+			if vo.GcpFilestore != nil {
+				fs = append(fs, field{"volume id", vo.GcpFilestore.Id})
+			}
 			if vo.PersistentVolumeClaim != nil {
 				fs = append(fs, field{"volume id", vo.PersistentVolumeClaim.Id})
 			}

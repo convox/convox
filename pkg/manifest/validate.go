@@ -251,6 +251,9 @@ func (m *Manifest) validateServices() []error {
 				if filestoreIds[fs.Id] {
 					errs = append(errs, fmt.Errorf("service %s: duplicate gcpFilestore id %s", s.Name, fs.Id))
 				}
+				if len(s.Name)+len(fs.Id) > 52 {
+					errs = append(errs, fmt.Errorf("service %s: gcpFilestore id %s is too long, the service name and id together must be 52 characters or fewer", s.Name, fs.Id))
+				}
 				filestoreIds[fs.Id] = true
 			}
 			claim := s.VolumeOptions[i].PersistentVolumeClaim

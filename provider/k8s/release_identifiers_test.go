@@ -77,6 +77,7 @@ func TestReleasePromoteIdentifiers(t *testing.T) {
 		{"MultiTypeVolumeOption", "services:\n  web:\n" + svc + "    volumeOptions:\n      - emptyDir:\n          id: a\n          mountPath: /a\n        awsEfs:\n          id: \"e f\"\n          mountPath: /b\n          accessMode: ReadWriteMany\n", "", `invalid volume id: "e f"`},
 		{"InitMultiTypeVolumeOption", "services:\n  web:\n" + svc + "    initContainer:\n      volumeOptions:\n        - emptyDir:\n            id: a\n            mountPath: /a\n          persistentVolumeClaim:\n            id: \"p q\"\n            mountPath: /b\n            size: 1Gi\n", "", `invalid volume id: "p q"`},
 		{"InitAzureFilesVolumeId", "services:\n  web:\n" + svc + "    initContainer:\n      volumeOptions:\n        - emptyDir:\n            id: a\n            mountPath: /a\n          azureFiles:\n            id: \"z z\"\n            mountPath: /c\n            accessMode: ReadWriteMany\n", "", `invalid volume id: "z z"`},
+		{"InitGcpFilestoreVolumeId", "services:\n  web:\n" + svc + "    initContainer:\n      volumeOptions:\n        - emptyDir:\n            id: a\n            mountPath: /a\n          gcpFilestore:\n            id: \"g g\"\n            mountPath: /c\n            accessMode: ReadWriteMany\n", "", `invalid volume id: "g g"`},
 		{"MaskedTypeAllowed", "resources:\n  database:\n    type: postgres:13\nservices:\n  web:\n" + svc, "DATABASE_URL=postgres://u:p@h:5432/db", ""},
 		{"Valid", "services:\n  web.v2:\n" + svc, "", ""},
 	}
