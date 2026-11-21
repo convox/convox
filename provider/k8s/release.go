@@ -32,6 +32,7 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
 
@@ -365,6 +366,10 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		return errors.WithStack(err)
 	}
 
+	if id != "" && !strings.EqualFold(id, priorRelease) {
+		p.resumeManualPauses(app)
+	}
+
 	// Capture context BEFORE the goroutine launch — the watcher outlives
 	// the request-scoped p.ctx, so it must NOT reference p.ContextActor()
 	// at later points. Mirrors build.go:600-608.
@@ -427,6 +432,61 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	}
 
 	return nil
+}
+
+func (p *Provider) promoteResumesPause(app, service string, so *unstructured.Unstructured, newRelease, override bool) bool {
+	if _, manual := scaledObjectPause(so); !manual || !newRelease || override {
+		return false
+	}
+	claimed, err := p.budgetClaimsService(context.TODO(), app, service)
+	return err == nil && !claimed
+}
+
+func (p *Provider) promoteKeepsPause(a *structs.App, r *structs.Release, service string) bool {
+	so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(p.AppNamespace(a.Name)).Get(context.TODO(), service, am.GetOptions{})
+	if err != nil {
+		return !kerr.IsNotFound(err)
+	}
+	return so.GetAnnotations()[structs.KedaPausedReplicasAnnotation] == "0" &&
+		!p.promoteResumesPause(a.Name, service, so, !strings.EqualFold(r.Id, a.Release), false)
+}
+
+func (p *Provider) resumeManualPauses(app string) {
+	if p.DynamicClient == nil || !p.IsKedaEnabled {
+		return
+	}
+	ns := p.AppNamespace(app)
+	sos, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).List(context.TODO(), am.ListOptions{})
+	if err != nil {
+		return
+	}
+	for i := range sos.Items {
+		so := &sos.Items[i]
+		name := so.GetName()
+		if _, manual := scaledObjectPause(so); !manual {
+			continue
+		}
+		d, err := p.Cluster.AppsV1().Deployments(ns).Get(context.TODO(), name, am.GetOptions{})
+		if err != nil {
+			continue
+		}
+		override := d.Annotations[ServiceScaleOverrideAnnotation] == ServiceScaleOverrideValueOn
+		if !p.promoteResumesPause(app, name, so, true, override) {
+			continue
+		}
+		patch := map[string]interface{}{"metadata": map[string]interface{}{"annotations": map[string]interface{}{
+			structs.KedaPausedReplicasAnnotation: nil,
+			structs.KedaManualPauseAnnotation:    nil,
+		}}}
+		setKedaHPAName(patch, so, name)
+		data, err := json.Marshal(patch)
+		if err != nil {
+			continue
+		}
+		if _, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Patch(context.TODO(), name, ktypes.MergePatchType, data, am.PatchOptions{}); err != nil {
+			fmt.Printf("ns=release at=resume_paused app=%s service=%s err=%q\n", app, name, err)
+		}
+	}
 }
 
 func (p *Provider) releaseCreate(r *structs.Release) (*structs.Release, error) {
@@ -1179,9 +1239,13 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 	// services missing from pss inherit overrideActive[name]=false (the safe
 	// default). The override path must NEVER cause a promote to fail outright.
 	overrideActive := map[string]bool{}
+	paused := map[string]bool{}
 	for i := range pss {
 		if pss[i].ScaleOverrideActive != nil && *pss[i].ScaleOverrideActive {
 			overrideActive[pss[i].Name] = true
+		}
+		if pss[i].Paused != nil && *pss[i].Paused {
+			paused[pss[i].Name] = true
 		}
 	}
 
@@ -1265,6 +1329,8 @@ func (p *Provider) releaseTemplateServices(a *structs.App, e structs.Environment
 					"yaml_count_min":  strconv.Itoa(s.Scale.Count.Min),
 				},
 			})
+		} else if paused[s.Name] && p.IsKedaEnabled && p.promoteKeepsPause(a, r, s.Name) {
+			replicas = 0
 		} else {
 			// Existing default — runtime count wins when non-zero,
 			// else yaml min.

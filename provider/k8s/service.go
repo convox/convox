@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ktypes "k8s.io/apimachinery/pkg/types"
 )
@@ -794,6 +795,9 @@ func (p *Provider) serviceUpdateScaledObject(app, name string, opts structs.Serv
 		spec["maxReplicaCount"] = *opts.Max
 	}
 	patch := map[string]interface{}{"spec": spec}
+	if _, err := p.resumeScaledObject(patch, app, name, so); err != nil {
+		return false, err
+	}
 	setKedaHPAName(patch, so, name)
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
@@ -825,11 +829,29 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 		return false, errors.WithStack(getErr)
 	}
 
-	patch := map[string]interface{}{
-		"spec": map[string]interface{}{
+	reason := "KEDA ScaledObject owns replicas; patched scaledobject spec.minReplicaCount / spec.maxReplicaCount instead of deployment replicas"
+	patch := map[string]interface{}{}
+	if count == 0 {
+		if _, manual := scaledObjectPause(so); manual && so.GetAnnotations()[structs.KedaPausedReplicasAnnotation] == "0" {
+			return false, nil
+		}
+		patch["metadata"] = map[string]interface{}{"annotations": map[string]interface{}{
+			structs.KedaPausedReplicasAnnotation: "0",
+			structs.KedaManualPauseAnnotation:    "true",
+		}}
+		reason = "KEDA ScaledObject owns replicas; paused the scaledobject instead of setting deployment replicas to 0"
+	} else {
+		patch["spec"] = map[string]interface{}{
 			"minReplicaCount": count,
 			"maxReplicaCount": count,
-		},
+		}
+		resumed, err := p.resumeScaledObject(patch, app, name, so)
+		if err != nil {
+			return false, err
+		}
+		if resumed {
+			reason += " and removed the pause"
+		}
 	}
 	setKedaHPAName(patch, so, name)
 	patchBytes, err := json.Marshal(patch)
@@ -848,10 +870,43 @@ func (p *Provider) serviceUpdateCount(app, name string, count int) (handled bool
 			"actor":   "system",
 			"app":     app,
 			"service": name,
-			"reason":  "KEDA ScaledObject owns replicas; patched scaledobject spec.minReplicaCount / spec.maxReplicaCount instead of deployment replicas",
+			"reason":  reason,
 		},
 	})
 
+	return true, nil
+}
+
+func scaledObjectPause(so *unstructured.Unstructured) (paused, manual bool) {
+	annos := so.GetAnnotations()
+	_, paused = annos[structs.KedaPausedReplicasAnnotation]
+	_, manual = annos[structs.KedaManualPauseAnnotation]
+	return paused, manual
+}
+
+// resumeScaledObject adds the removal of so's pause annotations to patch.
+func (p *Provider) resumeScaledObject(patch map[string]interface{}, app, name string, so *unstructured.Unstructured) (bool, error) {
+	paused, manual := scaledObjectPause(so)
+	if !paused && !manual {
+		return false, nil
+	}
+	if paused {
+		claimed, err := p.budgetClaimsService(context.TODO(), app, name)
+		if err != nil {
+			return false, err
+		}
+		if claimed {
+			return false, structs.ErrConflict("cannot scale service %s: a budget auto-shutdown is pending or in force for app %s. Run 'convox budget reset %s' to release it, then scale again", name, app, app)
+		}
+	}
+	annos := map[string]interface{}{}
+	if paused {
+		annos[structs.KedaPausedReplicasAnnotation] = nil
+	}
+	if manual {
+		annos[structs.KedaManualPauseAnnotation] = nil
+	}
+	patch["metadata"] = map[string]interface{}{"annotations": annos}
 	return true, nil
 }
 
