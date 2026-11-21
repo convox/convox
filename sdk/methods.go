@@ -1293,6 +1293,15 @@ func (c *Client) SystemJwtToken(opts structs.SystemJwtOptions) (*structs.SystemJ
 	return v, err
 }
 
+func (c *Client) SystemAuditLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
+	ro, err := stdsdk.MarshalOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Websocket("/system/audit/logs", ro)
+}
+
 func (c *Client) SystemLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
 	var err error
 

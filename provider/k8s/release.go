@@ -1055,8 +1055,8 @@ func (p *Provider) releaseTemplateHTTPProxyCore(a *structs.App, ss manifest.Serv
 		translation := translateNginxAnnotations(customAns, s.Name)
 
 		if len(translation.IncompatibleWarnings) > 0 {
-			log.Printf("WARNING: service %q has nginx-specific annotations with no Contour equivalent:\n%s",
-				s.Name, strings.Join(translation.IncompatibleWarnings, "\n"))
+			log.Printf("WARNING: service %q has nginx-specific annotations with no Contour equivalent: %q",
+				s.Name, translation.IncompatibleWarnings)
 		}
 
 		timeoutIdle := fmt.Sprintf("%ds", s.Timeout)

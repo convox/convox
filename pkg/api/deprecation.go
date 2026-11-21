@@ -35,7 +35,7 @@ func resolveAckByOverride(c *stdapi.Context, app string) string {
 	c.Response().Header().Set("Deprecation", "true")
 	c.Response().Header().Set("Sunset", deprecationSunsetDate())
 	c.Response().Header().Set("Link", `<https://docs.convox.com/migration/ack-by-derivation>; rel="deprecation"; type="text/html"`)
-	fmt.Printf("ns=api at=warn kind=ack_by_override app=%s client_supplied=%q jwt_user=%q\n",
+	fmt.Printf("ns=api at=warn kind=ack_by_override app=%q client_supplied=%q jwt_user=%q\n",
 		app, rawAckBy, derived)
 	return rawAckBy
 }
