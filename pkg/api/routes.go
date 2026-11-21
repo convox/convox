@@ -94,6 +94,7 @@ func (s *Server) setupRoutes(r stdapi.Router) {
 	r.Route("GET", "/system", s.SystemGet)
 	r.Route("", "", s.SystemInstall)
 	r.Route("SOCKET", "/system/logs", s.SystemLogs)
+	r.Route("SOCKET", "/system/audit/logs", s.SystemAuditLogs)
 	r.Route("GET", "/system/metrics", s.SystemMetrics)
 	r.Route("PUT", "/system/jwt/rotate", s.SystemJwtSignKeyRotate)
 	r.Route("POST", "/system/jwt/token", s.SystemJwtToken)

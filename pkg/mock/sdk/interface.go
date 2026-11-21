@@ -2275,6 +2275,27 @@ func (_m *Interface) Start() error {
 	return r0
 }
 
+// SystemAuditLogs provides a mock function with given fields: opts
+func (_m *Interface) SystemAuditLogs(opts structs.LogsOptions) (io.ReadCloser, error) {
+	ret := _m.Called(opts)
+
+	var r0 io.ReadCloser
+	if rf, ok := ret.Get(0).(func(structs.LogsOptions) io.ReadCloser); ok {
+		r0 = rf(opts)
+	} else if v, ok := ret.Get(0).(io.ReadCloser); ok {
+		r0 = v
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(structs.LogsOptions) error); ok {
+		r1 = rf(opts)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SystemGet provides a mock function with given fields:
 func (_m *Interface) SystemGet() (*structs.System, error) {
 	ret := _m.Called()

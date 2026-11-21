@@ -1,6 +1,10 @@
 package jwt_test
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
@@ -163,4 +167,45 @@ func TestVerify_ClaimsWrongType_ReturnsErr(t *testing.T) {
 	data3, verr3 := jm.Verify(signed3)
 	assert.Error(t, verr3, "wrong-type expiresAt claim must surface error")
 	assert.Nil(t, data3)
+}
+
+func TestFingerprint(t *testing.T) {
+	jm := jwt.NewJwtManager("TEST")
+
+	tk, err := jm.AdminToken(time.Hour)
+	assert.NoError(t, err)
+
+	sum := sha256.Sum256([]byte(tk))
+	fp := jwt.Fingerprint(tk)
+	assert.Equal(t, hex.EncodeToString(sum[:])[:12], fp)
+
+	parts := strings.Split(tk, ".")
+	sig := parts[2]
+	want, err := base64.RawURLEncoding.DecodeString(sig)
+	assert.NoError(t, err)
+
+	variants := []string{parts[0] + "." + parts[1] + "." + sig[:20] + "\r\n" + sig[20:]}
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+	for _, ch := range alphabet {
+		alt := sig[:len(sig)-1] + string(ch)
+		if alt == sig {
+			continue
+		}
+		if b, err := base64.RawURLEncoding.DecodeString(alt); err == nil && bytes.Equal(b, want) {
+			variants = append(variants, parts[0]+"."+parts[1]+"."+alt)
+		}
+	}
+	assert.Greater(t, len(variants), 1)
+
+	for _, v := range variants {
+		_, err := jm.Verify(v)
+		assert.NoError(t, err, "variant must verify: %q", v)
+		assert.Equal(t, fp, jwt.Fingerprint(v), "variant %q", v)
+	}
+}
+
+func TestFingerprintNotAToken(t *testing.T) {
+	for _, s := range []string{"", "password", "a.b", "a.b.!!!", "a.b.c.d", "..", "a.b."} {
+		assert.Equal(t, "", jwt.Fingerprint(s), "input %q", s)
+	}
 }

@@ -673,7 +673,9 @@ func (p *Provider) appParametersUpdate(a *structs.App, params map[string]string)
 		}
 	}
 
-	fmt.Printf("Skipping unsupported parameters: %s ...", strings.Join(invalidParameters, ", "))
+	if len(invalidParameters) > 0 {
+		fmt.Printf("Skipping unsupported parameters: %q\n", invalidParameters)
+	}
 
 	return nil
 }
