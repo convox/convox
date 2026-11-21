@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/mock"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/convox/provider/k8s"
 	cvfake "github.com/convox/convox/provider/k8s/pkg/client/clientset/versioned/fake"
@@ -193,4 +195,77 @@ func TestReleasePromotePodIdentityError(t *testing.T) {
 		_, err = kk.CoreV1().Secrets("rack1-app1").Get(context.Background(), "removed-database", am.GetOptions{})
 		require.NoError(t, err)
 	})
+}
+
+const (
+	podIdentityPolicyManifest = podIdentityTestManifest + "  worker:\n    image: docker.io/library/nginx\n    accessControl:\n      awsPodIdentity:\n        policyArns:\n          - arn:aws:iam::aws:policy/ReadOnlyAccess\n"
+	podIdentityEmptyManifest  = podIdentityTestManifest + "    accessControl:\n      awsPodIdentity: {}\n"
+)
+
+func TestReleasePromoteTenantPodIdentity(t *testing.T) {
+	promote := func(p *k8s.Provider) error {
+		return p.ReleasePromote("app1", "release2", structs.ReleasePromoteOptions{})
+	}
+	update := func(p *k8s.Provider) error {
+		return p.AppUpdate("app1", structs.AppUpdateOptions{})
+	}
+
+	tests := []struct {
+		Name     string
+		Tid      bool
+		Manifest string
+		Current  string
+		Promote  func(p *k8s.Provider) error
+		Refused  bool
+		Synced   bool
+	}{
+		{Name: "tid refuses policyArns", Tid: true, Manifest: podIdentityPolicyManifest, Current: "release1", Promote: promote, Refused: true},
+		{Name: "tid re-promote skips sync", Tid: true, Manifest: podIdentityPolicyManifest, Current: "release2", Promote: promote},
+		{Name: "tid app update skips sync", Tid: true, Manifest: podIdentityPolicyManifest, Current: "release2", Promote: update},
+		{Name: "tid without policyArns", Tid: true, Manifest: podIdentityEmptyManifest, Current: "release1", Promote: promote},
+		{Name: "gate off syncs", Manifest: podIdentityPolicyManifest, Current: "release1", Promote: promote, Synced: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			testProvider(t, func(p *k8s.Provider) {
+				engine := &podIdentityTestEngine{}
+				p.Engine = engine
+				if test.Tid {
+					p.FeatureGates = map[string]bool{options.FeatureGateTid: true}
+				}
+
+				kk, _ := p.Cluster.(*fake.Clientset)
+				cc, _ := p.Convox.(*cvfake.Clientset)
+				aa, _ := p.Atom.(*atom.MockInterface)
+
+				require.NoError(t, appCreate(kk, "rack1", "app1"))
+				require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release1", podIdentityTestManifest))
+				require.NoError(t, releaseCreateInline(cc, "rack1-app1", "release2", test.Manifest))
+				require.NoError(t, buildCreate(cc, "rack1-app1", "build1", "basic"))
+
+				aa.On("Status", "rack1-app1", "app").Return("Running", test.Current, nil)
+				aa.On("Apply", "rack1-app1", "app", tmock.Anything).Return(nil).Maybe()
+
+				err := test.Promote(p)
+
+				if test.Refused {
+					var herr *structs.HttpError
+					require.ErrorAs(t, err, &herr)
+					require.Equal(t, http.StatusBadRequest, herr.Code())
+					require.EqualError(t, err, "service worker: accessControl.awsPodIdentity is not supported on this rack")
+					aa.AssertNotCalled(t, "Apply", tmock.Anything, tmock.Anything, tmock.Anything)
+				} else {
+					require.NoError(t, err)
+					aa.AssertCalled(t, "Apply", "rack1-app1", "app", tmock.Anything)
+				}
+
+				if test.Synced {
+					require.Equal(t, []string{"app1"}, engine.apps)
+				} else {
+					require.Empty(t, engine.apps)
+				}
+			})
+		})
+	}
 }
