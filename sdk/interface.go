@@ -43,6 +43,7 @@ type Interface interface {
 	RackHost(rackOrgSlug string) (structs.RackData, error)
 	Runtimes(rackOrgSlug string) (structs.Runtimes, error)
 	RuntimeAttach(rackOrgSlug string, opts structs.RuntimeAttachOptions) error
+	SystemAuditLogs(opts structs.LogsOptions) (io.ReadCloser, error)
 	SystemJwtToken(opts structs.SystemJwtOptions) (*structs.SystemJwt, error)
 	SystemResourceCreateClassic(string, structs.ResourceCreateOptions) (*structs.Resource, error)
 	SystemResourceDeleteClassic(string) error

@@ -41,14 +41,14 @@ var (
 func (p *Provider) RackParams() map[string]interface{} {
 	trp, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-rack-params", am.GetOptions{})
 	if err != nil {
-		fmt.Printf("could not find rack params configmap: %v", err)
+		fmt.Printf("could not find rack params configmap: %v\n", err)
 		return nil
 	}
 
 	defaultParamValue := map[string]string{}
 	trd, err := p.Cluster.CoreV1().ConfigMaps(p.Namespace).Get(context.TODO(), "telemetry-default-rack-params", am.GetOptions{})
 	if err != nil {
-		fmt.Printf("could not find rack default params configmap: %v", err)
+		fmt.Printf("could not find rack default params configmap: %v\n", err)
 	} else {
 		defaultParamValue = trd.Data
 	}

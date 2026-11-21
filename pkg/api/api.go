@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/jwt"
@@ -55,7 +54,9 @@ func NewWithProvider(p structs.Provider) *Server {
 
 	s.Subrouter("/", func(auth *stdapi.Router) {
 		auth.Use(securityHeaders)
+		auth.Use(s.audit)
 		auth.Use(s.authenticate)
+		auth.Use(s.auditSession)
 
 		auth.Route("GET", "/auth", func(c *stdapi.Context) error { return c.RenderOK() })
 
@@ -81,25 +82,7 @@ func (s *Server) authenticate(next stdapi.HandlerFunc) stdapi.HandlerFunc {
 				return stdapi.Errorf(http.StatusUnauthorized, "invalid authentication")
 			}
 			SetAdminRole(c)
-			pickActor := func(raw string) string {
-				raw = strings.TrimSpace(raw)
-				if raw == "" {
-					return ""
-				}
-				sanitized := audit.SanitizeActor(raw)
-				if sanitized == "unknown" {
-					return ""
-				}
-				return sanitized
-			}
-			actor := pickActor(c.Request().Header.Get("X-Convox-Actor"))
-			if actor == "" {
-				actor = pickActor(c.Request().Header.Get("Convox-Actor"))
-			}
-			if actor == "" {
-				actor = "rack-password"
-			}
-			c.Set(structs.ConvoxJwtUserParam, actor)
+			c.Set(structs.ConvoxJwtUserParam, audit.Actor(c.Request().Header))
 		}
 
 		return next(c)
