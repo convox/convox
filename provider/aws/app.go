@@ -55,6 +55,10 @@ func (p *Provider) AppCreate(name string, opts structs.AppCreateOptions) (*struc
 }
 
 func (p *Provider) AppDelete(name string) error {
+	if _, err := p.AppDeletable(name); err != nil {
+		return err
+	}
+
 	err := p.cleanUpPodIdentity(name)
 	if err != nil {
 		return fmt.Errorf("cleanup associated pod identitiy: %s", err)
@@ -111,7 +115,6 @@ func (p *Provider) cleanUpPodIdentity(app string) error {
 		_, err = p.IAM.DeleteRole(&iam.DeleteRoleInput{
 			RoleName: aws.String(role), // service name is same as sa name
 		})
-		p.IAM.DetachRolePolicy(&iam.DetachRolePolicyInput{})
 		if err != nil {
 			if awsErrorCode(err) != iam.ErrCodeNoSuchEntityException {
 				return err

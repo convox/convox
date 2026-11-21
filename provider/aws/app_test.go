@@ -7,6 +7,8 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/convox/convox/pkg/atom"
 	mocks "github.com/convox/convox/pkg/mock/aws"
 	"github.com/convox/convox/pkg/structs"
@@ -150,53 +152,78 @@ func TestAppCreateImmutableTags(t *testing.T) {
 func TestAppDelete(t *testing.T) {
 	tests := []struct {
 		Name       string
-		BucketName string
 		AppName    string
-		Namespace  string
-		Err        error
+		Create     bool
+		Locked     bool
+		RepoErr    error
+		DeleteRepo bool
+		Statuses   int
+		Lists      int
+		Err        string
+		Kept       bool
 	}{
-		{
-			Name:       "Success",
-			BucketName: "rack1/app1",
-			AppName:    "app1",
-			Namespace:  "rack1-app1",
-			Err:        nil,
-		},
-		{
-			Name:       "Success",
-			BucketName: "rack1/app2",
-			AppName:    "app2",
-			Namespace:  "rack1-app2",
-			Err:        errors.New("error on delete app repository"),
-		},
+		{Name: "unlocked", AppName: "app1", Create: true, DeleteRepo: true, Statuses: 2, Lists: 1},
+		{Name: "ecr-error", AppName: "app2", Create: true, RepoErr: errors.New("error on delete app repository"), DeleteRepo: true, Statuses: 1, Lists: 1, Err: "error on delete app repository", Kept: true},
+		{Name: "locked", AppName: "app3", Create: true, Locked: true, Statuses: 1, Err: "app is locked: app3", Kept: true},
+		{Name: "missing", AppName: "app4", Err: "app not found: app4"},
 	}
 
 	testProvider(t, func(p *aws.Provider) {
-		for _, test := range tests {
-			fn := func(t *testing.T) {
-				kk := p.Provider.Cluster.(*fake.Clientset)
-				require.NoError(t, appCreate(kk, "rack1", "app1"))
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
 
-				if test.Err == nil {
-					aa := p.Atom.(*atom.MockInterface)
-					aa.On("Status", test.Namespace, "app").Return("Updating", "R1234567", nil).Once()
+		for _, test := range tests {
+			t.Run(test.Name, func(t *testing.T) {
+				t.Setenv("TEST", "")
+
+				ns := "rack1-" + test.AppName
+				eksapi := &appDeleteEKS{}
+				p.EKS = eksapi
+				ecrapi := &mocks.ECRAPI{}
+				p.ECR = ecrapi
+
+				if test.Create {
+					require.NoError(t, appCreate(kk, "rack1", test.AppName))
 				}
 
-				ecrapi := p.ECR.(*mocks.ECRAPI)
-				ecrapi.On("DeleteRepository", &ecr.DeleteRepositoryInput{
-					Force:          awssdk.Bool(true),
-					RepositoryName: awssdk.String(test.BucketName),
-				}).Return(nil, test.Err)
+				if test.Locked {
+					obj, err := kk.CoreV1().Namespaces().Get(context.TODO(), ns, am.GetOptions{})
+					require.NoError(t, err)
+					obj.Annotations["convox.com/lock"] = "true"
+					_, err = kk.CoreV1().Namespaces().Update(context.TODO(), obj, am.UpdateOptions{})
+					require.NoError(t, err)
+				}
+
+				if test.Statuses > 0 {
+					aa.On("Status", ns, "app").Return("Running", "R1234567", nil).Times(test.Statuses)
+				}
+
+				if test.DeleteRepo {
+					ecrapi.On("DeleteRepository", &ecr.DeleteRepositoryInput{
+						Force:          awssdk.Bool(true),
+						RepositoryName: awssdk.String("rack1/" + test.AppName),
+					}).Return(nil, test.RepoErr).Once()
+				}
 
 				err := p.AppDelete(test.AppName)
-				if err == nil {
+				if test.Err == "" {
 					require.NoError(t, err)
 				} else {
-					assert.Equal(t, test.Err.Error(), err.Error())
+					require.EqualError(t, err, test.Err)
 				}
-			}
 
-			t.Run(test.Name, fn)
+				require.Equal(t, test.Lists, eksapi.lists)
+				ecrapi.AssertExpectations(t)
+
+				_, err = kk.CoreV1().Namespaces().Get(context.TODO(), ns, am.GetOptions{})
+				if test.Kept {
+					require.NoError(t, err)
+				} else {
+					require.EqualError(t, err, fmt.Sprintf("namespaces %q not found", ns))
+				}
+			})
 		}
 	})
 }
@@ -224,4 +251,14 @@ func appCreate(c kubernetes.Interface, rack, name string) error {
 	)
 
 	return errors.WithStack(err)
+}
+
+type appDeleteEKS struct {
+	eksiface.EKSAPI
+	lists int
+}
+
+func (f *appDeleteEKS) ListPodIdentityAssociations(*eks.ListPodIdentityAssociationsInput) (*eks.ListPodIdentityAssociationsOutput, error) {
+	f.lists++
+	return &eks.ListPodIdentityAssociationsOutput{}, nil
 }
