@@ -184,13 +184,18 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string, extra
 		return fmt.Errorf("already found saved state for this id: %s", id)
 	}
 
+	var srcDbState *StateData
+	if srcDbStateBytes, err := p.storage.GetState(options[ParamSourceDBInstanceIdentifier]); err == nil {
+		srcDbState = NewEmptyState()
+		if err := srcDbState.LoadState(srcDbStateBytes); err != nil {
+			return fmt.Errorf("failed to load source db state: %s", err)
+		}
+	} else if !provisioner.IsNotFoundError(err) {
+		return err
+	}
+
 	if options[ParamMasterUserPassword] == "" {
-		sourceDbIdentifier := options[ParamSourceDBInstanceIdentifier]
-		if srcDbStateBytes, err := p.storage.GetState(sourceDbIdentifier); err == nil {
-			srcDbState := NewEmptyState()
-			if err := srcDbState.LoadState(srcDbStateBytes); err != nil {
-				return fmt.Errorf("failed to load source db state: %s", err)
-			}
+		if srcDbState != nil {
 			v, _ := srcDbState.GetParameterValuePtr(ParamMasterUserPassword)
 			if v != nil {
 				options[ParamMasterUserPassword] = *v
@@ -228,6 +233,15 @@ func (p *Provisioner) InstallReplica(id string, options map[string]string, extra
 	createOptions, err := stateData.GenerateCreateDBInstanceReadReplicaInput()
 	if err != nil {
 		return err
+	}
+
+	if srcDbState != nil {
+		if v, err := srcDbState.GetParameterValue(ParamDBInstanceIdentifier); err == nil {
+			createOptions.SourceDBInstanceIdentifier = aws.String(v)
+		}
+		if v, err := srcDbState.GetParameterValue(ParamVPCSecurityGroups); err == nil && len(createOptions.VpcSecurityGroupIds) == 0 {
+			createOptions.VpcSecurityGroupIds = provisioner.ConvertToStringArray(v)
+		}
 	}
 
 	createOptions.Tags = []rdstypes.Tag{
@@ -278,17 +292,6 @@ func (p *Provisioner) Update(id string, options map[string]string, extraOpts Pro
 		stateData.SetMeta(extraOpts.Meta)
 	}
 
-	changedParams := []string{}
-	for k, v := range options {
-		changed, err := stateData.UpdateParameterValueForDbUpdate(k, v)
-		if err != nil {
-			return fmt.Errorf("failed to update parameter value: %s", err)
-		}
-		if changed {
-			changedParams = append(changedParams, k)
-		}
-	}
-
 	isPromoted := false
 	sourceDBParam := stateData.GetParameter(ParamSourceDBInstanceIdentifier)
 	if _, has := options[ParamSourceDBInstanceIdentifier]; !has && sourceDBParam != nil && !sourceDBParam.IsValueEmpty() {
@@ -296,17 +299,45 @@ func (p *Provisioner) Update(id string, options map[string]string, extraOpts Pro
 		if err != nil {
 			return err
 		}
-		_, err = p.rdsClient.PromoteReadReplica(context.Background(), &rds.PromoteReadReplicaInput{
-			DBInstanceIdentifier: &dbIdentifier,
-		})
+
+		db, err := p.GetDBInstance(dbIdentifier)
 		if err != nil {
-			return fmt.Errorf("failed to promote read replica: %s", err)
+			return err
+		}
+
+		if aws.ToString(db.ReadReplicaSourceDBInstanceIdentifier) != "" {
+			_, err = p.rdsClient.PromoteReadReplica(context.Background(), &rds.PromoteReadReplicaInput{
+				DBInstanceIdentifier: &dbIdentifier,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to promote read replica: %s", err)
+			}
 		}
 
 		stateData.AddOrUpdateParameter(*NewParameterForValuePtr(ParamSourceDBInstanceIdentifier, nil, &MetaData{}))
 
+		if err := p.SaveState(id, stateData); err != nil {
+			return err
+		}
+
 		p.storage.SendStateLog(id, "promoted the read replica")
 		isPromoted = true
+	}
+
+	changedParams := []string{}
+	for k, v := range options {
+		if k == ParamSourceDBInstanceIdentifier && sourceDBParam != nil && sourceDBParam.IsValueEmpty() {
+			_ = p.storage.SendStateLog(id, "read replica already promoted, ignoring the source db")
+			continue
+		}
+
+		changed, err := stateData.UpdateParameterValueForDbUpdate(k, v)
+		if err != nil {
+			return fmt.Errorf("failed to update parameter value: %s", err)
+		}
+		if changed {
+			changedParams = append(changedParams, k)
+		}
 	}
 
 	if len(changedParams) == 0 {

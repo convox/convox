@@ -111,22 +111,23 @@ func (p *Provisioner) waitUntilTargetDBStatus(dbIdentifier string, conf *DBStatu
 	defer ticker.Stop()
 
 	for {
+		status, err := p.getDbStatus(dbIdentifier)
+		if err != nil {
+			return err
+		}
+
+		if provisioner.TargetExistsInStringArray(conf.Target, status) {
+			return nil
+		}
+
+		if provisioner.TargetExistsInStringArray(conf.Pending, status) {
+			p.logger.Logf("DB instances still in %s state", status)
+		}
+
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("timeout reached: %s", ctx.Err())
 		case <-ticker.C:
-			status, err := p.getDbStatus(dbIdentifier)
-			if err != nil {
-				return err
-			}
-
-			if provisioner.TargetExistsInStringArray(conf.Target, status) {
-				return nil
-			}
-
-			if provisioner.TargetExistsInStringArray(conf.Pending, status) {
-				p.logger.Logf("DB instances still in %s state", status)
-			}
 		}
 	}
 }
