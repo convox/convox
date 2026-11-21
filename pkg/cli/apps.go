@@ -454,7 +454,7 @@ func appExport(rack sdk.Interface, c *stdcli.Context, app string, w io.Writer) e
 			return err
 		}
 
-		if _, err := io.Copy(fd, rr); err != nil {
+		if err := copyResourceExport(fd, rr); err != nil {
 			return err
 		}
 
