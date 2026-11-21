@@ -155,6 +155,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	var progressDeadlines, crashRestartLimits map[string]int
 	var maxProgressDeadline int
+	var podIdentityWait time.Duration
 
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
@@ -314,6 +315,18 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 
+		if pe, ok := p.Engine.(PodIdentityEngine); ok {
+			created, err := pe.SyncPodIdentity(app, m)
+			if err != nil {
+				return err
+			}
+
+			if until := created.Add(podIdentityPropagation); until.After(time.Now()) {
+				dependencies = append(dependencies, podIdentityWaitId(app, p.ContextTID(), until))
+				podIdentityWait = min(time.Until(until), podIdentityPropagation)
+			}
+		}
+
 		// rds resources
 		rdsItems, rdsDeps, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
@@ -393,7 +406,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		ReleaseID:          id,
 		AtomVersion:        atomVer,
 		StartedAt:          time.Now().UTC(),
-		ExpiresAt:          time.Now().UTC().Add(time.Duration(timeout) * time.Second),
+		ExpiresAt:          time.Now().UTC().Add(podIdentityWait + time.Duration(timeout)*time.Second),
 		Actor:              capturedActor,
 		PriorRelease:       priorRelease,
 		ProgressDeadlines:  progressDeadlines,

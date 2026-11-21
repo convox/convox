@@ -30,3 +30,8 @@ type Engine interface {
 type RegistryPullEngine interface {
 	RegistryPullCredentials() (server, username, password string)
 }
+
+// PodIdentityEngine syncs a release's cloud roles and returns the creation time of the newest association.
+type PodIdentityEngine interface {
+	SyncPodIdentity(app string, m *manifest.Manifest) (time.Time, error)
+}
