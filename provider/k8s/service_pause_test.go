@@ -21,9 +21,9 @@ import (
 )
 
 var (
-	budgetPause = map[string]string{structs.KedaPausedReplicasAnnotation: "0"}
-	manualPause = map[string]string{structs.KedaPausedReplicasAnnotation: "0", structs.KedaManualPauseAnnotation: "true"}
-	markerOnly  = map[string]string{structs.KedaManualPauseAnnotation: "true"}
+	pauseAnnosBudget = map[string]string{structs.KedaPausedReplicasAnnotation: "0"}
+	pauseAnnosManual = map[string]string{structs.KedaPausedReplicasAnnotation: "0", structs.KedaManualPauseAnnotation: "true"}
+	pauseAnnosMarker = map[string]string{structs.KedaManualPauseAnnotation: "true"}
 )
 
 func pausedScaledObject(name string, minReplicas, maxReplicas int64, annotations map[string]string) *unstructured.Unstructured {
@@ -77,19 +77,19 @@ func firstScaledObjectPatchAnnotations(t *testing.T, dyn *fake.FakeDynamicClient
 	return nil
 }
 
-func getScaledObject(t *testing.T, p *k8s.Provider, name string) *unstructured.Unstructured {
+func pauseGetScaledObject(t *testing.T, p *k8s.Provider, name string) *unstructured.Unstructured {
 	t.Helper()
 	so, err := p.DynamicClient.Resource(testScaledObjectGVR).Namespace("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
 	require.NoError(t, err)
 	return so
 }
 
-func scaledObjectBounds(so *unstructured.Unstructured) (minReplicas, maxReplicas int64) {
+func pauseScaledObjectBounds(so *unstructured.Unstructured) (minReplicas, maxReplicas int64) {
 	spec, _ := so.Object["spec"].(map[string]interface{})
 	return toInt64(spec["minReplicaCount"]), toInt64(spec["maxReplicaCount"])
 }
 
-func deploymentReplicas(t *testing.T, kk *kfake.Clientset, name string) int32 {
+func pauseDeploymentReplicas(t *testing.T, kk *kfake.Clientset, name string) int32 {
 	t.Helper()
 	d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
 	require.NoError(t, err)
@@ -112,19 +112,19 @@ func TestServiceUpdateCountZeroPausesScaledObject(t *testing.T) {
 	pauseTestProvider(t, pausedScaledObject("web", 1, 5, nil), func(p *k8s.Provider, kk *kfake.Clientset, dyn *fake.FakeDynamicClient) {
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(0)}))
 
-		so := getScaledObject(t, p, "web")
-		require.Equal(t, manualPause, so.GetAnnotations())
-		lo, hi := scaledObjectBounds(so)
+		so := pauseGetScaledObject(t, p, "web")
+		require.Equal(t, pauseAnnosManual, so.GetAnnotations())
+		lo, hi := pauseScaledObjectBounds(so)
 		require.Equal(t, int64(1), lo)
 		require.Equal(t, int64(5), hi)
-		require.Equal(t, int32(2), deploymentReplicas(t, kk, "web"))
+		require.Equal(t, int32(2), pauseDeploymentReplicas(t, kk, "web"))
 		require.Equal(t, 1, scaledObjectPatchCount(dyn))
 
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(0)}))
 
 		require.Equal(t, 1, scaledObjectPatchCount(dyn))
-		require.Equal(t, int32(0), deploymentReplicas(t, kk, "web"))
-		require.Equal(t, manualPause, getScaledObject(t, p, "web").GetAnnotations())
+		require.Equal(t, int32(0), pauseDeploymentReplicas(t, kk, "web"))
+		require.Equal(t, pauseAnnosManual, pauseGetScaledObject(t, p, "web").GetAnnotations())
 	})
 }
 
@@ -134,17 +134,17 @@ func TestServiceUpdateCountZeroSetsLongHPAName(t *testing.T) {
 
 		hpaName, _, _ := unstructured.NestedString(scaledObjectAdvanced(t, p, "rack1-app1", longServiceName), "horizontalPodAutoscalerConfig", "name")
 		require.Equal(t, manifest.KedaHPAName(longServiceName), hpaName)
-		require.Equal(t, manualPause, getScaledObject(t, p, longServiceName).GetAnnotations())
+		require.Equal(t, pauseAnnosManual, pauseGetScaledObject(t, p, longServiceName).GetAnnotations())
 	})
 }
 
 func TestServiceUpdateCountResumesManualPause(t *testing.T) {
-	pauseTestProvider(t, pausedScaledObject("web", 1, 5, manualPause), func(p *k8s.Provider, _ *kfake.Clientset, dyn *fake.FakeDynamicClient) {
+	pauseTestProvider(t, pausedScaledObject("web", 1, 5, pauseAnnosManual), func(p *k8s.Provider, _ *kfake.Clientset, dyn *fake.FakeDynamicClient) {
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(3)}))
 
-		so := getScaledObject(t, p, "web")
+		so := pauseGetScaledObject(t, p, "web")
 		require.Empty(t, so.GetAnnotations())
-		lo, hi := scaledObjectBounds(so)
+		lo, hi := pauseScaledObjectBounds(so)
 		require.Equal(t, int64(3), lo)
 		require.Equal(t, int64(3), hi)
 		require.Equal(t, 1, scaledObjectPatchCount(dyn))
@@ -152,12 +152,12 @@ func TestServiceUpdateCountResumesManualPause(t *testing.T) {
 }
 
 func TestServiceUpdateRangeResumesManualPause(t *testing.T) {
-	pauseTestProvider(t, pausedScaledObject("web", 1, 5, manualPause), func(p *k8s.Provider, _ *kfake.Clientset, dyn *fake.FakeDynamicClient) {
+	pauseTestProvider(t, pausedScaledObject("web", 1, 5, pauseAnnosManual), func(p *k8s.Provider, _ *kfake.Clientset, dyn *fake.FakeDynamicClient) {
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Min: options.Int(2), Max: options.Int(6)}))
 
-		so := getScaledObject(t, p, "web")
+		so := pauseGetScaledObject(t, p, "web")
 		require.Empty(t, so.GetAnnotations())
-		lo, hi := scaledObjectBounds(so)
+		lo, hi := pauseScaledObjectBounds(so)
 		require.Equal(t, int64(2), lo)
 		require.Equal(t, int64(6), hi)
 		require.Equal(t, 1, scaledObjectPatchCount(dyn))
@@ -170,8 +170,8 @@ func TestServiceUpdateCountNullsOnlyTheAnnotationsItRead(t *testing.T) {
 		annotations map[string]string
 		want        map[string]interface{}
 	}{
-		{"marker only", markerOnly, map[string]interface{}{structs.KedaManualPauseAnnotation: nil}},
-		{"budget pause", budgetPause, map[string]interface{}{structs.KedaPausedReplicasAnnotation: nil}},
+		{"marker only", pauseAnnosMarker, map[string]interface{}{structs.KedaManualPauseAnnotation: nil}},
+		{"budget pause", pauseAnnosBudget, map[string]interface{}{structs.KedaPausedReplicasAnnotation: nil}},
 	}
 
 	for _, tc := range cases {
@@ -224,22 +224,22 @@ func TestServiceUpdatePauseAndResumeEventReasons(t *testing.T) {
 
 func TestServiceUpdateMarkerWithoutPausedReplicas(t *testing.T) {
 	t.Run("count 0 writes both annotations", func(t *testing.T) {
-		pauseTestProvider(t, pausedScaledObject("web", 1, 5, markerOnly), func(p *k8s.Provider, kk *kfake.Clientset, dyn *fake.FakeDynamicClient) {
+		pauseTestProvider(t, pausedScaledObject("web", 1, 5, pauseAnnosMarker), func(p *k8s.Provider, kk *kfake.Clientset, dyn *fake.FakeDynamicClient) {
 			require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(0)}))
 
-			require.Equal(t, manualPause, getScaledObject(t, p, "web").GetAnnotations())
+			require.Equal(t, pauseAnnosManual, pauseGetScaledObject(t, p, "web").GetAnnotations())
 			require.Equal(t, 1, scaledObjectPatchCount(dyn))
-			require.Equal(t, int32(2), deploymentReplicas(t, kk, "web"))
+			require.Equal(t, int32(2), pauseDeploymentReplicas(t, kk, "web"))
 		})
 	})
 
 	t.Run("count 2 removes the marker", func(t *testing.T) {
-		pauseTestProvider(t, pausedScaledObject("web", 1, 5, markerOnly), func(p *k8s.Provider, _ *kfake.Clientset, _ *fake.FakeDynamicClient) {
+		pauseTestProvider(t, pausedScaledObject("web", 1, 5, pauseAnnosMarker), func(p *k8s.Provider, _ *kfake.Clientset, _ *fake.FakeDynamicClient) {
 			require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(2)}))
 
-			so := getScaledObject(t, p, "web")
+			so := pauseGetScaledObject(t, p, "web")
 			require.Empty(t, so.GetAnnotations())
-			lo, hi := scaledObjectBounds(so)
+			lo, hi := pauseScaledObjectBounds(so)
 			require.Equal(t, int64(2), lo)
 			require.Equal(t, int64(2), hi)
 		})
@@ -252,7 +252,7 @@ func TestServiceUpdateRefusesResumeWhileBudgetClaimsService(t *testing.T) {
 		"armed":    func(*structs.AppBudgetShutdownState) {},
 		"in force": func(s *structs.AppBudgetShutdownState) { s.ShutdownAt = &shutdownAt },
 	}
-	pauses := map[string]map[string]string{"budget pause": budgetPause, "manual pause": manualPause}
+	pauses := map[string]map[string]string{"budget pause": pauseAnnosBudget, "manual pause": pauseAnnosManual}
 	commands := map[string]structs.ServiceUpdateOptions{
 		"count":   {Count: options.Int(2)},
 		"min max": {Min: options.Int(2), Max: options.Int(6)},
@@ -266,7 +266,7 @@ func TestServiceUpdateRefusesResumeWhileBudgetClaimsService(t *testing.T) {
 						state := pauseShutdownState("web")
 						mutate(state)
 						require.NoError(t, k8s.WriteBudgetShutdownStateAnnotationForTest(p, "app1", state))
-						before, err := json.Marshal(getScaledObject(t, p, "web").Object)
+						before, err := json.Marshal(pauseGetScaledObject(t, p, "web").Object)
 						require.NoError(t, err)
 
 						err = p.ServiceUpdate("app1", "web", opts)
@@ -275,11 +275,11 @@ func TestServiceUpdateRefusesResumeWhileBudgetClaimsService(t *testing.T) {
 						require.True(t, errors.As(err, &herr), "want a conflict error, got %v", err)
 						require.Equal(t, 409, herr.Code())
 						require.Contains(t, herr.Error(), "convox budget reset app1")
-						after, err := json.Marshal(getScaledObject(t, p, "web").Object)
+						after, err := json.Marshal(pauseGetScaledObject(t, p, "web").Object)
 						require.NoError(t, err)
 						require.Equal(t, string(before), string(after))
 						require.Zero(t, scaledObjectPatchCount(dyn))
-						require.Equal(t, int32(2), deploymentReplicas(t, kk, "web"))
+						require.Equal(t, int32(2), pauseDeploymentReplicas(t, kk, "web"))
 					})
 				})
 			}
@@ -312,7 +312,7 @@ func TestServiceUpdateResumesWhenBudgetDoesNotClaimService(t *testing.T) {
 		}},
 		{"no state", func() *structs.AppBudgetShutdownState { return nil }},
 	}
-	pauses := map[string]map[string]string{"budget pause": budgetPause, "manual pause": manualPause}
+	pauses := map[string]map[string]string{"budget pause": pauseAnnosBudget, "manual pause": pauseAnnosManual}
 
 	for _, tc := range cases {
 		for pauseName, annotations := range pauses {
@@ -324,9 +324,9 @@ func TestServiceUpdateResumesWhenBudgetDoesNotClaimService(t *testing.T) {
 
 					require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(2)}))
 
-					so := getScaledObject(t, p, "web")
+					so := pauseGetScaledObject(t, p, "web")
 					require.Empty(t, so.GetAnnotations())
-					lo, hi := scaledObjectBounds(so)
+					lo, hi := pauseScaledObjectBounds(so)
 					require.Equal(t, int64(2), lo)
 					require.Equal(t, int64(2), hi)
 				})
@@ -341,8 +341,8 @@ func TestServiceUpdateClaimedServiceNotPausedScalesAsBefore(t *testing.T) {
 
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(2)}))
 
-		so := getScaledObject(t, p, "web")
-		lo, hi := scaledObjectBounds(so)
+		so := pauseGetScaledObject(t, p, "web")
+		lo, hi := pauseScaledObjectBounds(so)
 		require.Equal(t, int64(2), lo)
 		require.Equal(t, int64(2), hi)
 		require.Empty(t, so.GetAnnotations())
@@ -351,7 +351,7 @@ func TestServiceUpdateClaimedServiceNotPausedScalesAsBefore(t *testing.T) {
 }
 
 func TestServiceUpdateCountZeroWhileClaimedMarksBudgetPause(t *testing.T) {
-	pauseTestProvider(t, pausedScaledObject("web", 1, 5, budgetPause), func(p *k8s.Provider, _ *kfake.Clientset, _ *fake.FakeDynamicClient) {
+	pauseTestProvider(t, pausedScaledObject("web", 1, 5, pauseAnnosBudget), func(p *k8s.Provider, _ *kfake.Clientset, _ *fake.FakeDynamicClient) {
 		shutdownAt := time.Now().UTC()
 		state := pauseShutdownState("web")
 		state.ShutdownAt = &shutdownAt
@@ -359,7 +359,7 @@ func TestServiceUpdateCountZeroWhileClaimedMarksBudgetPause(t *testing.T) {
 
 		require.NoError(t, p.ServiceUpdate("app1", "web", structs.ServiceUpdateOptions{Count: options.Int(0)}))
 
-		require.Equal(t, manualPause, getScaledObject(t, p, "web").GetAnnotations())
+		require.Equal(t, pauseAnnosManual, pauseGetScaledObject(t, p, "web").GetAnnotations())
 	})
 }
 
@@ -370,10 +370,10 @@ func TestServiceListReportsPausedScaledObject(t *testing.T) {
 		paused      *bool
 		coldStart   *bool
 	}{
-		{"manual pause", manualPause, options.Bool(true), nil},
-		{"budget pause", budgetPause, options.Bool(true), nil},
+		{"manual pause", pauseAnnosManual, options.Bool(true), nil},
+		{"budget pause", pauseAnnosBudget, options.Bool(true), nil},
 		{"not paused", nil, nil, options.Bool(true)},
-		{"marker only", markerOnly, nil, options.Bool(true)},
+		{"marker only", pauseAnnosMarker, nil, options.Bool(true)},
 		{"paused at 2", map[string]string{structs.KedaPausedReplicasAnnotation: "2"}, options.Bool(true), nil},
 	}
 

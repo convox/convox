@@ -16,7 +16,7 @@ import (
 	kfake "k8s.io/client-go/kubernetes/fake"
 )
 
-func restoreStateService(name string, keda bool) structs.AppBudgetShutdownStateService {
+func pauseRestoreStateService(name string, keda bool) structs.AppBudgetShutdownStateService {
 	s := structs.AppBudgetShutdownStateService{
 		Name:                       name,
 		OriginalScale:              structs.AppBudgetShutdownStateOriginalScale{Count: 3, Replicas: 3},
@@ -28,7 +28,7 @@ func restoreStateService(name string, keda bool) structs.AppBudgetShutdownStateS
 	return s
 }
 
-func restoreState(services ...structs.AppBudgetShutdownStateService) *structs.AppBudgetShutdownState {
+func pauseRestoreState(services ...structs.AppBudgetShutdownStateService) *structs.AppBudgetShutdownState {
 	state := pauseShutdownState()
 	shutdownAt := time.Now().UTC().Add(-time.Minute)
 	state.ShutdownAt = &shutdownAt
@@ -37,7 +37,7 @@ func restoreState(services ...structs.AppBudgetShutdownStateService) *structs.Ap
 	return state
 }
 
-func restoredDeployment(t *testing.T, kk *kfake.Clientset, name string) *appsv1.Deployment {
+func pauseRestoredDeployment(t *testing.T, kk *kfake.Clientset, name string) *appsv1.Deployment {
 	t.Helper()
 	d, err := kk.AppsV1().Deployments("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func requireOneRestoredEvent(t *testing.T, events *pauseRestoreEvents) map[strin
 	return data
 }
 
-func flapSuppressedUntil(t *testing.T, kk *kfake.Clientset) (string, bool) {
+func pauseFlapSuppressedUntil(t *testing.T, kk *kfake.Clientset) (string, bool) {
 	t.Helper()
 	ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
 	require.NoError(t, err)
@@ -106,24 +106,24 @@ func runPauseRestore(t *testing.T, deployments []string, scaledObjects []*unstru
 func TestBudgetRestoreLeavesManualPausePaused(t *testing.T) {
 	runPauseRestore(t,
 		[]string{"worker"},
-		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, manualPause)},
-		restoreState(restoreStateService("worker", true)),
+		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, pauseAnnosManual)},
+		pauseRestoreState(pauseRestoreStateService("worker", true)),
 		func(p *k8s.Provider, kk *kfake.Clientset) {
-			d := restoredDeployment(t, kk, "worker")
+			d := pauseRestoredDeployment(t, kk, "worker")
 			require.Equal(t, int32(0), *d.Spec.Replicas)
 			require.Equal(t, int64(60), *d.Spec.Template.Spec.TerminationGracePeriodSeconds)
-			require.Equal(t, manualPause, getScaledObject(t, p, "worker").GetAnnotations())
+			require.Equal(t, pauseAnnosManual, pauseGetScaledObject(t, p, "worker").GetAnnotations())
 		})
 }
 
 func TestBudgetRestoreReportsOnlyServicesItRestored(t *testing.T) {
 	events := runPauseRestore(t,
 		[]string{"worker", "web"},
-		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, manualPause)},
-		restoreState(restoreStateService("worker", true), restoreStateService("web", false)),
+		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, pauseAnnosManual)},
+		pauseRestoreState(pauseRestoreStateService("worker", true), pauseRestoreStateService("web", false)),
 		func(p *k8s.Provider, kk *kfake.Clientset) {
-			require.Equal(t, int32(3), *restoredDeployment(t, kk, "web").Spec.Replicas)
-			require.Equal(t, int32(0), *restoredDeployment(t, kk, "worker").Spec.Replicas)
+			require.Equal(t, int32(3), *pauseRestoredDeployment(t, kk, "web").Spec.Replicas)
+			require.Equal(t, int32(0), *pauseRestoredDeployment(t, kk, "worker").Spec.Replicas)
 		})
 
 	data := requireOneRestoredEvent(t, events)
@@ -136,14 +136,14 @@ func TestBudgetRestoreAllManuallyPausedStillEndsShutdown(t *testing.T) {
 	events := runPauseRestore(t,
 		[]string{"worker", "queue"},
 		[]*unstructured.Unstructured{
-			pausedScaledObject("worker", 1, 5, manualPause),
-			pausedScaledObject("queue", 0, 5, manualPause),
+			pausedScaledObject("worker", 1, 5, pauseAnnosManual),
+			pausedScaledObject("queue", 0, 5, pauseAnnosManual),
 		},
-		restoreState(restoreStateService("worker", true), restoreStateService("queue", true)),
+		pauseRestoreState(pauseRestoreStateService("worker", true), pauseRestoreStateService("queue", true)),
 		func(p *k8s.Provider, kk *kfake.Clientset) {
-			require.Equal(t, int32(0), *restoredDeployment(t, kk, "worker").Spec.Replicas)
-			require.Equal(t, int32(0), *restoredDeployment(t, kk, "queue").Spec.Replicas)
-			_, ok := flapSuppressedUntil(t, kk)
+			require.Equal(t, int32(0), *pauseRestoredDeployment(t, kk, "worker").Spec.Replicas)
+			require.Equal(t, int32(0), *pauseRestoredDeployment(t, kk, "queue").Spec.Replicas)
+			_, ok := pauseFlapSuppressedUntil(t, kk)
 			require.True(t, ok)
 		})
 
@@ -155,20 +155,20 @@ func TestBudgetRestoreAllManuallyPausedStillEndsShutdown(t *testing.T) {
 }
 
 func TestBudgetRestoreArmedOnlyAllManuallyPausedSendsNoRestoredEvent(t *testing.T) {
-	state := restoreState(restoreStateService("worker", true), restoreStateService("queue", true))
+	state := pauseRestoreState(pauseRestoreStateService("worker", true), pauseRestoreStateService("queue", true))
 	state.ShutdownAt = nil
 
 	events := runPauseRestore(t,
 		[]string{"worker", "queue"},
 		[]*unstructured.Unstructured{
-			pausedScaledObject("worker", 1, 5, manualPause),
-			pausedScaledObject("queue", 0, 5, manualPause),
+			pausedScaledObject("worker", 1, 5, pauseAnnosManual),
+			pausedScaledObject("queue", 0, 5, pauseAnnosManual),
 		},
 		state,
 		func(p *k8s.Provider, kk *kfake.Clientset) {
-			require.Equal(t, int32(0), *restoredDeployment(t, kk, "worker").Spec.Replicas)
-			require.Equal(t, int32(0), *restoredDeployment(t, kk, "queue").Spec.Replicas)
-			_, ok := flapSuppressedUntil(t, kk)
+			require.Equal(t, int32(0), *pauseRestoredDeployment(t, kk, "worker").Spec.Replicas)
+			require.Equal(t, int32(0), *pauseRestoredDeployment(t, kk, "queue").Spec.Replicas)
+			_, ok := pauseFlapSuppressedUntil(t, kk)
 			require.False(t, ok)
 		})
 
@@ -178,13 +178,13 @@ func TestBudgetRestoreArmedOnlyAllManuallyPausedSendsNoRestoredEvent(t *testing.
 func TestBudgetRestoreMarkerWithoutPausedReplicasRestoresService(t *testing.T) {
 	events := runPauseRestore(t,
 		[]string{"worker"},
-		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, markerOnly)},
-		restoreState(restoreStateService("worker", true)),
+		[]*unstructured.Unstructured{pausedScaledObject("worker", 1, 5, pauseAnnosMarker)},
+		pauseRestoreState(pauseRestoreStateService("worker", true)),
 		func(p *k8s.Provider, kk *kfake.Clientset) {
-			d := restoredDeployment(t, kk, "worker")
+			d := pauseRestoredDeployment(t, kk, "worker")
 			require.Equal(t, int32(3), *d.Spec.Replicas)
 			require.Equal(t, int64(60), *d.Spec.Template.Spec.TerminationGracePeriodSeconds)
-			_, paused := getScaledObject(t, p, "worker").GetAnnotations()[structs.KedaPausedReplicasAnnotation]
+			_, paused := pauseGetScaledObject(t, p, "worker").GetAnnotations()[structs.KedaPausedReplicasAnnotation]
 			require.False(t, paused)
 		})
 
