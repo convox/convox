@@ -62,19 +62,20 @@ module "k8s" {
   }
 
   env = {
-    APP_RACK_URL_DISABLE = var.app_rack_url_disable
-    BUCKET               = digitalocean_spaces_bucket.storage.name
-    CERT_MANAGER         = "true"
-    ELASTIC_URL          = module.elasticsearch.url
-    ELASTICSEARCH_DISK   = var.elasticsearch_disk
-    PROVIDER             = "do"
-    REGION               = var.region
-    REGISTRY             = "registry.${var.domain}"
-    RESOLVER             = var.resolver
-    ROUTER               = var.router
-    SECRET               = var.secret
-    SPACES_ACCESS        = var.access_id
-    SPACES_ENDPOINT      = "https://${var.region}.digitaloceanspaces.com"
-    SPACES_SECRET        = var.secret_key
+    APP_RACK_URL_DISABLE         = var.app_rack_url_disable
+    BUCKET                       = digitalocean_spaces_bucket.storage.name
+    CERT_MANAGER                 = "true"
+    ELASTIC_URL                  = module.elasticsearch.url
+    ELASTICSEARCH_DISK           = var.elasticsearch_disk
+    PROVIDER                     = "do"
+    REGION                       = var.region
+    REGISTRY                     = "registry.${var.domain}"
+    RESOLVER                     = var.resolver
+    ROUTER                       = var.router
+    ROUTER_USER_SNIPPETS_DISABLE = var.router_user_snippets_disable
+    SECRET                       = var.secret
+    SPACES_ACCESS                = var.access_id
+    SPACES_ENDPOINT              = "https://${var.region}.digitaloceanspaces.com"
+    SPACES_SECRET                = var.secret_key
   }
 }

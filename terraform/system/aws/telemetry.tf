@@ -157,6 +157,7 @@ locals {
     releases_to_retain_task_run_interval_hour = var.releases_to_retain_task_run_interval_hour
     router_log_redact_params                  = var.router_log_redact_params
     router_type                               = var.router_type
+    router_user_snippets_disable              = var.router_user_snippets_disable
     schedule_rack_scale_down                  = var.schedule_rack_scale_down
     schedule_rack_scale_up                    = var.schedule_rack_scale_up
     seccomp_default_enabled                   = var.seccomp_default_enabled
@@ -334,6 +335,7 @@ locals {
     releases_to_retain_task_run_interval_hour = "24"
     router_log_redact_params                  = ""
     router_type                               = "nginx"
+    router_user_snippets_disable              = "false"
     schedule_rack_scale_down                  = ""
     schedule_rack_scale_up                    = ""
     seccomp_default_enabled                   = "false"
