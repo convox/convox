@@ -113,7 +113,7 @@ var awsKnownParams = map[string]bool{
 	"prometheus_gpu_metrics_retention": true, "prometheus_url": true,
 	"proxy_protocol":     true,
 	"public_subnets_ids": true, "rack_name": true, "router_log_redact_params": true, "router_type": true,
-	"region": true, "release": true,
+	"region": true, "release": true, "rotate_api_password": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
@@ -136,7 +136,7 @@ var gcpKnownParams = map[string]bool{
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
-	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true, "settings": true,
+	"rack_name": true, "region": true, "release": true, "rotate_api_password": true, "router_log_redact_params": true, "settings": true,
 	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
@@ -152,7 +152,7 @@ var azureKnownParams = map[string]bool{
 	"nginx_image": true, "node_disk": true, "node_type": true,
 	"nvidia_device_plugin_enable": true, "nvidia_device_time_slicing_replicas": true,
 	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
-	"release": true, "router_log_redact_params": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
+	"release": true, "rotate_api_password": true, "router_log_redact_params": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
 	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "tags": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
@@ -163,7 +163,7 @@ var doKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"high_availability": true, "image": true, "k8s_version": true,
 	"name": true, "node_type": true, "rack_name": true, "region": true,
-	"registry_disk": true, "release": true, "router_log_redact_params": true, "secret_key": true,
+	"registry_disk": true, "release": true, "rotate_api_password": true, "router_log_redact_params": true, "secret_key": true,
 	"settings": true, "sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
 	"whitelist": true,
@@ -172,13 +172,13 @@ var doKnownParams = map[string]bool{
 var metalKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
 	"elasticsearch_disk": true, "fluentd_memory": true, "image": true, "name": true, "rack_name": true,
-	"registry_disk": true, "release": true, "router_log_redact_params": true, "sync_tf_now": true,
+	"registry_disk": true, "release": true, "rotate_api_password": true, "router_log_redact_params": true, "sync_tf_now": true,
 	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
 }
 
 var localKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "image": true,
-	"name": true, "os": true, "rack_name": true, "release": true,
+	"name": true, "os": true, "rack_name": true, "release": true, "rotate_api_password": true,
 	"settings": true, "sync_tf_now": true, "telemetry": true,
 	"webhook_signing_key": true,
 }
@@ -2303,6 +2303,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		if d <= 0 {
 			return errors.New("invalid value for terraform_update_timeout: must be a positive duration")
 		}
+	}
+
+	if v, has := params["rotate_api_password"]; has && v != "true" {
+		return errors.New("param 'rotate_api_password' only accepts true")
 	}
 
 	if v, has := params["imds_http_tokens"]; has && v != "" {

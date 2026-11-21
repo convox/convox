@@ -88,6 +88,7 @@ func (p *Provider) SystemJwtSignKeyRotate() (string, error) {
 	}
 	_, err = p.Cluster.AppsV1().Deployments(p.Namespace).Apply(context.TODO(), sObj, am.ApplyOptions{
 		FieldManager: "convox-system",
+		Force:        true,
 	})
 	if err != nil {
 		return "", err
@@ -185,6 +186,7 @@ func (p *Provider) updateJwtSignKey() (string, error) {
 	}
 	_, err := p.Cluster.CoreV1().Secrets(p.Namespace).Apply(context.TODO(), sObj, am.ApplyOptions{
 		FieldManager: "convox-system",
+		Force:        true,
 	})
 	return base64.StdEncoding.EncodeToString([]byte(signKey)), err
 }
