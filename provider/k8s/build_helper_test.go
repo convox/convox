@@ -352,3 +352,50 @@ func TestBuildCreateHelperTenant(t *testing.T) {
 	_, err = kk.CoreV1().Secrets(ns).Get(context.TODO(), name, am.GetOptions{})
 	require.NoError(t, err)
 }
+
+func TestProcessRun_BuildNodeAffinity(t *testing.T) {
+	build := ac.NodeSelectorRequirement{Key: "convox-build", Operator: ac.NodeSelectorOpIn, Values: []string{"true"}}
+	arm := ac.NodeSelectorRequirement{Key: "kubernetes.io/arch", Operator: ac.NodeSelectorOpIn, Values: []string{"arm64"}}
+	dedicated := ac.Toleration{Key: "dedicated", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+	dedicatedNode := ac.Toleration{Key: "dedicated-node", Operator: ac.TolerationOpExists, Effect: ac.TaintEffectNoSchedule}
+
+	required := func(exprs ...ac.NodeSelectorRequirement) *ac.Affinity {
+		return &ac.Affinity{NodeAffinity: &ac.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &ac.NodeSelector{
+				NodeSelectorTerms: []ac.NodeSelectorTerm{{MatchExpressions: exprs}},
+			},
+		}}
+	}
+
+	for name, tc := range map[string]struct {
+		buildNode   string
+		opts        structs.ProcessRunOptions
+		affinity    *ac.Affinity
+		tolerations []ac.Toleration
+		selector    map[string]string
+	}{
+		"NoBuildNode":          {"", structs.ProcessRunOptions{IsBuild: true, BuildArch: options.String("arm64")}, nil, []ac.Toleration{dedicated}, nil},
+		"BuildNode":            {"true", structs.ProcessRunOptions{IsBuild: true}, required(build), []ac.Toleration{dedicated}, nil},
+		"EmptyArch":            {"true", structs.ProcessRunOptions{IsBuild: true, BuildArch: options.String("")}, required(build), []ac.Toleration{dedicated}, nil},
+		"Arch":                 {"true", structs.ProcessRunOptions{IsBuild: true, BuildArch: options.String("arm64")}, required(build, arm), []ac.Toleration{dedicated}, nil},
+		"BuildLabels":          {"true", structs.ProcessRunOptions{IsBuild: true, NodeLabels: options.String("convox.io/label=arm")}, required(build), []ac.Toleration{dedicatedNode, dedicated}, map[string]string{"convox.io/label": "arm"}},
+		"NodeAffinityReplaced": {"true", structs.ProcessRunOptions{IsBuild: true, NodeAffinity: options.String("zone=a:10")}, required(build), []ac.Toleration{dedicated}, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p, kk, kc := minimalProvider(t)
+			p.BuildNodeEnabled = tc.buildNode
+			createAppNamespace(t, kk, "rack1", "app1")
+			createBuild(t, kc, "rack1-app1", "build1")
+			createRelease(t, kc, "rack1-app1", "rel1", manifestWithNodeSelectors)
+
+			tc.opts.Release = options.String("rel1")
+			tc.opts.Command = options.String("build")
+
+			spec := runAndGetPodSpec(t, p, kk, "app1", "build", tc.opts)
+
+			require.Equal(t, tc.affinity, spec.Affinity)
+			require.Equal(t, tc.tolerations, spec.Tolerations)
+			require.Equal(t, tc.selector, spec.NodeSelector)
+		})
+	}
+}
