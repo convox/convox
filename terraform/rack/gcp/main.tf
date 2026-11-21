@@ -23,28 +23,29 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  buildkit_enabled           = var.buildkit_enabled
-  cluster                    = var.cluster
-  cost_tracking_enable       = var.cost_tracking_enable
-  cost_tracking_history_days = var.cost_tracking_history_days
-  docker_hub_authentication  = module.k8s.docker_hub_authentication
-  elasticsearch_disk         = var.elasticsearch_disk
-  fluentd_memory             = var.fluentd_memory
-  domain                     = module.router.endpoint
-  image                      = var.image
-  name                       = var.name
-  rack_name                  = var.rack_name
-  namespace                  = module.k8s.namespace
-  nodes_account              = var.nodes_account
-  project_id                 = var.project_id
-  region                     = var.region
-  release                    = var.release
-  resolver                   = module.resolver.endpoint
-  router                     = module.router.endpoint
-  router_log_redact_params   = var.router_log_redact_params
-  syslog                     = var.syslog
-  syslog_tls_verify          = var.syslog_tls_verify
-  webhook_signing_key        = var.webhook_signing_key
+  buildkit_enabled             = var.buildkit_enabled
+  cluster                      = var.cluster
+  cost_tracking_enable         = var.cost_tracking_enable
+  cost_tracking_history_days   = var.cost_tracking_history_days
+  docker_hub_authentication    = module.k8s.docker_hub_authentication
+  elasticsearch_disk           = var.elasticsearch_disk
+  fluentd_memory               = var.fluentd_memory
+  domain                       = module.router.endpoint
+  image                        = var.image
+  name                         = var.name
+  rack_name                    = var.rack_name
+  namespace                    = module.k8s.namespace
+  nodes_account                = var.nodes_account
+  project_id                   = var.project_id
+  region                       = var.region
+  release                      = var.release
+  resolver                     = module.resolver.endpoint
+  router                       = module.router.endpoint
+  router_log_redact_params     = var.router_log_redact_params
+  router_user_snippets_disable = var.router_user_snippets_disable
+  syslog                       = var.syslog
+  syslog_tls_verify            = var.syslog_tls_verify
+  webhook_signing_key          = var.webhook_signing_key
 }
 
 module "resolver" {

@@ -26,22 +26,23 @@ module "api" {
     kubernetes = kubernetes
   }
 
-  docker_hub_authentication = module.k8s.docker_hub_authentication
-  domain                    = local.endpoint
-  elasticsearch_disk        = var.elasticsearch_disk
-  fluentd_memory            = var.fluentd_memory
-  image                     = var.image
-  name                      = var.name
-  rack_name                 = var.rack_name
-  namespace                 = module.k8s.namespace
-  release                   = var.release
-  resolver                  = module.resolver.endpoint
-  router                    = module.router.endpoint
-  router_log_redact_params  = var.router_log_redact_params
-  secret                    = random_string.secret.result
-  syslog                    = var.syslog
-  syslog_tls_verify         = var.syslog_tls_verify
-  webhook_signing_key       = var.webhook_signing_key
+  docker_hub_authentication    = module.k8s.docker_hub_authentication
+  domain                       = local.endpoint
+  elasticsearch_disk           = var.elasticsearch_disk
+  fluentd_memory               = var.fluentd_memory
+  image                        = var.image
+  name                         = var.name
+  rack_name                    = var.rack_name
+  namespace                    = module.k8s.namespace
+  release                      = var.release
+  resolver                     = module.resolver.endpoint
+  router                       = module.router.endpoint
+  router_log_redact_params     = var.router_log_redact_params
+  router_user_snippets_disable = var.router_user_snippets_disable
+  secret                       = random_string.secret.result
+  syslog                       = var.syslog
+  syslog_tls_verify            = var.syslog_tls_verify
+  webhook_signing_key          = var.webhook_signing_key
 }
 
 module "resolver" {

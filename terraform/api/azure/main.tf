@@ -88,6 +88,7 @@ module "k8s" {
     RESOLVER                             = var.resolver
     RESOURCE_GROUP                       = var.name
     ROUTER                               = var.router
+    ROUTER_USER_SNIPPETS_DISABLE         = var.router_user_snippets_disable
     STORAGE_ACCOUNT                      = azurerm_storage_account.storage.name
     STORAGE_SHARE                        = azurerm_storage_share.storage.name
     WORKSPACE                            = var.workspace

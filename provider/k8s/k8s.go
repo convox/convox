@@ -104,6 +104,7 @@ type Provider struct {
 	RestClient                          rest.Interface
 	Router                              string
 	RouterType                          string
+	RouterUserSnippetsDisable           bool
 	ProxyProtocol                       bool
 	PodImdsBlockEnabled                 bool
 	NetworkPolicyEnabled                bool
@@ -256,6 +257,7 @@ func FromEnv() (*Provider, error) {
 		RestClient:                       kc.RESTClient(),
 		Router:                           os.Getenv("ROUTER"),
 		RouterType:                       common.CoalesceString(os.Getenv("ROUTER_TYPE"), "nginx"),
+		RouterUserSnippetsDisable:        os.Getenv("ROUTER_USER_SNIPPETS_DISABLE") == "true",
 		ProxyProtocol:                    os.Getenv("PROXY_PROTOCOL") == "true",
 		PodImdsBlockEnabled:              os.Getenv("POD_IMDS_BLOCK_ENABLED") == "true",
 		NetworkPolicyEnabled:             os.Getenv("NETWORK_POLICY_ENABLED") == "true",

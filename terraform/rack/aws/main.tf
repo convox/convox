@@ -80,6 +80,7 @@ module "api" {
   webhook_signing_key                       = var.webhook_signing_key
   api_feature_gates                         = var.api_feature_gates
   router_type                               = var.router_type
+  router_user_snippets_disable              = var.router_user_snippets_disable
   pod_security_standard                     = var.pod_security_standard
   pod_security_mode                         = var.pod_security_mode
   cert_duration                             = var.cert_duration

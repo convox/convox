@@ -26,6 +26,7 @@ locals {
     region                          = var.region
     release                         = var.release
     router_log_redact_params        = var.router_log_redact_params
+    router_user_snippets_disable    = var.router_user_snippets_disable
     settings                        = var.settings
     syslog                          = var.syslog
     syslog_tls_verify               = var.syslog_tls_verify
@@ -59,6 +60,7 @@ locals {
     region                          = "us-east1"
     release                         = ""
     router_log_redact_params        = ""
+    router_user_snippets_disable    = "false"
     settings                        = ""
     syslog                          = ""
     syslog_tls_verify               = "true"

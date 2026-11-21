@@ -78,6 +78,11 @@ variable "router_log_redact_params" {
   default = ""
 }
 
+variable "router_user_snippets_disable" {
+  type    = bool
+  default = false
+}
+
 variable "syslog" {
   default = ""
 }

@@ -223,6 +223,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			}
 		}
 
+		if id != a.Release {
+			if err := p.validateRouterSnippets(m); err != nil {
+				return errors.WithStack(err)
+			}
+		}
+
 		e, err := structs.NewEnvironment([]byte(r.Env))
 		if err != nil {
 			return errors.WithStack(err)

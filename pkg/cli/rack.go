@@ -113,7 +113,8 @@ var awsKnownParams = map[string]bool{
 	"prometheus_gpu_metrics_retention": true, "prometheus_url": true,
 	"proxy_protocol":     true,
 	"public_subnets_ids": true, "rack_name": true, "router_log_redact_params": true, "router_type": true,
-	"region": true, "release": true,
+	"router_user_snippets_disable": true,
+	"region":                       true, "release": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
 	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
@@ -136,7 +137,8 @@ var gcpKnownParams = map[string]bool{
 	"gpu_observability_chart_version": true, "gpu_observability_enable": true, "image": true,
 	"k8s_version": true, "name": true, "nginx_additional_config": true,
 	"node_disk": true, "node_type": true, "preemptible": true,
-	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true, "settings": true,
+	"rack_name": true, "region": true, "release": true, "router_log_redact_params": true,
+	"router_user_snippets_disable": true, "settings": true,
 	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
@@ -152,7 +154,8 @@ var azureKnownParams = map[string]bool{
 	"nginx_image": true, "node_disk": true, "node_type": true,
 	"nvidia_device_plugin_enable": true, "nvidia_device_time_slicing_replicas": true,
 	"pdb_default_min_available_percentage": true, "rack_name": true, "region": true,
-	"release": true, "router_log_redact_params": true, "settings": true, "ssl_ciphers": true, "ssl_protocols": true,
+	"release": true, "router_log_redact_params": true, "router_user_snippets_disable": true, "settings": true,
+	"ssl_ciphers": true, "ssl_protocols": true,
 	"sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "tags": true, "telemetry": true,
 	"terraform_update_timeout": true, "webhook_signing_key": true,
 	"whitelist": true,
@@ -163,8 +166,9 @@ var doKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "elasticsearch_disk": true, "fluentd_memory": true,
 	"high_availability": true, "image": true, "k8s_version": true,
 	"name": true, "node_type": true, "rack_name": true, "region": true,
-	"registry_disk": true, "release": true, "router_log_redact_params": true, "secret_key": true,
-	"settings": true, "sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "router_user_snippets_disable": true,
+	"secret_key": true,
+	"settings":   true, "sync_tf_now": true, "syslog": true, "syslog_tls_verify": true, "telemetry": true,
 	"terraform_update_timeout": true, "token": true, "webhook_signing_key": true,
 	"whitelist": true,
 }
@@ -172,8 +176,9 @@ var doKnownParams = map[string]bool{
 var metalKnownParams = map[string]bool{
 	"docker_hub_password": true, "docker_hub_username": true, "domain": true,
 	"elasticsearch_disk": true, "fluentd_memory": true, "image": true, "name": true, "rack_name": true,
-	"registry_disk": true, "release": true, "router_log_redact_params": true, "sync_tf_now": true,
-	"syslog": true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
+	"registry_disk": true, "release": true, "router_log_redact_params": true, "router_user_snippets_disable": true,
+	"sync_tf_now": true,
+	"syslog":      true, "syslog_tls_verify": true, "webhook_signing_key": true, "whitelist": true,
 }
 
 var localKnownParams = map[string]bool{
@@ -228,6 +233,7 @@ var boolParams = map[string]bool{
 	"karpenter_consolidation_enabled":   true,
 	"keda_enable":                       true,
 	"pod_identity_agent_enable":         true,
+	"router_user_snippets_disable":      true,
 	"seccomp_default_enabled":           true,
 	"syslog_access_logs":                true,
 	"syslog_tls_verify":                 true,
@@ -399,6 +405,7 @@ var paramGroups = map[string]map[string]bool{
 		"private_eks_host":                    true,
 		"private_eks_pass":                    true,
 		"private_eks_user":                    true,
+		"router_user_snippets_disable":        true,
 		"seccomp_default_enabled":             true,
 		"secret_key":                          true,
 		"ssl_ciphers":                         true,
@@ -596,20 +603,21 @@ var paramGroups = map[string]map[string]bool{
 		"SyslogFormat":      true,
 	},
 	"ingress": {
-		"cert_duration":           true,
-		"contour_cpu_request":     true,
-		"contour_memory_request":  true,
-		"envoy_cpu_request":       true,
-		"envoy_memory_request":    true,
-		"idle_timeout":            true,
-		"internal_router":         true,
-		"contour_internal_tls":    true,
-		"nginx_additional_config": true,
-		"nginx_image":             true,
-		"proxy_protocol":          true,
-		"router_type":             true,
-		"ssl_ciphers":             true,
-		"ssl_protocols":           true,
+		"cert_duration":                true,
+		"contour_cpu_request":          true,
+		"contour_memory_request":       true,
+		"envoy_cpu_request":            true,
+		"envoy_memory_request":         true,
+		"idle_timeout":                 true,
+		"internal_router":              true,
+		"contour_internal_tls":         true,
+		"nginx_additional_config":      true,
+		"nginx_image":                  true,
+		"proxy_protocol":               true,
+		"router_type":                  true,
+		"router_user_snippets_disable": true,
+		"ssl_ciphers":                  true,
+		"ssl_protocols":                true,
 	},
 	"domain": {
 		"convox_domain_tls_cert_disable": true,
@@ -2652,6 +2660,18 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 		// Canonicalize to "true"/"false" for consistent vars.json storage.
 		params[k] = strconv.FormatBool(b)
+	}
+
+	if params["router_user_snippets_disable"] == "true" {
+		fmt.Fprintf(os.Stderr, "WARNING: apps already using -snippet ingress annotations keep them until their next deploy, which is then refused. Remove the annotations first.\n")
+
+		appRackURL := params["app_rack_url_disable"]
+		if appRackURL == "" {
+			appRackURL = currentParams["app_rack_url_disable"]
+		}
+		if appRackURL != "true" {
+			fmt.Fprintf(os.Stderr, "WARNING: router_user_snippets_disable does not stop apps that call the rack API through RACK_URL. Set app_rack_url_disable=true as well.\n")
+		}
 	}
 
 	if provider == "aws" {

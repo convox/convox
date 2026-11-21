@@ -263,6 +263,11 @@ variable "router_type" {
   default = "nginx"
 }
 
+variable "router_user_snippets_disable" {
+  type    = bool
+  default = false
+}
+
 variable "pod_security_standard" {
   type    = string
   default = ""
