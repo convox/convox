@@ -175,6 +175,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 			if err := m.ValidateTenantIngressAnnotations(); err != nil {
 				return structs.ErrBadRequest("%s", err)
 			}
+
+			for i := range m.Services {
+				if pi := m.Services[i].AccessControl.AWSPodIdentity; pi != nil && len(pi.PolicyArns) > 0 {
+					return structs.ErrBadRequest("service %s: accessControl.awsPodIdentity is not supported on this rack", m.Services[i].Name)
+				}
+			}
 		}
 
 		progressDeadlines, crashRestartLimits, maxProgressDeadline = p.fastFailStateForPromote(m.Services)
@@ -315,7 +321,8 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 
-		if pe, ok := p.Engine.(PodIdentityEngine); ok {
+		// a re-promote on a tid rack skips the refusal above and must not recreate roles either
+		if pe, ok := p.Engine.(PodIdentityEngine); ok && !p.FeatureGates[options.FeatureGateTid] {
 			created, err := pe.SyncPodIdentity(app, m)
 			if err != nil {
 				return err
