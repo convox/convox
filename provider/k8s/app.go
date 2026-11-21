@@ -164,13 +164,9 @@ func (p *Provider) AppConfigSet(app, name, valueBase64 string) error {
 }
 
 func (p *Provider) AppDelete(name string) error {
-	a, err := p.appGetLive(name)
+	a, err := p.AppDeletable(name)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-
-	if a.Locked {
-		return errors.WithStack(structs.ErrConflict("app is locked: %s", name))
 	}
 
 	if a.Status != "deleting" {
@@ -197,6 +193,20 @@ func (p *Provider) AppDelete(name string) error {
 	p.RemoveAppLock(name)
 
 	return nil
+}
+
+// AppDeletable reads the app from the cluster and returns an error if it does not exist or is locked.
+func (p *Provider) AppDeletable(name string) (*structs.App, error) {
+	a, err := p.appGetLive(name)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	if a.Locked {
+		return nil, errors.WithStack(structs.ErrConflict("app is locked: %s", name))
+	}
+
+	return a, nil
 }
 
 func (p *Provider) AppGet(name string) (*structs.App, error) {
