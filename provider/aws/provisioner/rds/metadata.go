@@ -215,17 +215,13 @@ func GetParametersMetaDataForReadReplicaInstall() map[string]*MetaData {
 			UpdatesWithSomeInterruption: options.Bool(true),
 		},
 		ParamDBInstanceClass: {
-			Required:                    options.Bool(true),
 			UpdatesWithSomeInterruption: options.Bool(true),
 		},
 		ParamStorageType: {
 			Required: options.Bool(true),
 			Default:  options.String("gp2"),
 		},
-		ParamAllocatedStorage: {
-			Required: options.Bool(true),
-			Default:  options.String("20"),
-		},
+		ParamAllocatedStorage: {},
 		ParamAutoMinorVersionUpgrade: {
 			UpdatesWithSomeInterruption: options.Bool(true),
 		},
