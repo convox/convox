@@ -2,6 +2,7 @@ package elasticache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -14,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/elasticache"
 	elasticachetypes "github.com/aws/aws-sdk-go-v2/service/elasticache/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/convox/convox/provider/aws/provisioner"
 	"github.com/convox/logger"
 )
@@ -574,11 +574,7 @@ func (p *Provisioner) UninstallReplicationGroup(id string) error {
 		return err
 	}
 
-	if err := p.deleteSecurityGroupIfManaged(state); err != nil {
-		return err
-	}
-
-	if err := p.deleteCacheSubnetGroupIfManaged(state); err != nil {
+	if err := errors.Join(p.deleteSecurityGroupIfManaged(state), p.deleteCacheSubnetGroupIfManaged(state)); err != nil {
 		return err
 	}
 
@@ -610,11 +606,7 @@ func (p *Provisioner) UninstallCacheCluster(id string) error {
 		return err
 	}
 
-	if err := p.deleteSecurityGroupIfManaged(state); err != nil {
-		return err
-	}
-
-	if err := p.deleteCacheSubnetGroupIfManaged(state); err != nil {
+	if err := errors.Join(p.deleteSecurityGroupIfManaged(state), p.deleteCacheSubnetGroupIfManaged(state)); err != nil {
 		return err
 	}
 
@@ -992,7 +984,7 @@ func (p *Provisioner) createCacheSubnetGroupIfNotProvided(state *StateData) erro
 	}
 
 	p.logger.Logf("checking if cacher subnet group is already created")
-	subnetGroupName = fmt.Sprintf("cache-subg-%s", state.Id)
+	subnetGroupName = cacheSubnetGroupName(state.Id)
 	sbg, err := p.GetCacheSubnetGroup(subnetGroupName)
 	if sbg != nil {
 		if err := state.InitializeParameterValue(ParamCacheSubnetGroupName, subnetGroupName); err != nil {
@@ -1027,7 +1019,8 @@ func (p *Provisioner) GetReplicationGroup(identifier string) (*elasticachetypes.
 
 	result, err := p.elasticacheClient.DescribeReplicationGroups(context.Background(), input)
 	if err != nil {
-		if err, ok := err.(awserr.Error); ok && strings.Contains(err.Code(), "ReplicationGroupNotFound") {
+		var nf *elasticachetypes.ReplicationGroupNotFoundFault
+		if errors.As(err, &nf) {
 			return nil, fmt.Errorf("replication group not found")
 		}
 		return nil, fmt.Errorf("failed to describe replication group: %s", err)
@@ -1049,7 +1042,8 @@ func (p *Provisioner) GetCacheCluster(clusterId string) (*elasticachetypes.Cache
 
 	result, err := p.elasticacheClient.DescribeCacheClusters(context.Background(), input)
 	if err != nil {
-		if err, ok := err.(awserr.Error); ok && strings.Contains(err.Code(), "CacheClusterNotFound") {
+		var nf *elasticachetypes.CacheClusterNotFoundFault
+		if errors.As(err, &nf) {
 			return nil, fmt.Errorf("cache cluster not found")
 		}
 		return nil, fmt.Errorf("failed to describe cache cluster: %s", err)
@@ -1103,6 +1097,11 @@ func (p *Provisioner) deleteReplicationGroupIfManaged(state *StateData) error {
 		return err
 	}
 
+	if aws.ToString(resp.Status) == "deleting" {
+		p.logger.Logf("Waiting for replication group %s to finish deleting", replciatonGroupId)
+		return fmt.Errorf("replication group %s: %w", replciatonGroupId, provisioner.ErrDeleteInProgress)
+	}
+
 	tagResp, err := p.elasticacheClient.ListTagsForResource(context.Background(), &elasticache.ListTagsForResourceInput{
 		ResourceName: resp.ARN,
 	})
@@ -1112,7 +1111,11 @@ func (p *Provisioner) deleteReplicationGroupIfManaged(state *StateData) error {
 
 	for _, v := range tagResp.TagList {
 		if v.Key != nil && *v.Key == ProvisionerName && v.Value != nil && *v.Value == state.Id {
-			return p.DeleteReplicationGroup(replciatonGroupId)
+			p.logger.Logf("Deleting replication group: %s", replciatonGroupId)
+			if err := p.DeleteReplicationGroup(replciatonGroupId); err != nil {
+				return err
+			}
+			return fmt.Errorf("replication group %s: %w", replciatonGroupId, provisioner.ErrDeleteInProgress)
 		}
 	}
 	return nil
@@ -1132,6 +1135,11 @@ func (p *Provisioner) deleteCacheClusterIfManaged(state *StateData) error {
 		return err
 	}
 
+	if status := aws.ToString(resp.CacheClusterStatus); status == "deleting" || status == "deleted" {
+		p.logger.Logf("Waiting for cache cluster %s to finish deleting", clusterId)
+		return fmt.Errorf("cache cluster %s: %w", clusterId, provisioner.ErrDeleteInProgress)
+	}
+
 	tagResp, err := p.elasticacheClient.ListTagsForResource(context.Background(), &elasticache.ListTagsForResourceInput{
 		ResourceName: resp.ARN,
 	})
@@ -1141,7 +1149,11 @@ func (p *Provisioner) deleteCacheClusterIfManaged(state *StateData) error {
 
 	for _, v := range tagResp.TagList {
 		if v.Key != nil && *v.Key == ProvisionerName && v.Value != nil && *v.Value == state.Id {
-			return p.DeleteCacheCluster(clusterId)
+			p.logger.Logf("Deleting cache cluster: %s", clusterId)
+			if err := p.DeleteCacheCluster(clusterId); err != nil {
+				return err
+			}
+			return fmt.Errorf("cache cluster %s: %w", clusterId, provisioner.ErrDeleteInProgress)
 		}
 	}
 	return nil
@@ -1155,34 +1167,33 @@ func (p *Provisioner) deleteSecurityGroupIfManaged(state *StateData) error {
 		return err
 	}
 
+	var errs []error
 	for i := range sgList {
-		p.logger.Logf("Deleting cache security group: %s", *sgList[i].GroupId)
-		p.DeleteSecurityGroup(*sgList[i].GroupId)
+		groupId := *sgList[i].GroupId
+		p.logger.Logf("Deleting cache security group: %s", groupId)
+		if err := p.DeleteSecurityGroup(groupId); err != nil {
+			errs = append(errs, fmt.Errorf("%w %s: %w", provisioner.ErrGroupDelete, groupId, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (p *Provisioner) deleteCacheSubnetGroupIfManaged(state *StateData) error {
+	name := cacheSubnetGroupName(state.Id)
+	if v, _ := state.GetParameterValue(ParamCacheSubnetGroupName); v != name {
+		return nil
+	}
+
+	p.logger.Logf("Deleting cache subnet group: %s", name)
+	var nf *elasticachetypes.CacheSubnetGroupNotFoundFault
+	if err := p.DeleteCacheSubnetGroup(name); err != nil && !errors.As(err, &nf) {
+		return fmt.Errorf("%w %s: %w", provisioner.ErrGroupDelete, name, err)
 	}
 	return nil
 }
 
-func (p *Provisioner) deleteCacheSubnetGroupIfManaged(state *StateData) error {
-	subnetGroup, err := state.GetParameterValuePtr(ParamCacheSubnetGroupName)
-	if err != nil {
-		return err
-	}
-
-	if subnetGroup == nil {
-		return nil
-	}
-
-	sbg, err := p.GetCacheSubnetGroup(*subnetGroup)
-	if err != nil {
-		if provisioner.IsNotFoundError(err) {
-			return nil
-		}
-		return err
-	}
-
-	p.logger.Logf("Deleting cache subnet group: %s", *sbg.CacheSubnetGroupName)
-	p.DeleteCacheSubnetGroup(*sbg.CacheSubnetGroupName)
-	return nil
+func cacheSubnetGroupName(id string) string {
+	return fmt.Sprintf("cache-subg-%s", id)
 }
 
 func extraTags(tags map[string]string) []elasticachetypes.Tag {
