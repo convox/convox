@@ -155,6 +155,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 	var progressDeadlines, crashRestartLimits map[string]int
 	var maxProgressDeadline int
+	var podIdentityWait time.Duration
 
 	if id != "" {
 		m, r, err := common.ReleaseManifest(p, app, id)
@@ -173,6 +174,12 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		if p.FeatureGates[options.FeatureGateTid] && id != a.Release {
 			if err := m.ValidateTenantIngressAnnotations(); err != nil {
 				return structs.ErrBadRequest("%s", err)
+			}
+
+			for i := range m.Services {
+				if pi := m.Services[i].AccessControl.AWSPodIdentity; pi != nil && len(pi.PolicyArns) > 0 {
+					return structs.ErrBadRequest("service %s: accessControl.awsPodIdentity is not supported on this rack", m.Services[i].Name)
+				}
 			}
 		}
 
@@ -314,6 +321,19 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 
 		items = append(items, data)
 
+		// a re-promote on a tid rack skips the refusal above and must not recreate roles either
+		if pe, ok := p.Engine.(PodIdentityEngine); ok && !p.FeatureGates[options.FeatureGateTid] {
+			created, err := pe.SyncPodIdentity(app, m)
+			if err != nil {
+				return err
+			}
+
+			if until := created.Add(podIdentityPropagation); until.After(time.Now()) {
+				dependencies = append(dependencies, podIdentityWaitId(app, p.ContextTID(), until))
+				podIdentityWait = min(time.Until(until), podIdentityPropagation)
+			}
+		}
+
 		// rds resources
 		rdsItems, rdsDeps, err := p.releaseRdsResources(a, e, m)
 		if err != nil {
@@ -393,7 +413,7 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 		ReleaseID:          id,
 		AtomVersion:        atomVer,
 		StartedAt:          time.Now().UTC(),
-		ExpiresAt:          time.Now().UTC().Add(time.Duration(timeout) * time.Second),
+		ExpiresAt:          time.Now().UTC().Add(podIdentityWait + time.Duration(timeout)*time.Second),
 		Actor:              capturedActor,
 		PriorRelease:       priorRelease,
 		ProgressDeadlines:  progressDeadlines,
