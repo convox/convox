@@ -95,6 +95,7 @@ module "rack" {
   ssl_protocols                        = var.ssl_protocols
   fluentd_memory                       = var.fluentd_memory
   router_log_redact_params             = var.router_log_redact_params
+  router_user_snippets_disable         = var.router_user_snippets_disable
   syslog                               = var.syslog
   syslog_tls_verify                    = var.syslog_tls_verify
   tags                                 = local.tags

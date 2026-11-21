@@ -32,6 +32,7 @@ locals {
     region                               = var.region
     release                              = var.release
     router_log_redact_params             = var.router_log_redact_params
+    router_user_snippets_disable         = var.router_user_snippets_disable
     settings                             = var.settings
     ssl_ciphers                          = var.ssl_ciphers
     ssl_protocols                        = var.ssl_protocols
@@ -74,6 +75,7 @@ locals {
     region                               = "eastus"
     release                              = ""
     router_log_redact_params             = ""
+    router_user_snippets_disable         = "false"
     settings                             = ""
     ssl_ciphers                          = ""
     ssl_protocols                        = ""

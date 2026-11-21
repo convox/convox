@@ -93,6 +93,7 @@ module "k8s" {
     POD_SECURITY_STANDARD                     = var.pod_security_standard
     POD_SECURITY_MODE                         = var.pod_security_mode
     CONTOUR_INTERNAL_TLS                      = var.contour_internal_tls
+    ROUTER_USER_SNIPPETS_DISABLE              = var.router_user_snippets_disable
   }
 }
 

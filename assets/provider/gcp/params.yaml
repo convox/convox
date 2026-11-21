@@ -21,6 +21,11 @@ Groups:
         type: string
         regex: ^\d+h$
         description: Certificate renewal period. The default is 90 days (2160h).
+      - name: router_user_snippets_disable
+        default: "false"
+        sideNote: "Has no effect on Convox's own router settings."
+        type: boolean
+        description: "Refuses deploys whose &i ingressAnnotations &i include nginx snippet annotations (keys ending in &i -snippet &i), which add raw configuration to the router shared by every app. Apps that already use them keep working until their next deploy. Set &i app_rack_url_disable &i as well, or apps that call the rack API are not restricted."
       - name: docker_hub_username
         default: "null"
         sideNote: Not set by default
