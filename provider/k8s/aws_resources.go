@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner"
 	"github.com/convox/convox/provider/aws/provisioner/elasticache"
 	"github.com/convox/convox/provider/aws/provisioner/rds"
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +28,10 @@ const (
 	StateFinalizer = "convox.com/rds-provisioner"
 	StateDataKey   = "state"
 
-	AnnotationUninstalledAt = "convox.com/uninstalled-at"
+	AnnotationUninstalledAt     = "convox.com/uninstalled-at"
+	AnnotationGroupCleanupSince = "convox.com/group-cleanup-since"
+
+	awsResourceGroupCleanupTimeout = 6 * time.Hour
 
 	MetaAppKey      = "convox-x-app"
 	MetaRackKey     = "convox-x-rack"
@@ -56,11 +61,11 @@ func generateResourceStateId(rack, tid, app, resourceName string) string {
 // parseable, so it also gets a labeled secret the state lookups read it back from.
 func (p *Provider) CreateAwsResourceStateId(tid, app, resourceName string) (string, error) {
 	id := generateResourceStateId(p.Name, tid, app, resourceName)
-	if tid == "" {
-		return id, nil
-	}
 
-	ns := p.tidNamespace(tid, app)
+	ns := p.AppNamespace(app)
+	if tid != "" {
+		ns = p.tidNamespace(tid, app)
+	}
 
 	cur, err := p.Cluster.CoreV1().Secrets(ns).Get(p.ctx, id, metav1.GetOptions{})
 	if err == nil {
@@ -71,6 +76,9 @@ func (p *Provider) CreateAwsResourceStateId(tid, app, resourceName string) (stri
 	}
 	if !kerr.IsNotFound(err) {
 		return "", err
+	}
+	if tid == "" {
+		return id, nil
 	}
 
 	_, err = p.Cluster.CoreV1().Secrets(ns).Create(p.ctx, &corev1.Secret{
@@ -477,8 +485,38 @@ func (p *Provider) MapToElasticacheParameter(cacheType, app string, params map[s
 	return filtered
 }
 
+func (p *Provider) uninstallDone(stateSecret *corev1.Secret, err error) (bool, error) {
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, provisioner.ErrDeleteInProgress):
+		return false, nil
+	case !errors.Is(err, provisioner.ErrGroupDelete):
+		return false, err
+	}
+
+	since, perr := time.Parse(time.RFC3339, stateSecret.Annotations[AnnotationGroupCleanupSince])
+	if perr != nil {
+		_, perr = p.PatchSecret(p.ctx, stateSecret, func(s *corev1.Secret) *corev1.Secret {
+			if s.Annotations == nil {
+				s.Annotations = map[string]string{}
+			}
+			s.Annotations[AnnotationGroupCleanupSince] = time.Now().UTC().Format(time.RFC3339)
+			return s
+		}, metav1.PatchOptions{})
+		return false, errors.Join(err, perr)
+	}
+
+	if time.Since(since) < awsResourceGroupCleanupTimeout {
+		return false, err
+	}
+
+	p.logger.Logf("Leaving groups of %s/%s in place after %s: %s", stateSecret.Namespace, stateSecret.Name, awsResourceGroupCleanupTimeout, err)
+	return true, nil
+}
+
 func (p *Provider) uninstallRdsAssociatedWithStateSecret(stateSecret *corev1.Secret) error {
-	if err := p.RdsProvisioner.Uninstall(stateSecret.Name); err != nil {
+	if done, err := p.uninstallDone(stateSecret, p.RdsProvisioner.Uninstall(stateSecret.Name)); !done {
 		return err
 	}
 
@@ -504,7 +542,7 @@ func (p *Provider) uninstallRdsAssociatedWithStateSecret(stateSecret *corev1.Sec
 }
 
 func (p *Provider) uninstallElaticacheAssociatedWithStateSecret(stateSecret *corev1.Secret) error {
-	if err := p.ElasticacheProvisioner.Uninstall(stateSecret.Name); err != nil {
+	if done, err := p.uninstallDone(stateSecret, p.ElasticacheProvisioner.Uninstall(stateSecret.Name)); !done {
 		return err
 	}
 
