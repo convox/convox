@@ -517,7 +517,14 @@ func (p *Provider) AppUpdate(name string, opts structs.AppUpdateOptions) error {
 		return errors.WithStack(err)
 	}
 
-	if err := p.ReleasePromote(a.Name, a.Release, structs.ReleasePromoteOptions{Timeout: options.Int(30)}); err != nil {
+	popts := structs.ReleasePromoteOptions{Timeout: options.Int(30)}
+	if a.Status == "updating" {
+		if status, _, err := p.Atom.Status(p.AppNamespace(a.Name), "app"); err == nil && status == "Pending" {
+			popts.Timeout = nil
+		}
+	}
+
+	if err := p.ReleasePromote(a.Name, a.Release, popts); err != nil {
 		return errors.WithStack(err)
 	}
 

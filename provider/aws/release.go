@@ -3,40 +3,26 @@ package aws
 import (
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/k8s"
 	"github.com/pkg/errors"
 )
+
+var _ k8s.PodIdentityEngine = (*Provider)(nil)
 
 func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOptions) error {
 	m, _, err := common.ReleaseManifest(p, app, id)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-
-	servicesMap := make(map[string]manifest.Service)
-	for i := range m.Services {
-		servicesMap[m.Services[i].Name] = m.Services[i]
-		err = p.processAccessControl(app, m.Services[i].Name, m.Services[i].AccessControl)
-		if err != nil {
-			return err
-		}
-	}
-
-	for i := range m.Timers {
-		service, ok := servicesMap[m.Timers[i].Service]
-		if ok {
-			err = p.processAccessControl(app, fmt.Sprintf("timer-%s", m.Timers[i].Name), service.AccessControl)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	if err := p.Provider.ReleasePromote(app, id, opts); err != nil {
@@ -46,22 +32,64 @@ func (p *Provider) ReleasePromote(app, id string, opts structs.ReleasePromoteOpt
 	return p.applyAppLogRetention(app, m)
 }
 
-func (p *Provider) processAccessControl(app, service string, opts manifest.AccessControlOptions) error {
+// SyncPodIdentity returns the creation time of the newest pod identity association.
+func (p *Provider) SyncPodIdentity(app string, m *manifest.Manifest) (time.Time, error) {
+	for i := range m.Services {
+		if pi := m.Services[i].AccessControl.AWSPodIdentity; pi != nil {
+			for _, policy := range pi.PolicyArns {
+				if a, err := arn.Parse(policy); err != nil || a.Service != "iam" || !strings.HasPrefix(a.Resource, "policy/") {
+					return time.Time{}, structs.ErrBadRequest("service %s: accessControl.awsPodIdentity.policyArns: %q is not an IAM policy ARN", m.Services[i].Name, policy)
+				}
+			}
+		}
+	}
+
+	var newest time.Time
+
+	servicesMap := make(map[string]manifest.Service)
+	for i := range m.Services {
+		servicesMap[m.Services[i].Name] = m.Services[i]
+		created, err := p.processAccessControl(app, m.Services[i].Name, m.Services[i].AccessControl)
+		if err != nil {
+			return time.Time{}, err
+		}
+		if created.After(newest) {
+			newest = created
+		}
+	}
+
+	for i := range m.Timers {
+		service, ok := servicesMap[m.Timers[i].Service]
+		if ok {
+			created, err := p.processAccessControl(app, fmt.Sprintf("timer-%s", m.Timers[i].Name), service.AccessControl)
+			if err != nil {
+				return time.Time{}, err
+			}
+			if created.After(newest) {
+				newest = created
+			}
+		}
+	}
+
+	return newest, nil
+}
+
+func (p *Provider) processAccessControl(app, service string, opts manifest.AccessControlOptions) (time.Time, error) {
 	return p.processAwsPodIdentityAccess(app, service, opts.AWSPodIdentity)
 }
 
-func (p *Provider) processAwsPodIdentityAccess(app, service string, opts *manifest.AWSPodIdentityOptions) error {
+func (p *Provider) processAwsPodIdentityAccess(app, service string, opts *manifest.AWSPodIdentityOptions) (time.Time, error) {
 	if opts == nil || len(opts.PolicyArns) == 0 {
-		return nil
+		return time.Time{}, nil
 	}
 
 	roleArn, err := p.createRoleIfNotExist(app, service)
 	if err != nil {
-		return fmt.Errorf("failed to create role: %s", err)
+		return time.Time{}, fmt.Errorf("failed to create role: %s", err)
 	}
 
 	if err := p.syncRolePolices(app, service, opts); err != nil {
-		return fmt.Errorf("failed to sync role policies: %s", err)
+		return time.Time{}, fmt.Errorf("failed to sync role policies: %s", err)
 	}
 
 	return p.associatePodIdentityIfNotExist(app, service, roleArn)
@@ -154,14 +182,14 @@ func (p *Provider) syncRolePolices(app, service string, opts *manifest.AWSPodIde
 	return nil
 }
 
-func (p *Provider) associatePodIdentityIfNotExist(app, service, roleArn string) error {
+func (p *Provider) associatePodIdentityIfNotExist(app, service, roleArn string) (time.Time, error) {
 	resp, err := p.EKS.ListPodIdentityAssociations(&eks.ListPodIdentityAssociationsInput{
 		ClusterName:    aws.String(p.Name),
 		Namespace:      aws.String(p.Provider.AppNamespace(app)),
 		ServiceAccount: aws.String(service),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list associated pod identitiy: %s", err)
+		return time.Time{}, fmt.Errorf("failed to list associated pod identitiy: %s", err)
 	}
 
 	if len(resp.Associations) == 0 {
@@ -172,13 +200,25 @@ func (p *Provider) associatePodIdentityIfNotExist(app, service, roleArn string) 
 			RoleArn:        aws.String(roleArn),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to list associated pod identitiy: %s", err)
+			return time.Time{}, fmt.Errorf("failed to create pod identity association: %s", err)
 		}
-		// wait 90s to sync pod identity association
-		time.Sleep(90 * time.Second)
+
+		return time.Now(), nil
 	}
 
-	return nil
+	desc, err := p.EKS.DescribePodIdentityAssociation(&eks.DescribePodIdentityAssociationInput{
+		AssociationId: resp.Associations[0].AssociationId,
+		ClusterName:   aws.String(p.Name),
+	})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to describe pod identity association: %s", err)
+	}
+
+	if desc.Association == nil || desc.Association.CreatedAt == nil {
+		return time.Now(), nil
+	}
+
+	return *desc.Association.CreatedAt, nil
 }
 
 func (p *Provider) getRoleName(app, service string) string {

@@ -178,6 +178,13 @@ func (a *AtomController) processDependency(obj *atomv1.Atom) {
 	for _, dep := range obj.Spec.Dependencies {
 		rs := parseResourceSubstitutionId(dep)
 
+		if rs.RType == podIdentityWaitType {
+			if d := min(time.Until(time.UnixMilli(rs.Until)), podIdentityPropagation); d > 0 {
+				_ = a.provider.systemLog(rs.Tid, rs.App, "state", time.Now(), fmt.Sprintf("Waiting %s for pod identity association to propagate", d.Round(time.Second)))
+				time.Sleep(d)
+			}
+		}
+
 		if strings.HasPrefix(rs.RType, "rds-") {
 			if err := a.processRdsDependency(obj, dep); err != nil {
 				a.logger.Logf("%s", err.Error())

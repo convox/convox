@@ -449,16 +449,25 @@ var gpuKeyToVendor = map[string]string{
 	"google.com/tpu": "google",
 }
 
+const podIdentityWaitType = "podidentity-wait"
+
+var podIdentityPropagation = 90 * time.Second
+
 type resourceSubstitution struct {
 	App     string
 	RType   string
 	RName   string
 	StateId string
 	Tid     string
+	Until   int64
 }
 
 func resourceSubstitutionId(r *resourceSubstitution) string {
 	return fmt.Sprintf("##|app:%s|type:%s|resource:%s|stateId:%s|tid:%s|##", r.App, r.RType, r.RName, r.StateId, r.Tid)
+}
+
+func podIdentityWaitId(app, tid string, until time.Time) string {
+	return fmt.Sprintf("##|app:%s|type:%s|tid:%s|until:%d|##", app, podIdentityWaitType, tid, until.UnixMilli())
 }
 
 func parseResourceSubstitutionId(id string) *resourceSubstitution {
@@ -481,6 +490,8 @@ func parseResourceSubstitutionId(id string) *resourceSubstitution {
 			rs.StateId = v
 		case "tid":
 			rs.Tid = v
+		case "until":
+			rs.Until, _ = strconv.ParseInt(v, 10, 64)
 		}
 	}
 
