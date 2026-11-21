@@ -112,6 +112,30 @@ func TestAppDelete(t *testing.T) {
 	})
 }
 
+func TestAppDeleteWhileDeleting(t *testing.T) {
+	testProvider(t, func(p *k8s.Provider) {
+		aa, ok := p.Atom.(*atom.MockInterface)
+		require.True(t, ok)
+		kk, ok := p.Cluster.(*fake.Clientset)
+		require.True(t, ok)
+
+		require.NoError(t, appCreate(kk, "rack1", "app1"))
+
+		ns, err := kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+		ns.Status.Phase = ac.NamespaceTerminating
+		_, err = kk.CoreV1().Namespaces().Update(context.TODO(), ns, am.UpdateOptions{})
+		require.NoError(t, err)
+
+		aa.On("Status", "rack1-app1", "app").Return("Running", "R1234567", nil).Once()
+
+		require.NoError(t, p.AppDelete("app1"))
+
+		_, err = kk.CoreV1().Namespaces().Get(context.TODO(), "rack1-app1", am.GetOptions{})
+		require.NoError(t, err)
+	})
+}
+
 func TestAppDeleteMissingApp(t *testing.T) {
 	testProvider(t, func(p *k8s.Provider) {
 		err := p.AppDelete("app1")

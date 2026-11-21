@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
+	"github.com/convox/convox/provider/aws/provisioner"
 	"github.com/convox/logger"
 	"github.com/stretchr/testify/require"
 	ac "k8s.io/api/core/v1"
@@ -90,6 +93,66 @@ func TestCreateAwsResourceStateId(t *testing.T) {
 
 	_, err = p.CreateAwsResourceStateId("ab12", "app1", "pg")
 	require.EqualError(t, err, "resource pg is still being deleted, promote again once it is gone")
+
+	held := mkStateSecret("rack1-app1", "pg-rrack1r-app1", nil, nil)
+	held.DeletionTimestamp = &now
+	held.Finalizers = []string{StateFinalizer}
+	_, err = p.Cluster.CoreV1().Secrets("rack1-app1").Create(context.TODO(), held, am.CreateOptions{})
+	require.NoError(t, err)
+
+	_, err = p.CreateAwsResourceStateId("", "app1", "pg")
+	require.EqualError(t, err, "resource pg is still being deleted, promote again once it is gone")
+}
+
+func TestUninstallDone(t *testing.T) {
+	groupErr := fmt.Errorf("%w sg-1: DependencyViolation", provisioner.ErrGroupDelete)
+
+	tests := []struct {
+		name      string
+		since     string
+		err       error
+		wantDone  bool
+		wantErr   error
+		wantSince bool
+	}{
+		{name: "uninstalled", wantDone: true},
+		{name: "delete in progress", err: fmt.Errorf("db instance db1: %w", provisioner.ErrDeleteInProgress)},
+		{name: "other error", err: fmt.Errorf("access denied"), wantErr: fmt.Errorf("access denied")},
+		{name: "first group error", err: groupErr, wantErr: groupErr, wantSince: true},
+		{name: "group error within the bound", since: time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), err: groupErr, wantErr: groupErr},
+		{name: "group error past the bound", since: time.Now().Add(-7 * time.Hour).UTC().Format(time.RFC3339), err: groupErr, wantDone: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			now := am.Now()
+			s := mkStateSecret("rack1-app1", "pg-rrack1r-app1", nil, nil)
+			s.DeletionTimestamp = &now
+			s.Finalizers = []string{StateFinalizer}
+			if tc.since != "" {
+				s.Annotations = map[string]string{AnnotationGroupCleanupSince: tc.since}
+			}
+			p := newTestAwsProvider(s)
+
+			done, err := p.uninstallDone(s, tc.err)
+			require.Equal(t, tc.wantDone, done)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantErr.Error())
+			}
+
+			cur, err := p.Cluster.CoreV1().Secrets("rack1-app1").Get(context.TODO(), "pg-rrack1r-app1", am.GetOptions{})
+			require.NoError(t, err)
+			if tc.wantSince {
+				since, err := time.Parse(time.RFC3339, cur.Annotations[AnnotationGroupCleanupSince])
+				require.NoError(t, err)
+				require.WithinDuration(t, time.Now(), since, time.Minute)
+			} else {
+				require.Equal(t, tc.since, cur.Annotations[AnnotationGroupCleanupSince])
+			}
+		})
+	}
 }
 
 // The provisioner storage callbacks run on the base provider, so SaveState has no

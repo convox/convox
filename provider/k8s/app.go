@@ -173,8 +173,10 @@ func (p *Provider) AppDelete(name string) error {
 		return errors.WithStack(structs.ErrConflict("app is locked: %s", name))
 	}
 
-	if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
-		return errors.WithStack(err)
+	if a.Status != "deleting" {
+		if err := p.Cluster.CoreV1().Namespaces().Delete(context.TODO(), p.AppNamespace(name), am.DeleteOptions{}); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	// Delete the dedicated build namespace if present. The type=build label guards

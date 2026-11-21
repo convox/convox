@@ -2,6 +2,7 @@ package rds
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -14,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	rdstypes "github.com/aws/aws-sdk-go-v2/service/rds/types"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/convox/convox/provider/aws/provisioner"
 	"github.com/convox/logger"
 )
@@ -476,11 +476,7 @@ func (p *Provisioner) Uninstall(id string) error {
 		return nil
 	}
 
-	if err := p.deleteSecurityGroupIfManaged(state); err != nil {
-		return err
-	}
-
-	if err := p.deleteDBSubnetGroupIfManaged(state); err != nil {
+	if err := errors.Join(p.deleteSecurityGroupIfManaged(state), p.deleteDBSubnetGroupIfManaged(state)); err != nil {
 		return err
 	}
 
@@ -735,7 +731,7 @@ func (p *Provisioner) createDBSubnetGroupIfNotProvided(state *StateData) error {
 	}
 
 	p.logger.Logf("checking if db subnet group is already created")
-	subnetGroupName = fmt.Sprintf("db-subg-%s", state.Id)
+	subnetGroupName = dbSubnetGroupName(state.Id)
 	dbSbg, err := p.GetDBSubnetGroup(*&subnetGroupName)
 	if dbSbg != nil {
 		if err := state.InitializeParameterValue(ParamDBSubnetGroupName, subnetGroupName); err != nil {
@@ -770,7 +766,8 @@ func (p *Provisioner) GetDBInstance(dbIdentifier string) (*rdstypes.DBInstance, 
 
 	result, err := p.rdsClient.DescribeDBInstances(context.Background(), input)
 	if err != nil {
-		if err, ok := err.(awserr.Error); ok && err.Code() == "DBInstanceNotFound" {
+		var nf *rdstypes.DBInstanceNotFoundFault
+		if errors.As(err, &nf) {
 			return nil, fmt.Errorf("db instance not found")
 		}
 		return nil, fmt.Errorf("failed to describe db instances: %s", err)
@@ -826,9 +823,18 @@ func (p *Provisioner) deleteDBInstancesIfManaged(state *StateData) (bool, error)
 		return true, nil
 	}
 
+	if status := aws.ToString(resp.DBInstanceStatus); status == "deleting" || status == "delete-precheck" {
+		p.logger.Logf("Waiting for db instance %s to finish deleting", dbIdentifier)
+		return false, fmt.Errorf("db instance %s: %w", dbIdentifier, provisioner.ErrDeleteInProgress)
+	}
+
 	for _, v := range resp.TagList {
 		if v.Key != nil && *v.Key == ProvisionerName && v.Value != nil && *v.Value == state.Id {
-			return false, p.DeleteDBInstance(dbIdentifier)
+			p.logger.Logf("Deleting db instance: %s", dbIdentifier)
+			if err := p.DeleteDBInstance(dbIdentifier); err != nil {
+				return false, err
+			}
+			return false, fmt.Errorf("db instance %s: %w", dbIdentifier, provisioner.ErrDeleteInProgress)
 		}
 	}
 	return false, nil
@@ -842,34 +848,33 @@ func (p *Provisioner) deleteSecurityGroupIfManaged(state *StateData) error {
 		return err
 	}
 
+	var errs []error
 	for i := range sgList {
-		p.logger.Logf("Deleting db security group: %s", *sgList[i].GroupId)
-		p.DeleteSecurityGroup(*sgList[i].GroupId)
+		groupId := *sgList[i].GroupId
+		p.logger.Logf("Deleting db security group: %s", groupId)
+		if err := p.DeleteSecurityGroup(groupId); err != nil {
+			errs = append(errs, fmt.Errorf("%w %s: %w", provisioner.ErrGroupDelete, groupId, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (p *Provisioner) deleteDBSubnetGroupIfManaged(state *StateData) error {
+	name := dbSubnetGroupName(state.Id)
+	if v, _ := state.GetParameterValue(ParamDBSubnetGroupName); v != name {
+		return nil
+	}
+
+	p.logger.Logf("Deleting db subnet group: %s", name)
+	var nf *rdstypes.DBSubnetGroupNotFoundFault
+	if err := p.DeleteDBSubnetGroup(name); err != nil && !errors.As(err, &nf) {
+		return fmt.Errorf("%w %s: %w", provisioner.ErrGroupDelete, name, err)
 	}
 	return nil
 }
 
-func (p *Provisioner) deleteDBSubnetGroupIfManaged(state *StateData) error {
-	subnetGroup, err := state.GetParameterValuePtr(ParamDBSubnetGroupName)
-	if err != nil {
-		return err
-	}
-
-	if subnetGroup == nil {
-		return nil
-	}
-
-	dbSbg, err := p.GetDBSubnetGroup(*subnetGroup)
-	if err != nil {
-		if provisioner.IsNotFoundError(err) {
-			return nil
-		}
-		return err
-	}
-
-	p.logger.Logf("Deleting db subnet group: %s", *dbSbg.DBSubnetGroupName)
-	p.DeleteDBSubnetGroup(*dbSbg.DBSubnetGroupName)
-	return nil
+func dbSubnetGroupName(id string) string {
+	return fmt.Sprintf("db-subg-%s", id)
 }
 
 func extraTags(tags map[string]string) []rdstypes.Tag {
