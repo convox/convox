@@ -280,6 +280,38 @@ func (p *Provider) applyPausedReplicasAnnotation(ctx context.Context, ns, name s
 	return p.patchPausedReplicasAnnotation(ctx, so, ns, name, "0")
 }
 
+func (p *Provider) budgetClaimsService(ctx context.Context, app, svc string) (bool, error) {
+	ns, err := p.Cluster.CoreV1().Namespaces().Get(ctx, p.AppNamespace(app), am.GetOptions{})
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+	state, _ := readBudgetShutdownStateAnnotation(ns.Annotations)
+	if state == nil || state.RestoredAt != nil || state.ExpiredAt != nil {
+		return false, nil
+	}
+	for i := range state.Services {
+		if state.Services[i].Name == svc {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (p *Provider) manuallyPaused(ctx context.Context, ns, name string) (bool, error) {
+	if p.DynamicClient == nil {
+		return false, nil
+	}
+	so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
+	if ae.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, errors.WithStack(err)
+	}
+	paused, manual := scaledObjectPause(so)
+	return paused && manual, nil
+}
+
 func (p *Provider) clearPausedReplicasAnnotation(ctx context.Context, ns, name string) error {
 	so, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(ns).Get(ctx, name, am.GetOptions{})
 	if err != nil {
@@ -302,49 +334,56 @@ func (p *Provider) patchPausedReplicasAnnotation(ctx context.Context, so *unstru
 	return errors.WithStack(err)
 }
 
-func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc *structs.AppBudgetShutdownStateService) (manualDetected bool, err error) {
+func (p *Provider) restoreServiceFromState(ctx context.Context, app string, svc *structs.AppBudgetShutdownStateService) (manualDetected, leftPaused bool, err error) {
 	nsName := p.AppNamespace(app)
 	dep, err := p.Cluster.AppsV1().Deployments(nsName).Get(ctx, svc.Name, am.GetOptions{})
 	if err != nil {
 		if ae.IsNotFound(err) {
-			return false, nil
+			return false, false, nil
 		}
-		return false, errors.WithStack(err)
+		return false, false, errors.WithStack(err)
 	}
 	currentReplicas := int32(0)
 	if dep.Spec.Replicas != nil {
 		currentReplicas = *dep.Spec.Replicas
 	}
 	if currentReplicas > 0 {
-		return true, nil
+		return true, false, nil
 	}
-	target := int32(svc.OriginalScale.Count) //nolint:gosec
-	if target == 0 && svc.OriginalScale.Replicas > 0 {
-		target = int32(svc.OriginalScale.Replicas) //nolint:gosec
+	leftPaused, err = p.manuallyPaused(ctx, nsName, svc.Name)
+	if err != nil {
+		return false, false, err
 	}
-	patchObj := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"replicas": target,
-			"template": map[string]interface{}{
-				"spec": map[string]interface{}{
-					"terminationGracePeriodSeconds": svc.OriginalGracePeriodSeconds,
-				},
+	spec := map[string]interface{}{
+		"template": map[string]interface{}{
+			"spec": map[string]interface{}{
+				"terminationGracePeriodSeconds": svc.OriginalGracePeriodSeconds,
 			},
 		},
 	}
-	patchBytes, err := json.Marshal(patchObj)
+	if !leftPaused {
+		target := int32(svc.OriginalScale.Count) //nolint:gosec
+		if target == 0 && svc.OriginalScale.Replicas > 0 {
+			target = int32(svc.OriginalScale.Replicas) //nolint:gosec
+		}
+		spec["replicas"] = target
+	}
+	patchBytes, err := json.Marshal(map[string]interface{}{"spec": spec})
 	if err != nil {
-		return false, errors.WithStack(err)
+		return false, false, errors.WithStack(err)
 	}
 	if _, err := patchDeploymentWithRetry(ctx, p.Cluster, nsName, svc.Name, types.MergePatchType, patchBytes); err != nil {
-		return false, errors.Wrapf(err, "patch restore %s/%s", nsName, svc.Name)
+		return false, false, errors.Wrapf(err, "patch restore %s/%s", nsName, svc.Name)
+	}
+	if leftPaused {
+		return false, true, nil
 	}
 	if svc.KedaScaledObject != nil {
 		if err := p.clearPausedReplicasAnnotation(ctx, nsName, svc.KedaScaledObject.Name); err != nil {
 			fmt.Printf("ns=budget_shutdown at=restore_scaledobject_missing app=%s service=%s err=%q\n", app, svc.Name, err)
 		}
 	}
-	return false, nil
+	return false, false, nil
 }
 
 type shutdownPlan struct {
@@ -615,15 +654,20 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 
 	manualDetected := []string{}
 	restoredOK := []string{}
+	leftPaused := []string{}
 	failed := []string{}
 	keda := 0
 	deploymentOnly := 0
 	for i := range state.Services {
 		svc := &state.Services[i]
-		md, err := p.restoreServiceFromState(ctx, app, svc)
+		md, paused, err := p.restoreServiceFromState(ctx, app, svc)
 		if err != nil {
 			fmt.Printf("ns=budget_shutdown at=restore_failed app=%s service=%s err=%q\n", app, svc.Name, err)
 			failed = append(failed, svc.Name)
+			continue
+		}
+		if paused {
+			leftPaused = append(leftPaused, svc.Name)
 			continue
 		}
 		if md {
@@ -661,7 +705,7 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 			data["expected_shutdown_at"] = expected.UTC().Format(time.RFC3339)
 		}
 		_ = p.EventSend(shutdownEventName("cancelled"), structs.EventSendOptions{Data: data})
-	} else if len(restoredOK) > 0 || len(manualDetected) > 0 {
+	} else if len(restoredOK) > 0 || len(manualDetected) > 0 || (len(leftPaused) > 0 && !wasArmedOnly) {
 		data := universalEventData(actor, tickID, false, capUsdFor(cfg), spendUsdFor(baseState))
 		data["app"] = app
 		data["restored_services"] = formatServiceList(append(append([]string{}, restoredOK...), manualDetected...))
@@ -673,6 +717,9 @@ func (p *Provider) restoreFromAnnotation(ctx context.Context, app, ackBy string,
 		}
 		data["restored_to_keda"] = strconv.Itoa(keda)
 		data["restored_to_deployment"] = strconv.Itoa(deploymentOnly)
+		if len(leftPaused) > 0 {
+			data["paused_services"] = formatServiceList(leftPaused)
+		}
 		data["drift_detected"] = "false"
 		flapUntil := now.Add(structs.BudgetFlapCooldown)
 		data["flap_suppressed_until"] = flapUntil.UTC().Format(time.RFC3339)

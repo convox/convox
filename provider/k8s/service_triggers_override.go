@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/convox/convox/pkg/manifest"
+	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	"github.com/pkg/errors"
@@ -458,6 +459,10 @@ func (p *Provider) overlayLiveCRDBounds(app, service string, s *structs.Service)
 		v := int(maxVal)
 		s.Max = &v
 	}
+	if paused, _ := scaledObjectPause(so); paused {
+		s.Paused = options.Bool(true)
+		s.ColdStart = nil
+	}
 }
 
 // Half the threshold, floor of 1 — mirrors manifest-driven derivation.
@@ -530,7 +535,7 @@ func (p *Provider) reinstateManifestAutoscaler(ns, app, service string, ms *mani
 }
 
 func (p *Provider) reinstateKedaScaledObject(ns, app, service string, ms *manifest.Service) {
-	if p.DynamicClient == nil {
+	if p.DynamicClient == nil || ms.Scale.Count.Max <= ms.Scale.Count.Min {
 		return
 	}
 	min := int32(ms.Scale.Count.Min) //nolint:gosec

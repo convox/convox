@@ -388,6 +388,17 @@ func validateServiceScale(s *Service) []error {
 		errs = append(errs, fmt.Errorf("service %s: scale.max must be >= scale.min", s.Name))
 	}
 
+	if k := s.Scale.Keda; k != nil && k.IdleReplicaCount != nil && effMax > effMin && (s.Scale.IsKedaEnabled() || s.Scale.Autoscale.IsEnabled()) {
+		if idle := int(*k.IdleReplicaCount); idle < 0 || idle >= max(effMin, 1) {
+			errs = append(errs, fmt.Errorf("service %s: scale.keda.idleReplicaCount must be lower than scale.min, and 0 when scale.min is 0 or 1", s.Name))
+		}
+	}
+	if s.Scale.IsKedaEnabled() && effMax == effMin && !s.Scale.Autoscale.IsEnabled() {
+		fmt.Fprintf(os.Stderr,
+			"WARNING: service %q: scale.keda triggers are ignored because scale.count is fixed at %d; set a range such as 0-10 to let KEDA scale this service.\n",
+			s.Name, effMin)
+	}
+
 	a := s.Scale.Autoscale
 	if !a.IsEnabled() {
 		return errs
