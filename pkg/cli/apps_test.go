@@ -661,3 +661,20 @@ func TestAppsParamsSetTags(t *testing.T) {
 		})
 	}
 }
+
+func TestAppsExportResourceError(t *testing.T) {
+	testClient(t, func(e *cli.Engine, i *mocksdk.Interface) {
+		i.On("AppGet", "app1").Return(&structs.App{Name: "app1", Generation: "2", Status: "running"}, nil)
+		i.On("ResourceList", "app1").Return(structs.Resources{*fxResource()}, nil)
+		i.On("ResourceExport", "app1", "resource1").Return(io.NopCloser(bytes.NewReader([]byte("ERROR: could not export: exit status 2\n"))), nil)
+
+		res, err := testExecute(e, fmt.Sprintf("apps export -a app1 -f %s", filepath.Join(t.TempDir(), "app.tgz")), nil)
+		require.NoError(t, err)
+		require.Equal(t, 1, res.Code)
+		res.RequireStderr(t, []string{"ERROR: could not export: exit status 2"})
+		res.RequireStdout(t, []string{
+			"Exporting app app1... OK",
+			"Exporting resource resource1... ",
+		})
+	})
+}
