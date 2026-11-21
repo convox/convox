@@ -289,11 +289,16 @@ func (c Console) UpdateParams(params map[string]string) error {
 		return err
 	}
 
-	if r.Version == "" {
+	version := r.Version
+	if _, ok := params[rotateAPIPasswordParam]; ok && version == "" {
+		version = r.Parameters["release"]
+	}
+
+	if version == "" {
 		return fmt.Errorf("current version invalid")
 	}
 
-	if err := cc.RackUpdate(c.name, r.Version, false, params); err != nil {
+	if err := cc.RackUpdate(c.name, version, false, params); err != nil {
 		return err
 	}
 

@@ -34,6 +34,9 @@ const (
 
 	MINOR_RACK_NAME_SUPPORT = 11
 	PATCH_RACK_NAME_SUPPORT = 2
+
+	apiPasswordAddress     = "module.system.module.rack.module.api.module.k8s.random_string.password"
+	rotateAPIPasswordParam = "rotate_api_password"
 )
 
 // preserveEmpty is the writeVars carve-out: for these TF variables, an empty
@@ -387,6 +390,9 @@ func (t Terraform) Uninstall() error {
 }
 
 func (t Terraform) UpdateParams(params map[string]string) error {
+	rotate := params[rotateAPIPasswordParam] == "true"
+	delete(params, rotateAPIPasswordParam)
+
 	vars, err := t.vars()
 	if err != nil {
 		return err
@@ -413,8 +419,18 @@ func (t Terraform) UpdateParams(params map[string]string) error {
 		return err
 	}
 
+	if rotate {
+		if err := t.taintAPIPassword(); err != nil {
+			return err
+		}
+	}
+
 	if err := t.apply(); err != nil {
 		return err
+	}
+
+	if rotate {
+		fmt.Fprintln(os.Stderr, "NOTICE: rotated the rack API password. RACK_URL values that embed the old password no longer work; run 'convox rack access key rotate' to also revoke access tokens.")
 	}
 
 	return nil
@@ -907,6 +923,8 @@ func (t Terraform) create(release string, vars map[string]string, state []byte) 
 		return err
 	}
 
+	delete(vars, rotateAPIPasswordParam)
+
 	if err := t.update(release, vars); err != nil {
 		return err
 	}
@@ -931,6 +949,15 @@ func (t Terraform) init() error {
 	}
 
 	return nil
+}
+
+func (t Terraform) taintAPIPassword() error {
+	dir, err := t.settingsDirectory()
+	if err != nil {
+		return err
+	}
+
+	return terraform(t.ctx, dir, "taint", "-no-color", "-allow-missing", apiPasswordAddress)
 }
 
 func (t Terraform) settingsDirectory() (string, error) {
