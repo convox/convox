@@ -59,8 +59,9 @@ func TestWhitespaceNormalizationOnClearableParams(t *testing.T) {
 }
 
 // paramGroupsExcluded enumerates settable params intentionally absent from
-// any paramGroup. These are managed-internally, install-immutable, or
-// internal feature gates surfaced only via the default unfiltered view.
+// any paramGroup. These are managed-internally, install-immutable, one-shot
+// actions that are never stored, or internal feature gates surfaced only via
+// the default unfiltered view.
 //
 // MAINTENANCE: this allowlist is the architectural decision boundary. Adding
 // a new entry IS an architectural change — review with spec authors before
@@ -68,7 +69,7 @@ func TestWhitespaceNormalizationOnClearableParams(t *testing.T) {
 // when a new entry is added without explicit signoff.
 var paramGroupsExcluded = map[string]bool{
 	"image": true, "name": true, "rack_name": true, "release": true,
-	"settings": true, "sync_tf_now": true,
+	"settings": true, "sync_tf_now": true, "rotate_api_password": true,
 	"private": true, "region": true, "availability_zones": true,
 	"api_feature_gates": true,
 }
@@ -78,7 +79,7 @@ var paramGroupsExcluded = map[string]bool{
 // description), except for the documented allowlist. Catches future PRs
 // that add a settable param without grouping it.
 func TestParamGroupsCoverage(t *testing.T) {
-	if got, want := len(paramGroupsExcluded), 10; got != want {
+	if got, want := len(paramGroupsExcluded), 11; got != want {
 		t.Fatalf("paramGroupsExcluded has %d entries; expected exactly %d. "+
 			"If you added an entry, that is an architectural change — review "+
 			"with spec authors and update this assertion.", got, want)
