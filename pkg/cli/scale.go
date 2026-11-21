@@ -269,6 +269,9 @@ func Scale(rack sdk.Interface, c *stdcli.Context) error {
 			if s.ColdStart != nil && *s.ColdStart {
 				status = "COLD (~2-5m first req)"
 			}
+			if common.DefaultBool(s.Paused, false) {
+				status = "paused"
+			}
 			// Append at-cap* sub-state when budget cap state is true.
 			// Short forms only here: long forms (e.g. `at-cap (keda-managed)`)
 			// are reserved for `convox budget show` banner per R3.

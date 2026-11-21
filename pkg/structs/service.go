@@ -35,6 +35,8 @@ type Service struct {
 	// Pointer tri-state: nil = pre-3.24.6 rack (unsupported), *false = off, *true = on.
 	ScaleOverrideActive    *bool `json:"scale-override-active,omitempty"`
 	TriggersOverrideActive *bool `json:"triggers-override-active,omitempty"` // same contract as ScaleOverrideActive
+
+	Paused *bool `json:"paused,omitempty"`
 }
 
 // ServiceAutoscaleState reports current autoscale state for a service.
