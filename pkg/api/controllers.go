@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
+	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
@@ -1465,6 +1467,8 @@ func (s *Server) ProcessRun(c *stdapi.Context) error {
 		return err
 	}
 
+	auditEntry(c).Pid = v.Id
+
 	if vs, ok := interface{}(v).(Sortable); ok {
 		sort.Slice(v, vs.Less)
 	}
@@ -2182,7 +2186,7 @@ func (s *Server) SystemLogs(c *stdapi.Context) error {
 		defer c.Close()
 	}
 
-	if err := copyLogs(c, v); err != nil {
+	if err := copyLogLines(c, v, dropAuditRecords(opts.Prefix != nil && *opts.Prefix)); err != nil {
 		return err
 	}
 
@@ -2191,6 +2195,32 @@ func (s *Server) SystemLogs(c *stdapi.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Server) SystemAuditLogs(c *stdapi.Context) error {
+	if !CanAdmin(c) {
+		return stdapi.Errorf(http.StatusForbidden, "admin role required")
+	}
+
+	if requestTID(c) != "" {
+		return stdapi.Errorf(http.StatusForbidden, "audit logs are not available on this rack")
+	}
+
+	var opts structs.LogsOptions
+	if err := stdapi.UnmarshalOptions(c.Request(), &opts); err != nil {
+		return err
+	}
+
+	opts.Filter = options.String(audit.Marker)
+	opts.Prefix = options.Bool(true)
+
+	v, err := s.provider(c).WithContext(contextFrom(c)).SystemLogs(opts)
+	if err != nil {
+		return err
+	}
+	defer v.Close()
+
+	return copyLogLines(c, v, keepAuditRecords)
 }
 
 func (s *Server) SystemMetrics(c *stdapi.Context) error {
@@ -2266,6 +2296,9 @@ func (s *Server) SystemJwtToken(c *stdapi.Context) error {
 	default:
 		return stdapi.Errorf(http.StatusBadRequest, "invalid role: must be read, write, or admin")
 	}
+
+	e := auditEntry(c)
+	e.Minted, e.Granted, e.Hours = jwt.Fingerprint(tk), role, durationInHour
 
 	return c.RenderJSON(structs.SystemJwt{
 		Token: tk,

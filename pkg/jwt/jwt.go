@@ -1,7 +1,11 @@
 package jwt
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/convox/convox/pkg/structs"
@@ -114,4 +118,21 @@ func (j *JwtManager) Verify(token string) (*TokenData, error) {
 		return nil, fmt.Errorf("token is expired")
 	}
 	return d, nil
+}
+
+// Fingerprint identifies a token in logs without revealing it; "" when token is not a JWT.
+func Fingerprint(token string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return ""
+	}
+
+	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil || len(sig) == 0 {
+		return ""
+	}
+
+	sum := sha256.Sum256([]byte(parts[0] + "." + parts[1] + "." + base64.RawURLEncoding.EncodeToString(sig)))
+
+	return hex.EncodeToString(sum[:])[:12]
 }

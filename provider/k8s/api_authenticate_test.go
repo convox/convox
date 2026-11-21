@@ -1,11 +1,15 @@
 package k8s
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/jwt"
 	"github.com/convox/convox/pkg/structs"
 	gojwt "github.com/golang-jwt/jwt/v4"
@@ -202,4 +206,102 @@ func TestApiProxyAuthenticateEmptyRackPassword(t *testing.T) {
 		require.Equal(t, http.StatusOK, res.code)
 		require.Empty(t, res.authHeader)
 	})
+}
+
+func TestApiProxyAuthenticateAuditRecords(t *testing.T) {
+	var buf bytes.Buffer
+	prev := audit.Output
+	audit.Output = &buf
+	t.Cleanup(func() { audit.Output = prev })
+
+	p := testProxyProvider("rackpassword")
+
+	admin, err := p.JwtMngr.AdminToken(time.Hour)
+	require.NoError(t, err)
+	read, err := p.JwtMngr.ReadToken(time.Hour)
+	require.NoError(t, err)
+	expired := mintTokenWithRole(t, testProxySignKey, structs.ConvoxRoleAdmin, time.Now().Add(-time.Hour))
+
+	cases := []struct {
+		name   string
+		creds  []string
+		actor  string
+		status int
+		want   audit.Entry
+	}{
+		{"password", []string{"convox", "rackpassword"}, "", 0, audit.Entry{Auth: "password", Role: structs.ConvoxRoleAdmin, Actor: "rack-password"}},
+		{"password claimed actor", []string{"convox", "rackpassword"}, "alice@example.com", 0, audit.Entry{Auth: "password", Role: structs.ConvoxRoleAdmin, Actor: "alice@example.com"}},
+		{"admin jwt", []string{"jwt", admin}, "", 0, audit.Entry{Auth: "jwt", Role: structs.ConvoxRoleAdmin, Actor: "system-admin", Token: jwt.Fingerprint(admin)}},
+		{"read jwt", []string{"jwt", read}, "", http.StatusForbidden, audit.Entry{Auth: "jwt", Role: structs.ConvoxRoleRead, Actor: "system-read", Token: jwt.Fingerprint(read)}},
+		{"expired jwt", []string{"jwt", expired}, "alice@example.com", http.StatusUnauthorized, audit.Entry{Auth: "jwt", Token: jwt.Fingerprint(expired)}},
+		{"wrong password", []string{"rackpassword", "wrong"}, "alice@example.com", http.StatusUnauthorized, audit.Entry{Auth: "password"}},
+		{"no credentials", nil, "", http.StatusUnauthorized, audit.Entry{Auth: "none"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			buf.Reset()
+
+			var authHeader string
+			stub := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				authHeader = r.Header.Get("Authorization")
+				require.Equal(t, 1, strings.Count(buf.String(), "\n{"), "record written before proxying")
+			})
+
+			req := httptest.NewRequest("GET", "/api/v1/namespaces/app/pods/web-1/exec?command=sh&command=-c&command=id&stdout=true", nil)
+			req.URL.Path = "/api/v1/namespaces/app/pods/web-1/exec"
+			req.RemoteAddr = "10.0.5.6:41000"
+			req.Header.Set("X-Forwarded-For", "198.51.100.1, 203.0.113.9")
+			if tc.actor != "" {
+				req.Header.Set("X-Convox-Actor", tc.actor)
+			}
+			if len(tc.creds) == 2 {
+				req.SetBasicAuth(tc.creds[0], tc.creds[1])
+			}
+
+			p.apiProxyAuthenticate(stub)(httptest.NewRecorder(), req)
+
+			require.Empty(t, authHeader)
+			require.Equal(t, 1, strings.Count(buf.String(), "\n{"))
+			require.NotContains(t, buf.String(), "rackpassword")
+			require.NotContains(t, buf.String(), "command=")
+			if len(tc.creds) == 2 {
+				require.NotContains(t, buf.String(), tc.creds[1])
+			}
+
+			var got audit.Entry
+			require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+			require.NotEmpty(t, got.Time)
+			got.Time = ""
+
+			want := tc.want
+			want.Type = "kubernetes"
+			want.Op = "Kubernetes"
+			want.Method = "GET"
+			want.Path = "/kubernetes/api/v1/namespaces/app/pods/web-1/exec"
+			want.Status = tc.status
+			want.IP = "203.0.113.9"
+			want.Peer = "10.0.5.6"
+			if tc.status == 0 || tc.status == http.StatusForbidden {
+				want.Command = "sh -c id"
+			}
+			require.Equal(t, want, got)
+		})
+	}
+}
+
+func TestAppParametersUpdateLogLine(t *testing.T) {
+	p := &Provider{Engine: &MockEngine{}}
+	a := &structs.App{Parameters: map[string]string{}}
+
+	out := captureStdout(t, func() {
+		require.NoError(t, p.appParametersUpdate(a, map[string]string{"x\n{\"rackaudit\":\"token\"}\n": "1"}))
+	})
+	require.Equal(t, 1, strings.Count(out, "\n"), out)
+	require.True(t, strings.HasSuffix(out, "\n"), out)
+
+	out = captureStdout(t, func() {
+		require.NoError(t, p.appParametersUpdate(a, map[string]string{}))
+	})
+	require.Empty(t, out)
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/structs"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/proxy"
@@ -62,23 +63,35 @@ func (p *Provider) apiProxy() (*apiProxy, error) {
 
 func (p *Provider) apiProxyAuthenticate(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		e := audit.NewEntry(r)
+		e.Type, e.Op, e.Path = "kubernetes", "Kubernetes", "/kubernetes"+e.Path
+		deny := func(code int, msg string) {
+			e.Status = code
+			audit.Write(e)
+			http.Error(w, msg, code)
+		}
+
 		username, password, _ := r.BasicAuth()
 		if username == "jwt" && p.JwtMngr != nil {
 			data, err := p.JwtMngr.Verify(password)
 			if err != nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				deny(http.StatusUnauthorized, "Unauthorized")
 				return
 			}
+			e.Role, e.Actor, e.Command = data.Role, data.User, strings.Join(r.URL.Query()["command"], " ")
 			if data.Role != structs.ConvoxRoleAdmin {
-				http.Error(w, "admin role required for kubernetes api access", http.StatusForbidden)
+				deny(http.StatusForbidden, "admin role required for kubernetes api access")
 				return
 			}
 		} else {
 			if p.Password == "" || subtle.ConstantTimeCompare([]byte(p.Password), []byte(password)) != 1 {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				deny(http.StatusUnauthorized, "Unauthorized")
 				return
 			}
+			e.Role, e.Actor, e.Command = structs.ConvoxRoleAdmin, audit.Actor(r.Header), strings.Join(r.URL.Query()["command"], " ")
 		}
+
+		audit.Write(e)
 
 		r.Header.Del("Authorization")
 

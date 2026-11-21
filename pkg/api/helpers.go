@@ -40,6 +40,18 @@ func contextFrom(c *stdapi.Context) context.Context {
 // copyLogs stops the stream when the client hangs up. After the stream ends it
 // keeps reading until then: closing with unread input resets the connection.
 func copyLogs(c *stdapi.Context, r io.ReadCloser) error {
+	return copyLogsTo(c, c, r)
+}
+
+func copyLogLines(c *stdapi.Context, r io.ReadCloser, keep func([]byte) []byte) error {
+	w := &logLines{w: c, keep: keep}
+	err := copyLogsTo(c, w, r)
+	_ = w.flush()
+
+	return err
+}
+
+func copyLogsTo(c *stdapi.Context, w io.Writer, r io.ReadCloser) error {
 	ws := c.Websocket()
 	gone := make(chan struct{})
 
@@ -57,7 +69,7 @@ func copyLogs(c *stdapi.Context, r io.ReadCloser) error {
 		}
 	}()
 
-	_, err := io.Copy(c, r)
+	_, err := io.Copy(w, r)
 
 	select {
 	case <-gone:
