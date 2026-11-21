@@ -33,6 +33,7 @@ const (
 	BudgetShutdownNoopFiredAtAnnotation = "convox.com/budget-shutdown-noop-fired-at"
 
 	KedaPausedReplicasAnnotation = "autoscaling.keda.sh/paused-replicas"
+	KedaManualPauseAnnotation    = "convox.com/scale-paused"
 
 	BudgetShutdownStateSchemaVersion = 1
 
