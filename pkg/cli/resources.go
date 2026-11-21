@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -188,7 +190,9 @@ func ResourcesConsole(rack sdk.Interface, c *stdcli.Context) error {
 func ResourcesExport(rack sdk.Interface, c *stdcli.Context) error {
 	var w io.Writer
 
-	if file := c.String("file"); file != "" {
+	file := c.String("file")
+
+	if file != "" {
 		f, err := os.Create(file)
 		if err != nil {
 			return err
@@ -207,11 +211,63 @@ func ResourcesExport(rack sdk.Interface, c *stdcli.Context) error {
 
 	c.Startf("Exporting resource data")
 
-	if _, err := io.Copy(w, r); err != nil {
+	if err := copyResourceExport(w, r); err != nil {
+		if fi, err := os.Lstat(file); err == nil && fi.Mode().IsRegular() {
+			os.Remove(file)
+		}
 		return err
 	}
 
 	return c.OK()
+}
+
+const resourceExportWindow = 64 * 1024
+
+func copyResourceExport(w io.Writer, r io.Reader) error {
+	buf := make([]byte, 32*1024)
+	var tail []byte
+
+	for {
+		n, err := r.Read(buf)
+		tail = append(tail, buf[:n]...)
+
+		if len(tail) > 2*resourceExportWindow {
+			k := len(tail) - resourceExportWindow
+			if _, err := w.Write(tail[:k]); err != nil {
+				return err
+			}
+			tail = append(tail[:0], tail[k:]...)
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	t := tail[max(0, len(tail)-resourceExportWindow):]
+
+	i := bytes.LastIndex(t, []byte("ERROR: could not export: "))
+	if i < 0 {
+		_, err := w.Write(tail)
+		return err
+	}
+
+	msg := strings.TrimSpace(string(t[i+len("ERROR: "):]))
+
+	var lines []string
+	for _, l := range strings.Split(string(t[:i]), "\n") {
+		if strings.HasPrefix(l, "mysqldump: ") || strings.HasPrefix(l, "pg_dump: ") {
+			lines = append(lines, l)
+		}
+	}
+	if len(lines) > 0 {
+		msg += ": " + strings.Join(lines, "\n")
+	}
+
+	return errors.New(msg)
 }
 
 func ResourcesImport(rack sdk.Interface, c *stdcli.Context) error {
