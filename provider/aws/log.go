@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	"github.com/convox/convox/pkg/structs"
@@ -545,8 +546,10 @@ func (p *Provider) streamLogs(ctx context.Context, w io.WriteCloser, group, stre
 
 			for _, e := range res.Events {
 				if !seen[*e.EventId] {
-					es = append(es, e)
 					seen[*e.EventId] = true
+					if !audit.Skip(ctx, aws.StringValue(e.Message)) {
+						es = append(es, e)
+					}
 				}
 
 				if e.Timestamp != nil && *e.Timestamp > start {

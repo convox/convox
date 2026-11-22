@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/options"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/stretchr/testify/require"
@@ -825,4 +826,30 @@ func TestStreamTailMissingIndexThenLive(t *testing.T) {
 
 	r.Close()
 	<-done
+}
+
+func TestStreamSkipsAuditRecordsBeforeTail(t *testing.T) {
+	ts := time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)
+	lines := []logLine{
+		{id: "ordinary", ts: ts},
+		{id: `{"rackaudit":1}`, ts: ts.Add(time.Millisecond)},
+		{id: `{"rackaudit":2}`, ts: ts.Add(2 * time.Millisecond)},
+	}
+
+	opts := noFollow(time.Hour)
+	opts.Tail = options.Int(1)
+
+	for want, ctx := range map[string]context.Context{
+		`{"rackaudit":2}` + "\n": context.Background(),
+		"ordinary\n":             audit.WithoutRecords(context.Background()),
+	} {
+		c, _ := newFakeES(t, page("s1", 0, lines...))
+
+		r, w := io.Pipe()
+		go c.Stream(ctx, w, "rack", "system", opts)
+
+		data, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.Equal(t, want, string(data))
+	}
 }

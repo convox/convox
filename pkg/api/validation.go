@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/convox/stdapi"
@@ -16,6 +17,16 @@ func (s *Server) AppCancelValidate(c *stdapi.Context) error {
 
 	if a.Status != "updating" {
 		return stdapi.Errorf(403, "app is not updating")
+	}
+
+	return nil
+}
+
+var appNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+
+func (s *Server) AppLogsValidate(c *stdapi.Context) error {
+	if !appNamePattern.MatchString(c.Var("app")) {
+		return stdapi.Errorf(http.StatusBadRequest, "invalid app name")
 	}
 
 	return nil

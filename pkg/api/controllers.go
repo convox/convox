@@ -2177,7 +2177,7 @@ func (s *Server) SystemLogs(c *stdapi.Context) error {
 		return err
 	}
 
-	v, err := s.provider(c).WithContext(contextFrom(c)).SystemLogs(opts)
+	v, err := s.provider(c).WithContext(audit.WithoutRecords(contextFrom(c))).SystemLogs(opts)
 	if err != nil {
 		return err
 	}

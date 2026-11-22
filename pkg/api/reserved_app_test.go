@@ -5,12 +5,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/convox/convox/pkg/api"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/convox/stdapi"
 	"github.com/convox/stdsdk"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -114,5 +116,33 @@ func TestReservedAppAllowsNormalNames(t *testing.T) {
 
 		var m structs.Metrics
 		require.NoError(t, c.Get("/apps/app1/metrics", stdsdk.RequestOptions{}, &m))
+	})
+}
+
+func TestAppLogsRejectsInvalidAppNames(t *testing.T) {
+	testAuditServer(t, func(as *auditServer) {
+		read := as.token(t, "read")
+
+		for _, app := range []string{"*", "2*", "2026.11.22", "SYSTEM", "a.b"} {
+			for _, auth := range []string{basicAuth("jwt", read), basicAuth("convox", auditPassword)} {
+				r := as.socket(t, fmt.Sprintf("/apps/%s/logs", app), map[string]string{"Authorization": auth})
+				data, err := io.ReadAll(r)
+				require.NoError(t, err)
+				require.Equal(t, "ERROR: invalid app name\n", string(data), app)
+			}
+		}
+	})
+}
+
+func TestAppLogsAcceptsAppNames(t *testing.T) {
+	testAuditServer(t, func(as *auditServer) {
+		for _, app := range []string{"app1", "1app", "my-app"} {
+			as.p.On("AppLogs", app, mock.Anything).Return(io.NopCloser(strings.NewReader("line\n")), nil)
+
+			r := as.socket(t, fmt.Sprintf("/apps/%s/logs", app), map[string]string{"Authorization": basicAuth("convox", auditPassword)})
+			data, err := io.ReadAll(r)
+			require.NoError(t, err)
+			require.Equal(t, "line\n", string(data), app)
+		}
 	})
 }

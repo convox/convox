@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -550,5 +551,30 @@ func TestAuditRecordInstanceShellCommand(t *testing.T) {
 		require.Equal(t, "exec", es[0].Type)
 		require.Equal(t, "InstanceShell", es[0].Op)
 		require.Equal(t, "cat /etc/hosts", es[0].Command)
+	})
+}
+
+func TestSystemLogsContextSkipsAuditRecords(t *testing.T) {
+	testAuditServer(t, func(as *auditServer) {
+		as.p.On("SystemLogs", mock.Anything).Return(io.NopCloser(strings.NewReader("")), nil)
+
+		lastContext := func() context.Context {
+			for i := len(as.p.Calls) - 1; i >= 0; i-- {
+				if as.p.Calls[i].Method == "WithContext" {
+					ctx, ok := as.p.Calls[i].Arguments.Get(0).(context.Context)
+					require.True(t, ok)
+					return ctx
+				}
+			}
+			require.FailNow(t, "WithContext not called")
+			return nil
+		}
+
+		for path, skip := range map[string]bool{"/system/logs": true, "/system/audit/logs": false} {
+			r := as.socket(t, path, map[string]string{"Authorization": basicAuth("convox", auditPassword)})
+			_, err := io.ReadAll(r)
+			require.NoError(t, err)
+			require.Equal(t, skip, audit.Skip(lastContext(), `{"rackaudit":{}}`), path)
+		}
 	})
 }
