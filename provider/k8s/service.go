@@ -547,18 +547,30 @@ func (p *Provider) ServiceUpdate(app, name string, opts structs.ServiceUpdateOpt
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	d = d.DeepCopy()
 
 	if opts.Min != nil || opts.Max != nil {
+		restored, err := p.serviceRangeRestore(app, name, d, opts.Min)
+		if err != nil {
+			return err
+		}
 		handled, err := p.serviceUpdateScaledObject(app, name, opts)
 		if err != nil {
 			return err
 		}
 		if !handled {
 			if opts.Max != nil {
-				if !p.IsKedaEnabled {
-					return fmt.Errorf("range scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy, click Enable triggers in the Console to configure one through the UI (CPU/Memory work without KEDA), or use --count for a fixed replica count")
+				prefix := ""
+				if restored {
+					if _, err := p.Cluster.AppsV1().Deployments(p.AppNamespace(app)).Update(context.TODO(), d, am.UpdateOptions{}); err != nil {
+						return errors.WithStack(err)
+					}
+					prefix = fmt.Sprintf("service %s was at 0 replicas and is now scaled to %d; ", name, *d.Spec.Replicas)
 				}
-				return fmt.Errorf("range scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale and re-deploy, click Enable triggers in the Console to configure one through the UI, or use --count for a fixed replica count")
+				if !p.IsKedaEnabled {
+					return fmt.Errorf("%srange scaling (min/max) requires KEDA on this rack; run `convox rack params set keda_enable=true` and re-deploy, click Enable triggers in the Console to configure one through the UI (CPU/Memory work without KEDA), or use --count for a fixed replica count", prefix)
+				}
+				return fmt.Errorf("%srange scaling (min/max) requires an autoscale block in convox.yml; set scale.autoscale and re-deploy, click Enable triggers in the Console to configure one through the UI, or use --count for a fixed replica count", prefix)
 			}
 			// --min-only: patch replicas directly (backward compat with `convox scale --min N`).
 			if opts.Min != nil {
@@ -891,12 +903,8 @@ func (p *Provider) resumeScaledObject(patch map[string]interface{}, app, name st
 		return false, nil
 	}
 	if paused {
-		claimed, err := p.budgetClaimsService(context.TODO(), app, name)
-		if err != nil {
+		if err := p.budgetClaimConflict(app, name); err != nil {
 			return false, err
-		}
-		if claimed {
-			return false, structs.ErrConflict("cannot scale service %s: a budget auto-shutdown is pending or in force for app %s. Run 'convox budget reset %s' to release it, then scale again", name, app, app)
 		}
 	}
 	annos := map[string]interface{}{}
@@ -907,6 +915,40 @@ func (p *Provider) resumeScaledObject(patch map[string]interface{}, app, name st
 		annos[structs.KedaManualPauseAnnotation] = nil
 	}
 	patch["metadata"] = map[string]interface{}{"annotations": annos}
+	return true, nil
+}
+
+func (p *Provider) budgetClaimConflict(app, name string) error {
+	claimed, err := p.budgetClaimsService(context.TODO(), app, name)
+	if err != nil {
+		return err
+	}
+	if claimed {
+		return structs.ErrConflict("cannot scale service %s: a budget auto-shutdown is pending or in force for app %s. Run 'convox budget reset %s' to release it, then scale again", name, app, app)
+	}
+	return nil
+}
+
+func (p *Provider) serviceRangeRestore(app, name string, d *appsv1.Deployment, minReplicas *int) (bool, error) {
+	if d.Spec.Replicas == nil || *d.Spec.Replicas != 0 {
+		return false, nil
+	}
+	_, err := p.DynamicClient.Resource(scaledObjectGVR).Namespace(p.AppNamespace(app)).Get(context.TODO(), name, am.GetOptions{})
+	if err == nil {
+		return false, nil
+	}
+	if !kerr.IsNotFound(err) && !meta.IsNoMatchError(err) {
+		return false, errors.WithStack(err)
+	}
+	if err := p.budgetClaimConflict(app, name); err != nil {
+		return false, err
+	}
+	n := 1
+	if minReplicas != nil {
+		n = max(*minReplicas, 1)
+	}
+	c := int32(n) //nolint:gosec // replica counts are user-validated and bounded
+	d.Spec.Replicas = &c
 	return true, nil
 }
 
