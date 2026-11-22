@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/structs"
 	"github.com/elastic/go-elasticsearch/v6"
@@ -171,6 +172,10 @@ func (c *Client) Stream(ctx context.Context, w io.WriteCloser, rack, app string,
 				}
 
 				if opts.Filter != nil && !strings.Contains(log.Source.Log, *opts.Filter) {
+					continue
+				}
+
+				if audit.Skip(ctx, log.Source.Log) {
 					continue
 				}
 

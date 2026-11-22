@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/convox/convox/pkg/atom"
+	"github.com/convox/convox/pkg/audit"
 	"github.com/convox/convox/pkg/common"
 	"github.com/convox/convox/pkg/manifest"
 	mocks "github.com/convox/convox/pkg/mock/aws"
@@ -1200,5 +1201,31 @@ func TestStreamLogsWritesError(t *testing.T) {
 		)
 		require.Equal(t, failure, err)
 		require.Equal(t, tt.want, lines)
+	}
+}
+
+func TestSystemLogsSkipsAuditRecordsBeforeTail(t *testing.T) {
+	for want, ctx := range map[string]context.Context{
+		`{"rackaudit":2}` + "\n": context.Background(),
+		"ordinary\n":             audit.WithoutRecords(context.Background()),
+	} {
+		m := &mocks.CloudWatchLogsAPI{}
+		m.On("FilterLogEvents", mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{
+			Events: []*cloudwatchlogs.FilteredLogEvent{
+				{EventId: aws.String("e1"), Timestamp: aws.Int64(1), Message: aws.String("ordinary")},
+				{EventId: aws.String("e2"), Timestamp: aws.Int64(2), Message: aws.String(`{"rackaudit":1}`)},
+				{EventId: aws.String("e3"), Timestamp: aws.Int64(3), Message: aws.String(`{"rackaudit":2}`)},
+			},
+		}, nil)
+
+		p, ok := (&Provider{Provider: &k8s.Provider{Name: "rack"}, CloudWatchLogs: m}).WithContext(ctx).(*Provider)
+		require.True(t, ok)
+
+		r, err := p.SystemLogs(structs.LogsOptions{Follow: options.Bool(false), Tail: options.Int(1)})
+		require.NoError(t, err)
+
+		data, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.Equal(t, want, string(data))
 	}
 }

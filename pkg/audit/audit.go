@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -21,6 +22,19 @@ const (
 )
 
 var Output io.Writer = os.Stdout
+
+type skipKey struct{}
+
+// WithoutRecords returns a context under which log streams leave out audit records.
+func WithoutRecords(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipKey{}, true)
+}
+
+// Skip reports whether line is an audit record that ctx asks log streams to leave out.
+func Skip(ctx context.Context, line string) bool {
+	skip, _ := ctx.Value(skipKey{}).(bool)
+	return skip && strings.HasPrefix(line, `{"`+Marker+`":`)
+}
 
 type Entry struct {
 	Type    string `json:"rackaudit"`
