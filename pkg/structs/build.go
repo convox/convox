@@ -31,6 +31,7 @@ type BuildCreateOptions struct {
 	Description    *string   `flag:"description,d" param:"description"`
 	Development    *bool     `flag:"development" param:"development"`
 	External       *bool     `flag:"external" param:"external"`
+	Ignore         *string   `flag:"ignore" param:"ignore"`
 	Manifest       *string   `flag:"manifest,m" param:"manifest"`
 	NoCache        *bool     `flag:"no-cache" param:"no-cache"`
 	WildcardDomain *bool     `flag:"wildcard-domain" param:"wildcard-domain"`
