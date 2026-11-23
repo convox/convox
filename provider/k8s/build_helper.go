@@ -28,6 +28,11 @@ const (
 	buildHelperCertLife = 24 * time.Hour
 )
 
+var (
+	buildHelperPollInterval = 5 * time.Second
+	buildHelperPollTimeout  = buildHelperDeadline
+)
+
 // buildHelper is a buildkitd pod that builds one architecture of a build on a node of that architecture.
 type buildHelper struct {
 	id        string
@@ -174,6 +179,29 @@ func (h *buildHelper) certificates(now time.Time) error {
 	h.clientCert, h.clientKey, err = leaf(template(3), x509.ExtKeyUsageClientAuth)
 
 	return err
+}
+
+// buildHelperStart waits for the build pod to have a node, so the helper cannot
+// take the last node the build pool may launch.
+func (p *Provider) buildHelperStart(app, process string, h *buildHelper, opts *structs.ProcessRunOptions) error {
+	deadline := time.Now().Add(buildHelperPollTimeout)
+
+	for {
+		if pd, _, err := p.buildPod(app, process); err == nil {
+			switch {
+			case pd == nil || pd.DeletionTimestamp != nil || pd.Status.Phase == ac.PodSucceeded || pd.Status.Phase == ac.PodFailed:
+				return nil
+			case pd.Spec.NodeName != "":
+				return p.buildHelperCreate(app, process, h, opts)
+			}
+		}
+
+		if !time.Now().Before(deadline) {
+			return fmt.Errorf("build pod %s has no node after %s", process, buildHelperPollTimeout)
+		}
+
+		time.Sleep(buildHelperPollInterval)
+	}
 }
 
 // buildHelperCreate ties the helper to the build pod, so it is removed when the build pod is.
