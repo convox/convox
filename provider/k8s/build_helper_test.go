@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/convox/convox/pkg/atom"
 	"github.com/convox/convox/pkg/mock"
@@ -35,7 +36,12 @@ func (buildParamsEngine) AppParameters() map[string]string {
 func nativeBuildProvider(t *testing.T, params string) (*Provider, *fake.Clientset) {
 	t.Helper()
 
+	interval := buildHelperPollInterval
+	buildHelperPollInterval = time.Millisecond
+	t.Cleanup(func() { buildHelperPollInterval = interval })
+
 	p, kk, _ := minimalProvider(t)
+	p.ctx = context.Background()
 	p.Engine = buildParamsEngine{&mock.TestEngine{}}
 	p.BuildNodeEnabled = "true"
 	p.BuildkitEnabled = "true"
@@ -60,6 +66,25 @@ func nativeBuildProvider(t *testing.T, params string) (*Provider, *fake.Clientse
 	})
 
 	return p, kk
+}
+
+func bindBuildPod(t *testing.T, kk *fake.Clientset, ns string) {
+	t.Helper()
+
+	pd, err := kk.CoreV1().Pods(ns).Get(context.TODO(), "build-abcde", am.GetOptions{})
+	require.NoError(t, err)
+	pd.Spec.NodeName = "node1"
+	_, err = kk.CoreV1().Pods(ns).Update(context.TODO(), pd, am.UpdateOptions{})
+	require.NoError(t, err)
+}
+
+func waitHelperPod(t *testing.T, kk *fake.Clientset, ns, name string) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		_, err := kk.CoreV1().Pods(ns).Get(context.TODO(), name, am.GetOptions{})
+		return err == nil
+	}, 5*time.Second, time.Millisecond)
 }
 
 func podEnv(pd *ac.Pod) map[string]string {
@@ -116,6 +141,11 @@ func TestBuildCreateNativeArch(t *testing.T) {
 			b, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{Development: options.Bool(test.development)})
 			require.NoError(t, err)
 			require.Equal(t, "running", b.Status)
+
+			if test.helper != "" {
+				bindBuildPod(t, kk, "rack1-app1")
+				waitHelperPod(t, kk, "rack1-app1", fmt.Sprintf("build-%s-%s", strings.ToLower(b.Id), test.helper))
+			}
 
 			pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
 			require.NoError(t, err)
@@ -174,6 +204,9 @@ func TestBuildCreateHelperObjects(t *testing.T) {
 	host := fmt.Sprintf("%s.rack1-app1.svc.cluster.local", name)
 	owner := []am.OwnerReference{{APIVersion: "v1", Kind: "Pod", Name: "build-abcde", UID: "build-pod-uid"}}
 	labels := map[string]string{"system": "convox", "rack": "rack1", "app": "app1", "service-type": "build", "type": "build-helper", "build": id}
+
+	bindBuildPod(t, kk, "rack1-app1")
+	waitHelperPod(t, kk, "rack1-app1", name)
 
 	build, err := kk.CoreV1().Pods("rack1-app1").Get(context.TODO(), "build-abcde", am.GetOptions{})
 	require.NoError(t, err)
@@ -264,6 +297,9 @@ func TestBuildCreateHelperBuildNamespace(t *testing.T) {
 
 	name := fmt.Sprintf("build-%s-arm64", strings.ToLower(b.Id))
 
+	bindBuildPod(t, kk, "rack1-build-app1")
+	waitHelperPod(t, kk, "rack1-build-app1", name)
+
 	build, err := kk.CoreV1().Pods("rack1-build-app1").Get(context.TODO(), "build-abcde", am.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("tcp://%s.rack1-build-app1.svc.cluster.local:1234", name), podEnv(build)["BUILD_HELPER_ADDR"])
@@ -276,23 +312,125 @@ func TestBuildCreateHelperBuildNamespace(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestBuildCreateHelperFailureKeepsBuild(t *testing.T) {
+func TestBuildCreateHelperWaitsForNode(t *testing.T) {
 	t.Setenv("BUILD_NATIVE_ARCH", "amd64")
 	t.Setenv("BUILD_ARCHS", "amd64,arm64")
 
 	p, kk := nativeBuildProvider(t, "")
-	kk.PrependReactor("create", "services", func(k8stesting.Action) (bool, runtime.Object, error) {
-		return true, nil, fmt.Errorf("quota")
-	})
 
 	b, err := p.BuildCreate("app1", "object://app1/object.tgz", structs.BuildCreateOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "running", b.Status)
 	require.Equal(t, "build-abcde", b.Process)
 
+	name := fmt.Sprintf("build-%s-arm64", strings.ToLower(b.Id))
+
+	require.Never(t, func() bool {
+		_, perr := kk.CoreV1().Pods("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
+		_, serr := kk.CoreV1().Secrets("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
+		_, verr := kk.CoreV1().Services("rack1-app1").Get(context.TODO(), name, am.GetOptions{})
+		return perr == nil || serr == nil || verr == nil
+	}, 50*time.Millisecond, time.Millisecond)
+
+	bindBuildPod(t, kk, "rack1-app1")
+	waitHelperPod(t, kk, "rack1-app1", name)
+}
+
+func TestBuildHelperStart(t *testing.T) {
+	bound := func(pd *ac.Pod) { pd.Spec.NodeName = "node1" }
+
+	tests := []struct {
+		name    string
+		pod     func(*ac.Pod)
+		getFail bool
+		err     bool
+		helper  bool
+	}{
+		{name: "no build pod"},
+		{name: "deleting", pod: func(pd *ac.Pod) { bound(pd); pd.DeletionTimestamp = &am.Time{Time: time.Now()} }},
+		{name: "succeeded", pod: func(pd *ac.Pod) { bound(pd); pd.Status.Phase = ac.PodSucceeded }},
+		{name: "failed", pod: func(pd *ac.Pod) { bound(pd); pd.Status.Phase = ac.PodFailed }},
+		{name: "no node", pod: func(*ac.Pod) {}, err: true},
+		{name: "get error then bound", pod: bound, getFail: true, helper: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.err {
+				timeout := buildHelperPollTimeout
+				buildHelperPollTimeout = 20 * time.Millisecond
+				t.Cleanup(func() { buildHelperPollTimeout = timeout })
+			}
+
+			p, kk := nativeBuildProvider(t, "")
+
+			if test.pod != nil {
+				pd := &ac.Pod{ObjectMeta: am.ObjectMeta{Name: "build-abcde", Namespace: "rack1-app1"}}
+				test.pod(pd)
+				_, err := kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), pd, am.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			if test.getFail {
+				failed := false
+				kk.PrependReactor("get", "pods", func(k8stesting.Action) (bool, runtime.Object, error) {
+					if failed {
+						return false, nil, nil
+					}
+					failed = true
+					return true, nil, fmt.Errorf("timeout")
+				})
+			}
+
+			h, err := p.buildHelperPrepare("app1", "BABCDEFGHIJ", "arm64")
+			require.NoError(t, err)
+
+			err = p.buildHelperStart("app1", "build-abcde", h, &structs.ProcessRunOptions{IsBuild: true, Image: options.String("convox/convox:test")})
+			if test.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			_, err = kk.CoreV1().Pods("rack1-app1").Get(context.TODO(), h.name, am.GetOptions{})
+			require.Equal(t, test.helper, err == nil)
+
+			secrets, err := kk.CoreV1().Secrets("rack1-app1").List(context.TODO(), am.ListOptions{})
+			require.NoError(t, err)
+			if test.helper {
+				require.Len(t, secrets.Items, 1)
+			} else {
+				require.Empty(t, secrets.Items)
+			}
+		})
+	}
+}
+
+func TestBuildHelperStartFailureKeepsBuild(t *testing.T) {
+	p, kk := nativeBuildProvider(t, "")
+	kk.PrependReactor("create", "services", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("quota")
+	})
+
+	_, err := kk.CoreV1().Pods("rack1-app1").Create(context.TODO(), &ac.Pod{
+		ObjectMeta: am.ObjectMeta{Name: "build-abcde", Namespace: "rack1-app1"},
+		Spec:       ac.PodSpec{NodeName: "node1"},
+	}, am.CreateOptions{})
+	require.NoError(t, err)
+
+	h, err := p.buildHelperPrepare("app1", "BABCDEFGHIJ", "arm64")
+	require.NoError(t, err)
+
+	require.Error(t, p.buildHelperStart("app1", "build-abcde", h, &structs.ProcessRunOptions{IsBuild: true, Image: options.String("convox/convox:test")}))
+
 	pods, err := kk.CoreV1().Pods("rack1-app1").List(context.TODO(), am.ListOptions{})
 	require.NoError(t, err)
 	require.Len(t, pods.Items, 1)
+	require.Equal(t, "build-abcde", pods.Items[0].Name)
+
+	services, err := kk.CoreV1().Services("rack1-app1").List(context.TODO(), am.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, services.Items)
 }
 
 func TestBuildHelperCreateWithoutBuildPod(t *testing.T) {
@@ -336,6 +474,9 @@ func TestBuildCreateHelperTenant(t *testing.T) {
 
 	const ns = "rack1-build-t1-app1"
 	name := fmt.Sprintf("build-%s-arm64", strings.ToLower(b.Id))
+
+	bindBuildPod(t, kk, ns)
+	waitHelperPod(t, kk, ns, name)
 
 	build, err := kk.CoreV1().Pods(ns).Get(context.TODO(), "build-abcde", am.GetOptions{})
 	require.NoError(t, err)

@@ -290,9 +290,20 @@ func (p *Provider) BuildCreate(app, url string, opts structs.BuildCreateOptions)
 
 	// The build falls back to emulation when its helper never answers.
 	if helper != nil {
-		if err := p.buildHelperCreate(app, ps.Id, helper, &psOpts); err != nil {
-			_ = p.logger.Errorf("build %s: %s helper: %s", b.Id, helper.arch, err)
-		}
+		// p.ctx is the request context and ends when this handler returns.
+		hp := *p
+		hp.ctx = context.WithoutCancel(p.ctx)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("panic in buildHelperStart for build %s: %v\nstack: %s\n", b.Id, r, debug.Stack())
+				}
+			}()
+
+			if err := hp.buildHelperStart(app, ps.Id, helper, &psOpts); err != nil {
+				_ = hp.logger.Errorf("build %s: %s helper: %s", b.Id, helper.arch, err)
+			}
+		}()
 	}
 
 	return b, nil
