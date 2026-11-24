@@ -79,11 +79,14 @@ locals {
   ]
 
   # Tail CAS flags (shared between all modes)
-  cas_tail_args = [
+  cas_tail_args = concat([
     "--skip-nodes-with-system-pods=false",
     "--max-pod-eviction-time=5m",
     "--emit-per-nodegroup-metrics",
-  ]
+    ],
+    # Omitted at the CAS default of 50 so existing racks keep an unchanged Deployment.
+    var.scale_down_utilization_percentage != 50 ? ["--scale-down-utilization-threshold=${format("%.2f", var.scale_down_utilization_percentage / 100)}"] : [],
+  )
 
   # Mode-specific discovery/targeting flag
   cas_discovery_args = var.karpenter_enabled ? (

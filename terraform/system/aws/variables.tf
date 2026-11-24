@@ -578,6 +578,11 @@ variable "node_max_unavailable_percentage" {
   default = 0
 }
 
+variable "scale_down_utilization_percentage" {
+  type    = number
+  default = 50
+}
+
 variable "terraform_update_timeout" {
   type    = string
   default = "2h"

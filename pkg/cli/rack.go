@@ -118,7 +118,8 @@ var awsKnownParams = map[string]bool{
 	"region":                       true, "release": true, "rotate_api_password": true,
 	"release_watcher_gc_interval":     true,
 	"releases_to_retain_after_active": true, "releases_to_retain_task_run_interval_hour": true,
-	"schedule_rack_scale_down": true, "schedule_rack_scale_up": true,
+	"scale_down_utilization_percentage": true,
+	"schedule_rack_scale_down":          true, "schedule_rack_scale_up": true,
 	"seccomp_default_enabled": true,
 	"settings":                true, "ssl_ciphers": true,
 	"ssl_protocols": true, "sync_tf_now": true,
@@ -462,6 +463,7 @@ var paramGroups = map[string]map[string]bool{
 		"min_on_demand_count":                     true,
 		"node_max_unavailable_percentage":         true,
 		"pdb_default_min_available_percentage":    true,
+		"scale_down_utilization_percentage":       true,
 		"schedule_rack_scale_down":                true,
 		"schedule_rack_scale_up":                  true,
 		"terraform_update_timeout":                true,
@@ -3374,6 +3376,14 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 		}
 		if d < 60*time.Second || d > time.Hour {
 			return fmt.Errorf("release_watcher_gc_interval: must be between 60s and 1h (got %s)", v)
+		}
+	}
+
+	// scale_down_utilization_percentage: CAS --scale-down-utilization-threshold as a whole percentage.
+	if v, has := params["scale_down_utilization_percentage"]; has && v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 100 {
+			return fmt.Errorf("scale_down_utilization_percentage: must be an integer between 1 and 100 (got %q)", v)
 		}
 	}
 

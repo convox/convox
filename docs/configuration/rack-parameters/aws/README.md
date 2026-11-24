@@ -105,6 +105,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [node_volume_iops](/configuration/rack-parameters/aws/node_volume_iops)             | Sets provisioned IOPS on each node's root volume, capped at 500 per GiB of `node_disk`. |
 | [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) | Sets provisioned throughput in MiB/s on each node's root volume, capped at a quarter of the provisioned IOPS. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
+| [scale_down_utilization_percentage](/configuration/rack-parameters/aws/scale_down_utilization_percentage) | Sets the Cluster Autoscaler scale-down utilization threshold, as a percentage. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
 | [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |

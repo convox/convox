@@ -437,6 +437,13 @@ Groups:
         description: "How many times a container may restart during a rollout before the deploy is aborted and rolled back."
         sideNote: "Disabled by default. A service can opt out with deployment.crashRestartLimit set to -1."
         allowedMinValue: 0
+      - name: scale_down_utilization_percentage
+        default: "50"
+        type: integer
+        description: "Cluster Autoscaler removes a node only when the CPU and memory requested on it are both below this percentage of what the node can hold."
+        sideNote: "Raise it to pack nodes tighter after cutting pod requests. Higher values move pods more often."
+        allowedMinValue: 1
+        allowedMaxValue: 100
       - name: pdb_default_min_available_percentage
         default: "50"
         type: integer
