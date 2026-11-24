@@ -92,6 +92,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) | Configures additional customized node groups for the cluster. |
 | [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
+| [scale_down_utilization_percentage](/configuration/rack-parameters/aws/scale_down_utilization_percentage) | Sets the Cluster Autoscaler scale-down utilization threshold, as a percentage. |
 | [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a Service rollout may go without progress before it is failed. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable) | Pulls and unpacks image layers in parallel through the SOCI snapshotter on AL2023 nodes. |

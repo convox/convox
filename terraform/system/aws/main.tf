@@ -214,6 +214,7 @@ module "cluster" {
   node_volume_throughput                  = var.node_volume_throughput
   node_type                               = var.node_type
   node_max_unavailable_percentage         = var.node_max_unavailable_percentage
+  scale_down_utilization_percentage       = var.scale_down_utilization_percentage
   terraform_update_timeout                = var.terraform_update_timeout
   nvidia_device_plugin_enable             = var.nvidia_device_plugin_enable
   nvidia_device_time_slicing_replicas     = var.nvidia_device_time_slicing_replicas

@@ -1576,3 +1576,16 @@ func TestValidateAndMutateParamsGcpHyperdiskTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateAndMutateParams_ClusterAutoscalerScaleDownUtilization(t *testing.T) {
+	for _, v := range []string{"1", "50", "65", "100"} {
+		if err := validateAndMutateParams(map[string]string{"scale_down_utilization_percentage": v}, "aws", nil, false); err != nil {
+			t.Errorf("%s=%q: unexpected error %v", "scale_down_utilization_percentage", v, err)
+		}
+	}
+	for _, v := range []string{"0", "101", "-5", "0.65", "65%", "abc"} {
+		if err := validateAndMutateParams(map[string]string{"scale_down_utilization_percentage": v}, "aws", nil, false); err == nil {
+			t.Errorf("%s=%q: expected an error, got none", "scale_down_utilization_percentage", v)
+		}
+	}
+}
