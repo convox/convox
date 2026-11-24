@@ -92,7 +92,6 @@ Parameters are grouped by category below. Every parameter links to its own refer
 |:-------------------------------------|:-------------------------------------------------------------------------|
 | [additional_node_groups_config](/configuration/rack-parameters/aws/additional_node_groups_config) | Configures additional customized node groups for the cluster. |
 | [deploy_crash_restart_limit](/configuration/rack-parameters/aws/deploy_crash_restart_limit) | Aborts a rollout once a container has restarted more than this many times. |
-| [scale_down_utilization_percentage](/configuration/rack-parameters/aws/scale_down_utilization_percentage) | Sets the Cluster Autoscaler scale-down utilization threshold, as a percentage. |
 | [deploy_progress_deadline](/configuration/rack-parameters/aws/deploy_progress_deadline) | Sets how long a Service rollout may go without progress before it is failed. |
 | [efs_csi_driver_enable](/configuration/rack-parameters/aws/efs_csi_driver_enable)   | Enables the EFS CSI driver to use AWS EFS volumes.                       |
 | [fast_image_pull_enable](/configuration/rack-parameters/aws/fast_image_pull_enable) | Pulls and unpacks image layers in parallel through the SOCI snapshotter on AL2023 nodes. |
@@ -106,6 +105,7 @@ Parameters are grouped by category below. Every parameter links to its own refer
 | [node_volume_iops](/configuration/rack-parameters/aws/node_volume_iops)             | Sets provisioned IOPS on each node's root volume, capped at 500 per GiB of `node_disk`. |
 | [node_volume_throughput](/configuration/rack-parameters/aws/node_volume_throughput) | Sets provisioned throughput in MiB/s on each node's root volume, capped at a quarter of the provisioned IOPS. |
 | [pdb_default_min_available_percentage](/configuration/rack-parameters/aws/pdb_default_min_available_percentage) | Sets the default minimum percentage for Pod Disruption Budgets. |
+| [scale_down_utilization_percentage](/configuration/rack-parameters/aws/scale_down_utilization_percentage) | Sets the Cluster Autoscaler scale-down utilization threshold, as a percentage. |
 | [schedule_rack_scale_down](/configuration/rack-parameters/aws/schedule_rack_scale_down) | Specifies the schedule for scaling down the rack.                        |
 | [schedule_rack_scale_up](/configuration/rack-parameters/aws/schedule_rack_scale_up) | Specifies the schedule for scaling up the rack.                          |
 | [vpa_enable](/configuration/rack-parameters/aws/vpa_enable)                         | Enables the Vertical Pod Autoscaler (VPA) for automatic resource right-sizing. |

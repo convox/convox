@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/zclconf/go-cty/cty"
 )
 
 func captureStderr(t *testing.T, fn func()) string {
@@ -1577,15 +1579,104 @@ func TestValidateAndMutateParamsGcpHyperdiskTypes(t *testing.T) {
 	}
 }
 
-func TestValidateAndMutateParams_ClusterAutoscalerScaleDownUtilization(t *testing.T) {
-	for _, v := range []string{"1", "50", "65", "100"} {
-		if err := validateAndMutateParams(map[string]string{"scale_down_utilization_percentage": v}, "aws", nil, false); err != nil {
-			t.Errorf("%s=%q: unexpected error %v", "scale_down_utilization_percentage", v, err)
+const scaleDownUtilizationParam = "scale_down_utilization_percentage"
+
+func TestValidateAndMutateParams_ScaleDownUtilizationPercentage(t *testing.T) {
+	cases := []struct {
+		value   string
+		wantErr bool
+	}{
+		{"1", false},
+		{"50", false},
+		{"65", false},
+		{"100", false},
+		{"0", true},
+		{"101", true},
+		{"-5", true},
+		{"0.65", true},
+		{"65%", true},
+		{"abc", true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.value, func(t *testing.T) {
+			err := validateAndMutateParams(map[string]string{scaleDownUtilizationParam: c.value}, "aws", nil, false)
+			if !c.wantErr {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected an error, got nil")
+			}
+			if !strings.Contains(err.Error(), scaleDownUtilizationParam) {
+				t.Errorf("expected error to name %s, got: %v", scaleDownUtilizationParam, err)
+			}
+		})
+	}
+}
+
+// A missing declaration or pass-through ships an inert parameter with a green CI run.
+func TestScaleDownUtilizationPercentageWired(t *testing.T) {
+	if !awsKnownParams[scaleDownUtilizationParam] {
+		t.Errorf("awsKnownParams is missing %s", scaleDownUtilizationParam)
+	}
+	if !paramGroups["scaling"][scaleDownUtilizationParam] {
+		t.Errorf("paramGroups[\"scaling\"] is missing %s", scaleDownUtilizationParam)
+	}
+
+	yaml := string(mustReadFile(t, "../../assets/provider/aws/params.yaml"))
+	if !strings.Contains(yaml, "- name: "+scaleDownUtilizationParam+"\n        default: \"50\"\n") {
+		t.Errorf("aws params.yaml: %s missing or not defaulted to \"50\"", scaleDownUtilizationParam)
+	}
+
+	for _, path := range []string{"../../terraform/cluster/aws/variables.tf", "../../terraform/system/aws/variables.tf"} {
+		var found bool
+		for _, block := range parseHCLBody(t, path).Blocks {
+			if block.Type != "variable" || len(block.Labels) != 1 || block.Labels[0] != scaleDownUtilizationParam {
+				continue
+			}
+			found = true
+			def, ok := block.Body.Attributes["default"]
+			if !ok {
+				t.Fatalf("%s: %s declares no default", path, scaleDownUtilizationParam)
+			}
+			v, diags := def.Expr.Value(nil)
+			if diags.HasErrors() {
+				t.Fatalf("%s: evaluate default: %v", path, diags)
+			}
+			if !v.Equals(cty.NumberIntVal(50)).True() {
+				t.Errorf("%s: default is %s; want 50", path, v.GoString())
+			}
+		}
+		if !found {
+			t.Errorf("%s: no variable %q", path, scaleDownUtilizationParam)
 		}
 	}
-	for _, v := range []string{"0", "101", "-5", "0.65", "65%", "abc"} {
-		if err := validateAndMutateParams(map[string]string{"scale_down_utilization_percentage": v}, "aws", nil, false); err == nil {
-			t.Errorf("%s=%q: expected an error, got none", "scale_down_utilization_percentage", v)
+
+	const mainPath = "../../terraform/system/aws/main.tf"
+	var passed bool
+	for _, block := range parseHCLBody(t, mainPath).Blocks {
+		if block.Type != "module" || len(block.Labels) != 1 || block.Labels[0] != "cluster" {
+			continue
 		}
+		attr, ok := block.Body.Attributes[scaleDownUtilizationParam]
+		if !ok {
+			t.Fatalf(`%s: module "cluster" does not pass %s`, mainPath, scaleDownUtilizationParam)
+		}
+		passed = true
+		src := string(attr.Expr.Range().SliceBytes(mustReadFile(t, mainPath)))
+		if want := "var." + scaleDownUtilizationParam; strings.TrimSpace(src) != want {
+			t.Errorf("%s: %s is %q; want %q", mainPath, scaleDownUtilizationParam, src, want)
+		}
+	}
+	if !passed {
+		t.Errorf("%s: no module \"cluster\"", mainPath)
+	}
+
+	autoscaler := string(mustReadFile(t, "../../terraform/cluster/aws/autoscaler.tf"))
+	if !strings.Contains(autoscaler, "var."+scaleDownUtilizationParam+" != 50 ?") {
+		t.Errorf("autoscaler.tf no longer omits the flag at the default of 50")
 	}
 }
