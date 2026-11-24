@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/convox/convox/pkg/structs"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -116,7 +114,7 @@ func sandboxNetworkPolicyName(sandboxID string) string {
 	return sandboxNetworkPolicyPrefix + sandboxID
 }
 
-func sandboxNetworkPolicy(namespace, sandboxID string, e *SandboxNetworkEgress) *networkingv1.NetworkPolicy {
+func sandboxNetworkPolicy(namespace, systemNamespace, sandboxID string, e *SandboxNetworkEgress) *networkingv1.NetworkPolicy {
 	spec := networkingv1.NetworkPolicySpec{
 		PodSelector: am.LabelSelector{MatchLabels: map[string]string{
 			SandboxLabel:   "true",
@@ -127,16 +125,7 @@ func sandboxNetworkPolicy(namespace, sandboxID string, e *SandboxNetworkEgress) 
 	}
 
 	if !e.BlockAll {
-		udp := corev1.ProtocolUDP
-		tcp := corev1.ProtocolTCP
-		dns := intstr.FromInt32(53)
-		spec.Egress = append(spec.Egress, networkingv1.NetworkPolicyEgressRule{
-			To: []networkingv1.NetworkPolicyPeer{{
-				NamespaceSelector: &am.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
-				PodSelector:       &am.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}},
-			}},
-			Ports: []networkingv1.NetworkPolicyPort{{Protocol: &udp, Port: &dns}, {Protocol: &tcp, Port: &dns}},
-		})
+		spec.Egress = append(spec.Egress, sandboxDNSRules(systemNamespace)...)
 		peers := make([]networkingv1.NetworkPolicyPeer, 0, len(e.Allow))
 		for i := range e.Allow {
 			b := e.Allow[i]

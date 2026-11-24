@@ -194,12 +194,12 @@ func TestSandboxIngressPolicy(t *testing.T) {
 }
 
 func TestSandboxEgressPolicy(t *testing.T) {
-	np := sandboxEgressPolicy("rack1-sandboxes")
+	np := sandboxEgressPolicy("rack1-sandboxes", "rack1-system")
 
 	assert.Equal(t, sandboxEgressPolicyName, np.Name)
 	assert.Equal(t, map[string]string{SandboxLabel: "true"}, np.Spec.PodSelector.MatchLabels)
 	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}, np.Spec.PolicyTypes)
-	require.Len(t, np.Spec.Egress, 2)
+	require.Len(t, np.Spec.Egress, 3)
 
 	dns := np.Spec.Egress[0]
 	require.Len(t, dns.To, 1)
@@ -207,7 +207,14 @@ func TestSandboxEgressPolicy(t *testing.T) {
 	require.Len(t, dns.Ports, 2)
 	assert.Equal(t, int32(53), dns.Ports[0].Port.IntVal)
 
-	world := np.Spec.Egress[1].To[0].IPBlock
+	resolver := np.Spec.Egress[1]
+	require.Len(t, resolver.To, 1)
+	assert.Equal(t, map[string]string{"system": "convox", "service": "resolver"}, resolver.To[0].PodSelector.MatchLabels)
+	assert.Equal(t, map[string]string{"kubernetes.io/metadata.name": "rack1-system"}, resolver.To[0].NamespaceSelector.MatchLabels)
+	require.Len(t, resolver.Ports, 1)
+	assert.Equal(t, int32(5454), resolver.Ports[0].Port.IntVal)
+
+	world := np.Spec.Egress[2].To[0].IPBlock
 	require.NotNil(t, world)
 	assert.Equal(t, "0.0.0.0/0", world.CIDR)
 	assert.Contains(t, world.Except, "169.254.0.0/16")
@@ -240,7 +247,7 @@ func TestReconcileNetworkPolicy_DisabledRemovesSandboxPolicies(t *testing.T) {
 	kk := fake.NewSimpleClientset(
 		newSandboxNamespace("rack1-sandboxes", "rack1"),
 		sandboxIngressPolicy("rack1-sandboxes"),
-		sandboxEgressPolicy("rack1-sandboxes"),
+		sandboxEgressPolicy("rack1-sandboxes", "rack1-system"),
 	)
 	p := &Provider{Cluster: kk, Name: "rack1", Namespace: "rack1-system"}
 
@@ -252,7 +259,7 @@ func TestReconcileNetworkPolicy_DisabledRemovesSandboxPolicies(t *testing.T) {
 }
 
 func TestReconcileNetworkPolicy_SandboxPoliciesRepairDrift(t *testing.T) {
-	stale := sandboxEgressPolicy("rack1-sandboxes")
+	stale := sandboxEgressPolicy("rack1-sandboxes", "rack1-system")
 	stale.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{}}
 	kk := fake.NewSimpleClientset(newSandboxNamespace("rack1-sandboxes", "rack1"), stale)
 	p := &Provider{Cluster: kk, Name: "rack1", Namespace: "rack1-system", NetworkPolicyEnabled: true}
@@ -261,7 +268,7 @@ func TestReconcileNetworkPolicy_SandboxPoliciesRepairDrift(t *testing.T) {
 
 	np, err := getPolicy(t, kk, "rack1-sandboxes", sandboxEgressPolicyName)
 	require.NoError(t, err)
-	assert.Equal(t, sandboxEgressPolicy("rack1-sandboxes").Spec, np.Spec)
+	assert.Equal(t, sandboxEgressPolicy("rack1-sandboxes", "rack1-system").Spec, np.Spec)
 }
 
 func TestReconcileNetworkPolicy_SandboxNoUpdateWhenUnchanged(t *testing.T) {

@@ -56,7 +56,7 @@ func TestParseSandboxNetworkEgress(t *testing.T) {
 }
 
 func TestSandboxNetworkPolicyShapes(t *testing.T) {
-	block := sandboxNetworkPolicy("ns", "sbx-1", &SandboxNetworkEgress{BlockAll: true})
+	block := sandboxNetworkPolicy("ns", "rack1-system", "sbx-1", &SandboxNetworkEgress{BlockAll: true})
 	assert.Equal(t, "convox-sandbox-net-sbx-1", block.Name)
 	assert.Equal(t, map[string]string{SandboxLabel: "true", SandboxIDLabel: "sbx-1"}, block.Spec.PodSelector.MatchLabels)
 	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}, block.Spec.PolicyTypes)
@@ -65,14 +65,16 @@ func TestSandboxNetworkPolicyShapes(t *testing.T) {
 
 	e, err := parseSandboxNetworkEgress("8.8.8.0/24")
 	require.NoError(t, err)
-	allow := sandboxNetworkPolicy("ns", "sbx-1", e)
-	require.Len(t, allow.Spec.Egress, 2)
+	allow := sandboxNetworkPolicy("ns", "rack1-system", "sbx-1", e)
+	require.Len(t, allow.Spec.Egress, 3)
 	assert.Equal(t, map[string]string{"k8s-app": "kube-dns"}, allow.Spec.Egress[0].To[0].PodSelector.MatchLabels)
-	assert.Equal(t, "8.8.8.0/24", allow.Spec.Egress[1].To[0].IPBlock.CIDR)
+	assert.Equal(t, map[string]string{"system": "convox", "service": "resolver"}, allow.Spec.Egress[1].To[0].PodSelector.MatchLabels)
+	assert.Equal(t, int32(5454), allow.Spec.Egress[1].Ports[0].Port.IntVal)
+	assert.Equal(t, "8.8.8.0/24", allow.Spec.Egress[2].To[0].IPBlock.CIDR)
 }
 
 func TestSandboxSharedEgressExcludesRestrictedPods(t *testing.T) {
-	np := sandboxEgressPolicy("ns")
+	np := sandboxEgressPolicy("ns", "rack1-system")
 	require.Len(t, np.Spec.PodSelector.MatchExpressions, 1)
 	assert.Equal(t, SandboxEgressLabel, np.Spec.PodSelector.MatchExpressions[0].Key)
 	assert.Equal(t, am.LabelSelectorOpDoesNotExist, np.Spec.PodSelector.MatchExpressions[0].Operator)
@@ -117,7 +119,7 @@ func TestProcessRun_SandboxNetworkEgressPolicyBeforePod(t *testing.T) {
 	runAndGetPod(t, p, kk, sandboxHostApp, "sbx", sandboxEgressRunOptions("8.8.8.0/24"))
 	np, err = getPolicy(t, kk, ns, "convox-sandbox-net-sbx-1")
 	require.NoError(t, err)
-	assert.Len(t, np.Spec.Egress, 2, "a later run updates the sandbox's policy")
+	assert.Len(t, np.Spec.Egress, 3, "a later run updates the sandbox's policy")
 }
 
 func TestProcessRun_SandboxNetworkEgressRejected(t *testing.T) {
@@ -162,7 +164,7 @@ func TestProcessRun_SandboxWithoutEgressHasNoOwnPolicy(t *testing.T) {
 }
 
 func sandboxNetPolicyAt(ns, id string, created time.Time) *networkingv1.NetworkPolicy {
-	np := sandboxNetworkPolicy(ns, id, &SandboxNetworkEgress{BlockAll: true})
+	np := sandboxNetworkPolicy(ns, "rack1-system", id, &SandboxNetworkEgress{BlockAll: true})
 	np.CreationTimestamp = am.NewTime(created)
 	return np
 }
@@ -176,7 +178,7 @@ func TestRemoveOrphanSandboxNetworkPolicies(t *testing.T) {
 		sandboxNetPolicyAt(ns, "live", now.Add(-time.Hour)),
 		sandboxNetPolicyAt(ns, "gone", now.Add(-time.Hour)),
 		sandboxNetPolicyAt(ns, "young", now.Add(-time.Minute)),
-		sandboxEgressPolicy(ns),
+		sandboxEgressPolicy(ns, "rack1-system"),
 	)
 	p := &Provider{Cluster: kk, Name: "rack1", Namespace: "rack1-system", NetworkPolicyEnabled: true}
 
@@ -213,7 +215,7 @@ func TestOrphanSweepKeepsRecentlyEnsuredPolicy(t *testing.T) {
 	_, err := getPolicy(t, kk, ns, "convox-sandbox-net-restarting")
 	assert.NoError(t, err, "a policy ensured for a starting pod survives even though it was created long ago")
 
-	require.NoError(t, p.ensureSandboxNetworkPolicy(context.Background(), sandboxNetworkPolicy(ns, "restarting", &SandboxNetworkEgress{BlockAll: true}), now.Add(time.Hour)))
+	require.NoError(t, p.ensureSandboxNetworkPolicy(context.Background(), sandboxNetworkPolicy(ns, "rack1-system", "restarting", &SandboxNetworkEgress{BlockAll: true}), now.Add(time.Hour)))
 	np, err := getPolicy(t, kk, ns, "convox-sandbox-net-restarting")
 	require.NoError(t, err)
 	assert.Equal(t, now.Add(time.Hour).UTC().Format(time.RFC3339), np.Annotations[sandboxNetworkEnsuredAnnotation])

@@ -132,11 +132,36 @@ func sandboxIngressPolicy(namespace string) *networkingv1.NetworkPolicy {
 	}
 }
 
-func sandboxEgressPolicy(namespace string) *networkingv1.NetworkPolicy {
+// sandboxResolverPort is the container port behind the rack resolver service (53 -> 5454), the nameserver
+// rack pods use. Policies match the pod port, not the service port.
+const sandboxResolverPort = 5454
+
+// sandboxDNSRules allows DNS to CoreDNS and to the rack's resolver.
+func sandboxDNSRules(systemNamespace string) []networkingv1.NetworkPolicyEgressRule {
 	udp := corev1.ProtocolUDP
 	tcp := corev1.ProtocolTCP
 	dns := intstr.FromInt32(53)
+	resolver := intstr.FromInt32(sandboxResolverPort)
 
+	return []networkingv1.NetworkPolicyEgressRule{
+		{
+			To: []networkingv1.NetworkPolicyPeer{{
+				NamespaceSelector: &am.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
+				PodSelector:       &am.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{{Protocol: &udp, Port: &dns}, {Protocol: &tcp, Port: &dns}},
+		},
+		{
+			To: []networkingv1.NetworkPolicyPeer{{
+				NamespaceSelector: &am.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": systemNamespace}},
+				PodSelector:       &am.LabelSelector{MatchLabels: map[string]string{"system": "convox", "service": "resolver"}},
+			}},
+			Ports: []networkingv1.NetworkPolicyPort{{Protocol: &udp, Port: &resolver}},
+		},
+	}
+}
+
+func sandboxEgressPolicy(namespace, systemNamespace string) *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: am.ObjectMeta{
 			Name:      sandboxEgressPolicyName,
@@ -146,23 +171,11 @@ func sandboxEgressPolicy(namespace string) *networkingv1.NetworkPolicy {
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: sandboxSharedEgressSelector(),
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-			Egress: []networkingv1.NetworkPolicyEgressRule{
-				{
-					To: []networkingv1.NetworkPolicyPeer{{
-						NamespaceSelector: &am.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}},
-						PodSelector:       &am.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}},
-					}},
-					Ports: []networkingv1.NetworkPolicyPort{
-						{Protocol: &udp, Port: &dns},
-						{Protocol: &tcp, Port: &dns},
-					},
-				},
-				{
-					To: []networkingv1.NetworkPolicyPeer{{
-						IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0", Except: append([]string{}, sandboxEgressDeniedCIDRs...)},
-					}},
-				},
-			},
+			Egress: append(sandboxDNSRules(systemNamespace), networkingv1.NetworkPolicyEgressRule{
+				To: []networkingv1.NetworkPolicyPeer{{
+					IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0", Except: append([]string{}, sandboxEgressDeniedCIDRs...)},
+				}},
+			}),
 		},
 	}
 }
@@ -346,7 +359,7 @@ func (p *Provider) ensureSandboxNetworkPolicies(ctx context.Context, namespace s
 	if _, err := p.ensureNetworkPolicy(ctx, sandboxIngressPolicy(namespace)); err != nil {
 		return err
 	}
-	_, err := p.ensureNetworkPolicy(ctx, sandboxEgressPolicy(namespace))
+	_, err := p.ensureNetworkPolicy(ctx, sandboxEgressPolicy(namespace, p.Namespace))
 	return err
 }
 

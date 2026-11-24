@@ -600,7 +600,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 	}
 
 	if egress != nil {
-		if err := p.ensureSandboxNetworkPolicy(context.TODO(), sandboxNetworkPolicy(createNs, labels[SandboxIDLabel], egress), time.Now()); err != nil {
+		if err := p.ensureSandboxNetworkPolicy(context.TODO(), sandboxNetworkPolicy(createNs, p.Namespace, labels[SandboxIDLabel], egress), time.Now()); err != nil {
 			return nil, errors.WithStack(err)
 		}
 		labels[SandboxEgressLabel] = "restricted"
