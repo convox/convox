@@ -397,3 +397,18 @@ func TestProcessRun_RetainBeatsCollidingAnnotation(t *testing.T) {
 	})
 	require.Equal(t, "120", pod.Annotations[AnnotationProcessRetain])
 }
+
+func TestProcessRun_ServiceAccountOnlyWhenItExists(t *testing.T) {
+	opts := structs.ProcessRunOptions{Release: options.String("rel1")}
+
+	p, kk := runFlagsProvider(t)
+	spec := runAndGetPod(t, p, kk, "app1", "plain", opts).Spec
+	require.Empty(t, spec.ServiceAccountName, "a release that was never promoted has no service account yet; use the default")
+
+	p, kk = runFlagsProvider(t)
+	ns := p.AppNamespace("app1")
+	_, err := kk.CoreV1().ServiceAccounts(ns).Create(context.TODO(), &ac.ServiceAccount{ObjectMeta: am.ObjectMeta{Name: "plain", Namespace: ns}}, am.CreateOptions{})
+	require.NoError(t, err)
+	spec = runAndGetPod(t, p, kk, "app1", "plain", opts).Spec
+	require.Equal(t, "plain", spec.ServiceAccountName, "a promoted service keeps its own account")
+}

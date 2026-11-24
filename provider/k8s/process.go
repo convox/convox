@@ -18,6 +18,7 @@ import (
 	shellquote "github.com/kballard/go-shellquote"
 	"github.com/pkg/errors"
 	ac "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/api/validate/content"
 	am "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -673,6 +674,13 @@ func (p *Provider) ProcessWait(app, pid string) (int, error) {
 	}
 }
 
+// serviceAccountUsable reports whether a service's account exists. Promoting a release creates it, so a run from a
+// release that was never promoted falls back to the namespace default instead of being refused.
+func (p *Provider) serviceAccountUsable(ns, name string) bool {
+	_, err := p.Cluster.CoreV1().ServiceAccounts(ns).Get(context.TODO(), name, am.GetOptions{})
+	return !k8serrors.IsNotFound(err)
+}
+
 func (p *Provider) podSpecFromService(app, service, release string, isBuild bool) (*ac.PodSpec, error) {
 	a, err := p.AppGet(app)
 	if err != nil {
@@ -728,7 +736,9 @@ func (p *Provider) podSpecFromService(app, service, release string, isBuild bool
 		env := map[string]string{}
 
 		if s, _ := m.Service(service); s != nil {
-			serviceAccountName = s.Name
+			if p.serviceAccountUsable(p.AppNamespace(app), s.Name) {
+				serviceAccountName = s.Name
+			}
 			if s.Command != "" {
 				parts, err := shellquote.Split(s.Command)
 				if err != nil {
