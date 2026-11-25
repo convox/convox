@@ -274,10 +274,14 @@ EOT
       ami_id                  = lookup(np, "ami_id", "")
       weight                  = lookup(np, "weight", null) != null ? tonumber(lookup(np, "weight", null)) : null
       dedicated               = tobool(lookup(np, "dedicated", false))
-      labels = {
-        for pair in compact(split(",", lookup(np, "labels", ""))) :
-        trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
-      }
+      gvisor                  = tobool(lookup(np, "gvisor", false)) && lookup(np, "ami_id", "") == "" && !local.karpenter_is_bottlerocket
+      labels = merge(
+        {
+          for pair in compact(split(",", lookup(np, "labels", ""))) :
+          trimspace(split("=", pair)[0]) => trimspace(split("=", pair)[1])
+        },
+        tobool(lookup(np, "gvisor", false)) && lookup(np, "ami_id", "") == "" && !local.karpenter_is_bottlerocket ? { (local.gvisor_node_label_key) = local.gvisor_node_label_value } : {},
+      )
       taints = concat(
         tobool(lookup(np, "dedicated", false)) ? [{
           key    = "dedicated-node"
@@ -445,7 +449,7 @@ resource "kubectl_manifest" "karpenter_ec2nodeclass_additional" {
     extra_tags                 = var.tags
     ami_id                     = each.value.ami_id
     ami_alias                  = local.karpenter_effective_ami_alias
-    node_config_user_data      = local.ec2_node_config_user_data
+    node_config_user_data      = each.value.gvisor ? local.gvisor_karpenter_user_data : local.ec2_node_config_user_data
   })
 
   wait = true

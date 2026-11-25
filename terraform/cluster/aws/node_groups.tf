@@ -63,6 +63,7 @@ locals {
       label         = lookup(ng, "label", null)
       ami_id        = lookup(ng, "ami_id", null)
       dedicated     = tobool(lookup(ng, "dedicated", false))
+      gvisor        = tobool(lookup(ng, "gvisor", false)) && lookup(ng, "ami_id", null) == null
       tags = {
         for pair in compact(split(",", lookup(ng, "tags", ""))) :
         trimspace(split("=", pair)[0]) => trimspace(try(split("=", pair)[1], "novalue"))
@@ -173,9 +174,10 @@ resource "aws_eks_node_group" "cluster_additional" {
     ignore_changes        = [scaling_config[0].desired_size]
   }
 
-  labels = {
-    "convox.io/label" = each.value.label != null ? each.value.label : "custom"
-  }
+  labels = merge(
+    { "convox.io/label" = each.value.label != null ? each.value.label : "custom" },
+    each.value.gvisor ? { (local.gvisor_node_label_key) = local.gvisor_node_label_value } : {},
+  )
 
   dynamic "taint" {
     for_each = each.value.dedicated ? [1] : []
@@ -229,7 +231,7 @@ resource "aws_launch_template" "cluster_additional" {
     }
   }
 
-  user_data = random_id.additional_node_groups[each.key].keepers.ami_id == null ? (
+  user_data = each.value.gvisor ? base64encode(local.gvisor_node_group_user_data) : random_id.additional_node_groups[each.key].keepers.ami_id == null ? (
     local.node_config_user_data != "" ? base64encode(local.node_config_user_data) : null
     ) : base64encode(templatefile("${path.module}/files/custom_ami_userdata_al2023.sh", {
       api_server_endpoint       = aws_eks_cluster.cluster.endpoint,

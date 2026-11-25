@@ -598,6 +598,7 @@ func (p *Provider) ProcessRun(app, service string, opts structs.ProcessRunOption
 		if err := p.prepareSandboxNamespace(context.TODO(), createNs); err != nil {
 			return nil, errors.WithStack(err)
 		}
+		hardenSandboxPod(s)
 	}
 
 	if egress != nil {
@@ -1451,6 +1452,10 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 		ExitCode: exitCode,
 	}
 
+	if status == "pending" || status == "crashed" {
+		ps.Reason = pendingReason(pd)
+	}
+
 	for key := range gpuKeyToVendor {
 		if q, ok := c.Resources.Requests[ac.ResourceName(key)]; ok {
 			ps.Gpu = int(q.Value())
@@ -1463,6 +1468,45 @@ func (p *Provider) processFromPod(pd ac.Pod) (*structs.Process, error) {
 	}
 
 	return ps, nil
+}
+
+const pendingReasonMax = 300
+
+var stuckWaitingReasons = map[string]bool{
+	"CrashLoopBackOff":           true,
+	"CreateContainerConfigError": true,
+	"CreateContainerError":       true,
+	"ErrImagePull":               true,
+	"ImageInspectError":          true,
+	"ImagePullBackOff":           true,
+	"InvalidImageName":           true,
+}
+
+// pendingReason explains why a pod hasn't started: the scheduler's message, or a container stuck pulling or
+// crashing. It is empty while the pod is simply starting.
+func pendingReason(pd ac.Pod) string {
+	reason := ""
+	for _, cd := range pd.Status.Conditions {
+		if cd.Type == ac.PodScheduled && cd.Status == ac.ConditionFalse && cd.Message != "" {
+			reason = "unschedulable: " + cd.Message
+		}
+	}
+	if reason == "" {
+		statuses := append(append([]ac.ContainerStatus{}, pd.Status.InitContainerStatuses...), pd.Status.ContainerStatuses...)
+		for _, cs := range statuses {
+			if w := cs.State.Waiting; w != nil && stuckWaitingReasons[w.Reason] {
+				reason = w.Reason
+				if w.Message != "" {
+					reason += ": " + w.Message
+				}
+				break
+			}
+		}
+	}
+	if len(reason) > pendingReasonMax {
+		reason = reason[:pendingReasonMax]
+	}
+	return reason
 }
 
 func execStreamOptions(eo *ac.PodExecOptions, rw io.ReadWriter, opts structs.ProcessExecOptions) remotecommand.StreamOptions {

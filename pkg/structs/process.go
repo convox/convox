@@ -40,6 +40,9 @@ type Process struct {
 
 	// ExitCode is the primary container's terminated exit status; nil while running or unknown.
 	ExitCode *int `json:"exit-code,omitempty"`
+
+	// Reason is why a pending or crashing process hasn't started (scheduling or image pull); empty otherwise.
+	Reason string `json:"reason,omitempty"`
 }
 
 type Processes []Process

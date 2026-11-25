@@ -336,7 +336,7 @@ module "rack" {
   proxy_protocol                            = var.proxy_protocol
   pod_imds_block_enabled                    = var.pod_imds_block_enabled
   network_policy_enable                     = var.network_policy_enable
-  sandbox_runtime_classes                   = var.sandbox_runtime_classes
+  sandbox_runtime_classes                   = join(",", distinct(compact(concat([for rc in split(",", var.sandbox_runtime_classes) : trimspace(rc)], split(",", module.cluster.sandbox_runtime_classes)))))
   sandbox_storage_class                     = var.sandbox_storage_class
   release                                   = local.release
   releases_to_retain_after_active           = var.releases_to_retain_after_active

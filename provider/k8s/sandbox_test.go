@@ -325,3 +325,56 @@ func TestReconcilePodImdsBlock_UpdatesExistingPolicyToExcludeSandboxPods(t *test
 	require.Len(t, got.Spec.PodSelector.MatchExpressions, 1)
 	assert.Equal(t, SandboxLabel, got.Spec.PodSelector.MatchExpressions[0].Key)
 }
+
+func TestProcessRun_SandboxPodIsHardened(t *testing.T) {
+	p, kk := sandboxHostProvider(t)
+
+	pod := runAndGetPod(t, p, kk, sandboxHostApp, "sbx", sandboxRunOptions())
+
+	require.NotNil(t, pod.Spec.AutomountServiceAccountToken)
+	assert.False(t, *pod.Spec.AutomountServiceAccountToken, "sandbox code gets no Kubernetes API token")
+	require.NotNil(t, pod.Spec.SecurityContext)
+	require.NotNil(t, pod.Spec.SecurityContext.SeccompProfile)
+	assert.Equal(t, ac.SeccompProfileTypeRuntimeDefault, pod.Spec.SecurityContext.SeccompProfile.Type)
+	sc := pod.Spec.Containers[0].SecurityContext
+	require.NotNil(t, sc)
+	require.NotNil(t, sc.Capabilities)
+	assert.Equal(t, []ac.Capability{"NET_RAW"}, sc.Capabilities.Drop)
+	assert.Nil(t, sc.AllowPrivilegeEscalation, "sudo in the sandbox images needs privilege escalation")
+	assert.Nil(t, sc.Privileged)
+}
+
+func TestProcessRun_SandboxSeedContainerIsHardenedToo(t *testing.T) {
+	p, kk := sandboxHostProvider(t)
+	opts := sandboxRunOptions()
+	opts.VolumeClaims = options.String(sandboxClaim)
+
+	pod := runAndGetPod(t, p, kk, sandboxHostApp, "sbx", opts)
+
+	require.Len(t, pod.Spec.InitContainers, 1)
+	assert.Equal(t, pod.Spec.Containers[0].SecurityContext, pod.Spec.InitContainers[0].SecurityContext)
+	assert.Equal(t, ac.SeccompProfileTypeRuntimeDefault, pod.Spec.SecurityContext.SeccompProfile.Type)
+	require.NotNil(t, pod.Spec.SecurityContext.FSGroup, "hardening keeps the volume's fsGroup")
+}
+
+func TestProcessRun_NonSandboxPodKeepsItsSecurity(t *testing.T) {
+	p, kk := runFlagsProvider(t)
+
+	pod := runAndGetPod(t, p, kk, "app1", "web", structs.ProcessRunOptions{Release: options.String("rel1")})
+
+	assert.Nil(t, pod.Spec.AutomountServiceAccountToken, "apps keep their ServiceAccount token")
+	if pod.Spec.SecurityContext != nil {
+		assert.Nil(t, pod.Spec.SecurityContext.SeccompProfile)
+	}
+	for _, c := range pod.Spec.Containers {
+		if c.SecurityContext != nil && c.SecurityContext.Capabilities != nil {
+			assert.NotContains(t, c.SecurityContext.Capabilities.Drop, ac.Capability("NET_RAW"))
+		}
+	}
+}
+
+func TestHardenSandboxPodKeepsExistingDrops(t *testing.T) {
+	s := &ac.PodSpec{Containers: []ac.Container{{Name: "a", SecurityContext: &ac.SecurityContext{Capabilities: &ac.Capabilities{Drop: []ac.Capability{"SYS_ADMIN", "NET_RAW"}}}}}}
+	hardenSandboxPod(s)
+	assert.Equal(t, []ac.Capability{"SYS_ADMIN", "NET_RAW"}, s.Containers[0].SecurityContext.Capabilities.Drop)
+}

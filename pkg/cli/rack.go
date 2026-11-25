@@ -1062,6 +1062,7 @@ type NodeGroupConfigParam struct {
 	GpuType      *string `json:"gpu_type,omitempty"`
 	GpuCount     *int    `json:"gpu_count,omitempty"`
 	TpuTopology  *string `json:"tpu_topology,omitempty"`
+	Gvisor       *bool   `json:"gvisor,omitempty"`
 }
 
 var tpuTopologyPattern = regexp.MustCompile(`^[1-9][0-9]*x[1-9][0-9]*(x[1-9][0-9]*)?$`)
@@ -1102,6 +1103,15 @@ func (n *NodeGroupConfigParam) Validate(provider string) error {
 
 	if n.Dedicated != nil && *n.Dedicated && n.Label == nil {
 		return fmt.Errorf("label is required when dedicated option is set")
+	}
+
+	if n.Gvisor != nil && *n.Gvisor {
+		if provider != "aws" {
+			return fmt.Errorf("gvisor node groups are only supported on AWS racks")
+		}
+		if n.AmiID != nil && *n.AmiID != "" {
+			return fmt.Errorf("gvisor needs the EKS-optimized AMI; remove ami_id from the node group")
+		}
 	}
 
 	if n.GpuCount != nil && *n.GpuCount < 1 {
@@ -1170,6 +1180,7 @@ type KarpenterNodePoolConfigParam struct {
 	Dedicated             *bool   `json:"dedicated,omitempty"`
 	Weight                *int    `json:"weight,omitempty"`
 	AmiID                 *string `json:"ami_id,omitempty"`
+	Gvisor                *bool   `json:"gvisor,omitempty"`
 }
 
 var karpenterNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,62}$`)
@@ -1317,6 +1328,25 @@ func (np *KarpenterNodePoolConfigParam) Validate() error {
 		return fmt.Errorf("karpenter nodepool '%s': invalid ami_id '%s' (must look like ami-0123456789abcdef0)", np.Name, *np.AmiID)
 	}
 
+	if np.Gvisor != nil && *np.Gvisor && np.AmiID != nil && *np.AmiID != "" {
+		return fmt.Errorf("karpenter nodepool '%s': gvisor needs the default AL2023 AMI; remove ami_id", np.Name)
+	}
+
+	return nil
+}
+
+// validateGvisorNodeOS refuses gvisor Karpenter pools on Bottlerocket nodes: the gVisor install runs as
+// AL2023 user data, which Bottlerocket doesn't execute.
+func validateGvisorNodeOS(params, currentParams map[string]string) error {
+	if effectiveParam(params, currentParams, "karpenter_node_os", "al2023") != "bottlerocket" {
+		return nil
+	}
+	pools, _ := decodeKarpenterNodePools(effectiveParam(params, currentParams, "additional_karpenter_nodepools_config", ""))
+	for _, np := range pools {
+		if np.Gvisor != nil && *np.Gvisor {
+			return fmt.Errorf("karpenter nodepool '%s': gvisor needs karpenter_node_os=al2023", np.Name)
+		}
+	}
 	return nil
 }
 
@@ -3218,6 +3248,10 @@ func validateAndMutateParams(params map[string]string, provider string, currentP
 	}
 
 	if err := validateKarpenterDisruptionWindow(params, currentParams); err != nil {
+		return err
+	}
+
+	if err := validateGvisorNodeOS(params, currentParams); err != nil {
 		return err
 	}
 

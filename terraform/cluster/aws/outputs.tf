@@ -71,3 +71,8 @@ output "karpenter_interruption_queue_name" {
 output "ecr_docker_hub_cache_prefix" {
   value = var.ecr_docker_hub_cache && var.docker_hub_username != "" && var.docker_hub_password != "" ? "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/docker-hub-${var.name}" : ""
 }
+
+# "gvisor" when a node pool has gVisor installed, so the rack API allows that runtime class; empty otherwise.
+output "sandbox_runtime_classes" {
+  value = local.gvisor_enabled ? "gvisor" : ""
+}

@@ -36,6 +36,7 @@ The `additional_node_groups_config` parameter takes a JSON array of node group c
 | `tags` | No | Custom AWS tags specified as comma-separated key-value pairs (e.g., `environment=production,team=backend`) | None |
 | `ami_id`* | No | Custom AMI ID to use | EKS-optimized AMI |
 | `dedicated` | No | When `true`, only services with matching node group labels will be scheduled on these nodes | `false` |
+| `gvisor` | No | When `true`, installs gVisor on the nodes for Convox Sandboxes (see [gVisor for Convox Sandboxes](#gvisor-for-convox-sandboxes)) | `false` |
 
 \* **Important**: Custom AMI configuration should be used with extreme caution. AMIs in EKS clusters have strict compatibility requirements, and improper configuration can lead to cluster update failures requiring manual intervention. Only use custom AMIs if you have specific compatibility requirements and thoroughly understand EKS node bootstrapping processes. We recommend testing in a non-production environment before implementation.
 
@@ -205,6 +206,23 @@ services:
 ```
 
 This will ensure that the `web` service is scheduled only on nodes with the label `convox.io/label: app-workers`.
+
+## gVisor for Convox Sandboxes
+
+Set `"gvisor": true` on a node group to run Convox Sandboxes on it under [gVisor](https://gvisor.dev), which gives each sandbox its own user-space kernel instead of sharing the node's.
+
+- Nodes boot with a pinned, checksum-verified gVisor release registered with containerd, and get the label `convox.io/sandbox-runtime=gvisor`.
+- The rack creates a `gvisor` RuntimeClass that schedules only onto those nodes, and adds `gvisor` to the runtime classes sandboxes may use (`sandbox_runtime_classes` is merged, not replaced).
+- Ordinary Services are unaffected. Pods without the runtime class keep running as standard containers, so combine `gvisor` with `dedicated` (and a ``label``) to keep the nodes for sandboxes.
+- Needs the default EKS-optimized AMI; `gvisor` can't be combined with `ami_id`.
+- Nodes download the release from `storage.googleapis.com` when they boot. If that fails, the node still joins, but gvisor sandboxes fail to start there rather than running without gVisor.
+- Turning `gvisor` on or off for an existing node group replaces its nodes.
+
+```json
+[{"id": 201, "type": "m6i.xlarge", "min_size": 1, "max_size": 5, "label": "sandbox", "dedicated": true, "gvisor": true}]
+```
+
+Then set **Runtime class** to `gvisor` on the rack's Sandboxes card in the Convox console (rack → **Settings** → **Sandboxes**). The RuntimeClass places sandboxes on the gVisor nodes by itself, so the card needs no node labels for this.
 
 ## Architecture Compatibility
 

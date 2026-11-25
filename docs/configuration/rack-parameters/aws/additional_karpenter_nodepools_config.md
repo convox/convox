@@ -71,6 +71,23 @@ The guard triggers on any change that drops a pool name, which includes renaming
 
 This check runs in the `convox` CLI as of `3.25.4` and returns before any Terraform apply, so it arrives with an updated CLI rather than with a Rack update, and it does not cover a parameter change made through Console. Services left pinned to a pool that no longer exists cannot schedule, and a deploy that targets a missing pool is rejected up front. See [Node Pool Validation](/configuration/scaling/karpenter#node-pool-validation).
 
+## gVisor for Convox Sandboxes
+
+Set `"gvisor": true` on a pool to run Convox Sandboxes on it under [gVisor](https://gvisor.dev), which gives each sandbox its own user-space kernel instead of sharing the node's.
+
+- Nodes boot with a pinned, checksum-verified gVisor release registered with containerd, and get the label `convox.io/sandbox-runtime=gvisor`.
+- The rack creates a `gvisor` RuntimeClass that schedules only onto those nodes, and adds `gvisor` to the runtime classes sandboxes may use (`sandbox_runtime_classes` is merged, not replaced).
+- Ordinary Services are unaffected. Pods without the runtime class keep running as standard containers, so combine `gvisor` with `dedicated` (and a ``name``) to keep the nodes for sandboxes.
+- Needs the default AL2023 AMI (not Bottlerocket); `gvisor` can't be combined with `ami_id`.
+- Nodes download the release from `storage.googleapis.com` when they boot. If that fails, the node still joins, but gvisor sandboxes fail to start there rather than running without gVisor.
+- Turning `gvisor` on or off for an existing pool replaces its nodes.
+
+```json
+[{"name": "sandbox", "dedicated": true, "gvisor": true, "cpu_limit": 64, "memory_limit_gb": 256}]
+```
+
+Then set **Runtime class** to `gvisor` on the rack's Sandboxes card in the Convox console (rack → **Settings** → **Sandboxes**). The RuntimeClass places sandboxes on the gVisor nodes by itself, so the card needs no node labels for this.
+
 ## Additional Information
 
 - **Input formats:** Raw JSON string, base64-encoded JSON, or a `.json` file path.
